@@ -1,0 +1,391 @@
+================================================================================
+RESUMEN DE AVANCE - QUALITY ALERT SYSTEM (8D METHODOLOGY)
+Fecha: 06 de Diciembre de 2025
+================================================================================
+
+PROTOCOLO OBLIGATORIO PARA PRÓXIMA SESIÓN:
+================================================================================
+
+🚨 REGLA CRÍTICA - LEER Y COMPRENDER ANTES DE ACTUAR:
+1. NUNCA hacer cambios al primer síntoma/error/anomalía encontrado
+2. SIEMPRE leer archivos COMPLETOS antes de modificar
+3. COMPRENDER la estructura total antes de diagnosticar
+4. INVESTIGAR múltiples fuentes del problema antes de "arreglar"
+5. NO asumir que el primer error es la causa raíz
+
+METODOLOGÍA OBLIGATORIA:
+- Paso 1: Leer resumen completo
+- Paso 2: Leer archivos relevantes COMPLETOS (no solo secciones)
+- Paso 3: Usar Grep/Glob para buscar patrones y entender estructura
+- Paso 4: ANALIZAR y DIAGNOSTICAR completamente
+- Paso 5: Solo entonces, hacer cambios quirúrgicos y precisos
+
+⚠️ PROHIBIDO: Hacer edits incrementales sin análisis completo previo
+⚠️ PROHIBIDO: Asumir que conoces el problema sin investigar
+⚠️ PROHIBIDO: "Arreglar" basándote en un solo error/síntoma
+
+CONTEXTO DEL SISTEMA:
+- Sistema: Quality Alert System con metodología 8D
+- Stack Tecnológico:
+  * Frontend: React (puerto 3000)
+  * Backend: Node.js/Express (puerto 5000)
+  * Base de datos: PostgreSQL
+  * Ubicación: C:\Users\The Eidrian\quality-alert-system\
+
+SERVIDORES EN EJECUCIÓN:
+- Backend: múltiples instancias corriendo en background (shells: 5e86c7, ed6278, d156be, 654d3b, b9b465, af4943)
+- Frontend: npm start corriendo en background (shells: aca24a, 6102fc)
+
+COMANDOS PARA VERIFICAR ESTADO:
+- Backend: cd "C:\Users\The Eidrian\quality-alert-system\backend" && node server.js
+- Frontend: cd "C:\Users\The Eidrian\quality-alert-system\frontend" && npm start
+- Verificar procesos: tasklist | findstr node
+
+ARCHIVOS CLAVE MODIFICADOS EN ESTA SESIÓN:
+1. frontend/src/components/8D/D3MFG.js (2,300+ líneas)
+2. frontend/src/components/8D/D4ContainmentRootCause.js (1,502 líneas)
+
+================================================================================
+TRABAJO REALIZADO EN ESTA SESIÓN
+================================================================================
+
+1. ELIMINACIÓN DE AUTO-GUARDADO (COMPLETADO)
+--------------------------------------------------------------------------------
+Problema Original:
+- El auto-guardado causaba conflictos y pérdida de datos
+- Los usuarios experimentaban que sus cambios desaparecían
+
+Solución Implementada:
+- Eliminado auto-guardado de D4ContainmentRootCause.js (líneas 143-183)
+- Eliminado auto-guardado de D3MFG.js (líneas 175-209)
+- Reemplazado con sistema de guardado manual mediante botones
+
+Archivos Modificados:
+- frontend/src/components/8D/D4ContainmentRootCause.js
+- frontend/src/components/8D/D3MFG.js
+
+Funciones handleSave Existentes:
+- Ambos componentes YA TENÍAN funciones handleSave con validaciones robustas
+- Solo se eliminaron los useEffect de auto-guardado
+- Se mantuvieron las validaciones originales
+
+Problemas Encontrados y Solucionados:
+a) Error de funciones duplicadas:
+   - Causa: Intenté agregar nuevas funciones handleSave sin verificar las existentes
+   - Solución: Eliminé mis versiones y mantuve las originales con validaciones
+
+b) Cache de Webpack:
+   - Causa: Webpack guardaba versiones antiguas con duplicados
+   - Solución: Eliminado node_modules/.cache
+
+c) Caracteres de control al final de archivos:
+   - Causa: PowerShell Write-Output agregó caracteres invisibles
+   - Error: "Unexpected character ''" en líneas 1503 (D4) y 2301 (D3MFG)
+   - Solución: Uso de Get-Content -TotalCount para mantener solo líneas válidas
+   - Comandos ejecutados:
+     * (Get-Content 'path\to\D4ContainmentRootCause.js' -TotalCount 1502) | Set-Content
+     * (Get-Content 'path\to\D3MFG.js' -TotalCount 2300) | Set-Content
+
+
+2. BOTONES DE GUARDADO MANUAL AGREGADOS (COMPLETADO)
+--------------------------------------------------------------------------------
+Se agregó botón de guardar 💾 junto al botón "Eliminar" en TODAS las secciones
+de acciones inmediatas de contención en D3MFG.js:
+
+Secciones Modificadas:
+
+1. 👥 Personas Involucradas en el Evento
+   - Ubicación: Líneas 1179-1192
+   - Cambio adicional: Grid de 3 columnas para tarjetas de personas
+   - Layout anterior: Tarjetas de ancho completo
+   - Layout nuevo: display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px'
+   - Beneficio: Ahorro de espacio, escalable hasta 100+ personas
+
+2. 📋 Controles Temporales del Proceso (Temporary Controls)
+   - Ubicación: Líneas 1307-1313
+   - Botón 💾 agregado junto a "Eliminar"
+
+3. ⚙️ Parámetros del Proceso Ajustados (Parameters Adjusted)
+   - Ubicación: Líneas 1451-1457
+   - Botón 💾 agregado junto a "Eliminar"
+
+4. 🔍 Puntos de Inspección Agregados (Inspection Points)
+   - Ubicación: Líneas 1569-1575
+   - Botón 💾 agregado junto a "Eliminar"
+
+5. 🛡️ Dispositivos Poka-Yoke Implementados (Poka-Yoke Devices)
+   - Ubicación: Líneas 1720-1726
+   - Botón 💾 agregado junto a "Eliminar"
+
+6. 🏗️ Modificaciones de Línea (Line Modifications)
+   - Ubicación: Líneas 1898-1904
+   - Botón 💾 agregado junto a "Eliminar"
+
+7. 👷 Entrenamiento de Operadores (Operator Training)
+   - Ubicación: Líneas 2014-2020
+   - Botón 💾 agregado junto a "Eliminar"
+
+8. ✅ Validación de Efectividad (Effectiveness Validation)
+   - Ubicación: Líneas 2130-2136
+   - Botón 💾 agregado junto a "Eliminar"
+
+Patrón de Implementación Consistente:
+```javascript
+<div style={{ display: 'flex', gap: '8px' }}>
+  <button
+    style={{ ...styles.saveButton, padding: '6px 12px', fontSize: '12px', margin: 0 }}
+    onClick={handleSave}
+    disabled={isSaving || isFormBlocked}
+  >
+    💾
+  </button>
+  <button
+    style={styles.removeButton}
+    onClick={() => remove[ItemType](index)}
+    disabled={isFormBlocked}
+  >
+    {t('remove')}
+  </button>
+</div>
+```
+
+Características del Botón de Guardado:
+- Emoji: 💾 (solo icono, sin texto para ahorrar espacio)
+- Tamaño: padding: '6px 12px', fontSize: '12px'
+- Deshabilitado cuando: isSaving || isFormBlocked
+- Función: Llama a handleSave existente con validaciones
+- Posicionamiento: A la derecha, antes del botón "Eliminar"
+
+
+3. MEJORA DE LAYOUT - GRID DE 3 COLUMNAS (COMPLETADO)
+--------------------------------------------------------------------------------
+Sección: 👥 Personas Involucradas en el Evento
+Ubicación: D3MFG.js, líneas 1075-1112
+
+Cambio Implementado:
+ANTES:
+- Tarjetas de ancho completo (flex con justifyContent: 'space-between')
+- Cada persona ocupaba una fila completa
+- Información horizontal: nombre a la izquierda, botón a la derecha
+- Espaciado vertical excesivo
+
+DESPUÉS:
+- Grid de 3 columnas: gridTemplateColumns: 'repeat(3, 1fr)'
+- Tarjetas compactas: padding: '8px' (antes 12px)
+- Información vertical: flexDirection: 'column'
+- Fuentes reducidas: 13px nombres, 12px posición (antes 13px y tamaño normal)
+- Gap entre tarjetas: '8px'
+- Botón "Eliminar" dentro de cada tarjeta
+
+Código Actual:
+```javascript
+<div style={{
+  marginBottom: '12px',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: '8px'
+}}>
+  {formData.d3MfgResponsibleUserIds.map((userId) => {
+    return (
+      <div key={userId} style={{
+        backgroundColor: 'white',
+        padding: '8px',
+        borderRadius: '6px',
+        border: '1px solid #e5e7eb',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
+      }}>
+        <div style={{ fontSize: '13px' }}>
+          <strong>{user.firstName} {user.lastName}</strong>
+          <div style={{ color: '#666', fontSize: '12px' }}>
+            {user.position || user.role}
+          </div>
+        </div>
+        <button
+          style={{ ...styles.removeButton, fontSize: '12px', padding: '4px 8px' }}
+          onClick={() => removeResponsibleUser(userId)}
+        >
+          {t('remove')}
+        </button>
+      </div>
+    );
+  })}
+</div>
+```
+
+Beneficios:
+- Ahorro de espacio vertical ~66%
+- Escalable para 100+ personas sin scroll excesivo
+- Vista más compacta y profesional
+
+
+================================================================================
+ESTADO ACTUAL DEL SISTEMA
+================================================================================
+
+COMPONENTES CON GUARDADO MANUAL:
+✅ D3MFG.js - 8 secciones con botones de guardar
+✅ D4ContainmentRootCause.js - Auto-guardado eliminado, guardado manual funcionando
+
+COMPONENTES SIN MODIFICAR (aún con auto-guardado potencial):
+- D1TeamFormation.js
+- D2ProblemDescription.js
+- D5CorrectiveActions.js
+- D6PermanentActions.js
+- D7PreventRecurrence.js
+- D8TeamRecognition.js
+
+ARCHIVOS DE SERVICIOS Y ENDPOINTS (sin cambios en esta sesión):
+- frontend/src/services/eightDService.js
+- backend/endpoints/eightDEndpoints.js
+- Nota: Sesiones anteriores limpiaron debug logs y corrigieron mapeos de campos
+
+
+================================================================================
+PROBLEMAS TÉCNICOS RESUELTOS
+================================================================================
+
+1. Duplicación de funciones handleSave:
+   - Error: "Identifier 'handleSave' has already been declared"
+   - Líneas afectadas: D4:375, D3MFG:312
+   - Root cause: Agregué nuevas funciones sin verificar existentes
+   - Solución: Eliminadas versiones duplicadas, conservadas originales
+
+2. Cache de Webpack persistente:
+   - Síntoma: Errores persisten después de corregir archivos
+   - Solución: rm -rf node_modules/.cache
+   - Archivos tocados para forzar recompilación
+
+3. Caracteres de control al final de archivos:
+   - Error: "Unexpected character ''" líneas 1503 (D4) y 2301 (D3MFG)
+   - Causa: PowerShell Write-Output agregó control chars
+   - Usuario detectó: "creo no es invisible sino una ^"
+   - Solución: Get-Content -TotalCount N | Set-Content
+   - D4: Mantenidas 1502 líneas válidas
+   - D3MFG: Mantenidas 2300 líneas válidas
+
+4. Múltiples instancias de servidores:
+   - Backend: 7 shells en background
+   - Frontend: 2 shells en background
+   - Estado: Funcionando correctamente
+   - Nota: Considerar limpieza en próxima sesión si causan problemas
+
+
+================================================================================
+VALIDACIONES Y FUNCIONALIDAD
+================================================================================
+
+FUNCIÓN handleSave EN D4ContainmentRootCause.js (línea 345):
+- Validación de formulario bloqueado
+- Validación de causa raíz no vacía
+- Validación de razón de retraso cuando hay SLA excedido
+- Estado isSaving para prevenir doble-guardado
+- Llamada a onDataUpdate con datos completos
+- Manejo de errores con try/catch
+- Alertas de éxito/error al usuario
+
+FUNCIÓN handleSave EN D3MFG.js (línea 284):
+- Validación básica de bloqueo de formulario
+- Estado isSaving para prevenir doble-guardado
+- Llamada a onDataUpdate
+- Manejo de errores básico
+- Alertas al usuario
+
+ESTADOS COMPARTIDOS:
+- isSaving: Previene múltiples clics de guardar
+- isFormBlocked: Bloquea edición cuando no es responsable o en contestación
+- uploadingEvidence: Estado para subida de archivos
+
+
+================================================================================
+PRÓXIMOS PASOS SUGERIDOS
+================================================================================
+
+1. TESTING REQUERIDO:
+   - Verificar que el guardado manual funcione en todas las secciones de D3MFG
+   - Verificar que no se pierdan datos al cambiar entre secciones
+   - Probar con múltiples usuarios (validación de bloqueo de formulario)
+   - Probar escalabilidad del grid de 3 columnas con 50-100 personas
+
+2. POSIBLES MEJORAS:
+   - Considerar aplicar mismo patrón de guardado manual a D5, D6, D7
+   - Implementar indicador visual de cambios sin guardar
+   - Agregar confirmación antes de salir con cambios sin guardar
+   - Implementar auto-guardado local (localStorage) como backup
+
+3. LIMPIEZA DE SISTEMA:
+   - Revisar y cerrar shells de backend/frontend duplicados
+   - Verificar que solo haya una instancia de cada servidor corriendo
+   - Limpiar archivos de backup si ya no son necesarios
+
+4. DOCUMENTACIÓN:
+   - Documentar patrón de guardado manual para futuros componentes
+   - Crear guía de usuario sobre cuándo guardar manualmente
+   - Documentar flujo de validaciones en cada sección
+
+
+================================================================================
+COMANDOS ÚTILES PARA PRÓXIMA SESIÓN
+================================================================================
+
+VERIFICAR PROCESOS:
+tasklist | findstr node
+netstat -ano | findstr :3000
+netstat -ano | findstr :5000
+
+MATAR PROCESOS SI ES NECESARIO:
+taskkill /PID [PID_NUMBER] /F
+
+REINICIAR SERVIDORES:
+cd "C:\Users\The Eidrian\quality-alert-system\backend"
+node server.js
+
+cd "C:\Users\The Eidrian\quality-alert-system\frontend"
+npm start
+
+LIMPIAR CACHE SI HAY PROBLEMAS:
+cd "C:\Users\The Eidrian\quality-alert-system\frontend"
+del /s /q node_modules\.cache
+
+VERIFICAR ARCHIVOS:
+powershell "Get-Content 'C:\Users\The Eidrian\quality-alert-system\frontend\src\components\8D\D3MFG.js' | Select-Object -Last 10"
+
+
+================================================================================
+NOTAS IMPORTANTES
+================================================================================
+
+1. El sistema usa traducción (t()) para textos de interfaz
+2. Todos los componentes 8D siguen patrón similar de estructura
+3. El backend mapea campos específicos (d3MfgTemporaryControls, etc.)
+4. Las evidencias se suben a través de handleEvidenceUpload
+5. El sistema tiene control de acceso basado en responsable principal
+6. SLA tracking está implementado con validación de retrasos
+
+ESTRUCTURA DE DATOS D3MFG:
+- d3MfgResponsibleUserIds: Array de IDs de usuarios
+- d3MfgImplementationDate: Fecha de implementación
+- d3MfgTemporaryControls: Array de controles temporales
+- d3MfgParametersAdjusted: Array de parámetros ajustados
+- d3MfgInspectionPoints: Array de puntos de inspección
+- d3MfgPokaYokeDevices: Array de dispositivos poka-yoke
+- d3MfgLineModifications: Array de modificaciones de línea
+- d3MfgOperatorTraining: Array de entrenamientos
+- d3MfgEffectivenessValidation: Array de validaciones
+
+Cada item en los arrays puede contener:
+- description/device/location/etc.: String descriptivo
+- comments: String de comentarios
+- evidence: Array de {name, url} para archivos adjuntos
+
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================
+Última actualización: 06 de Diciembre de 2025
+Sistema: Quality Alert System - 8D Methodology
+Versión de archivo: D3MFG.js (2,300+ líneas), D4ContainmentRootCause.js (1,502 líneas)
+
+Para continuar: Leer este archivo completo antes de comenzar nueva sesión.
+================================================================================

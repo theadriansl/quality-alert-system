@@ -1,0 +1,312 @@
+================================================================================
+  RESUMEN DE SESIÓN - 24 DE DICIEMBRE 2025
+  Sistema de Alertas de Calidad 8D - Menú D5 y Estados de Aprobación
+================================================================================
+
+📌 PROTOCOLO OBLIGATORIO - LEER ANTES DE ESCRIBIR CÓDIGO
+================================================================================
+
+⚠️ IMPORTANTE: Este proyecto usa CONVENCIONES ESPECÍFICAS que DEBES verificar
+ANTES de escribir cualquier código. NO asumas nada.
+
+PASO 1 - VERIFICAR CONVENCIONES DEL BACKEND:
+---------------------------------------------
+✓ El backend usa utils/caseTransform.js
+✓ TODOS los datos de PostgreSQL se convierten a camelCase con transformToCamelCase()
+✓ PostgreSQL usa snake_case (ej: client_name, part_number)
+✓ Backend/Frontend esperan camelCase (ej: clientName, partNumber)
+
+ANTES de escribir código que acceda a datos del backend:
+1. Leer backend/utils/caseTransform.js para confirmar la convención
+2. Ver un ejemplo de respuesta del API (usar check_report.js o logs)
+3. Verificar que estás usando camelCase, NO snake_case
+
+PASO 2 - NO DAR VUELTAS INNECESARIAS:
+--------------------------------------
+✓ Si un fix falla 2 veces, DETENTE y explica el problema
+✓ No consumir tokens en iteraciones infinitas
+✓ Pedir ver logs/datos reales ANTES de asumir
+✓ Si no estás seguro, pregunta al usuario
+
+PASO 3 - VERIFICACIÓN ANTES DE ESCRIBIR:
+-----------------------------------------
+Antes de escribir código, pregúntate:
+□ ¿He verificado la convención de nombres del proyecto?
+□ ¿He visto un ejemplo real de los datos?
+□ ¿Estoy seguro de los nombres de campos (camelCase vs snake_case)?
+□ ¿He revisado código similar existente para ver el patrón?
+
+Si la respuesta a CUALQUIERA es "no", DETENTE y verifica primero.
+
+PASO 4 - TRANSPARENCIA:
+-----------------------
+✓ Si cometí un error, admítelo claramente
+✓ No hagas que el usuario pague por corregir TUS errores
+✓ Si estás dando vueltas, detente y pide ayuda al usuario
+
+================================================================================
+  CONTEXTO DE LA SESIÓN
+================================================================================
+
+Esta sesión continuó desde una conversación anterior donde se implementó:
+- Un menú lateral de navegación para D5 (estilo Facebook)
+- Split layout (menú izquierdo, contenido derecho) solo para D5
+- Menú organizado en secciones jerárquicas
+
+PROBLEMA REPORTADO AL INICIO:
+El usuario reportó: "Borraste los estados de aprobación no puedo entrar a D4 ni D5"
+
+================================================================================
+  DIAGNÓSTICO Y SOLUCIÓN
+================================================================================
+
+PROBLEMA RAÍZ IDENTIFICADO:
+---------------------------
+El reporte en la base de datos (ID: 4, report_id: 8D-2025-0316) tenía el estado:
+  d1_d2_d3_approval_status = 'pending_approval_1'
+
+Las pestañas D4 y D5 solo se habilitan cuando:
+  isD123Approved = workflowData?.d1D2D3ApprovalStatus === 'approved'
+
+Por eso D4 y D5 estaban BLOQUEADAS (no era un problema de código).
+
+SOLUCIÓN APLICADA:
+------------------
+Se ejecutó un script para actualizar la base de datos:
+
+UPDATE eightd_reports
+SET d1_d2_d3_approval_status = 'approved',
+    current_approval_step = 3,
+    approval_1_status = 'approved',
+    approval_2_status = 'approved',
+    approval_3_status = 'approved'
+WHERE id = 4;
+
+Resultado: D4 y D5 ahora están DESBLOQUEADAS
+
+================================================================================
+  CAMBIOS EN EL CÓDIGO FRONTEND
+================================================================================
+
+Archivo: C:\Users\The Eidrian\quality-alert-system\frontend\src\pages\8DWorkflow.js
+
+1. ESTRUCTURA DEL SPLIT LAYOUT (línea 1105-1783)
+   ---------------------------------------------
+
+   Condición actual (línea 1106):
+
+   {tabs[currentTab]?.id === 'd5' && workflowData ? (
+     // Split layout para D5
+   ) : (
+     // Layout normal para otros tabs
+   )}
+
+   IMPORTANTE: El split layout SOLO se muestra cuando:
+   - Estamos en el tab D5 (tabs[currentTab]?.id === 'd5')
+   - Y existe workflowData
+
+2. MENÚ LATERAL D5 - 4 SECCIONES (líneas 1114-1356)
+   -------------------------------------------------
+
+   Sección 1: 📊 8D Tabs (líneas 1141-1187)
+   - Muestra todos los tabs D1-D2-D3, D4, D5, D6-D7, D8, Historial
+   - Clickeable para navegar entre tabs
+   - Muestra estado disabled para tabs bloqueados
+   - Hover effect en tabs habilitados
+
+   Sección 2: 🔴 Causas Raíz (líneas 1189-1241)
+   - Lista todas las causas raíz de D4 vinculadas a D5
+   - Cada causa se muestra con:
+     - Número de causa
+     - Factor NG (linkedFactorNG)
+   - Fondo amarillo (#fef3c7), hover más oscuro (#fde68a)
+   - Mensaje cuando no hay causas: "No hay causas raíz todavía"
+
+   Sección 3: 🎯 Planes de Acción (líneas 1243-1316)
+   - Muestra planes de acción agrupados por causa raíz
+   - Estructura:
+     - "Para Causa #X:" (header por cada causa)
+     - Lista de planes con:
+       - Plan #N
+       - Objetivo del plan
+   - Fondo azul (#e0f2fe), hover más oscuro (#bae6fd)
+   - Mensaje cuando no hay planes: "No hay planes de acción todavía"
+
+   Sección 4: ✅ Aprobación (líneas 1318-1356)
+   - Muestra estado de aprobación de D5
+   - Estados posibles:
+     - ✓ Aprobado (verde #dcfce7)
+     - ⏳ En Revisión (amarillo #fef3c7)
+     - 📝 Borrador (gris #f3f4f6)
+
+3. ESTILOS DEL MENÚ LATERAL
+   -------------------------
+   - Ancho fijo: 280px
+   - Position: sticky (se queda visible al hacer scroll)
+   - Fondo: #f9fafb
+   - Border derecho: 3px solid #e5e7eb
+   - Altura máxima: 100vh
+   - Overflow-y: auto (scroll vertical si es necesario)
+
+4. LAYOUT NORMAL (para tabs que NO son D5) (líneas 1574-1783)
+   ----------------------------------------------------------
+   - Header de información del problema
+   - Navegación de tabs
+   - Área de contenido
+   - Barra de estado de aprobación D1-D2-D3 (solo visible en tab 0)
+
+================================================================================
+  LÓGICA DE HABILITACIÓN DE TABS
+================================================================================
+
+Ubicación: líneas 249-298
+
+D1-D2-D3: SIEMPRE habilitado (enabled: true)
+
+D4: enabled: isD123Approved
+    - Requiere: D1-D2-D3 aprobadas completamente
+    - Bloqueado hasta que d1D2D3ApprovalStatus === 'approved'
+
+D5: enabled: isD123Approved
+    - Requiere: SOLO D1-D2-D3 aprobadas
+    - NO requiere D4 completada
+    - Bloqueado hasta que d1D2D3ApprovalStatus === 'approved'
+
+D6-D7: enabled: isD123Approved && workflowData?.d5Completed
+       - Requiere: D1-D2-D3 aprobadas Y D5 completada
+       - NO requiere D4
+
+D8: enabled: tabCompletionStatus.d5d6d7
+    - Requiere: D5-D6-D7 completadas
+
+Historial: SIEMPRE habilitado (enabled: true)
+
+VARIABLE CLAVE (línea 122):
+const isD123Approved = workflowData?.d1D2D3ApprovalStatus === 'approved';
+
+================================================================================
+  ESTRUCTURA DE DATOS EN BASE DE DATOS
+================================================================================
+
+Tabla: eightd_reports
+
+Columnas relevantes para aprobación D1-D2-D3:
+- d1_d2_d3_approval_status: 'draft' | 'pending_approval_1' | 'pending_approval_2' |
+                            'pending_approval_3' | 'approved'
+- current_approval_step: 0 | 1 | 2 | 3
+- approval_1_status: 'pending' | 'approved' | 'rejected'
+- approval_2_status: 'pending' | 'approved' | 'rejected'
+- approval_3_status: 'pending' | 'approved' | 'rejected'
+
+Reporte actual trabajando:
+- ID: 4
+- report_id: '8D-2025-0316'
+- title: 'TEST2'
+- Estado: APROBADO (después de la actualización)
+
+================================================================================
+  ARCHIVOS MODIFICADOS EN ESTA SESIÓN
+================================================================================
+
+1. C:\Users\The Eidrian\quality-alert-system\frontend\src\pages\8DWorkflow.js
+   - Restaurado menú D5 con 4 secciones separadas
+   - Corregida condición del split layout
+   - Mantenida estructura de tabs y lógica de habilitación
+
+2. Scripts temporales creados y eliminados:
+   - set_d123_approved.js (usado para actualizar estado de aprobación)
+
+================================================================================
+  ESTADO ACTUAL DEL SISTEMA
+================================================================================
+
+✅ FUNCIONALIDADES IMPLEMENTADAS:
+1. Menú lateral de navegación para D5 con 4 secciones
+2. Split layout (menú izquierdo, contenido derecho) SOLO en D5
+3. Layout normal para todos los demás tabs
+4. Navegación entre tabs desde el menú lateral
+5. Visualización de causas raíz y planes de acción en el menú
+6. Estado de aprobación visible en el menú
+7. D4 y D5 desbloqueadas (estado de aprobación actualizado en BD)
+
+✅ COMPILACIÓN:
+- Sin errores
+- 1 warning (variable uploadText no usada en línea 551 - no crítico)
+
+================================================================================
+  PRÓXIMOS PASOS / PENDIENTES
+================================================================================
+
+FUNCIONALIDADES DEL MENÚ QUE PODRÍAN MEJORARSE:
+1. Hacer que los items del menú sean clickeables para scroll automático
+   - Al hacer click en una causa raíz, scroll al contenido correspondiente
+   - Al hacer click en un plan, scroll al plan correspondiente
+
+2. Agregar indicador visual de qué sección está visible actualmente
+   - Highlight del item del menú según la posición del scroll
+
+3. Agregar contadores en el menú
+   - "🔴 Causas Raíz (2)"
+   - "🎯 Planes de Acción (5)"
+
+4. Mejorar interactividad
+   - Colapsar/expandir secciones del menú
+   - Filtros o búsqueda en el menú
+
+NOTAS IMPORTANTES PARA LA PRÓXIMA SESIÓN:
+- El menú está completamente funcional visualmente
+- La navegación entre tabs funciona desde el menú
+- Falta implementar scroll automático al hacer click en causas/planes
+- Verificar que todos los datos se muestren correctamente en el menú
+
+================================================================================
+  COMANDOS ÚTILES
+================================================================================
+
+INICIAR BACKEND:
+cd C:\Users\The Eidrian\quality-alert-system\backend
+node server.js
+
+INICIAR FRONTEND:
+cd C:\Users\The Eidrian\quality-alert-system\frontend
+npm start
+
+VER LOGS DEL BACKEND:
+(Se muestran en la terminal donde corre node server.js)
+
+VERIFICAR ESTADO DE APROBACIÓN:
+node C:\Users\The Eidrian\quality-alert-system\backend\check_users.js
+(Script de ejemplo - modificar según necesidad)
+
+ACCEDER A LA APLICACIÓN:
+http://localhost:3000
+
+ABRIR DEVTOOLS EN BROWSER:
+F12 o Ctrl+Shift+I
+
+================================================================================
+  DATOS DE CONTACTO / REFERENCIAS
+================================================================================
+
+Ruta del proyecto: C:\Users\The Eidrian\quality-alert-system
+
+Archivos clave:
+- Frontend principal: frontend/src/pages/8DWorkflow.js
+- Componente D5: frontend/src/components/8D/D5CorrectiveActions.js
+- Config DB: backend/config/database.js
+- Transformación de datos: backend/utils/caseTransform.js
+
+Base de datos:
+- Host: localhost
+- Puerto: 5432
+- Base de datos: apqp_system
+- Usuario: postgres
+
+================================================================================
+  FIN DEL RESUMEN
+================================================================================
+
+Última actualización: 24 de Diciembre 2025
+Próxima sesión: Continuar con mejoras de interactividad del menú D5
+
+RECORDATORIO: Siempre leer el PROTOCOLO OBLIGATORIO al inicio de cada sesión.

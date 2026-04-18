@@ -1,0 +1,646 @@
+// Servicio para manejar operaciones de clientes
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const clientService = {
+  // Obtener todos los clientes
+  getAllClients: async (filters = {}) => {
+    try {
+      console.log('🔄 Fetching clients from backend...');
+
+      // Construir query string con filtros
+      const queryParams = new URLSearchParams();
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.isActive !== undefined) queryParams.append('isActive', filters.isActive);
+
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/clients/list${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.clients) {
+        console.log('✅ Clients loaded from backend:', data.clients.length);
+        return {
+          clients: data.clients,
+          stats: data.stats
+        };
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error('❌ Error fetching clients from backend:', error);
+      throw error;
+    }
+  },
+
+  // Obtener un cliente por ID
+  getClientById: async (clientId) => {
+    try {
+      console.log(`🔄 Fetching client ${clientId} from backend...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.client) {
+        console.log('✅ Client loaded:', data.client.name);
+        return data.client;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error fetching client ${clientId}:`, error);
+      throw error;
+    }
+  },
+
+  // Crear un nuevo cliente
+  createClient: async (clientData) => {
+    try {
+      console.log('🔄 Creating new client...');
+      const response = await fetch(`${API_BASE_URL}/clients/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(clientData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.client) {
+        console.log('✅ Client created:', data.client.name);
+        return data.client;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error('❌ Error creating client:', error);
+      throw error;
+    }
+  },
+
+  // Actualizar un cliente
+  updateClient: async (clientId, clientData) => {
+    try {
+      console.log(`🔄 Updating client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(clientData)
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.client) {
+        console.log('✅ Client updated:', data.client.name);
+        return data.client;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error updating client ${clientId}:`, error);
+      throw error;
+    }
+  },
+
+  // Eliminar un cliente
+  deleteClient: async (clientId) => {
+    try {
+      console.log(`🔄 Deleting client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Client deleted');
+        return data.client;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error deleting client ${clientId}:`, error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // MÉTODOS DE DOCUMENTOS
+  // ============================================================================
+
+  // Subir un documento para un cliente
+  uploadDocument: async (clientId, file, title = '', description = '', uploadedBy = 'System') => {
+    try {
+      console.log(`🔄 Uploading document for client ${clientId}...`);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('uploadedBy', uploadedBy);
+
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/documents/upload`, {
+        method: 'POST',
+        body: formData
+        // No incluir Content-Type header, el navegador lo establecerá automáticamente con boundary
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.document) {
+        console.log('✅ Document uploaded:', data.document.fileName);
+        return data.document;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error uploading document:`, error);
+      throw error;
+    }
+  },
+
+  // Obtener todos los documentos de un cliente
+  getDocuments: async (clientId) => {
+    try {
+      console.log(`🔄 Fetching documents for client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/documents`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Documents loaded:', data.count);
+        return data.documents;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error fetching documents:`, error);
+      throw error;
+    }
+  },
+
+  // Eliminar un documento
+  deleteDocument: async (clientId, documentId) => {
+    try {
+      console.log(`🔄 Deleting document ${documentId} from client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Documento no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Document deleted');
+        return data.document;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error deleting document:`, error);
+      throw error;
+    }
+  },
+
+  // Helper: Formatear tamaño de archivo
+  formatFileSize: (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  },
+
+  // Helper: Obtener icono según tipo de archivo
+  getFileIcon: (fileType) => {
+    if (!fileType) return 'FileText';
+
+    if (fileType.includes('pdf')) return 'FileText';
+    if (fileType.includes('word') || fileType.includes('document')) return 'FileText';
+    if (fileType.includes('excel') || fileType.includes('spreadsheet')) return 'Sheet';
+    if (fileType.includes('image')) return 'Image';
+    if (fileType.includes('zip') || fileType.includes('rar')) return 'Archive';
+    if (fileType.includes('video')) return 'Video';
+
+    return 'FileText';
+  },
+
+  // ============================================================================
+  // MÉTODOS DE CONTACTOS
+  // ============================================================================
+
+  // Crear un contacto para un cliente
+  createContact: async (clientId, contactData) => {
+    try {
+      console.log(`🔄 Creating contact for client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/contacts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(contactData)
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.contact) {
+        console.log('✅ Contact created:', data.contact.name);
+        return data.contact;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error creating contact:`, error);
+      throw error;
+    }
+  },
+
+  // Actualizar un contacto
+  updateContact: async (clientId, contactId, contactData) => {
+    try {
+      console.log(`🔄 Updating contact ${contactId} for client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/contacts/${contactId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(contactData)
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Contacto no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.contact) {
+        console.log('✅ Contact updated:', data.contact.name);
+        return data.contact;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error updating contact:`, error);
+      throw error;
+    }
+  },
+
+  // Eliminar un contacto
+  deleteContact: async (clientId, contactId) => {
+    try {
+      console.log(`🔄 Deleting contact ${contactId} from client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/contacts/${contactId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Contacto no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Contact deleted');
+        return data.contact;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error deleting contact:`, error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // MÉTODOS DE PARTES (BOM - Bill of Materials)
+  // ============================================================================
+
+  // Obtener todas las partes de un cliente
+  getParts: async (clientId, activeOnly = false) => {
+    try {
+      console.log(`🔄 Fetching parts for client ${clientId}${activeOnly ? ' (active only)' : ''}...`);
+
+      const queryParams = activeOnly ? '?activeOnly=true' : '';
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/parts${queryParams}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Parts loaded:', data.total, `(${data.activeCount} active, ${data.inactiveCount} inactive)`);
+        return {
+          parts: data.parts,
+          total: data.total,
+          activeCount: data.activeCount,
+          inactiveCount: data.inactiveCount
+        };
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error fetching parts:`, error);
+      throw error;
+    }
+  },
+
+  // Crear una nueva parte para un cliente
+  createPart: async (clientId, partData) => {
+    try {
+      console.log(`🔄 Creating part for client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/parts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(partData)
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        if (response.status === 409) {
+          throw new Error('El número de parte ya existe para este cliente');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.part) {
+        console.log('✅ Part created:', data.part.partNumber);
+        return data.part;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error creating part:`, error);
+      throw error;
+    }
+  },
+
+  // Actualizar una parte
+  updatePart: async (clientId, partId, partData) => {
+    try {
+      console.log(`🔄 Updating part ${partId} for client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/parts/${partId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(partData)
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Parte no encontrada');
+        }
+        if (response.status === 409) {
+          throw new Error('El número de parte ya existe para este cliente');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.part) {
+        console.log('✅ Part updated:', data.part.partNumber);
+        return data.part;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error updating part:`, error);
+      throw error;
+    }
+  },
+
+  // Eliminar una parte
+  deletePart: async (clientId, partId) => {
+    try {
+      console.log(`🔄 Deleting part ${partId} from client ${clientId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/parts/${partId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Parte no encontrada');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Part deleted');
+        return true;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error deleting part:`, error);
+      throw error;
+    }
+  },
+
+  // Alternar estado activo/inactivo de una parte
+  togglePartActive: async (clientId, partId) => {
+    try {
+      console.log(`🔄 Toggling active status for part ${partId}...`);
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}/parts/${partId}/toggle-active`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Parte no encontrada');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.part) {
+        console.log(`✅ Part ${data.part.active ? 'activated' : 'deactivated'}`);
+        return data.part;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error toggling part active status:`, error);
+      throw error;
+    }
+  },
+
+  // Obtener TODAS las partes de TODOS los clientes (BOM Global)
+  getAllParts: async (activeOnly = false) => {
+    try {
+      console.log(`🔄 Fetching all parts from all clients${activeOnly ? ' (active only)' : ''}...`);
+
+      const queryParams = activeOnly ? '?activeOnly=true' : '';
+      const response = await fetch(`${API_BASE_URL}/clients/parts/all${queryParams}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ All parts loaded:', data.total, `(${data.activeCount} active, ${data.inactiveCount} inactive)`);
+        console.log('✅ Custom fields found:', data.allCustomFieldNames);
+        return {
+          parts: data.parts,
+          total: data.total,
+          activeCount: data.activeCount,
+          inactiveCount: data.inactiveCount,
+          allCustomFieldNames: data.allCustomFieldNames || []
+        };
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error fetching all parts:`, error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // MÉTODOS DE TIMELINE
+  // ============================================================================
+
+  // Obtener timeline de un cliente con filtros opcionales
+  getTimeline: async (clientId, filters = {}) => {
+    try {
+      console.log(`🔄 Fetching timeline for client ${clientId}...`);
+
+      // Construir query string con filtros
+      const queryParams = new URLSearchParams();
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+      if (filters.eventCategory) queryParams.append('eventCategory', filters.eventCategory);
+      if (filters.eventType) queryParams.append('eventType', filters.eventType);
+      if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/clients/${clientId}/timeline${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Cliente no encontrado');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ Timeline loaded:', data.count, 'events');
+        return data.timeline;
+      }
+
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error(`❌ Error fetching timeline:`, error);
+      throw error;
+    }
+  }
+};
+
+export default clientService;

@@ -1,0 +1,878 @@
+================================================================================
+  RESUMEN DE TRABAJO - SISTEMA DE ALERTAS DE CALIDAD (8D)
+  Fecha: 14 de Noviembre, 2025 - ACTUALIZADO 3:30 PM
+================================================================================
+
+OBJETIVOS COMPLETADOS HOY:
+---------------------------
+1. ✅ Arreglar dropdowns de usuarios (mostrar firstName, lastName, position, department)
+2. ✅ Fix error en cálculo de costos (reduce().toFixed)
+3. ✅ Remover funcionalidad TFT completa del sistema
+4. ✅ Mejorar sistema de atajos (Team Presets)
+5. ✅ Fix JSON.stringify para guardar atajos en PostgreSQL
+6. ✅ Interfaz compacta de atajos (grid 2×6)
+
+
+================================================================================
+CAMBIOS IMPLEMENTADOS - SESIÓN DE HOY
+================================================================================
+
+1. DROPDOWNS DE USUARIOS CORREGIDOS
+------------------------------------
+PROBLEMA:
+  Los dropdowns mostraban "undefined" porque usaban user.name y user.role
+  que no existen en la estructura de datos del backend.
+
+SOLUCIÓN:
+  ✅ Actualizado filtro de búsqueda (líneas 595-605)
+  ✅ Display de usuario seleccionado (líneas 672-677)
+  ✅ Lista de opciones del dropdown (líneas 779-787)
+
+AHORA MUESTRA:
+  - Nombre completo: firstName + lastName
+  - Posición: position
+  - Departamento: department
+  - Email: email
+
+CÓDIGO ACTUALIZADO:
+  📄 TeamAssignmentTab.js
+     - Filter: usa firstName, lastName, position, department
+     - Display: "FirstName LastName" + "Position • Department"
+     - Dropdown items: Nombre bold, posición y departamento, email
+
+
+2. FIX ERROR DE CÁLCULO DE COSTOS
+----------------------------------
+PROBLEMA:
+  Error: "selectedParts.reduce(...).toFixed is not a function"
+  Ocurría cuando selectedParts era undefined o el reduce retornaba null.
+
+SOLUCIÓN:
+  Línea 1999: Agregado optional chaining y parseFloat
+
+  ANTES:
+    ${selectedParts.reduce((total, part) => total + part.unitCost, 0).toFixed(2)}
+
+  AHORA:
+    ${(selectedParts?.reduce((total, part) =>
+      total + (parseFloat(part.unitCost) || 0), 0) || 0).toFixed(2)} USD
+
+
+3. REMOCIÓN COMPLETA DE TFT (TASK FORCE TEAM)
+----------------------------------------------
+ARCHIVOS MODIFICADOS:
+
+A) FRONTEND - UserManagement.js:
+   ❌ Removida columna TFT de la tabla
+   ❌ Removido checkbox de TFT membership
+   ❌ Removida función handleTFTToggle()
+   ✅ Columna ahora muestra "Atajos Guardados"
+
+B) FRONTEND - TeamAssignmentTab.js:
+   ❌ Removido estado useTFT y tftMembers
+   ❌ Removida sección de checkbox TFT
+   ❌ Removidas funciones fetchTFTMembers() y handleTFTToggle()
+   ✅ Solo queda sistema de atajos (Team Presets)
+
+C) BACKEND - usersEndpoints.js:
+   ❌ Removida función getTFTMembers()
+   ❌ Removida función updateTFTMembership()
+
+   Module exports ahora solo tiene:
+     - getUsersList
+     - updateUser
+     - getUserById
+
+D) BACKEND - server.js:
+   ❌ Removidas rutas:
+      - GET  /users/tft-members
+      - PUT  /users/:id/tft-membership
+
+
+4. MEJORA DEL SISTEMA DE ATAJOS (TEAM PRESETS)
+-----------------------------------------------
+CAMBIOS PRINCIPALES:
+
+A) LÍMITE AUMENTADO DE 3 A 12 ATAJOS:
+   📄 Backend - teamPresetsEndpoints.js (líneas 88-98)
+      - Validación actualizada a 12 atajos máximo
+      - Mensaje: "Máximo 12 atajos permitidos por usuario"
+
+B) UN SOLO BOTÓN "GUARDAR ATAJO":
+   📄 Frontend - TeamAssignmentTab.js (líneas 1751-1783)
+
+   ANTES: 3 botones fijos (Atajo 1, Atajo 2, Atajo 3)
+   AHORA: 1 botón dinámico que:
+     ✅ Pide nombre personalizado al guardar
+     ✅ Se deshabilita al llegar a 12 atajos
+     ✅ Muestra "⚠️ Límite alcanzado (12/12)"
+     ✅ Fecha por defecto: "Atajo [fecha actual]"
+
+C) FUNCIÓN DE ELIMINAR ATAJOS:
+   Nueva función handleDeletePreset() (líneas 1192-1223):
+     ✅ Confirmación antes de eliminar
+     ✅ DELETE request al backend
+     ✅ Recarga automática de lista
+     ✅ Mensaje de éxito/error
+
+D) INTERFAZ COMPACTA - GRID 2×6:
+   📄 Frontend - TeamAssignmentTab.js (líneas 1423-1520)
+
+   ESTRUCTURA:
+     - Display: CSS Grid con 6 columnas
+     - Máximo: 2 filas (12 atajos)
+     - Gap: 8px entre tarjetas
+
+   CADA TARJETA MUESTRA:
+     ✅ Nombre del atajo (con ellipsis si es largo)
+     ✅ Fecha corta (ej: "nov 14")
+     ✅ Botón verde 📥 (Cargar)
+     ✅ Botón rojo 🗑️ (Eliminar)
+     ✅ Hover effect: fondo verde claro + borde verde
+     ✅ Tooltips en hover
+
+   CONTADOR:
+     "X de 12 atajos guardados" (centrado abajo)
+
+E) FUNCIÓN DE CARGAR ATAJOS:
+   Función handleLoadPreset() (líneas 1143-1190):
+     ✅ Busca preset por ID
+     ✅ Convierte arrays a estructura 1+3
+     ✅ Carga las 3 secciones (Issue, Countermeasure, Confirmation)
+     ✅ Mensaje de confirmación con conteo de miembros
+     ✅ Marca hasManualAssignments = true
+
+
+5. FIX JSON.STRINGIFY PARA POSTGRESQL
+--------------------------------------
+PROBLEMA:
+  PostgreSQL recibía arrays de JavaScript y trataba de convertirlos
+  automáticamente, creando JSON inválido como {"1"} en lugar de [1].
+
+ERROR ORIGINAL:
+  invalid input syntax for type json
+  Expected ":", but found "}"
+  JSON data, line 1: {"1"}
+
+SOLUCIÓN:
+  📄 Backend - teamPresetsEndpoints.js
+
+  A) CREATE PRESET (línea 121):
+     ANTES:
+       [userId, name, issueUserIds, countermeasureUserIds, confirmationUserIds]
+
+     AHORA:
+       [userId, name,
+        JSON.stringify(issueUserIds),
+        JSON.stringify(countermeasureUserIds),
+        JSON.stringify(confirmationUserIds)]
+
+  B) UPDATE PRESET (líneas 188, 193, 198):
+     ANTES:
+       values.push(issueUserIds);
+
+     AHORA:
+       values.push(JSON.stringify(issueUserIds));
+
+RESULTADO:
+  ✅ Los arrays se guardan correctamente como JSON strings
+  ✅ PostgreSQL puede parsearlos como JSON válido
+  ✅ No más errores al guardar/actualizar atajos
+
+
+================================================================================
+ESTADO ACTUAL DEL SISTEMA
+================================================================================
+
+COMPILACIÓN:
+  ✅ Frontend: Compilando exitosamente
+  ✅ Backend: Ejecutando sin errores en puerto 5000
+  ✅ Sin errores de sintaxis
+
+WARNINGS (No críticos):
+  - Line 2:8:   'eightDService' is defined but never used
+  - Line 8:10:  'currentStep' is assigned a value but never used
+  - Line 8:23:  'setCurrentStep' is assigned a value but never used
+  - Line 571:6: React Hook useEffect missing dependency 'getFilteredUsers'
+
+SERVIDORES:
+  🟢 Backend:  http://localhost:5000
+  🟢 Frontend: http://localhost:3000
+
+
+================================================================================
+ARQUITECTURA - SISTEMA DE ATAJOS
+================================================================================
+
+FRONTEND (TeamAssignmentTab.js):
+  Estado: teamPresets (array de objetos)
+
+  Funciones principales:
+    - handleSaveAsPreset()     → Guarda nuevo atajo
+    - handleLoadPreset(id)     → Carga atajo por ID
+    - handleDeletePreset(id)   → Elimina atajo
+
+  useEffect:
+    - Carga atajos al montar componente
+    - Endpoint: GET /users/:id/team-presets
+
+BACKEND (teamPresetsEndpoints.js):
+  Endpoints:
+    - GET    /users/:id/team-presets          → getUserTeamPresets()
+    - POST   /users/:id/team-presets          → createTeamPreset()
+    - PUT    /users/:id/team-presets/:id      → updateTeamPreset()
+    - DELETE /users/:id/team-presets/:id      → deleteTeamPreset()
+
+  Validaciones:
+    ✅ Máximo 12 presets por usuario
+    ✅ Nombre no duplicado
+    ✅ Arrays de userIds requeridos
+    ✅ JSON.stringify antes de INSERT/UPDATE
+
+BASE DE DATOS:
+  Tabla: team_presets
+    - id (serial)
+    - user_id (integer)
+    - preset_name (varchar)
+    - issue_user_ids (json)            → Array de IDs [1,2,3,4]
+    - countermeasure_user_ids (json)   → Array de IDs [5,6,7,8]
+    - confirmation_user_ids (json)     → Array de IDs [9,10,11,12]
+    - created_at (timestamp)
+    - updated_at (timestamp)
+
+
+================================================================================
+INTERFAZ DE USUARIO - ATAJOS
+================================================================================
+
+SECCIÓN "CARGAR ATAJO GUARDADO":
+  ┌────────────────────────────────────────────────────────────┐
+  │ 🎯 Cargar Atajo Guardado                                   │
+  ├──────────┬──────────┬──────────┬──────────┬──────────┬─────┤
+  │ Equipo QA│ Config 1 │ Team Dev │ 8D Std   │ Emergency│ ... │
+  │ nov 14   │ nov 13   │ nov 12   │ nov 11   │ nov 10   │     │
+  │ 📥  🗑️   │ 📥  🗑️   │ 📥  🗑️   │ 📥  🗑️   │ 📥  🗑️   │     │
+  ├──────────┼──────────┼──────────┼──────────┼──────────┼─────┤
+  │ Standard │ QA Team  │ Prod     │ Dev Team │ ...      │ ... │
+  │ nov 9    │ nov 8    │ nov 7    │ nov 6    │          │     │
+  │ 📥  🗑️   │ 📥  🗑️   │ 📥  🗑️   │ 📥  🗑️   │          │     │
+  └──────────┴──────────┴──────────┴──────────┴──────────┴─────┘
+                    10 de 12 atajos guardados
+
+SECCIÓN "GUARDAR COMO ATAJO":
+  ┌────────────────────────────────────────────────────────────┐
+  │ 💾 Guardar Como Atajo                                      │
+  │ ┌────────────────────────────────────────────────────────┐ │
+  │ │        💾 Guardar Nuevo Atajo                          │ │
+  │ └────────────────────────────────────────────────────────┘ │
+  │ Guarda los miembros asignados en las 3 secciones          │
+  └────────────────────────────────────────────────────────────┘
+
+ESTADO CUANDO LÍMITE ALCANZADO:
+  Botón muestra: "⚠️ Límite alcanzado (12/12)"
+  Botón disabled con cursor: not-allowed
+  Background: gris (#9ca3af)
+
+
+================================================================================
+FLUJO DE USUARIO - ATAJOS
+================================================================================
+
+1. GUARDAR NUEVO ATAJO:
+   a. Usuario completa asignación de equipo (Issue, Countermeasure, Confirmation)
+   b. Click en "💾 Guardar Nuevo Atajo"
+   c. Aparece prompt pidiendo nombre
+   d. Si hay menos de 12 atajos:
+      ✅ POST al backend
+      ✅ Recarga lista de atajos
+      ✅ Alert: "✅ Atajo [nombre] guardado exitosamente"
+   e. Si ya hay 12 atajos:
+      ❌ Botón deshabilitado
+      ⚠️ Mensaje: "Has alcanzado el límite de 12 atajos"
+
+2. CARGAR ATAJO:
+   a. Click en botón 📥 de cualquier tarjeta
+   b. handleLoadPreset() ejecuta:
+      - Busca preset por ID
+      - Convierte userIds a objetos User
+      - Estructura en formato 1+3 (primary + 3 approvers)
+      - setEscalationData() con las 3 secciones
+   c. Alert de confirmación:
+      "✅ Atajo [nombre] cargado:
+       📋 Issue: X miembros
+       🔧 Countermeasure: X miembros
+       ✔️ Confirmation: X miembros"
+
+3. ELIMINAR ATAJO:
+   a. Click en botón 🗑️
+   b. Confirmación: "¿Estás seguro de eliminar el atajo [nombre]?"
+   c. Si confirma:
+      ✅ DELETE al backend
+      ✅ Recarga lista
+      ✅ Alert: "✅ Atajo [nombre] eliminado exitosamente"
+   d. Si cancela:
+      ❌ No hace nada
+
+
+================================================================================
+PRÓXIMA FUNCIONALIDAD - SISTEMA DE APROBACIONES
+================================================================================
+
+OBJETIVO:
+  Implementar flujo de aprobaciones en cascada para D1-D2-D3.
+
+FLUJO DE APROBACIÓN:
+
+  ISSUE SECTION:
+    Emisor → Aprobador 1 → Aprobador 2 → Aprobador 3 → ✅ Aprobado
+      ↓         ↓              ↓              ↓
+      ←─────────┴──────────────┴──────────────┘
+      (Cualquiera puede rechazar y regresa al paso anterior)
+
+  COUNTERMEASURE SECTION:
+    Primary → Aprobador 1 → Aprobador 2 → Aprobador 3 → ✅ Aprobado
+      (Mismo flujo de rechazo)
+
+  CONFIRMATION SECTION:
+    Primary → Aprobador 1 → Aprobador 2 → Aprobador 3 → ✅ Cerrado
+
+REGLAS:
+  1. Si no hay aprobador asignado, se salta al siguiente
+  2. Si no hay ningún aprobador, pasa a la siguiente fase automáticamente
+  3. Cada rechazo debe incluir comentario obligatorio
+  4. Los aprobadores pueden EDITAR además de aprobar/rechazar
+  5. Al rechazar, regresa al paso ANTERIOR (no siempre al emisor)
+  6. Emisor siempre puede ver estado actual y quién lo tiene
+
+ESTADOS DEL 8D (15 estados):
+  1.  draft                      - Borrador inicial
+  2.  issue_approval_1           - Esperando Issue Aprobador 1
+  3.  issue_approval_2           - Esperando Issue Aprobador 2
+  4.  issue_approval_3           - Esperando Issue Aprobador 3
+  5.  issue_approved             - Issue completado
+  6.  countermeasure_in_progress - Countermeasure Primary trabajando
+  7.  countermeasure_approval_1  - Esperando Countermeasure Aprobador 1
+  8.  countermeasure_approval_2  - Esperando Countermeasure Aprobador 2
+  9.  countermeasure_approval_3  - Esperando Countermeasure Aprobador 3
+  10. countermeasure_approved    - Countermeasure completado
+  11. confirmation_in_progress   - Confirmation Primary trabajando
+  12. confirmation_approval_1    - Esperando Confirmation Aprobador 1
+  13. confirmation_approval_2    - Esperando Confirmation Aprobador 2
+  14. confirmation_approval_3    - Esperando Confirmation Aprobador 3
+  15. closed                     - 8D completado y cerrado
+
+TABLA A CREAR:
+  eightd_approvals:
+    - id (serial)
+    - report_id (integer) → FK a eightd_reports
+    - section (varchar)   → 'issue', 'countermeasure', 'confirmation'
+    - approver_level (int) → 1, 2, 3 (qué aprobador es)
+    - user_id (integer)   → Quién aprobó/rechazó
+    - action (varchar)    → 'approved', 'rejected'
+    - comments (text)     → Razón de rechazo (obligatorio si rejected)
+    - created_at (timestamp)
+
+ENDPOINTS A CREAR:
+  - POST /8d/reports/:id/approve
+    Body: { section, level, comments? }
+
+  - POST /8d/reports/:id/reject
+    Body: { section, level, comments }  // comments obligatorio
+
+  - GET /8d/reports/:id/approval-status
+    Response: { current_state, pending_approver, history[] }
+
+UI A IMPLEMENTAR:
+  1. Botón "Completar D1-D2-D3" que envía a aprobación
+  2. Badge de estado visible en dashboard
+  3. Modal de rechazo con textarea obligatorio
+  4. Timeline de aprobaciones (quién aprobó cuándo)
+  5. Notificaciones in-app (sin email por ahora)
+
+PENDIENTE:
+  - Sistema de correos electrónicos (más adelante)
+  - Por ahora solo lógica de estados y UI
+
+
+================================================================================
+ARCHIVOS MODIFICADOS HOY
+================================================================================
+
+FRONTEND:
+  📄 src/components/8D/TeamAssignmentTab.js
+     - Líneas 595-605:   Filter de usuarios corregido
+     - Líneas 672-677:   Display de usuario seleccionado
+     - Líneas 779-787:   Lista de opciones del dropdown
+     - Línea 1999:       Cálculo de costos con optional chaining
+     - Líneas 59-64:     Removido estado TFT
+     - Líneas 1143-1190: handleLoadPreset()
+     - Líneas 1192-1223: handleDeletePreset()
+     - Líneas 1135-1141: handleSaveAsPreset() actualizado
+     - Líneas 1423-1520: Grid compacto 2×6 de atajos
+     - Líneas 1751-1783: Botón único "Guardar Atajo"
+
+  📄 src/pages/UserManagement.js
+     - Removida columna TFT
+     - Removido checkbox TFT
+     - Removida función handleTFTToggle()
+     - Actualizada columna a "Atajos Guardados"
+
+BACKEND:
+  📄 endpoints/usersEndpoints.js
+     - Removida función getTFTMembers()
+     - Removida función updateTFTMembership()
+     - Module exports actualizado
+
+  📄 endpoints/teamPresetsEndpoints.js
+     - Línea 88-98:  Límite cambiado de 3 a 12
+     - Línea 121:    JSON.stringify en CREATE
+     - Líneas 188, 193, 198: JSON.stringify en UPDATE
+
+  📄 server.js
+     - Removidas rutas TFT:
+       - GET  /users/tft-members
+       - PUT  /users/:id/tft-membership
+
+
+================================================================================
+TESTING RECOMENDADO
+================================================================================
+
+ATAJOS (TEAM PRESETS):
+  1. ✅ Guardar un atajo con nombre personalizado
+  2. ✅ Cargar el atajo y verificar que carga las 3 secciones
+  3. ✅ Guardar hasta 12 atajos diferentes
+  4. ✅ Verificar que botón se deshabilita al llegar a 12
+  5. ✅ Eliminar un atajo
+  6. ✅ Verificar contador "X de 12 atajos guardados"
+  7. ✅ Hover sobre tarjetas (efecto verde)
+  8. ✅ Tooltips de botones funcionan
+
+DROPDOWNS DE USUARIOS:
+  1. ✅ Verificar que muestra firstName + lastName
+  2. ✅ Verificar que muestra position
+  3. ✅ Verificar que muestra department
+  4. ✅ Búsqueda por nombre funciona
+  5. ✅ Búsqueda por posición funciona
+
+CÁLCULO DE COSTOS:
+  1. ✅ Seleccionar partes y verificar cálculo
+  2. ✅ No seleccionar partes (debe mostrar $0.00)
+  3. ✅ Partes sin costo (debe sumar 0)
+
+
+================================================================================
+COMANDOS DE DESARROLLO
+================================================================================
+
+INICIAR SERVIDORES:
+  Backend:  cd C:\Users\The Eidrian\quality-alert-system\backend && node server.js
+  Frontend: cd C:\Users\The Eidrian\quality-alert-system\frontend && npm start
+
+VERIFICAR ESTADO:
+  git status
+  git diff
+
+
+================================================================================
+CONTACTO Y SOPORTE
+================================================================================
+
+DESARROLLADO POR: Claude Code (Anthropic)
+FECHA: 14 de Noviembre, 2025 - Actualizado 3:30 PM
+VERSIÓN: 2.0 - Sistema de Atajos Mejorado + Preparación para Aprobaciones
+
+DOCUMENTACIÓN PREVIA:
+  - Resumen.11.13.2025_FINAL.txt (migración PostgreSQL)
+  - Sistema completo de 8D con workflow de 3 tabs
+
+================================================================================
+
+
+================================================================================
+SESIÓN ADICIONAL - 14 de Noviembre, 2025 (Tarde)
+================================================================================
+
+OBJETIVOS COMPLETADOS EN ESTA SESIÓN:
+--------------------------------------
+1. ✅ Compactar tabla de inventario de partes afectadas
+2. ✅ Actualizar cálculo automático de costo estimado total
+3. ✅ Eliminar panel redundante de impacto total
+4. ✅ Implementar sección de evidencia visual (fotos No Good y OK)
+5. ✅ Implementar sección de documentos adjuntos
+6. ✅ Implementar D3 - Acciones de Contención Inmediata completo
+
+
+================================================================================
+1. COMPACTACIÓN DE TABLA DE INVENTARIO
+================================================================================
+
+ARCHIVO MODIFICADO: PartsInventoryTable.js
+
+CAMBIOS REALIZADOS:
+-------------------
+✅ Implementado table-layout: fixed con colgroup para anchos precisos
+✅ Headers simplificados a solo emojis (🏭, ⚙️, 🚚, 👤) para ahorrar espacio
+✅ Columnas de cantidad reducidas a 70px de ancho
+✅ Inputs reducidos a 60px con padding mínimo (px-1)
+✅ Fuentes reducidas de text-sm a text-xs en toda la tabla
+✅ Celdas calculadas y fila de totales con padding reducido
+
+ESTRUCTURA DE COLUMNAS:
+  - # (índice): 40px
+  - Número de Parte: 140px
+  - Descripción: auto (mínimo 180px)
+  - Cantidades (🏭⚙️🚚👤): 70px cada una
+  - Total Afectado: 70px
+  - Costo Unitario: 85px
+  - Impacto Total: 95px
+
+RESULTADO:
+  Los números de parte y descripciones ahora caben en una sola línea
+  sin desbordamiento ni wrapping.
+
+
+================================================================================
+2. ACTUALIZACIÓN DE COSTO ESTIMADO TOTAL
+================================================================================
+
+ARCHIVO MODIFICADO: TeamAssignmentTab.js (líneas 1946-1954)
+
+ANTES:
+  - Solo sumaba unitCost de cada parte
+  - Mostraba "Basado en X partes seleccionadas"
+
+AHORA:
+  - Suma totalCostImpact de cada parte (cantidad × costo unitario)
+  - Muestra "Basado en X piezas afectadas"
+  - Se actualiza automáticamente cuando el usuario ingresa cantidades
+
+CÓDIGO IMPLEMENTADO:
+  Costo Total:
+    selectedParts?.reduce((total, part) =>
+      total + (parseFloat(part.totalCostImpact) || 0), 0)
+
+  Texto descriptivo:
+    "Basado en {totalAffectedQty} piezas afectadas"
+
+
+================================================================================
+3. ELIMINACIÓN DE PANEL REDUNDANTE
+================================================================================
+
+ARCHIVO MODIFICADO: PartsInventoryTable.js (líneas 233-252 eliminadas)
+
+ELIMINADO:
+  ❌ Panel "Impacto Total Estimado" con:
+     - Ícono 💰
+     - Total de piezas afectadas
+     - Costo total en rojo grande
+     - Texto "USD"
+
+RAZÓN:
+  Era redundante con el recuadro verde "Costo Estimado Total"
+  que aparece arriba en la interfaz.
+
+
+================================================================================
+4. EVIDENCIA VISUAL - FOTOS NO GOOD Y OK
+================================================================================
+
+ARCHIVO MODIFICADO: TeamAssignmentTab.js
+
+NUEVOS ESTADOS (líneas 92-94):
+  const [photoNoGood, setPhotoNoGood] = useState(null);
+  const [photoOK, setPhotoOK] = useState(null);
+
+HANDLERS AGREGADOS (líneas 505-538):
+  - handlePhotoNoGoodChange(): Valida y carga foto del problema
+  - handlePhotoOKChange(): Valida y carga foto de referencia
+  - removePhotoNoGood(): Elimina foto No Good
+  - removePhotoOK(): Elimina foto OK
+
+INTERFAZ IMPLEMENTADA (líneas 2048-2214):
+
+  📸 EVIDENCIA VISUAL
+  ┌─────────────────────────┬─────────────────────────┐
+  │  ❌ Foto No Good        │  ✅ Foto OK             │
+  │  (Problema)             │  (Referencia)           │
+  │                         │                         │
+  │  [📷 Click para         │  [📷 Click para         │
+  │   seleccionar imagen]   │   seleccionar imagen]   │
+  │                         │                         │
+  │  O preview de imagen    │  O preview de imagen    │
+  │  con botón × para       │  con botón × para       │
+  │  eliminar               │  eliminar               │
+  └─────────────────────────┴─────────────────────────┘
+
+CARACTERÍSTICAS:
+  ✅ Cuadro rojo (No Good) y verde (OK) para fácil identificación
+  ✅ Validación: solo acepta archivos de tipo imagen
+  ✅ Preview automático de la imagen cargada
+  ✅ Muestra nombre del archivo debajo de la imagen
+  ✅ Botón × en esquina superior para eliminar
+  ✅ Mensaje de error si se intenta cargar archivo no válido
+
+
+================================================================================
+5. DOCUMENTOS ADJUNTOS
+================================================================================
+
+ARCHIVO MODIFICADO: TeamAssignmentTab.js
+
+NUEVO ESTADO (línea 94):
+  const [attachedDocuments, setAttachedDocuments] = useState([]);
+
+HANDLERS AGREGADOS (líneas 523-530):
+  - handleDocumentsChange(): Agrega múltiples archivos
+  - removeDocument(index): Elimina documento específico
+
+INTERFAZ IMPLEMENTADA (líneas 2217-2303):
+
+  📎 DOCUMENTOS ADJUNTOS
+  ┌────────────────────────────────────────────┐
+  │  [📁 Adjuntar Archivos]  (botón azul)     │
+  │                                            │
+  │  Archivos adjuntos (3):                   │
+  │  ┌────────────────────────────────────┐   │
+  │  │ 📄 documento.pdf      [Eliminar]   │   │
+  │  │    125.3 KB                        │   │
+  │  ├────────────────────────────────────┤   │
+  │  │ 📄 diagrama.xlsx      [Eliminar]   │   │
+  │  │    87.2 KB                         │   │
+  │  ├────────────────────────────────────┤   │
+  │  │ 📄 reporte.docx       [Eliminar]   │   │
+  │  │    234.8 KB                        │   │
+  │  └────────────────────────────────────┘   │
+  └────────────────────────────────────────────┘
+
+CARACTERÍSTICAS:
+  ✅ Botón principal para adjuntar múltiples archivos
+  ✅ Acepta cualquier tipo de archivo
+  ✅ Lista de documentos con nombre y tamaño en KB
+  ✅ Botón "Eliminar" individual para cada documento
+  ✅ Contador de archivos adjuntos
+  ✅ Diseño limpio con bordes azules
+
+
+================================================================================
+6. D3 - ACCIONES DE CONTENCIÓN INMEDIATA
+================================================================================
+
+ARCHIVO MODIFICADO: TeamAssignmentTab.js
+
+NUEVO ESTADO (líneas 96-108):
+  const [d3Data, setD3Data] = useState({
+    detectionPoints: {
+      duringProcess: { yes: false, no: false },
+      afterManufacture: { yes: false, no: false },
+      priorDespatch: { yes: false, no: false }
+    },
+    nonDetectionReasons: ['', '', '', '', ''],  // 5 Why's
+    suspectMaterialDisposal: '',
+    conformanceMaterialGuarantee: '',
+    requiresRework: null,  // true, false, or null
+    reworkUnitCost: 0
+  });
+
+HANDLERS AGREGADOS (líneas 554-596):
+  - handleDetectionPointChange(): Maneja checkboxes de detección
+  - handleWhyChange(): Maneja los 5 Por qués
+  - handleD3TextChange(): Maneja campos de texto
+  - handleReworkChange(): Maneja selección de retrabajo
+  - handleReworkCostChange(): Maneja costo de retrabajo
+
+SECCIONES IMPLEMENTADAS:
+-------------------------
+
+A) ¿DÓNDE DEBERÍAN HABERSE DETECTADO LAS PARTES NO CONFORMES?
+   (líneas 2373-2486)
+
+   Tabla con 3 puntos de detección:
+   ┌──────────────────────────────────────┬─────┬─────┐
+   │ Punto de Detección                   │ Sí  │ No  │
+   ├──────────────────────────────────────┼─────┼─────┤
+   │ Durante el proceso/manufactura       │ [✓] │ [ ] │
+   │ Después de manufactura (ej. Insp.)   │ [ ] │ [✓] │
+   │ Antes del despacho                   │ [✓] │ [ ] │
+   └──────────────────────────────────────┴─────┴─────┘
+
+B) RAZÓN DE NO-DETECCIÓN (5 POR QUÉS)
+   (líneas 2488-2521)
+
+   1. ¿Por qué?  [________________________________]
+   2. ¿Por qué?  [________________________________]
+   3. ¿Por qué?  [________________________________]
+   4. ¿Por qué?  [________________________________]
+   5. ¿Por qué?  [________________________________]
+
+C) DISPOSICIÓN Y GARANTÍA DE MATERIAL
+   (líneas 2523-2543)
+
+   - ¿Cómo se va a disponer del material sospechoso? *
+     [Textarea con placeholder descriptivo]
+
+   - ¿Cómo se va a estar garantizando que el material esté conforme? *
+     [Textarea con placeholder descriptivo]
+
+D) ¿IMPLICA RETRABAJO?
+   (líneas 2545-2590)
+
+   ( ) SÍ    ( ) NO
+
+E) COSTOS DE RETRABAJO (solo si SÍ)
+   (líneas 2592-2639)
+
+   Panel amarillo con:
+   ┌────────────────────────────────────────────────┐
+   │  💰 Costos de Retrabajo                       │
+   │                                                │
+   │  Costo Unitario:  [____] USD                  │
+   │  Costo Total:     $XXX.XX USD (calculado)     │
+   └────────────────────────────────────────────────┘
+
+   CÁLCULO AUTOMÁTICO:
+     Costo Total = Costo Unitario × Total Piezas Afectadas
+
+F) COSTO REAL DE AFECTACIÓN
+   (líneas 2641-2702)
+
+   Panel destacado que cambia de color según selección:
+
+   SI NO HAY RETRABAJO (panel rojo):
+   ┌────────────────────────────────────────────────┐
+   │  💵 Costo Real de Afectación                  │
+   │  Basado en costo total de partes              │
+   │                              $X,XXX.XX USD     │
+   └────────────────────────────────────────────────┘
+
+   SI HAY RETRABAJO (panel azul):
+   ┌────────────────────────────────────────────────┐
+   │  💵 Costo Real de Afectación                  │
+   │  Basado en costo de retrabajo                 │
+   │                              $X,XXX.XX USD     │
+   └────────────────────────────────────────────────┘
+
+   LÓGICA DE CÁLCULO:
+     - requiresRework === false:
+       Usa totalCostImpact de partes del inventario
+
+     - requiresRework === true:
+       Usa reworkUnitCost × totalAffectedQty
+
+
+================================================================================
+TRADUCCIONES REALIZADAS
+================================================================================
+
+TEXTOS TRADUCIDOS DE INGLÉS A ESPAÑOL:
+  ✅ "Where should..." → "¿Dónde deberían haberse detectado...?"
+  ✅ "Detection Point" → "Punto de Detección"
+  ✅ "Yes" / "No" → "Sí" / "No"
+  ✅ "During process/manufacture" → "Durante el proceso/manufactura"
+  ✅ "After manufacture..." → "Después de manufactura (ej. Inspección Final)"
+  ✅ "Prior despatch" → "Antes del despacho"
+  ✅ "Reason for non-detection" → "Razón de no-detección"
+  ✅ "Why?" → "¿Por qué?"
+  ✅ "YES" / "NO" → "SÍ" / "NO"
+
+
+================================================================================
+ARCHIVOS MODIFICADOS EN ESTA SESIÓN
+================================================================================
+
+FRONTEND:
+---------
+1. src/components/8D/PartsInventoryTable.js
+   - Líneas 68-80: Agregado colgroup con anchos fijos
+   - Líneas 106-117: Simplificado headers a emojis
+   - Líneas 138-183: Reducido tamaño de inputs
+   - Líneas 185-228: Reducido tamaño de celdas calculadas y totales
+   - Líneas 233-252: Eliminado panel redundante
+
+2. src/components/8D/TeamAssignmentTab.js
+   - Líneas 92-94: Agregado estados para fotos
+   - Líneas 96-108: Agregado estado d3Data
+   - Líneas 505-596: Agregado handlers para fotos, docs y D3
+   - Líneas 1946-1954: Actualizado cálculo de costo estimado
+   - Líneas 2048-2303: Agregado evidencia visual y documentos
+   - Líneas 2371-2702: Implementado sección D3 completa
+
+BACKEND:
+--------
+Ningún cambio en backend en esta sesión.
+(Los datos se guardarán cuando se implemente el endpoint de guardado)
+
+
+================================================================================
+PRÓXIMOS PASOS SUGERIDOS
+================================================================================
+
+1. BACKEND - GUARDAR DATOS DE D3:
+   - Actualizar eightDEndpoints.js para incluir:
+     * d3_detection_points (JSON)
+     * d3_non_detection_reasons (JSON array)
+     * d3_suspect_material_disposal (TEXT)
+     * d3_conformance_guarantee (TEXT)
+     * d3_requires_rework (BOOLEAN)
+     * d3_rework_unit_cost (DECIMAL)
+     * d3_real_impact_cost (DECIMAL - calculado)
+
+2. BACKEND - GUARDAR FOTOS Y DOCUMENTOS:
+   - Implementar upload de archivos (multer)
+   - Crear carpeta uploads/ en backend
+   - Guardar rutas en base de datos
+   - Servir archivos estáticos
+
+3. DATABASE - MIGRACIÓN PARA D3:
+   - Crear migración add_d3_fields.sql
+   - Agregar campos a eightd_reports
+
+4. FRONTEND - VALIDACIONES:
+   - Validar que se complete D3 antes de guardar
+   - Validar formato de fotos (jpg, png, etc.)
+   - Validar tamaño máximo de archivos
+
+5. UI/UX - MEJORAS:
+   - Indicador de progreso de sección D3
+   - Tooltips explicativos en cada campo
+   - Confirmación antes de eliminar documentos
+
+
+================================================================================
+ESTADO ACTUAL DEL SISTEMA
+================================================================================
+
+FUNCIONALIDAD COMPLETA:
+✅ D0 - Preparación y Escalamiento
+✅ D1 - Establecer el Equipo
+✅ D2 - Describir el Problema
+   ├─ Selección de cliente, proyecto y partes
+   ├─ Tabla de inventario de partes afectadas
+   ├─ Cálculo automático de costos
+   ├─ Evidencia visual (fotos No Good y OK)
+   └─ Documentos adjuntos
+✅ D3 - Implementar Acciones de Contención Inmediata
+   ├─ Puntos de detección
+   ├─ 5 Por qués
+   ├─ Disposición de material
+   ├─ Garantía de conformidad
+   └─ Cálculo de costos de retrabajo
+⏳ D4 - Identificar Causa Raíz (pendiente)
+⏳ D5 - Elegir Acciones Correctivas (pendiente)
+⏳ D6 - Implementar Acciones Correctivas (pendiente)
+⏳ D7 - Prevenir Recurrencia (pendiente)
+⏳ D8 - Felicitar al Equipo (pendiente)
+
+SISTEMA DE APROBACIONES:
+✅ Tabla eightd_approvals creada
+✅ 15 estados implementados
+✅ Endpoints de aprobación/rechazo
+✅ UI con modales y timeline
+✅ Integrado en 8DWorkflow.js
+
+
+
+================================================================================
+FIN DEL RESUMEN - ACTUALIZADO 7:00 PM
+================================================================================

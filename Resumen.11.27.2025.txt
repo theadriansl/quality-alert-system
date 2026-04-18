@@ -1,0 +1,519 @@
+================================================================================
+RESUMEN DE TRABAJO - SISTEMA DE ALERTAS DE CALIDAD 8D
+Fecha: 27 de Noviembre de 2025
+================================================================================
+
+PROTOCOLO DE INTERACCIÓN:
+------------------------
+- Siempre revisar este documento al iniciar sesión
+- NO hacer cambios sin leer este resumen primero
+- Actualizar este archivo al finalizar cada sesión
+- Usar nombres descriptivos para funciones y variables
+- Mantener código limpio y comentado en español
+
+================================================================================
+OBJETIVO PRINCIPAL DEL PROYECTO
+================================================================================
+
+Sistema de gestión de reportes 8D (8 Disciplinas) para resolución de problemas
+de calidad con:
+- Workflow de aprobación secuencial de 3 niveles
+- Trazabilidad completa con audit log
+- Control de permisos basado en roles y rutas de escalación
+- Historial detallado de todos los cambios
+
+================================================================================
+TRABAJO COMPLETADO HOY (27 NOV 2025)
+================================================================================
+
+✅ 1. SISTEMA DE AUDITORÍA Y TRAZABILIDAD
+------------------------------------------
+**Problema:** No había historial de cambios en los reportes 8D
+
+**Solución Implementada:**
+
+A) Backend - Base de datos y endpoints:
+   - Creada tabla `eightd_audit_log` (migration)
+     * Columnas: id, report_id, action_type, action_category, section_name,
+                 user_id, user_name, description, old_value, new_value,
+                 ip_address, user_agent, created_at
+
+   - Creado `/backend/utils/auditLog.js`
+     * Función `logAction()` - registra cualquier acción
+     * Función `logApproval()` - registra aprobaciones
+     * Función `logRejection()` - registra rechazos
+     * Función `getAuditLog()` - obtiene historial con filtros
+
+   - Creado `/backend/endpoints/auditLogEndpoints.js`
+     * GET /8d/reports/:reportId/audit-log - obtiene audit log completo
+
+   - Integrado logging en `/backend/endpoints/sequentialApprovalEndpoints.js`
+     * approveStep1/2/3 ahora registran en audit log
+     * rejectStep1/2/3 ahora registran en audit log
+
+   - Añadida ruta en `/backend/server.js` línea 201
+
+B) Frontend - Interfaz de historial:
+   - Actualizado `/frontend/src/components/8D/HistoryTab.js`
+     * Fetch de audit log desde backend
+     * Panel de estadísticas (eventos, aprobaciones, rechazos, modificaciones)
+     * Timeline visual con iconos y colores por tipo de evento
+     * Muestra: usuario, fecha/hora, descripción, comentarios
+     * Fallback a timeline básico si falla el audit log
+
+   - Backfill de datos históricos
+     * Script ejecutado para insertar eventos de aprobación existentes
+     * Report 8D-2025-0316 ahora tiene 4 eventos:
+       - Creación (Adrian Salazar - 22 Nov 2025)
+       - Aprobación Nivel 1 (Robert Robert - 26 Nov 2025)
+       - Aprobación Nivel 2 (Production Supervisor - 26 Nov 2025)
+       - Aprobación Nivel 3 (Quality Analyst - 26 Nov 2025)
+
+**Estado:** ✅ FUNCIONANDO CORRECTAMENTE
+
+================================================================================
+
+✅ 2. BUG CRÍTICO: USUARIO NO SE GUARDABA EN LOCALSTORAGE
+----------------------------------------------------------
+**Problema:**
+Al navegar de Dashboard a 8D Workflow, el usuario se perdía, causando:
+- localStorage.getItem('user') → null
+- currentUserId → undefined
+- Todas las secciones bloqueadas para todos los usuarios
+
+**Causa Raíz:**
+En `/frontend/src/context/AuthContext.js`:
+- Función login() guardaba el token: `localStorage.setItem('token', token)`
+- Pero NO guardaba el usuario: solo hacía `setUser(user)` en React state
+- 8DWorkflow.js intentaba leer: `JSON.parse(localStorage.getItem('user'))`
+- Resultado: null → bloqueo total
+
+**Solución Implementada:**
+
+A) AuthContext.js - Función login (línea 46):
+   ANTES:
+   ```javascript
+   localStorage.setItem('token', token);
+   setUser(user);
+   ```
+
+   DESPUÉS:
+   ```javascript
+   localStorage.setItem('token', token);
+   localStorage.setItem('user', JSON.stringify(user));  // ← AÑADIDO
+   setUser(user);
+   ```
+
+B) AuthContext.js - Función logout (línea 58):
+   ANTES:
+   ```javascript
+   localStorage.removeItem('token');
+   ```
+
+   DESPUÉS:
+   ```javascript
+   localStorage.removeItem('token');
+   localStorage.removeItem('user');  // ← AÑADIDO
+   ```
+
+**Estado:** ✅ FUNCIONANDO CORRECTAMENTE
+
+================================================================================
+
+✅ 3. BUG CRÍTICO: ESCALATIONPATH NO LLEGABA A 8DWORKFLOW
+----------------------------------------------------------
+**Problema:**
+workflowData.escalationPath era undefined, causando:
+- hasPath → false
+- countermeasure_users → []
+- D3-MFG bloqueado incluso para usuarios autorizados
+
+**Causa Raíz - Múltiple:**
+
+A) Backend retorna escalationPath en camelCase:
+   - transformToCamelCase convierte: escalation_path → escalationPath (columna)
+   - Pero el CONTENIDO del JSONB NO se transforma recursivamente
+   - JSONB almacena: {issue_users: [...], countermeasure_users: [...]}
+
+B) Frontend service mapeaba mal (eightDService.js):
+   - Línea 453 retornaba: `escalation_path: escalationPath`
+   - Pero 8DWorkflow.js buscaba: `workflowData.escalationPath` (camelCase)
+   - Resultado: undefined
+
+**Solución Implementada:**
+
+A) eightDService.js - Mapeo de escalationPath (líneas 310-314):
+   ```javascript
+   const escalationPath = report.escalationPath ? {
+     issue_users: report.escalationPath.issue_users ||
+                  report.escalationPath.issueUsers || [],
+     countermeasure_users: report.escalationPath.countermeasure_users ||
+                           report.escalationPath.countermeasureUsers || [],
+     confirmation_users: report.escalationPath.confirmation_users ||
+                         report.escalationPath.confirmationUsers || []
+   } : null;
+   ```
+
+B) eightDService.js - Return object (líneas 453-454):
+   ```javascript
+   escalation_path: escalationPath,  // Para TeamAssignmentTab (usa snake_case)
+   escalationPath: escalationPath,   // Para 8DWorkflow (usa camelCase)
+   ```
+
+C) 8DWorkflow.js - Blocking logic (líneas 124-140):
+   ```javascript
+   const isCountermeasureResponsible = () => {
+     if (!currentUser?.id || !workflowData?.escalationPath) {
+       return false;
+     }
+     const countermeasureUsers = workflowData.escalationPath.countermeasure_users || [];
+     return countermeasureUsers.includes(currentUser.id);
+   };
+
+   const isD3MFGBlocked = !isD123Approved || (!isCountermeasureResponsible() && !isAdmin);
+   ```
+
+**Estado:** ✅ FUNCIONANDO CORRECTAMENTE
+
+================================================================================
+
+✅ 4. BUGS MENORES CORREGIDOS
+------------------------------
+
+A) D3MFG.js - Mensaje de bloqueo incorrecto (líneas 95, 136):
+   ANTES: "solo puede ser editado por usuarios responsables de Manufactura"
+   DESPUÉS: "solo puede ser editado por usuarios responsables de Contramedidas"
+
+B) D4TemporaryCountermeasure.js (línea 24):
+   ANTES: `setUsers(result || [])`
+   DESPUÉS: `setUsers(result.users || [])`
+
+C) D5FinalAnalysis.js (línea 64):
+   ANTES: `setUsers(result || [])`
+   DESPUÉS: `setUsers(result.users || [])`
+
+D) D6DefinitiveCountermeasure.js (línea 34):
+   ANTES: `setUsers(result || [])`
+   DESPUÉS: `setUsers(result.users || [])`
+
+**Estado:** ✅ FUNCIONANDO CORRECTAMENTE
+
+================================================================================
+ARQUITECTURA ACTUAL DEL SISTEMA
+================================================================================
+
+BACKEND (Node.js + Express + PostgreSQL):
+-----------------------------------------
+/backend
+├── /config
+│   └── database.js              # PostgreSQL pool connection
+├── /endpoints
+│   ├── authEndpoints.js         # Login, verify token
+│   ├── usersEndpoints.js        # User CRUD
+│   ├── eightDEndpoints.js       # 8D reports CRUD
+│   ├── sequentialApprovalEndpoints.js  # Aprobaciones D1-D2-D3
+│   ├── auditLogEndpoints.js     # ← NUEVO: Audit log endpoints
+│   └── ...otros
+├── /utils
+│   ├── caseTransform.js         # Snake_case ↔ camelCase
+│   └── auditLog.js              # ← NUEVO: Logging utilities
+├── /migrations
+│   └── create_audit_log.sql     # ← NUEVO: Tabla de auditoría
+└── server.js                    # Express server
+
+DATABASE (PostgreSQL):
+----------------------
+Tables principales:
+- users                    # Usuarios del sistema
+- eightd_reports          # Reportes 8D principales
+- eightd_parts            # Partes afectadas por reporte
+- eightd_audit_log        # ← NUEVO: Audit trail completo
+
+FRONTEND (React):
+-----------------
+/frontend/src
+├── /context
+│   └── AuthContext.js           # ← ACTUALIZADO: Guarda user en localStorage
+├── /services
+│   ├── eightDService.js         # ← ACTUALIZADO: Retorna escalationPath dual
+│   └── api.js
+├── /pages
+│   └── 8DWorkflow.js            # ← ACTUALIZADO: Blocking logic arreglado
+├── /components/8D
+│   ├── HistoryTab.js            # ← ACTUALIZADO: Muestra audit log completo
+│   ├── D3MFG.js                 # ← ACTUALIZADO: Mensaje correcto
+│   ├── D4TemporaryCountermeasure.js  # ← ACTUALIZADO: users.map fix
+│   ├── D5FinalAnalysis.js       # ← ACTUALIZADO: users.map fix
+│   └── D6DefinitiveCountermeasure.js # ← ACTUALIZADO: users.map fix
+└── ...otros componentes
+
+================================================================================
+FLUJO DE APROBACIÓN SECUENCIAL D1-D2-D3
+================================================================================
+
+1. EMISOR crea reporte → Status: draft
+2. EMISOR envía a aprobación → POST /8d/reports/:id/submit
+   * Status cambia a: pending_approval_1
+   * Se registra en audit log
+
+3. APROBADOR 1 revisa:
+   * Aprobar: POST /8d/reports/:id/approve-step-1
+     - Status → pending_approval_2
+     - Se registra aprobación en audit log
+   * Rechazar: POST /8d/reports/:id/reject-step-1
+     - Status → draft (regresa a Emisor)
+     - Se registra rechazo en audit log
+
+4. APROBADOR 2 revisa:
+   * Aprobar: POST /8d/reports/:id/approve-step-2
+     - Status → pending_approval_3
+     - Se registra aprobación en audit log
+   * Rechazar: POST /8d/reports/:id/reject-step-2
+     - Status → pending_approval_1 (regresa a A1)
+     - Se registra rechazo en audit log
+
+5. APROBADOR 3 revisa (FINAL):
+   * Aprobar: POST /8d/reports/:id/approve-step-3
+     - Status → approved
+     - Se registra aprobación en audit log
+     - ✅ DESBLOQUEA D4-D8 para edición
+   * Rechazar: POST /8d/reports/:id/reject-step-3
+     - Status → pending_approval_2 (regresa a A2)
+     - Se registra rechazo en audit log
+
+RUTA DE ESCALACIÓN:
+-------------------
+Almacenada en eightd_reports.escalation_path (JSONB):
+{
+  "issue_users": [emisor, aprobador1, aprobador2, aprobador3],
+  "countermeasure_users": [responsable, aprobador1, aprobador2, aprobador3],
+  "confirmation_users": [responsable, aprobador1, aprobador2, aprobador3]
+}
+
+LÓGICA DE BLOQUEO:
+------------------
+D3-MFG: Bloqueado si:
+  - D1-D2-D3 NO están aprobadas, O
+  - Usuario NO está en escalationPath.countermeasure_users, O
+  - Usuario NO es administrador
+
+D4-D8: Bloqueado si:
+  - D1-D2-D3 NO están aprobadas
+
+================================================================================
+ESTADO DE TRANSFORMACIÓN DE DATOS
+================================================================================
+
+BASE DE DATOS (PostgreSQL):
+---------------------------
+- Columnas: snake_case (report_id, escalation_path, d1_d2_d3_approval_status)
+- JSONB content: snake_case (issue_users, countermeasure_users)
+
+BACKEND (transformToCamelCase):
+-------------------------------
+- Columnas: snake_case → camelCase (reportId, escalationPath, d1D2D3ApprovalStatus)
+- JSONB content: NO SE TRANSFORMA (sigue siendo snake_case)
+
+FRONTEND (workflowData):
+------------------------
+- Recibe: camelCase en columnas, snake_case en JSONB
+- eightDService mapea escalationPath manualmente
+- Retorna AMBAS claves para compatibilidad:
+  * escalation_path (para TeamAssignmentTab)
+  * escalationPath (para 8DWorkflow)
+
+================================================================================
+DATOS DE PRUEBA
+================================================================================
+
+REPORTE DE PRUEBA: 8D-2025-0316
+-------------------------------
+- ID: 4
+- Status: approved
+- Creado por: Adrian Salazar (ID: 1)
+- Aprobaciones:
+  * Nivel 1: Robert Robert (ID: 2) - 26 Nov 2025 18:26
+  * Nivel 2: Production Supervisor (ID: 5) - 26 Nov 2025 18:26
+  * Nivel 3: Quality Analyst (ID: 6) - 26 Nov 2025 18:26
+
+Escalation Path:
+- issue_users: [1, 2, 5, 6]
+- countermeasure_users: [9, 8, 3, 11]  ← David Supervisor (ID 9) es responsable
+- confirmation_users: [2, 6, 10, 1]
+
+USUARIO DE PRUEBA: David Supervisor
+-----------------------------------
+- ID: 9
+- Email: david.supervisor@company.com
+- Role: Production Supervisor
+- Permisos: Responsable de Countermeasure (primer usuario en countermeasure_users)
+- Puede editar: D3-MFG cuando D1-D2-D3 están aprobadas
+
+================================================================================
+COMANDOS ÚTILES
+================================================================================
+
+BACKEND:
+--------
+cd "C:\Users\The Eidrian\quality-alert-system\backend"
+node server.js                  # Iniciar backend (puerto 5000)
+
+# Queries útiles:
+node -e "const { query } = require('./config/database'); ..."
+
+FRONTEND:
+---------
+cd "C:\Users\The Eidrian\quality-alert-system\frontend"
+npm start                       # Iniciar frontend (puerto 3000)
+
+GIT:
+----
+git status
+git add .
+git commit -m "feat: implement audit log and fix blocking logic"
+git push
+
+DATABASE:
+---------
+psql -U postgres -d quality_alerts
+\dt                            # Listar tablas
+SELECT * FROM eightd_audit_log WHERE report_id = 4;
+
+================================================================================
+PRÓXIMOS PASOS / PENDIENTES
+================================================================================
+
+PRIORIDAD ALTA:
+---------------
+[ ] Agregar logging para creación de reportes (logReportCreated)
+[ ] Agregar logging para actualizaciones de secciones (logSectionUpdate)
+[ ] Agregar logging para cambios de estado (logStatusChange)
+[ ] Agregar logging para D6 approval/rejection
+
+PRIORIDAD MEDIA:
+----------------
+[ ] Implementar filtros en HistoryTab (por tipo, sección, usuario, fecha)
+[ ] Agregar exportación de historial (PDF, Excel)
+[ ] Implementar paginación en audit log (actualmente limitado a 100)
+[ ] Añadir notificaciones en tiempo real con WebSockets
+
+PRIORIDAD BAJA:
+---------------
+[ ] Optimizar queries de audit log con índices
+[ ] Agregar tests unitarios para audit logging
+[ ] Documentar API de audit log en Swagger/OpenAPI
+[ ] Implementar soft delete para audit log entries
+
+BUGS CONOCIDOS:
+---------------
+Ninguno en este momento
+
+================================================================================
+ERRORES COMUNES Y SOLUCIONES
+================================================================================
+
+ERROR: "users.map is not a function"
+CAUSA: Endpoint /users/list retorna {success: true, users: [...]}
+SOLUCIÓN: Usar result.users en lugar de result
+
+ERROR: "escalationPath is undefined"
+CAUSA: Falta incluir ambas claves (escalation_path y escalationPath) en return
+SOLUCIÓN: Ver eightDService.js líneas 453-454
+
+ERROR: "localStorage.getItem('user') returns null"
+CAUSA: Login no guarda usuario en localStorage
+SOLUCIÓN: Agregar localStorage.setItem('user', JSON.stringify(user)) en login
+
+ERROR: "D3-MFG bloqueado para usuario autorizado"
+CAUSA: workflowData.escalationPath no tiene countermeasure_users
+SOLUCIÓN: Verificar que escalationPath se incluye en workflowData
+
+ERROR: "Historial vacío"
+CAUSA: Audit log no tiene entradas para ese reporte
+SOLUCIÓN: Verificar que approveStep/rejectStep estén usando logApproval/logRejection
+
+================================================================================
+CONTACTO Y NOTAS
+================================================================================
+
+Usuario: The Eidrian
+Proyecto: Quality Alert System - 8D Module
+Base de datos: PostgreSQL
+Stack: Node.js + Express + React
+
+IMPORTANTE:
+-----------
+- SIEMPRE leer este resumen antes de hacer cambios
+- SIEMPRE actualizar este resumen después de cambios importantes
+- NUNCA borrar logs de auditoría
+- NUNCA modificar datos de audit log manualmente
+- SIEMPRE probar cambios con usuario David Supervisor en reporte 8D-2025-0316
+
+================================================================================
+TRABAJO COMPLETADO HOY (27 NOV 2025 - CONTINUACIÓN)
+================================================================================
+
+✅ 5. REORGANIZACIÓN DE DISCIPLINAS D4-D7
+------------------------------------------
+**Objetivo:** Reorganizar las secciones D4-D7 para mejor flujo de trabajo
+
+**Cambios Implementados:**
+
+A) Nueva Estructura:
+   ANTES:
+   - D4: Contramedida Temporal
+   - D5: Análisis Final - Root Cause
+   - D6: Contramedida Definitiva
+   - D7: Confirmación de Contramedidas
+
+   DESPUÉS:
+   - D4: Contención y Análisis de Causa Raíz (pestaña individual)
+   - D5-D6-D7: Contramedidas y Confirmación (pestaña combinada)
+     * D5: Contramedida Temporal
+     * D6: Contramedida Definitiva
+     * D7: Confirmación de Contramedidas
+
+B) Base de Datos:
+   - Agregada columna: d4_containment_actions (JSONB)
+   - Migración: /backend/migrations/add_d4_containment.sql
+   - Estructura compatible con datos existentes
+
+C) Frontend - Nuevos Componentes:
+   - Creado: /frontend/src/components/8D/D4ContainmentRootCause.js
+     * Incluye sección de acciones de contención
+     * Incluye análisis de causa raíz (5 Whys, Fishbone)
+     * Estructura similar a componentes individuales
+
+   - Creado: /frontend/src/components/8D/D5D6D7Countermeasures.js
+     * D5: Contramedida temporal con validación
+     * D6: Contramedidas definitivas (acciones múltiples)
+     * D7: Confirmación de efectividad
+     * Estructura similar a TeamAssignmentTab (D1-D2-D3)
+
+D) Actualizado: /frontend/src/pages/8DWorkflow.js
+   - Imports actualizados a nuevos componentes
+   - Tab completion status simplificado:
+     * d1d2d3, d4, d5d6d7, d8
+   - Tabs reorganizados (de 8 tabs a 6 tabs)
+   - Lógica de habilitación actualizada
+
+E) Componentes Obsoletos:
+   - Movidos a: /frontend/src/components/8D/_obsolete/
+     * D4TemporaryCountermeasure.js
+     * D5FinalAnalysis.js
+     * D6DefinitiveCountermeasure.js
+     * D7Confirmation.js
+
+**Beneficios:**
+- Flujo de trabajo más lógico y cohesivo
+- D5-D6-D7 agrupadas como proceso continuo de contramedidas
+- Menos navegación entre pestañas
+- Estructura similar a D1-D2-D3 (familiar para usuarios)
+- Base de datos compatible con datos existentes
+
+**Estado:** ✅ COMPLETADO - LISTO PARA PRUEBAS
+
+================================================================================
+ÚLTIMA ACTUALIZACIÓN: 27 de Noviembre de 2025 - 23:45 hrs
+ESTADO: SISTEMA OPERATIVO - REORGANIZACIÓN D4-D7 COMPLETADA
+================================================================================

@@ -1,0 +1,475 @@
+================================================================================
+  PROTOCOLO OBLIGATORIO - LEER ANTES DE ESCRIBIR CÓDIGO
+================================================================================
+
+⚠️ IMPORTANTE: Este proyecto usa CONVENCIONES ESPECÍFICAS que DEBES verificar
+ANTES de escribir cualquier código. NO asumas nada.
+
+PASO 1 - VERIFICAR CONVENCIONES DEL BACKEND:
+---------------------------------------------
+✓ El backend usa utils/caseTransform.js
+✓ TODOS los datos de PostgreSQL se convierten a camelCase con transformToCamelCase()
+✓ PostgreSQL usa snake_case (ej: client_name, part_number)
+✓ Backend/Frontend esperan camelCase (ej: clientName, partNumber)
+
+ANTES de escribir código que acceda a datos del backend:
+1. Leer backend/utils/caseTransform.js para confirmar la convención
+2. Ver un ejemplo de respuesta del API (usar check_report.js o logs)
+3. Verificar que estás usando camelCase, NO snake_case
+
+PASO 2 - NO DAR VUELTAS INNECESARIAS:
+--------------------------------------
+✓ Si un fix falla 2 veces, DETENTE y explica el problema
+✓ No consumir tokens en iteraciones infinitas
+✓ Pedir ver logs/datos reales ANTES de asumir
+✓ Si no estás seguro, pregunta al usuario
+
+PASO 3 - VERIFICACIÓN ANTES DE ESCRIBIR:
+-----------------------------------------
+Antes de escribir código, pregúntate:
+□ ¿He verificado la convención de nombres del proyecto?
+□ ¿He visto un ejemplo real de los datos?
+□ ¿Estoy seguro de los nombres de campos (camelCase vs snake_case)?
+□ ¿He revisado código similar existente para ver el patrón?
+
+Si la respuesta a CUALQUIERA es "no", DETENTE y verifica primero.
+
+PASO 4 - TRANSPARENCIA:
+-----------------------
+✓ Si cometí un error, admítelo claramente
+✓ No hagas que el usuario pague por corregir TUS errores
+✓ Si estás dando vueltas, detente y pide ayuda al usuario
+
+📌 ESTE PROTOCOLO DEBE APARECER AL INICIO DE CADA RESUMEN DE SESIÓN
+
+================================================================================
+  RESUMEN DE SESIÓN - 25 DE NOVIEMBRE 2025
+  Sistema de Alertas de Calidad 8D - Estado D4-D5-D6
+================================================================================
+
+FECHA: Lunes, 25 de Noviembre 2025
+HORA: Tarde/Noche
+ENFOQUE: Documentación del estado actual de D4-D5-D6
+
+================================================================================
+  🚨 RECORDATORIO CRÍTICO
+================================================================================
+
+⚠️  NO REINICIAR PUERTOS - El sistema se bloquea cada vez que se intenta
+    reiniciar procesos o puertos. Dejar servidores corriendo.
+
+================================================================================
+  📋 CONTEXTO DE LA SESIÓN
+================================================================================
+
+El usuario solicitó:
+1. Verificar el archivo markdown (MD) de donde nos quedamos
+2. Revisar qué avanzamos en el proyecto
+3. El usuario aclaró que D1-D2-D3 con aprobadores ya está COMPLETO
+4. Ahora estamos trabajando en D4, D5 y D6
+
+Encontramos dos documentos clave:
+- CAMBIOS_09_11_2025.md (Team Presets - completado)
+- WORKFLOW_APROBACION_8D.md (Sistema de aprobación D1-D2-D3 - completado)
+
+================================================================================
+  ✅ LO QUE HICIMOS HOY
+================================================================================
+
+1. INVESTIGACIÓN DE ESTADO ACTUAL
+   ---------------------------------
+   ✓ Buscamos archivos markdown de seguimiento
+   ✓ Encontramos WORKFLOW_APROBACION_8D.md y CAMBIOS_09_11_2025.md
+   ✓ Usuario confirmó que D1-D2-D3 ya está completo
+   ✓ Identificamos que ahora trabajamos en D4-D5-D6
+
+2. VERIFICACIÓN DE COMPONENTES FRONTEND
+   --------------------------------------
+   ✓ Localizamos 3 componentes existentes:
+     - D4TemporaryCountermeasure.js
+     - D5FinalAnalysis.js (error de handleSave duplicado ya corregido)
+     - D6DefinitiveCountermeasure.js
+
+   ✓ Todos los componentes tienen:
+     - Formularios completos
+     - Validaciones
+     - Soporte multiidioma (es/en)
+     - Prop isBlocked para control de acceso
+     - Función handleSave con llamada a onDataUpdate
+
+3. VERIFICACIÓN DE BASE DE DATOS
+   --------------------------------
+   ✓ Encontramos migración: reorganize_d4_d8_structure.sql (25 Nov 2025)
+   ✓ Verificamos que la migración YA SE EJECUTÓ en la BD
+   ✓ Confirmamos 28 columnas creadas para D4-D5-D6:
+     - 12 columnas para D4 (Temporary Countermeasure)
+     - 5 columnas para D5 (Final Root Cause Analysis)
+     - 8 columnas para D6 (Definitive Countermeasure + Approval)
+
+4. DOCUMENTACIÓN CREADA
+   ---------------------
+   ✓ Creamos documento COMPLETO: ESTADO_D4_D5_D6.md
+   ✓ Incluye:
+     - Resumen ejecutivo
+     - Estado de BD (todas las columnas documentadas)
+     - Estado de componentes frontend
+     - Lista de pendientes con prioridades
+     - Estructura de datos
+     - Preguntas pendientes de diseño
+     - Notas técnicas sobre discrepancias
+
+5. LIMPIEZA
+   ---------
+   ✓ Eliminamos script temporal check_d456_structure.js
+
+================================================================================
+  📊 ESTADO ACTUAL DEL PROYECTO - D4-D5-D6
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ COMPONENTE                          │ ESTADO     │ COMPLETITUD          │
+├─────────────────────────────────────┼────────────┼──────────────────────┤
+│ Base de Datos - Migración           │ ✅ COMPLETO│ 100% - 28 columnas   │
+│ D4TemporaryCountermeasure.js        │ ✅ COMPLETO│ 100% - UI funcional  │
+│ D5FinalAnalysis.js                  │ ✅ COMPLETO│ 100% - UI funcional  │
+│ D6DefinitiveCountermeasure.js       │ ✅ COMPLETO│ 100% - UI funcional  │
+│ Integración en 8DWorkflow.js        │ ✅ COMPLETO│ Componentes importados│
+│ Endpoints Backend                   │ ⚠️ PENDIENTE│ Verificar/implementar│
+│ Lógica de Bloqueo (isBlocked)       │ ⚠️ PENDIENTE│ Definir reglas       │
+│ Sistema de Aprobación D6            │ ⚠️ PENDIENTE│ UI + Endpoints       │
+│ Testing                             │ ❌ PENDIENTE│ 0% - No iniciado     │
+└─────────────────────────────────────┴────────────┴──────────────────────┘
+
+================================================================================
+  🔧 ESTRUCTURA IMPLEMENTADA
+================================================================================
+
+D4 - TEMPORARY COUNTERMEASURE (Contramedida Temporal)
+------------------------------------------------------
+Base de Datos:
+  - d4_temporary_countermeasure        TEXT
+  - d4_responsible_user_id             INTEGER (FK users)
+  - d4_implementation_date             DATE
+  - d4_effectiveness_evaluation        TEXT
+  - d4_completed                       BOOLEAN
+  - d4_completed_at                    TIMESTAMP
+
+Frontend (D4TemporaryCountermeasure.js):
+  - Textarea: Descripción de contramedida *REQUERIDO*
+  - Select: Usuario responsable
+  - Date: Fecha de implementación
+  - Textarea: Evaluación de efectividad
+  - Checkbox: Marcar D4 como completada
+  - Botón: Guardar Cambios
+
+Estado: ✅ Componente completo, backend pendiente de verificar
+
+---
+
+D5 - FINAL ROOT CAUSE ANALYSIS (Análisis Final)
+------------------------------------------------
+Base de Datos:
+  - d5_final_root_cause                TEXT
+  - d5_analysis_responsible_user_id    INTEGER (FK users)
+  - d5_corrective_actions              JSONB
+  - d5_completed                       BOOLEAN
+  - d5_completed_at                    TIMESTAMP
+
+Frontend (D5FinalAnalysis.js):
+  - Textarea: Análisis de Causa Raíz *REQUERIDO*
+  - Textarea: Verificación de la Causa
+  - Input: Herramientas de Análisis Utilizadas
+  - Select: Responsable del Análisis
+  - Date: Fecha de Completación
+  - Checkbox: Marcar D5 como completada
+  - Botón: Guardar Cambios
+
+Estado: ✅ Componente completo (error handleSave corregido anteriormente)
+
+⚠️ NOTA: Hay discrepancia entre nombres de campos:
+   - Frontend usa: d5RootCauseAnalysis, d5CauseVerification, d5AnalysisTools
+   - Backend tiene: d5_final_root_cause
+   - Faltan columnas para: causeVerification, analysisTools
+   - PENDIENTE: Definir mapeo o agregar columnas
+
+---
+
+D6 - DEFINITIVE COUNTERMEASURE (Contramedida Definitiva)
+---------------------------------------------------------
+Base de Datos:
+  - d6_definitive_actions              JSONB (array de acciones)
+  - d6_implementation_plan             JSONB
+  - d6_validation_results              JSONB
+  - d6_quality_approval_status         VARCHAR (pending/approved/rejected)
+  - d6_quality_approved_by             INTEGER (FK users)
+  - d6_quality_approved_at             TIMESTAMP
+  - d6_quality_approval_comments       TEXT
+  - d6_completed                       BOOLEAN
+  - d6_completed_at                    TIMESTAMP
+
+Frontend (D6DefinitiveCountermeasure.js):
+  - Array dinámico de acciones correctivas:
+    * Descripción (textarea)
+    * Responsable (select)
+    * Fecha objetivo (date)
+    * Estado (select: pending/in_progress/completed/cancelled)
+    * Botón: Agregar Acción / Eliminar
+  - Plan de Implementación:
+    * Cronograma general (textarea)
+    * Recursos necesarios (textarea)
+  - Textarea: Resultados de validación inicial
+  - Checkbox: Marcar D6 como completada
+  - Botón: Guardar Cambios
+
+Estado: ✅ Componente completo, falta UI de aprobación
+
+================================================================================
+  ⚠️ PENDIENTES CRÍTICOS PARA MAÑANA
+================================================================================
+
+PRIORIDAD 1 - ENDPOINTS BACKEND
+--------------------------------
+□ Verificar si existen endpoints en backend/endpoints/eightDEndpoints.js:
+  - GET /8d/reports/:id (obtener reporte completo)
+  - PUT /8d/reports/:id (actualizar reporte - ¿incluye D4-D5-D6?)
+
+□ Si NO existen, implementar:
+  - PUT /8d/reports/:id/d4 (guardar D4)
+  - PUT /8d/reports/:id/d5 (guardar D5)
+  - PUT /8d/reports/:id/d6 (guardar D6)
+
+□ Endpoints de aprobación D6:
+  - POST /8d/reports/:id/d6/approve
+  - POST /8d/reports/:id/d6/reject
+
+□ Verificar transformación camelCase ↔ snake_case:
+  - ⚠️ PASO 1 del protocolo: Revisar utils/caseTransform.js
+  - Confirmar que D4/D5/D6 se transforman correctamente
+
+PRIORIDAD 2 - LÓGICA DE BLOQUEO
+--------------------------------
+□ Definir en 8DWorkflow.js cuándo cada sección está bloqueada:
+
+  D4 (Temporary Countermeasure):
+    isD4Blocked =
+      - d1D2D3ApprovalStatus !== 'approved' (D1-D2-D3 no aprobados), O
+      - currentUser no es responsable de Countermeasure Card, O
+      - currentUser no es administrador
+
+  D5 (Final Analysis):
+    isD5Blocked =
+      - d4Completed !== true (D4 no completado), O
+      - currentUser no es responsable de Countermeasure Card, O
+      - currentUser no es administrador
+
+  D6 (Definitive Countermeasure):
+    isD6Blocked =
+      - d5Completed !== true (D5 no completado), O
+      - currentUser no es responsable de Countermeasure Card, O
+      - currentUser no es administrador
+
+□ Implementar función isD4Locked(), isD5Locked(), isD6Locked()
+□ Pasar props correctas a cada componente
+
+PRIORIDAD 3 - SISTEMA DE APROBACIÓN D6
+---------------------------------------
+□ Agregar UI de aprobación en D6DefinitiveCountermeasure.js:
+  - Botones "Aprobar" y "Rechazar" (solo visibles para aprobadores)
+  - Textarea para comentarios (obligatorio en rechazo)
+  - Mostrar estado actual: pending/approved/rejected
+  - Mostrar quién aprobó y cuándo
+
+□ Implementar handleApprove() y handleReject()
+□ Definir quién puede aprobar D6 (¿rol Quality? ¿Issue Primary?)
+
+PRIORIDAD 4 - RESOLVER DISCREPANCIAS
+-------------------------------------
+□ D5FinalAnalysis.js espera campos que no existen en BD:
+  - d5CauseVerification (no hay columna d5_cause_verification)
+  - d5AnalysisTools (no hay columna d5_analysis_tools)
+
+  OPCIONES:
+  A) Agregar columnas a la BD
+  B) Mapear a columnas existentes de d4_ (fishbone, five_whys, etc.)
+  C) Rediseñar formulario D5 para usar solo d5_final_root_cause
+
+□ Decidir y ejecutar solución
+
+================================================================================
+  ❓ PREGUNTAS PARA RESOLVER MAÑANA
+================================================================================
+
+1. PERMISOS Y ROLES
+   -----------------
+   ¿Quién puede editar D4-D5-D6?
+   □ ¿Solo el responsable de Countermeasure Card (del Issue Assignment)?
+   □ ¿El creador del reporte también puede editar?
+   □ ¿Los administradores siempre pueden editar (override)?
+
+2. APROBACIÓN D6
+   --------------
+   ¿Quién aprueba D6?
+   □ ¿Usuario con rol "Quality"?
+   □ ¿El mismo Issue Primary que aprobó D1-D2-D3?
+   □ ¿Un aprobador específico diferente?
+
+   ¿D6 necesita 3 aprobadores secuenciales como D1-D2-D3?
+   □ ¿O solo una aprobación final de Quality?
+
+3. FLUJO DE TRABAJO
+   -----------------
+   ¿D4 y D5 se pueden completar sin aprobación externa?
+   □ ¿O necesitan aprobación también?
+
+   ¿Qué pasa si D6 es rechazado?
+   □ ¿Se puede editar D5 o solo D6?
+   □ ¿Se notifica al responsable?
+
+4. CAMPOS DE D5
+   -------------
+   ¿Qué hacer con los campos faltantes en D5?
+   □ Agregar columnas: d5_cause_verification, d5_analysis_tools
+   □ Reusar columnas de d4_: verification_evidence, analysis_technique
+   □ Simplificar formulario D5
+
+================================================================================
+  📂 ARCHIVOS RELEVANTES
+================================================================================
+
+DOCUMENTACIÓN:
+  ✓ ESTADO_D4_D5_D6.md                 (Creado hoy - Estado completo)
+  ✓ WORKFLOW_APROBACION_8D.md          (Ya existía - D1-D2-D3)
+  ✓ CAMBIOS_09_11_2025.md              (Ya existía - Team Presets)
+  ✓ Resumen.11.25.2025.txt             (Este archivo)
+
+BASE DE DATOS:
+  ✓ backend/migrations/reorganize_d4_d8_structure.sql  (Migración ejecutada)
+  ✓ backend/migrations/001_complete_schema.sql         (Schema base)
+  ✓ backend/config/database.js                         (Conexión PostgreSQL)
+  ✓ backend/utils/caseTransform.js                     (⚠️ REVISAR SIEMPRE)
+
+FRONTEND - COMPONENTES:
+  ✓ frontend/src/components/8D/D4TemporaryCountermeasure.js
+  ✓ frontend/src/components/8D/D5FinalAnalysis.js
+  ✓ frontend/src/components/8D/D6DefinitiveCountermeasure.js
+  ✓ frontend/src/pages/8DWorkflow.js                   (Integración)
+
+BACKEND - ENDPOINTS:
+  ⚠️ backend/endpoints/eightDEndpoints.js              (VERIFICAR mañana)
+  ⚠️ backend/server.js                                  (Rutas registradas)
+
+================================================================================
+  🎯 PLAN DE ACCIÓN PARA MAÑANA
+================================================================================
+
+FASE 1 - VERIFICACIÓN (30 min)
+-------------------------------
+1. Abrir backend/endpoints/eightDEndpoints.js
+2. Buscar endpoints existentes para D4/D5/D6
+3. Verificar si GET /8d/reports/:id devuelve datos de D4/D5/D6
+4. Revisar utils/caseTransform.js (PASO 1 del protocolo)
+5. Crear script de prueba para ver respuesta real del API
+
+FASE 2 - DECISIONES (15 min)
+-----------------------------
+6. Responder preguntas de permisos y roles
+7. Definir quién aprueba D6
+8. Decidir qué hacer con campos faltantes de D5
+
+FASE 3 - IMPLEMENTACIÓN (2-3 horas)
+------------------------------------
+9. Implementar/actualizar endpoints backend:
+   - PUT /8d/reports/:id (asegurar que guarda D4/D5/D6)
+   - POST /8d/reports/:id/d6/approve
+   - POST /8d/reports/:id/d6/reject
+
+10. Implementar lógica de bloqueo en 8DWorkflow.js:
+    - Calcular isD4Blocked
+    - Calcular isD5Blocked
+    - Calcular isD6Blocked
+    - Pasar props a componentes
+
+11. Agregar UI de aprobación en D6DefinitiveCountermeasure.js:
+    - Botones Aprobar/Rechazar
+    - Campo de comentarios
+    - Mostrar estado de aprobación
+
+12. Resolver discrepancia de campos D5:
+    - Agregar columnas faltantes O
+    - Actualizar componente para usar campos existentes
+
+FASE 4 - TESTING (1 hora)
+--------------------------
+13. Crear un reporte 8D de prueba
+14. Completar D1-D2-D3 y obtener aprobación
+15. Probar flujo completo: D4 → D5 → D6
+16. Verificar que bloqueos funcionan correctamente
+17. Probar aprobación/rechazo de D6
+18. Verificar que datos se guardan correctamente en BD
+
+FASE 5 - DOCUMENTACIÓN (30 min)
+--------------------------------
+19. Actualizar ESTADO_D4_D5_D6.md con cambios
+20. Crear nuevo resumen de sesión
+21. Documentar decisiones tomadas
+
+================================================================================
+  💾 BACKUPS Y ESTADO DEL SISTEMA
+================================================================================
+
+SERVIDORES:
+  ⚠️ Frontend (port 3000): Corriendo - NO REINICIAR
+  ⚠️ Backend (port 5000): Corriendo - NO REINICIAR
+
+BASE DE DATOS:
+  ✅ PostgreSQL: Conectada y funcional
+  ✅ Migración D4-D8: Ejecutada exitosamente
+  ✅ 28 columnas verificadas en eightd_reports
+
+GIT:
+  ⚠️ Estado desconocido - Verificar cambios sin commit
+
+================================================================================
+  🔍 CHECKLIST ANTES DE EMPEZAR MAÑANA
+================================================================================
+
+ANTES de escribir cualquier código:
+
+□ Leí el PROTOCOLO OBLIGATORIO al inicio de este resumen
+□ Leí la sección PLAN DE ACCIÓN PARA MAÑANA
+□ Revisé la sección PREGUNTAS PARA RESOLVER
+□ Entendí el ESTADO ACTUAL del proyecto
+□ Verifiqué utils/caseTransform.js (PASO 1)
+□ Pregunté al usuario cualquier duda ANTES de asumir
+
+================================================================================
+  📝 NOTAS FINALES
+================================================================================
+
+✅ LOGROS DE HOY:
+   - Documentación completa del estado D4-D5-D6
+   - Verificación de estructura de BD (28 columnas)
+   - Confirmación de que componentes frontend están completos
+   - Identificación clara de pendientes
+
+⚠️ ADVERTENCIAS:
+   - NO reiniciar puertos (sistema se bloquea)
+   - Verificar convenciones ANTES de escribir código
+   - Hay discrepancias en campos D5 que necesitan resolverse
+   - Endpoints backend no verificados aún
+
+🎯 OBJETIVO DE MAÑANA:
+   - Completar endpoints backend
+   - Implementar lógica de bloqueo
+   - Agregar sistema de aprobación D6
+   - Hacer testing del flujo completo D4→D5→D6
+
+================================================================================
+  FIN DEL RESUMEN - 25 DE NOVIEMBRE 2025
+================================================================================
+
+Próxima sesión: 26 de Noviembre 2025
+Estado: 🟡 D4-D5-D6 en desarrollo activo
+Prioridad: Backend endpoints y lógica de bloqueo
+
+¡No olvides seguir el PROTOCOLO OBLIGATORIO! 🚀

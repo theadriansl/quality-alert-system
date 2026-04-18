@@ -1,0 +1,16 @@
+SECCIONES A MOVER DE D7 A D6:
+
+1. EVIDENCIA ANTES/DESPUÉS (líneas 560-641)
+2. VALIDACIÓN DE CONTRAMEDIDAS (líneas 643-806)
+
+Estas secciones usan los siguientes campos del estado:
+- beforeCondition
+- afterCondition
+- beforePhotos
+- afterPhotos
+- d3Implemented, d3Effective, d3SpcJudgment, d3ClientJudgment, d3Comments, d3Lesson
+- d5Implemented, d5Effective, d5SpcJudgment, d5ClientJudgment, d5Comments, d5Lesson
+
+También usan las funciones:
+- uploadFile(file, 'before_photo' | 'after_photo')
+- deleteFile(fileId)

@@ -1,0 +1,115 @@
+          <tbody>
+            {auditItems.map((item) => (
+              <tr key={item.id} style={styles.tr}>
+                {/* Item Name */}
+                <td style={styles.td}>
+                  <strong>{item.icon} {item.name}</strong>
+                </td>
+
+                {/* Comments */}
+                <td style={styles.td}>
+                  <textarea
+                    style={{ ...styles.textarea, fontSize: '13px', padding: '6px 10px', minHeight: '60px' }}
+                    value={item.comments}
+                    onChange={(e) => updateAuditItem(item.id, 'comments', e.target.value)}
+                    placeholder="Comentarios / evidencia..."
+                    disabled={isBlocked}
+                    rows="2"
+                  />
+                </td>
+
+                {/* Audit Judgment */}
+                <td style={{ ...styles.td, textAlign: 'center' }}>
+                  <select
+                    style={{ ...styles.input, fontSize: '12px', padding: '4px 6px' }}
+                    value={item.auditJudgment}
+                    onChange={(e) => updateAuditItem(item.id, 'auditJudgment', e.target.value)}
+                    disabled={isBlocked}
+                  >
+                    <option value="">--</option>
+                    <option value="C">✓ Conforme</option>
+                    <option value="NC">✗ No Conforme</option>
+                    <option value="NA">- No Aplica</option>
+                    <option value="OBS">⚠ Observación</option>
+                  </select>
+                </td>
+
+                {/* Files */}
+                <td style={{ ...styles.td, textAlign: 'center' }}>
+                  <div>
+                    <label style={{ ...styles.fileLabel, padding: '4px 8px', fontSize: '12px', cursor: 'pointer' }}>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf,.xlsx,.xls,.docx,.doc"
+                        multiple
+                        onChange={(e) => {
+                          Array.from(e.target.files).forEach(file => uploadAuditItemFile(item.id, file));
+                        }}
+                        disabled={isBlocked}
+                        style={{ display: 'none' }}
+                      />
+                      📎 Subir
+                    </label>
+                    {item.files && item.files.length > 0 && (
+                      <div style={{ marginTop: '8px', fontSize: '12px', textAlign: 'left' }}>
+                        {item.files.map(file => (
+                          <div key={file.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px', backgroundColor: '#f9fafb', borderRadius: '4px', marginBottom: '4px' }}>
+                            <a href={`http://localhost:5000${file.file_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '11px' }}>
+                              📄 {file.file_name}
+                            </a>
+                            <button onClick={() => deleteAuditItemFile(item.id, file.id)} style={{ ...styles.deleteBtn, position: 'static', fontSize: '10px', padding: '2px 6px' }} disabled={isBlocked}>🗑️</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </td>
+
+                {/* Delete Button */}
+                <td style={{ ...styles.td, textAlign: 'center' }}>
+                  <button
+                    onClick={() => deleteAuditItem(item.id)}
+                    style={{
+                      ...styles.deleteBtn,
+                      position: 'static',
+                      fontSize: '16px',
+                      padding: '4px 8px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: isBlocked ? 'not-allowed' : 'pointer',
+                      opacity: isBlocked ? 0.5 : 1
+                    }}
+                    disabled={isBlocked}
+                    title="Eliminar item"
+                  >
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Add Item Button */}
+        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          <button
+            onClick={addAuditItem}
+            style={{
+              ...styles.fileLabel,
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: isBlocked ? 'not-allowed' : 'pointer',
+              opacity: isBlocked ? 0.5 : 1
+            }}
+            disabled={isBlocked}
+          >
+            ➕ Agregar Item de Auditoría
+          </button>
+        </div>
+      </div>

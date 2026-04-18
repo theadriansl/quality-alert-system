@@ -1,0 +1,299 @@
+================================================================================
+PROTOCOLO OBLIGATORIO - LEER ANTES DE ESCRIBIR CÓDIGO
+================================================================================
+
+⚠️ IMPORTANTE: Este proyecto usa CONVENCIONES ESPECÍFICAS que DEBES verificar
+ANTES de escribir cualquier código. NO asumas nada.
+
+PASO 1 - VERIFICAR CONVENCIONES DEL BACKEND:
+---------------------------------------------
+✓ El backend usa utils/caseTransform.js
+✓ TODOS los datos de PostgreSQL se convierten a camelCase con transformToCamelCase()
+✓ PostgreSQL usa snake_case (ej: client_name, part_number)
+✓ Backend/Frontend esperan camelCase (ej: clientName, partNumber)
+
+ANTES de escribir código que acceda a datos del backend:
+1. Leer backend/utils/caseTransform.js para confirmar la convención
+2. Ver un ejemplo de respuesta del API (usar check_report.js o logs)
+3. Verificar que estás usando camelCase, NO snake_case
+
+PASO 2 - NO DAR VUELTAS INNECESARIAS:
+--------------------------------------
+✓ Si un fix falla 2 veces, DETENTE y explica el problema
+✓ No consumir tokens en iteraciones infinitas
+✓ Pedir ver logs/datos reales ANTES de asumir
+✓ Si no estás seguro, pregunta al usuario
+
+PASO 3 - VERIFICACIÓN ANTES DE ESCRIBIR:
+-----------------------------------------
+Antes de escribir código, pregúntate:
+□ ¿He verificado la convención de nombres del proyecto?
+□ ¿He visto un ejemplo real de los datos?
+□ ¿Estoy seguro de los nombres de campos (camelCase vs snake_case)?
+□ ¿He revisado código similar existente para ver el patrón?
+
+Si la respuesta a CUALQUIERA es "no", DETENTE y verifica primero.
+
+PASO 4 - TRANSPARENCIA:
+-----------------------
+✓ Si cometí un error, admítelo claramente
+✓ No hagas que el usuario pague por corregir TUS errores
+✓ Si estás dando vueltas, detente y pide ayuda al usuario
+
+📌 ESTE PROTOCOLO DEBE APARECER AL INICIO DE CADA RESUMEN DE SESIÓN
+
+================================================================================
+RESUMEN DE SESIÓN - 15 DE NOVIEMBRE 2025
+Sistema de Alertas de Calidad 8D - Corrección de Carga de Datos
+================================================================================
+
+PROBLEMA INICIAL:
+-----------------
+Al cargar un reporte 8D existente (ID=1) desde la base de datos en modo edición,
+la información guardada NO se mostraba en el frontend, a pesar de estar
+correctamente almacenada en PostgreSQL.
+
+Usuario reportó: "Solo esta el titulo" - ningún otro dato se mostraba.
+
+DATOS EN LA BASE DE DATOS (Verificados):
+-----------------------------------------
+✅ Report ID: 1
+✅ Title: "TEst"
+✅ Supplier: "ElringKlinger Canada Inc"
+✅ Issue Date: 2025-11-15
+✅ Cliente ID: 4 (ElringKlinger Canada Inc)
+✅ Proyecto ID: 14 (PROJ-ELK-2024-004 - Engine Gasket System)
+✅ 1 Parte: ELK-GAS-001 (Cylinder Head Gasket)
+   - Cantidades: Warehouse=1, InProcess=2, InTransit=1, WithCustomer=1
+   - Costo unitario: $45.00
+✅ 3 Attachments: 2 fotos (photo_no_good, photo_ok), 1 documento
+✅ D3 Data: detection_points guardados
+
+PROBLEMA RAÍZ IDENTIFICADO:
+---------------------------
+⚠️ CRÍTICO - CONVENCIÓN DE NOMBRES (camelCase vs snake_case):
+
+El backend usa `transformToCamelCase()` para convertir TODOS los campos de
+snake_case (de PostgreSQL) a camelCase (para JavaScript).
+
+PERO el código del frontend estaba buscando los campos en snake_case:
+- ❌ Buscaba: part.part_id, part.client_id, part.project_id
+- ✅ Backend envía: part.partId, part.clientId, part.projectId
+
+ESTO ES CRÍTICO: El backend SIEMPRE convierte a camelCase, así que el frontend
+SIEMPRE debe esperar camelCase.
+
+ERRORES ENCONTRADOS Y CORREGIDOS:
+----------------------------------
+
+1. **Error Principal - Bloqueo condicional** (TeamAssignmentTab.js:187)
+   - Antes: if (data && data.selectedClient) {
+   - Después: if (data) {
+   - Razón: selectedClient era null, bloqueaba la carga de TODO
+
+2. **Error de Convención de Nombres** (eightDService.js)
+
+   CAMPOS DE PARTES (lines 259-289):
+   Antes (snake_case):          Después (camelCase):
+   - part.part_id            → part.partId
+   - part.part_number        → part.partNumber
+   - part.part_name          → part.partName
+   - part.client_part_number → part.clientPartNumber
+   - part.unit_cost          → part.unitCost
+   - part.qty_warehouse      → part.qtyWarehouse
+   - part.qty_in_process     → part.qtyInProcess
+   - part.qty_in_transit     → part.qtyInTransit
+   - part.qty_with_customer  → part.qtyWithCustomer
+
+   CAMPOS DE CLIENTE/PROYECTO (lines 281-291):
+   - firstPart.client_id     → firstPart.clientId
+   - firstPart.client_name   → firstPart.clientName
+   - firstPart.project_id    → firstPart.projectId
+   - firstPart.project_number→ firstPart.projectNumber
+   - firstPart.project_name  → firstPart.projectName
+
+   CAMPOS DE REPORTE (lines 376-407):
+   - report.report_id        → report.reportId
+   - report.supplier_name    → report.supplierName
+   - report.supplier_account → report.supplierAccount
+   - report.part_number      → report.partNumber
+   - report.part_name        → report.partName
+   - report.current_step     → report.currentStep
+   - report.created_at       → report.createdAt
+   - report.updated_at       → report.updatedAt
+   - report.issue_date       → report.issueDate
+   - report.problem_type     → report.problemType
+   - report.tipo_issue       → report.tipoIssue
+   - report.tipo_resp        → report.tipoResp
+   - report.timing_occurrence→ report.timingOccurrence
+   - report.customer_impact  → report.customerImpact
+   - report.estimated_cost   → report.estimatedCost
+   - report.target_closure_date → report.targetClosureDate
+   - report.issue_assigned_to   → report.issueAssignedTo
+   - report.countermeasure_assigned_to → report.countermeasureAssignedTo
+   - report.confirmation_assigned_to   → report.confirmationAssignedTo
+   - report.team_leader      → report.teamLeader
+
+   CAMPOS D3 DATA (lines 364-372):
+   - report.d3_detection_points     → report.d3DetectionPoints
+   - report.d3_non_detection_reasons→ report.d3NonDetectionReasons
+   - report.d3_suspect_material_disposal → report.d3SuspectMaterialDisposal
+   - report.d3_conformance_guarantee→ report.d3ConformanceGuarantee
+   - report.d3_requires_rework      → report.d3RequiresRework
+   - report.d3_rework_unit_cost     → report.d3ReworkUnitCost
+   - report.d3_real_impact_cost     → report.d3RealImpactCost
+
+   ESCALATION PATH (lines 300-307):
+   - report.escalation_path.issue_users → report.escalationPath.issueUsers
+   - report.escalation_path.countermeasure_users → report.escalationPath.countermeasureUsers
+   - report.escalation_path.confirmation_users → report.escalationPath.confirmationUsers
+
+3. **Error de cálculo de totales** (eightDService.js:259-289)
+   - Problema: No se calculaban totalAffectedQty y totalCostImpact
+   - Solución: Agregar cálculos al mapear partes:
+     ```javascript
+     const totalAffectedQty = qtyWarehouse + qtyInProcess + qtyInTransit + qtyWithCustomer;
+     const totalCostImpact = totalAffectedQty * unitCost;
+     ```
+
+4. **Error de formato de fecha** (TeamAssignmentTab.js:161-179)
+   - Problema: issueDate viene en formato ISO, input type="date" necesita YYYY-MM-DD
+   - Solución: Convertir fecha antes de asignar:
+     ```javascript
+     const dateObj = new Date(data.issueDate);
+     formattedDate = dateObj.toISOString().split('T')[0];
+     ```
+
+5. **Error de carga de proyectos** (TeamAssignmentTab.js:204-221)
+   - Problema: Al cargar cliente guardado, no se cargaban sus proyectos
+   - Resultado: Selector de proyecto mostraba "Selecciona un proyecto..."
+   - Solución: Cargar proyectos del cliente cuando se carga selectedClient:
+     ```javascript
+     if (data.selectedClient) {
+       setSelectedClient(data.selectedClient);
+       // Cargar proyectos del cliente
+       const response = await fetch(`/clients/${data.selectedClient.id}/projects`);
+       setProjects(result.projects);
+     }
+     ```
+
+6. **Errores de backend corregidos**:
+
+   a) eightDEndpoints.js (line 345-350):
+      - Error: "operator does not exist: character varying = integer"
+      - Causa: WHERE clause comparaba INTEGER y VARCHAR
+      - Fix: Detectar si reportId es numérico o string
+
+   b) approvalsEndpoints.js (line 396):
+      - Error: column "team_assignments" does not exist
+      - Fix: Remover columna inexistente del SELECT
+
+ARCHIVOS MODIFICADOS:
+---------------------
+1. frontend/src/services/eightDService.js
+   - Líneas 253-289: Mapeo de partes a camelCase + cálculos
+   - Líneas 281-291: Cliente/Proyecto a camelCase
+   - Líneas 300-307: Escalation path a camelCase
+   - Líneas 364-372: D3 data a camelCase
+   - Líneas 374-426: Campos de reporte a camelCase
+
+2. frontend/src/components/8D/TeamAssignmentTab.js
+   - Líneas 18: Fecha del issue en estado inicial
+   - Líneas 157-197: Conversión de fecha y actualización de datos
+   - Líneas 187: Eliminación de condicional que bloqueaba carga
+   - Líneas 200-242: Carga de proyectos al cargar cliente
+
+3. backend/endpoints/eightDEndpoints.js
+   - Líneas 345-350: Fix de type mismatch en UPDATE query
+
+4. backend/endpoints/approvalsEndpoints.js
+   - Línea 396: Eliminación de columna inexistente
+
+RESULTADO FINAL:
+----------------
+✅ Cliente se muestra: "ElringKlinger Canada Inc"
+✅ Proyecto se muestra: "PROJ-ELK-2024-004 - Engine Gasket System"
+✅ Parte seleccionada: ELK-GAS-001 (Cylinder Head Gasket)
+✅ Fecha del issue: 2025-11-15
+✅ Fotos cargadas: photo_no_good y photo_ok
+✅ Documentos: 1 documento adjunto
+✅ Cantidades correctas:
+   - Warehouse: 1
+   - In Process: 2
+   - In Transit: 1
+   - With Customer: 1
+   - Total Afectado: 5 piezas
+✅ Costos calculados:
+   - Costo Unitario: $45.00
+   - Impacto Total: $225.00 (5 × $45.00)
+   - Costo Estimado Total: $225.00 USD
+✅ D3 Data cargada correctamente
+
+LECCIÓN CRÍTICA PARA FUTURAS SESIONES:
+---------------------------------------
+🔴 REGLA DE ORO - CONVENCIÓN DE NOMBRES:
+
+El backend usa utils/caseTransform.js con transformToCamelCase() para convertir
+TODOS los datos de PostgreSQL (snake_case) a JavaScript (camelCase).
+
+POR LO TANTO:
+- El frontend SIEMPRE debe esperar campos en camelCase
+- NUNCA usar snake_case en el frontend para datos del backend
+- Si se agrega una nueva tabla/campo en PostgreSQL:
+  * PostgreSQL: usar snake_case (ej: client_name)
+  * Backend: transformToCamelCase automático
+  * Frontend: esperar camelCase (ej: clientName)
+
+VERIFICACIÓN RÁPIDA:
+Si los datos no se muestran pero están en la BD:
+1. Abrir consola del navegador (F12)
+2. Buscar logs de datos recibidos
+3. Verificar si los nombres de campos son camelCase o snake_case
+4. Si son camelCase pero el código busca snake_case → ERROR
+5. Corregir todos los accesos a campos para usar camelCase
+
+COMANDOS ÚTILES PARA DEBUGGING:
+--------------------------------
+# Verificar datos en PostgreSQL
+cd "C:\Users\The Eidrian\quality-alert-system\backend"
+node check_report.js
+
+# Ver logs del backend
+# (revisar terminal donde corre node server.js)
+
+# Ver datos en frontend
+# F12 → Console → buscar logs con 🔍 DEBUG
+
+PRÓXIMOS PASOS SUGERIDOS:
+--------------------------
+1. Completar D4 (Root Cause Analysis)
+2. Completar D5 (Corrective Actions)
+3. Completar D6 (Implement Permanent Actions)
+4. Completar D7 (Prevent Recurrence)
+5. Completar D8 (Congratulate Team)
+6. Implementar flujo de aprobaciones en cascada
+7. Agregar notificaciones por email
+8. Implementar permisos por rol
+
+ESTADO ACTUAL DEL PROYECTO:
+----------------------------
+✅ D0 - Escalation & Team (COMPLETO)
+✅ D1 - Team Assignment (COMPLETO)
+✅ D2 - Problem Description (COMPLETO)
+✅ D3 - Containment Actions (COMPLETO - con datos de inventario)
+⏳ D4 - Root Cause Analysis (PENDIENTE)
+⏳ D5 - Corrective Actions (PENDIENTE)
+⏳ D6 - Implement Actions (PENDIENTE)
+⏳ D7 - Prevent Recurrence (PENDIENTE)
+⏳ D8 - Congratulate Team (PENDIENTE)
+
+✅ Sistema de aprobaciones en cascada (BACKEND COMPLETO)
+⏳ Sistema de aprobaciones en cascada (FRONTEND PENDIENTE)
+✅ Carga y guardado de reportes
+✅ Manejo de archivos adjuntos (fotos y documentos)
+✅ Cálculos de inventario y costos
+✅ Integración Cliente-Proyecto-Partes
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================

@@ -1,0 +1,316 @@
+# Resumen del Sistema de Cotizaciones (Quotes)
+**Fecha**: 02 de Noviembre, 2025
+**Proyecto**: Quality Alert System
+
+---
+
+## 📍 ESTADO ACTUAL DEL PROYECTO
+
+### Contexto General
+- **Sistema principal**: Quality Alert System con gestión de Clientes, Jobs y Work Instructions
+- **Nueva funcionalidad**: Sistema de Cotizaciones (Quotes) dentro de Jobs
+- **Ubicación**: Sección "Documents" dentro de JobDetail
+
+---
+
+## ✅ LO QUE YA ESTÁ IMPLEMENTADO
+
+### 1. BACKEND - Endpoints de Quotes
+**Archivo**: `backend/endpoints/quotesEndpoints.js`
+
+Endpoints disponibles:
+- `GET /quotes` - Listar cotizaciones (con filtro opcional por jobId)
+- `GET /quotes/:id` - Obtener cotización específica
+- `POST /quotes` - Crear nueva cotización
+- `PUT /quotes/:id` - Actualizar cotización existente
+- `DELETE /quotes/:id` - Eliminar cotización
+- `POST /quotes/:id/export` - Marcar cotización como exportada
+
+### 2. FRONTEND - Servicio de Quotes
+**Archivo**: `frontend/src/services/quoteService.js`
+
+Métodos implementados:
+- `getAll(jobId)` - Obtener todas las cotizaciones
+- `getById(id)` - Obtener cotización por ID
+- `create(quoteData)` - Crear cotización
+- `update(id, quoteData)` - Actualizar cotización
+- `delete(id)` - Eliminar cotización
+- `markAsExported(id, exportType)` - Marcar como exportada
+
+### 3. FRONTEND - Crear Cotización
+**Archivo**: `frontend/src/pages/CreateQuote.js`
+
+**Características del formulario**:
+
+#### Sección 1: Client / Bill-To Information (Auto-rellenada desde Job)
+- Company
+- Contact Name
+- Billing Address
+- City, State, Zip Code
+- Phone
+- Email
+
+#### Sección 2: Service Location (Editable)
+- Company
+- Contact Name
+- Address
+- City, State, Zip Code
+- Phone
+- Email
+
+#### Sección 3: Project Information
+- Project Description (auto-rellenada desde Job)
+- Part Descriptions
+- Agreed Upon Services
+- Estimated Hours
+
+#### Sección 4: Service Rates (USD per hour)
+Tabla de tarifas con dos roles:
+1. **Working Supervisor**
+2. **Rework Team Member / Inspector**
+
+Tipos de tarifa para cada rol:
+- Shift 1
+- Shift 2/3
+- Overtime
+- Saturday
+- Sunday
+- Holiday
+
+**Valores por defecto**:
+- Working Supervisor: $29.00 (regular), $43.50 (overtime/weekend), $53.50 (holiday)
+- Inspector: $26.00 (regular), $39.00 (overtime/weekend), $52.00 (holiday)
+
+#### Sección 5: Additional Terms
+- Minimum Hours per Team Member (default: 4)
+- Overtime Threshold (default: 40 hours)
+- Material Markup (default: 10%)
+
+#### Sección 6: Purchase Order Information (Opcional)
+- Purchase Order Number
+- Purchase Order Amount
+
+**Funcionalidad**:
+- Auto-rellena datos del cliente y job al cargar
+- Permite editar todas las tarifas y términos
+- Guarda como "Draft" al crear
+- Navega de vuelta a JobDetail sección Documents después de guardar
+
+### 4. FRONTEND - Visualización en JobDetail
+**Archivo**: `frontend/src/pages/JobDetail.js` (líneas 1589-1764)
+
+**Sección "Documents"** (case 'documents'):
+- Título: "Quotes & Documents"
+- Botón "New Quote" (navega a `/jobs/:jobId/quotes/new`)
+- Lista de cotizaciones con:
+  - Quote Number
+  - Fecha y estado (Draft/Sent/Accepted/Rejected)
+  - Cliente y contacto
+  - Descripción del proyecto (truncada a 150 caracteres)
+- Click en cotización navega a `/jobs/:jobId/quotes/:quoteId` (⚠️ RUTA NO IMPLEMENTADA)
+- Estados con colores:
+  - Accepted: Verde
+  - Sent: Azul
+  - Rejected: Rojo
+  - Draft: Amarillo
+
+### 5. RUTAS CONFIGURADAS
+**Archivo**: `frontend/src/App.js`
+
+Rutas implementadas:
+- ✅ `/jobs/:jobId/quotes/new` → `<CreateQuote />`
+
+---
+
+## ❌ LO QUE FALTA POR IMPLEMENTAR
+
+### 1. QuoteDetail.js (PRIORIDAD ALTA)
+**Archivo a crear**: `frontend/src/pages/QuoteDetail.js`
+
+**Debe incluir**:
+- Ver todos los detalles de la cotización
+- Editar cotización existente
+- Cambiar estado (Draft → Sent → Accepted/Rejected)
+- Botón para exportar (PDF o Excel)
+- Botón para eliminar
+- Mostrar historial de cambios (si existe)
+- Vista previa similar al formato final
+
+### 2. Ruta faltante
+**Archivo**: `frontend/src/App.js`
+
+Agregar:
+```javascript
+<Route path="/jobs/:jobId/quotes/:quoteId" element={
+  <ProtectedRoute>
+    <QuoteDetail />
+  </ProtectedRoute>
+} />
+```
+
+### 3. Funcionalidad de Exportación (OPCIONAL)
+Opciones:
+- Exportar a PDF (usando react-pdf o similar)
+- Exportar a Excel (usando xlsx)
+- Generar documento con formato profesional
+- Enviar por email (integración futura)
+
+### 4. Modo Edición en QuoteDetail (OPCIONAL)
+- Permitir editar cotización existente
+- Reutilizar formulario de CreateQuote o crear uno similar
+- Guardar cambios y mantener historial
+
+---
+
+## 📊 ESTRUCTURA DE DATOS
+
+### Quote Object
+```javascript
+{
+  id: number,
+  jobId: number,
+  quoteNumber: string,        // Auto-generado
+  date: string,                // ISO date
+  status: string,              // 'Draft' | 'Sent' | 'Accepted' | 'Rejected'
+
+  // Client Info
+  clientCompany: string,
+  clientContact: string,
+  clientBillingAddress: string,
+  clientCity: string,
+  clientPhone: string,
+  clientEmail: string,
+
+  // Service Location
+  serviceCompany: string,
+  serviceContact: string,
+  serviceAddress: string,
+  serviceCity: string,
+  servicePhone: string,
+  serviceEmail: string,
+
+  // Project Info
+  projectDescription: string,
+  partDescriptions: string,
+  agreedServices: string,
+  estimatedHours: number,
+
+  // Service Rates
+  serviceRates: {
+    workingSupervisor: {
+      shift1: number,
+      shift2_3: number,
+      overtime: number,
+      saturday: number,
+      sunday: number,
+      holiday: number
+    },
+    inspector: {
+      shift1: number,
+      shift2_3: number,
+      overtime: number,
+      saturday: number,
+      sunday: number,
+      holiday: number
+    }
+  },
+
+  // Additional Terms
+  minimumHours: number,
+  overtimeThreshold: number,
+  materialMarkup: number,
+
+  // Purchase Order
+  purchaseOrderNumber: string,
+  purchaseOrderAmount: string,
+
+  // Metadata
+  createdAt: string,
+  updatedAt: string,
+  exportedAt: string | null,
+  exportType: string | null
+}
+```
+
+---
+
+## 🔄 FLUJO DE USUARIO ACTUAL
+
+1. **Ver Job** → JobDetail → Click en tab "Documents"
+2. **Crear Cotización** → Click "New Quote" → Formulario CreateQuote
+3. **Llenar Formulario** → Datos auto-rellenados + editar tarifas
+4. **Guardar** → Se guarda como "Draft" → Regresa a Documents tab
+5. **Ver Lista** → Cotizaciones aparecen en la lista con estado/fecha
+6. **⚠️ Click en Cotización** → FALLA - No existe QuoteDetail.js
+
+---
+
+## 🎯 PRÓXIMOS PASOS RECOMENDADOS
+
+### Paso 1: Crear QuoteDetail.js (INMEDIATO)
+- Vista completa de cotización
+- Modo lectura/edición
+- Botones de acción (Edit, Delete, Export, Change Status)
+
+### Paso 2: Agregar ruta en App.js
+- Configurar `/jobs/:jobId/quotes/:quoteId`
+
+### Paso 3: Probar flujo completo
+- Crear cotización → Ver → Editar → Exportar
+
+### Paso 4 (Opcional): Exportación
+- Generar PDF profesional
+- Incluir logo y formato corporativo
+
+---
+
+## 📁 ARCHIVOS CLAVE
+
+### Backend
+- `backend/endpoints/quotesEndpoints.js` - Todos los endpoints
+- `backend/server.js` - Importa quotesEndpoints
+
+### Frontend - Servicios
+- `frontend/src/services/quoteService.js` - API client
+
+### Frontend - Páginas
+- `frontend/src/pages/CreateQuote.js` - ✅ Implementado
+- `frontend/src/pages/QuoteDetail.js` - ❌ NO EXISTE (crear)
+- `frontend/src/pages/JobDetail.js` - ✅ Muestra lista de quotes
+
+### Frontend - Configuración
+- `frontend/src/App.js` - Rutas
+
+---
+
+## 🚀 SERVIDORES
+
+- **Backend**: http://localhost:5000
+- **Frontend**: http://localhost:3000
+
+---
+
+## 📝 NOTAS IMPORTANTES
+
+1. **Auto-relleno**: CreateQuote auto-rellena datos del Job y Cliente al cargar
+2. **Navegación**: Después de guardar, regresa a JobDetail tab Documents
+3. **Estados**: Las cotizaciones inician en "Draft"
+4. **Validación**: Actualmente mínima - se puede mejorar
+5. **Persistencia**: Los datos se guardan en memoria (arrays en backend)
+
+---
+
+## 🔍 CONTEXTO DEL PROYECTO COMPLETO
+
+Este sistema de cotizaciones es parte de un proyecto más grande:
+- **Quality Alert System**: Sistema principal
+- **Clientes**: Gestión de clientes con contactos y documentos
+- **Jobs**: Proyectos/trabajos vinculados a clientes
+- **Work Instructions**: Instrucciones de trabajo con HOE format
+- **Process Audits**: Auditorías de proceso (46 preguntas en 5 secciones)
+- **Risk Assessments**: Evaluaciones de riesgo (16 preguntas predefinidas)
+- **Quotes**: Sistema de cotizaciones (ACTUAL TRABAJO)
+
+---
+
+**ÚLTIMA ACTUALIZACIÓN**: 02/Nov/2025 - Sistema de cotizaciones funcional excepto QuoteDetail.js

@@ -1,0 +1,414 @@
+================================================================================
+RESUMEN DE AVANCE - SISTEMA DE ALERTAS DE CALIDAD 8D
+Fecha: 12 de Diciembre de 2025
+================================================================================
+
+PROTOCOLO OBLIGATORIO DE INICIO:
+--------------------------------------------------------------------------------
+ANTES DE CONTINUAR CON CUALQUIER TAREA, EJECUTAR LOS SIGUIENTES COMANDOS:
+
+1. Iniciar Backend:
+   cd "C:\Users\The Eidrian\quality-alert-system\backend"
+   node server.js
+   (Debe mostrar: "Quality Alert System ready for use" en puerto 5000)
+
+2. Iniciar Frontend (en otra terminal):
+   cd "C:\Users\The Eidrian\quality-alert-system\frontend"
+   npm start
+   (Debe abrir http://localhost:3000)
+
+3. Verificar base de datos:
+   - PostgreSQL debe estar corriendo
+   - Base de datos: quality_alert_system
+   - Usuario: postgres
+
+USUARIOS DE PRUEBA:
+- david.supervisor@company.com (Responsable Principal - ID: 9)
+- maria.engineer@company.com (Aprobador 1 - ID: 8)
+- john.manager@company.com (Aprobador 2)
+- sarah.director@company.com (Aprobador 3)
+
+REPORTE DE PRUEBA:
+- ID: 4
+- Report ID: 8D-2025-0316
+- Título: TEST2
+
+================================================================================
+TRABAJO REALIZADO HOY
+================================================================================
+
+1. IMPLEMENTACIÓN DE TOAST NOTIFICATIONS EN D1-D2-D3
+--------------------------------------------------------------------------------
+Archivos modificados:
+- frontend/src/pages/8DWorkflow.js
+
+Cambios:
+- Agregado import de useToast: import { useToast } from '../context/ToastContext';
+- Agregado hook: const { showSuccess, showError, showWarning } = useToast();
+- Reemplazados 4 alert() con Toast notifications:
+  * Línea 544-547: Éxito al guardar (draft/completar)
+  * Línea 552: Error al guardar
+  * Línea 571: Warning "guardar primero"
+  * Línea 596: Error en D3-MFG
+
+Resultado: Sistema unificado de notificaciones en toda la aplicación.
+
+--------------------------------------------------------------------------------
+
+2. CORRECCIÓN DE ÍCONO EN D4 "BORRADOR GUARDADO"
+--------------------------------------------------------------------------------
+Archivos modificados:
+- frontend/src/components/8D/D4ContainmentRootCause.js
+
+Cambio:
+- Línea 361: Cambiado de showError() a showSuccess('Borrador guardado ✓')
+
+Problema solucionado: El mensaje de éxito mostraba ícono de error.
+
+--------------------------------------------------------------------------------
+
+3. SISTEMA DE BLOQUEO POR APROBACIÓN EN D3-MFG
+--------------------------------------------------------------------------------
+Archivos modificados:
+- frontend/src/components/8D/D3MFG.js
+- frontend/src/services/eightDService.js
+- backend/endpoints/approvalEndpoints.js
+
+PROBLEMA INICIAL:
+- D3-MFG no bloqueaba durante proceso de aprobación
+- Cualquiera podía editar incluso después de enviar a aprobación
+- Se perdía trazabilidad
+
+CAUSA RAÍZ IDENTIFICADA:
+- Campo d3_mfg_current_approval_step se corrompía a 0 después de enviar a aprobación
+- Causa: mapD3MfgToBackend en eightDService.js enviaba approval_step en cada guardado
+- Los campos de aprobación deben manejarse SOLO por endpoints de aprobación
+
+SOLUCIONES IMPLEMENTADAS:
+
+A) Frontend - D3MFG.js:
+
+   1. Lógica de bloqueo mejorada (líneas 79-87):
+      ```javascript
+      const isFormBlocked = data?.d3MfgStatus === 'under_review' ||
+                            data?.d3MfgStatus === 'approved' ||
+                            (data?.d3MfgCurrentApprovalStep >= 1 && data?.d3MfgCurrentApprovalStep <= 3) ||
+                            data?.d3MfgCurrentApprovalStep === 4 ||
+                            !isPrimaryUser(); // CRÍTICO: Solo el primario puede editar
+      ```
+
+   2. Concepto de effectiveStep implementado:
+      - Cuando d3MfgStatus='under_review' pero currentApprovalStep=0 → asume step=1
+      - Aplicado en 3 funciones:
+        * isCurrentApprover() - líneas 43-61
+        * currentUserInProcess - líneas 92-119
+        * Cinta de estado - líneas 1084-1094
+
+   3. Separación de guardado normal vs aprobación (líneas 314-369):
+      - handleSendToApproval ahora hace 2 operaciones:
+        1. Guarda datos del formulario vía onDataUpdate(formData)
+        2. Envía estado de aprobación vía PUT directo al backend
+
+   4. Condición de botones corregida (línea 2370):
+      - Antes: isInApprovalState() && isCurrentApprover()
+      - Ahora: data?.d3MfgStatus === 'under_review' && isCurrentApprover()
+      - Usa status (confiable) en lugar de step (corrupto)
+
+B) Frontend - eightDService.js:
+
+   1. mapD3MfgToBackend limpiado (líneas 870-912):
+      - ELIMINADOS: d3_mfg_status y d3_mfg_current_approval_step
+      - Razón: Estos campos SOLO deben modificarse por endpoints de aprobación
+      - Mapea únicamente datos del formulario
+
+   2. Debug logging agregado (líneas 988-992):
+      - Ayuda a rastrear transformaciones de approval step
+
+C) Backend - approvalEndpoints.js:
+
+   1. Concepto de effectiveStep implementado (líneas 60-61):
+      ```javascript
+      const effectiveStep = (d3MfgStatus === 'under_review' && currentStep === 0)
+        ? 1
+        : currentStep;
+      ```
+
+   2. Validación mejorada (líneas 48-55):
+      - Verifica d3MfgStatus === 'under_review' ANTES de verificar step
+      - Más confiable que solo verificar step
+
+   3. Uso de effectiveStep en:
+      - Verificación de autorización (línea 72)
+      - Cálculo de nuevo step (línea 83)
+      - UPDATE query (líneas 88-91)
+
+   4. Audit log comentado temporalmente (líneas 106-117):
+      - Tabla audit_log no existe en la base de datos
+      - TODO: Crear tabla o eliminar definitivamente
+
+D) Frontend - 8DWorkflow.js:
+
+   Debug logging agregado (líneas 53-58):
+   - Muestra d3MfgStatus, d3MfgCurrentApprovalStep, d3MfgCompleted al cargar
+   - Útil para depuración
+
+REGLAS DE NEGOCIO IMPLEMENTADAS:
+
+1. Solo el Responsable Principal puede editar en cualquier momento
+2. Cuando está en aprobación (under_review):
+   - Campos bloqueados para TODOS
+   - Solo el aprobador actual ve botones Aprobar/Rechazar
+   - Responsable principal NO puede editar
+3. Cuando está aprobado (approved):
+   - Bloqueado permanentemente para TODOS
+4. Cuando está en draft:
+   - Solo Responsable Principal puede editar
+   - Aprobadores solo pueden VER (sin botones)
+
+--------------------------------------------------------------------------------
+
+4. SISTEMA DE BLOQUEO POR APROBACIÓN EN D4
+--------------------------------------------------------------------------------
+Archivos modificados:
+- frontend/src/components/8D/D4ContainmentRootCause.js
+
+Cambios aplicados (misma lógica que D3-MFG):
+
+1. Lógica de bloqueo mejorada (líneas 33-41):
+   ```javascript
+   const isFormBlocked = data?.d4Status === 'under_review' ||
+                         data?.d4Status === 'approved' ||
+                         (data?.d4CurrentApprovalStep >= 1 && data?.d4CurrentApprovalStep <= 3) ||
+                         data?.d4CurrentApprovalStep === 4 ||
+                         !isPrimaryUser();
+   ```
+
+2. Concepto de effectiveStep en:
+   - currentUserInProcess (líneas 59-86)
+   - Cinta de estado (líneas 758-767)
+
+Resultado: D4 tiene las mismas protecciones que D3-MFG.
+
+--------------------------------------------------------------------------------
+
+5. CORRECCIÓN DE CINTA DE ESTADO
+--------------------------------------------------------------------------------
+Archivos modificados:
+- frontend/src/components/8D/D3MFG.js (líneas 1084-1094)
+- frontend/src/components/8D/D4ContainmentRootCause.js (líneas 758-767)
+
+Problema:
+- Mostraba "Paso: Responsable Principal" cuando debería mostrar "Paso: Aprobador 1"
+- Mostraba usuario incorrecto en "Usuario Actual"
+
+Solución:
+- Implementado effectiveStep que corrige step=0 a step=1 cuando status='under_review'
+- Usuario Actual ahora busca en countermeasureUsers[effectiveStep]
+
+Resultado:
+Cuando está en aprobación muestra correctamente:
+```
+Estado: 🔄 En Revisión
+Paso: Aprobador 1
+Usuario Actual: 👤 maria.engineer@company.com
+```
+
+================================================================================
+ARCHIVOS MODIFICADOS (RESUMEN)
+================================================================================
+
+Frontend:
+- src/pages/8DWorkflow.js (Toast notifications + debug)
+- src/components/8D/D3MFG.js (bloqueo + effectiveStep + debug)
+- src/components/8D/D4ContainmentRootCause.js (bloqueo + effectiveStep)
+- src/services/eightDService.js (eliminados campos de aprobación del mapping)
+
+Backend:
+- endpoints/approvalEndpoints.js (effectiveStep + validación por status)
+
+Total: 5 archivos modificados
+
+================================================================================
+FLUJO DE APROBACIÓN PROBADO Y FUNCIONANDO
+================================================================================
+
+1. ENVIAR A APROBACIÓN:
+   ✅ Responsable Principal envía
+   ✅ d3_mfg_status cambia a 'under_review'
+   ✅ d3_mfg_current_approval_step cambia a 1
+   ✅ Campos se bloquean
+   ✅ Botones Guardar/Enviar desaparecen
+
+2. APROBAR:
+   ✅ Aprobador 1 ve botones Aprobar/Rechazar
+   ✅ Al aprobar, step avanza a 2
+   ✅ Status sigue en 'under_review'
+   ✅ Aprobación se guarda en d3_mfg_approval_1_status
+
+3. RECHAZAR:
+   ✅ Aprobador puede rechazar con comentarios
+   ✅ d3_mfg_status regresa a 'draft'
+   ✅ d3_mfg_current_approval_step regresa a 0
+   ✅ Campos se desbloquean SOLO para Responsable Principal
+   ✅ Rechazo se guarda en d3_mfg_approval_1_status='rejected'
+
+4. PROTECCIÓN DE TRAZABILIDAD:
+   ✅ Aprobadores NO pueden editar (ni en draft ni en revisión)
+   ✅ Solo pueden VER y Aprobar/Rechazar cuando les corresponde
+   ✅ Responsable Principal es el ÚNICO que puede editar
+
+================================================================================
+ISSUES CONOCIDOS / PENDIENTES
+================================================================================
+
+1. TABLA AUDIT_LOG NO EXISTE
+   - Código comentado en approvalEndpoints.js líneas 106-117
+   - Decisión pendiente: ¿Crear tabla o eliminar código?
+
+2. MÚLTIPLES PROCESOS BACKEND
+   - Hay varios procesos node corriendo simultáneamente
+   - IDs: 288623, 8ea717, 0a28a8, 9d99c9, c99752
+   - Recomendación: Matar todos y mantener solo uno
+   - Comando: taskkill /F /IM node.exe && cd backend && node server.js
+
+3. CONSOLE.LOGS DE DEBUG
+   - Agregados console.log en varios archivos para debugging
+   - Considerar limpiarlos en producción
+   - Archivos afectados:
+     * 8DWorkflow.js línea 53
+     * D3MFG.js línea 90
+     * eightDService.js línea 988
+
+4. OTROS ARCHIVOS TEST EN BACKEND
+   - insert_test_otros.js visto durante la sesión
+   - Revisar y limpiar archivos de prueba temporales
+
+================================================================================
+CONCEPTOS TÉCNICOS CLAVE PARA ENTENDER EL CÓDIGO
+================================================================================
+
+1. EFFECTIVE STEP:
+   - Variable calculada que corrige el step corrupto
+   - Fórmula: si (status='under_review' Y step=0) entonces step=1, sino usar step real
+   - Usado en validaciones, UI y backend
+   - Solución al problema de corrupción de datos
+
+2. SEPARACIÓN DE CONCERNS:
+   - Datos de formulario → manejados por onDataUpdate + mapD3MfgToBackend
+   - Estado de aprobación → manejado SOLO por endpoints de aprobación
+   - NUNCA mezclar: cada uno tiene su responsabilidad
+
+3. BLOQUEO MULTINIVEL:
+   - Nivel 1: Status (under_review/approved) = bloqueado para todos
+   - Nivel 2: Usuario (si no eres primario) = bloqueado siempre
+   - Nivel 3: Aprobadores nunca editan, solo aprueban/rechazan
+   - Resultado: Solo primario edita, solo en draft
+
+4. SNAKE_CASE ↔ CAMELCASE:
+   - Backend usa snake_case (d3_mfg_status)
+   - Frontend usa camelCase (d3MfgStatus)
+   - Transformación automática en eightDService.js
+   - transformToCamelCase en línea 359
+
+================================================================================
+COMANDOS ÚTILES PARA DEBUGGING
+================================================================================
+
+1. Ver estado de aprobación en consola del navegador:
+   - Ir a pestaña D3-MFG o D4
+   - Abrir DevTools → Console
+   - Buscar: "🔒 D3MFG Block Status:" o "📊 Report Data Loaded:"
+
+2. Consultar base de datos directamente:
+   psql -U postgres -d quality_alert_system
+
+   SELECT id, d3_mfg_status, d3_mfg_current_approval_step,
+          d3_mfg_approval_1_status, d3_mfg_approval_2_status
+   FROM eightd_reports WHERE id = 4;
+
+3. Ver logs del backend:
+   - Los logs muestran cada request
+   - Buscar: "🔄 Approving" o "🔄 Rejecting"
+
+4. Verificar procesos en puerto 5000:
+   netstat -ano | findstr :5000
+
+5. Matar proceso específico:
+   taskkill /F /PID [número]
+
+================================================================================
+DATOS DE PRUEBA ÚTILES
+================================================================================
+
+Escalation Path del reporte 4:
+{
+  "issue_users": [9],           // david.supervisor
+  "countermeasure_users": [
+    9,    // [0] Responsable Principal - david.supervisor
+    8,    // [1] Aprobador 1 - maria.engineer
+    10,   // [2] Aprobador 2 - john.manager
+    11    // [3] Aprobador 3 - sarah.director
+  ],
+  "confirmation_users": [9]
+}
+
+Estados de d3_mfg_status:
+- 'draft' = En borrador, editable por primario
+- 'under_review' = En proceso de aprobación, bloqueado
+- 'approved' = Aprobado completamente, bloqueado permanentemente
+
+Estados de d3_mfg_approval_X_status:
+- null = No revisado aún
+- 'approved' = Aprobado por aprobador X
+- 'rejected' = Rechazado por aprobador X
+
+================================================================================
+PRÓXIMOS PASOS SUGERIDOS
+================================================================================
+
+1. INMEDIATO:
+   - Limpiar procesos node duplicados
+   - Decidir sobre tabla audit_log (crear o eliminar código)
+   - Probar flujo completo con 3 aprobadores
+
+2. CORTO PLAZO:
+   - Aplicar misma lógica de bloqueo a otras secciones si las hay
+   - Limpiar console.logs de debug
+   - Verificar que D5 y D6 también protejan trazabilidad
+
+3. MEDIANO PLAZO:
+   - Implementar notificaciones por email a aprobadores
+   - Dashboard de reportes pendientes de aprobación
+   - Historial de aprobaciones/rechazos visible en UI
+
+4. LIMPIEZA DE CÓDIGO:
+   - Eliminar archivos de prueba en backend (insert_test_otros.js, etc.)
+   - Revisar y consolidar procesos backend
+   - Documentar API endpoints
+
+================================================================================
+NOTAS IMPORTANTES
+================================================================================
+
+⚠️  NUNCA modificar d3_mfg_status o d3_mfg_current_approval_step desde
+    el guardado normal (onDataUpdate). Solo usar endpoints de aprobación.
+
+⚠️  Siempre verificar isPrimaryUser() antes de permitir ediciones.
+
+⚠️  El concepto de effectiveStep es CRÍTICO para manejar datos corruptos.
+    No eliminar esta lógica.
+
+⚠️  Los botones de Aprobar/Rechazar solo deben aparecer cuando:
+    - d3MfgStatus === 'under_review' (usa status, no step)
+    - isCurrentApprover() === true
+
+⚠️  El overlay de bloqueo fue eliminado porque bloqueaba otras pestañas.
+    Se usa disabled={isFormBlocked} en cada campo individual.
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================
+
+Generado: 12/08/2025
+Sistema: Quality Alert System - 8D Methodology
+Version: 2.0

@@ -1,0 +1,168 @@
+# Resumen de la Sesión - Quality Alert System
+
+## Estado Actual del Proyecto
+
+### Arquitectura General
+- **Frontend**: React 18+ con React Router v6, ejecutándose en puerto 3000
+- **Backend**: Node.js + Express, ejecutándose en puerto 5000
+- **Almacenamiento**: En memoria (arrays en backend/server.js)
+- **Estilos**: CSS inline, sin framework CSS externo
+
+### Funcionalidades Principales Implementadas
+
+#### 1. **Sistema de Gestión de Clientes**
+- **Lista de clientes** (`/clients`) - ClientsList.js
+- **Detalle de cliente** (`/clients/:clientId`) - ClientDetail.js
+- **Crear cliente** (`/clients/new`) - CreateClient.js
+- **Editar cliente** (`/clients/:clientId/edit`) - CreateClient.js (mismo componente, modo edición)
+
+#### 2. **Sistema de Gestión de Jobs**
+- **Lista de jobs** (`/jobs`) - JobsList.js
+- **Detalle de job** (`/jobs/:jobId`) - JobDetail.js
+- **Crear job** (`/jobs/new`) - CreateJob.js
+
+#### 3. **CreateJob - Características Especiales**
+**Selector de Tipo de Job** (3 opciones):
+- **"Campaña de calidad"**: Sin sección de milestones, aspectos de calidad personalizables
+- **"Nueva tarea"**: Con milestones y aspectos de calidad personalizables
+- **"Proyecto"**: Con milestones, pero aspectos de calidad fijos = "Juicio del Proyecto" únicamente
+
+**Secciones del formulario**:
+- Información básica (nombre, número, cliente, tipo)
+- Milestones (condicional - se oculta para Campaña de calidad)
+- Aspectos de calidad (auto-asigna "Juicio del Proyecto" para Proyectos)
+- Documentos (se guardan en el cliente con referencia al job)
+
+#### 4. **CreateClient - Características**
+**Modo dual** (crear/editar):
+- Detecta si hay `clientId` en URL para determinar el modo
+- En modo edición: carga datos existentes con `useEffect`
+- Muestra spinner mientras carga datos en modo edición
+
+**Secciones del formulario**:
+- Información Básica (nombre, alias, vendor number, website, estado, firma requerida)
+- Información Corporativa (dirección, teléfono, fax)
+- Información de Facturación (dirección facturación, frecuencia, período)
+- Contactos (tabla dinámica con agregar/eliminar)
+- Documentos (tabla dinámica con tipos predefinidos: Cotización, Correo de Aprobación, Instrucciones, Contrato, Orden de Compra, Certificado, Otro)
+
+### Cambio Importante de Esta Sesión
+
+**ANTES**: ClientDetail tenía edición inline (campos se convertían en inputs, botones Save/Cancel)
+**AHORA**: ClientDetail solo muestra datos, botón "Edit" navega a `/clients/:clientId/edit` que abre el formulario completo pre-poblado
+
+**Razón del cambio**: Evitar complicaciones con edición pestaña por pestaña en ClientDetail (que tiene múltiples tabs: profile, contacts, documents, jobs, analytics, billing)
+
+### Archivos Modificados en Esta Sesión
+
+1. **frontend/src/pages/CreateClient.js**:
+   - Agregado `useParams` para detectar `clientId`
+   - Agregado `isEditMode` flag
+   - Agregado `useEffect` para cargar datos del cliente en modo edición
+   - Modificado `handleSubmit` para usar PUT en edición, POST en creación
+   - Agregado loading spinner para modo edición
+   - Textos dinámicos según modo (títulos, botones)
+
+2. **frontend/src/App.js**:
+   - Agregada ruta `/clients/:clientId/edit` (líneas 117-121)
+
+3. **frontend/src/pages/ClientDetail.js**:
+   - Eliminados states: `isEditing`, `editedClient`, `saving`
+   - Eliminados handlers: `handleSaveEdit`, `handleCancelEdit`, `handleInputChange`
+   - Simplificado `handleEdit` para navegar a ruta de edición
+   - Eliminadas todas las condicionales `{isEditing ? ... : ...}`
+   - Limpiados imports no utilizados (Save, X icons)
+   - Solo quedan botones: Edit y Delete
+
+### Relación Documentos-Jobs-Clientes
+
+**Arquitectura implementada**:
+- Los documentos subidos en CreateJob se guardan en el array `documents` del cliente
+- Cada documento del job incluye: `jobId`, `jobNumber`, `jobName` como referencias
+- Esto permite centralizar documentos en el cliente pero filtrarlos por job
+- Backend maneja esta lógica en el endpoint POST `/jobs/create` (líneas 1293-1311 de server.js)
+
+### Backend - Endpoints Clave
+
+**Clientes**:
+- `GET /clients` - Lista todos los clientes
+- `GET /clients/:id` - Obtiene un cliente específico
+- `POST /clients/create` - Crea nuevo cliente
+- `PUT /clients/:id` - Actualiza cliente existente
+- `DELETE /clients/:id` - Elimina cliente
+
+**Jobs**:
+- `GET /jobs` - Lista todos los jobs (acepta filtro `?clientId=`)
+- `GET /jobs/:id` - Obtiene un job específico
+- `POST /jobs/create` - Crea nuevo job (incluye lógica para documentos)
+
+### Estructura de Datos
+
+**Cliente**:
+```javascript
+{
+  id, name, alias, vendorNumber,
+  corporateAddress, corporatePhone, corporateFax,
+  billingAddress, billingFrequency, billingPeriod,
+  website, isActive, requiresSignature,
+  contacts: [{name, title, email, phone}],
+  documents: [{name, type, description, fileName, fileSize, uploadDate, jobId?, jobNumber?, jobName?}]
+}
+```
+
+**Job**:
+```javascript
+{
+  id, jobNumber, jobName, clientId, jobType,
+  milestones: [{name, targetDate}],
+  qualityAspects: [{name, criteria: []}],
+  documents: [{name, type, description, fileName, fileSize, uploadDate}]
+}
+```
+
+### Pendientes/Notas para el Futuro
+
+1. Los servidores backend y frontend deben estar corriendo (hay múltiples instancias en background)
+2. La navegación después de guardar en CreateClient redirige correctamente a ClientDetail
+3. No hay validación real de archivos (solo simulación)
+4. Los datos se pierden al reiniciar el servidor (en memoria)
+5. No hay manejo de errores robusto en el frontend
+6. Las rutas legacy aún existen (create-8d, analysis, validation8d, escalation) pero no se usan activamente
+
+### Rutas del Sistema
+
+**Protegidas** (requieren autenticación):
+- `/dashboard` - Dashboard principal
+- `/8d-workflow` - Flujo 8D
+- `/8d-consultation` - Consulta 8D
+- `/user-management` - Gestión de usuarios
+- `/clients` - Lista de clientes
+- `/clients/new` - Crear cliente
+- `/clients/:clientId/edit` - **NUEVO** Editar cliente
+- `/clients/:clientId` - Detalle de cliente
+- `/jobs` - Lista de jobs
+- `/jobs/new` - Crear job
+- `/jobs/:jobId` - Detalle de job
+
+**Públicas**:
+- `/login` - Página de login
+- `/` - Redirige a `/dashboard`
+
+### Estado de los Servidores
+
+Hay múltiples instancias de backend ejecutándose (IDs: 338839, d48e5e, 256a9c, 63de9f, 04e69c, 07dc53, 217bd2). Probablemente solo una esté activa en los puertos 5000/3000.
+
+### Próximos Pasos Sugeridos
+
+1. Probar el flujo completo de edición de cliente
+2. Considerar implementar edición de jobs de manera similar
+3. Limpiar instancias duplicadas de servidores backend
+4. Implementar persistencia real (base de datos)
+5. Agregar validación de formularios más robusta
+6. Implementar manejo de carga real de archivos
+
+---
+
+**Última modificación**: Implementación completa del sistema de edición de clientes mediante formulario completo (CreateClient en modo edición) en lugar de edición inline en ClientDetail.
+
+**Fecha**: 2025-10-30

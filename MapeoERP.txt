@@ -1,0 +1,745 @@
+================================================================================
+                        QUALITY ALERT SYSTEM
+              Sistema Integral de Gestión de Calidad Industrial
+                         http://localhost:3000/
+================================================================================
+
+                                      |
+        +-------------+---------------+---------------+-------------+-------------+
+        |             |               |               |             |             |
+        v             v               v               v             v             v
+  +-----------+ +-----------+ +-------------+ +-----------+ +-----------+ +-----------+
+  |    8D     | |  ECR/ECO  | |   QUALITY   | |    MRB    | |  CLIENTES | |  ADMIN    |
+  |  REPORTS  | |           | |    ALERT    | |           | |           | |           |
+  +-----+-----+ +-----+-----+ +------+------+ +-----+-----+ +-----+-----+ +-----+-----+
+        |             |              |              |             |             |
+
+
+================================================================================
+                    MODULO 1: 8D REPORTS
+        Gestión de No Conformidades con Metodología 8 Disciplinas
+================================================================================
+
+8D REPORTS
+|
++-- Dashboard (/dashboard)
+|   +-- KPIs en Tiempo Real
+|   |   +-- Total de Reportes
+|   |   +-- Abiertos / Cerrados
+|   |   +-- Vencidos (con alertas)
+|   |   +-- Costo Total Acumulado
+|   +-- Gráficas Analíticas
+|   |   +-- Tendencia 30 días
+|   |   +-- Tendencia de Costos
+|   |   +-- Distribución por Severidad
+|   |   +-- Radar de Desempeño (5 ejes)
+|   |   +-- Pareto de Defectos (80/20)
+|   |   +-- Distribución por Status
+|   +-- Vista Personal vs General
+|
++-- Workflow 8D (/8d-workflow)
+|   +-- D1-D3: Formación de Equipo
+|   |   +-- Asignación de responsables
+|   |   +-- Definición del problema
+|   |   +-- Acciones de contención
+|   +-- D4: Análisis de Causa Raíz
+|   |   +-- 5 Porqués
+|   |   +-- Diagrama Ishikawa
+|   |   +-- Árbol de fallas
+|   +-- D5: Acciones Correctivas
+|   |   +-- Plan de implementación
+|   |   +-- Fechas compromiso
+|   +-- D5-D6-D7: Contramedidas
+|   |   +-- Verificación de efectividad
+|   |   +-- Acciones preventivas
+|   |   +-- Estandarización
+|   +-- D8: Cierre y Evidencia
+|       +-- Documentación final
+|       +-- Reconocimiento de equipo
+|       +-- Lecciones aprendidas
+|
++-- Consulta (/8d-consultation)
+|   +-- Búsqueda avanzada
+|   +-- Filtros por status
+|   +-- Historial completo
+|
++-- Lecciones Aprendidas (/lessons-learned)
+    +-- Repositorio centralizado
+    +-- Búsqueda por texto/cliente
+    +-- Filtro por severidad
+
+VALOR DE NEGOCIO:
+  [✓] Cumplimiento IATF 16949 / ISO 9001
+  [✓] Reducción de tiempos de respuesta a cliente
+  [✓] Trazabilidad completa de no conformidades
+  [✓] Análisis de costos por calidad
+  [✓] Base de conocimiento para prevención
+
+
+================================================================================
+                    MODULO 2: ECR/ECO
+        Engineering Change Request / Engineering Change Order
+================================================================================
+
+ECR/ECO
+|
++-- Dashboard PowerBI (/ecr-dashboard)
+|   +-- Widgets Configurables (Drag & Drop)
+|   |   +-- KPIs con Semáforos
+|   |   +-- Gráficas de Tendencia
+|   |   +-- Distribución por Tipo/Categoría
+|   |   +-- Etapas de Adopción
+|   |   +-- Mapa de Calor de Riesgos
+|   |   +-- Rankings (Clientes/Áreas)
+|   |   +-- Impacto Financiero
+|   +-- Personalización por Usuario
+|   +-- Múltiples Temas Visuales
+|
++-- Workflow ECR (/ecr-workflow)
+|   +-- ECR-1: Tablero de Cambios
+|   |   +-- Solicitud inicial
+|   |   +-- Asignación de equipo
+|   +-- ECR-2: Descripción del Cambio
+|   |   +-- Detalle técnico
+|   |   +-- Justificación
+|   +-- ECR-2B: Análisis de Impacto (IATF 8.5.6.1)
+|   |   +-- Matriz de riesgos
+|   |   +-- Áreas afectadas
+|   |   +-- Validadores requeridos
+|   +-- ECR-3: Plan de Validación
+|   |   +-- Pruebas requeridas
+|   |   +-- Criterios de aceptación
+|   +-- ECR-4: Cierre y Confirmación
+|       +-- Evidencia de implementación
+|       +-- Aprobación final
+|
++-- Dashboard Simple (/ecr-dashboard-simple)
+    +-- Vista ejecutiva sin personalización
+
+VALOR DE NEGOCIO:
+  [✓] Control de cambios de ingeniería
+  [✓] Cumplimiento IATF 8.5.6.1
+  [✓] Análisis de impacto sistemático
+  [✓] Trazabilidad de modificaciones
+  [✓] Reducción de errores por cambios no controlados
+
+
+================================================================================
+                    MODULO 3: QUALITY ALERT (QAR)
+        Sistema de Alertas de Calidad y Captura de Defectos
+================================================================================
+
+QUALITY ALERT
+|
++-- Captura de Defectos (/defect-capture)
+|   +-- Interfaz Táctil (Tablets)
+|   +-- Inspección Pieza por Pieza
+|   +-- Botones de Defectos Configurables
+|   +-- Disposiciones (OK/NG/Scrap/Rework)
+|   +-- Disparo Automático de QAR
+|   +-- Múltiples Temas Visuales
+|
++-- Crear QAR (/qar-create)
+|   +-- Modo Automático (por umbrales)
+|   |   +-- Datos pre-llenados de defectos
+|   +-- Modo Manual
+|   |   +-- Selección de catálogo
+|   |   +-- Cliente/Proyecto/Parte
+|   +-- Fotos OK vs NOK
+|   +-- Destinatarios (Respuesta/Validación)
+|
++-- Lista de QARs (/qar-list)
+|   +-- Estados: EMITIDO -> RESPONDIDO -> CERRADO
+|   +-- Filtros por Cliente/Status
+|   +-- Iconos de Estado Visual
+|
++-- Detalle QAR (/qar-detail/:id)
+|   +-- Información del Alerta
+|   +-- Sección de Respuesta
+|   |   +-- Causa raíz
+|   |   +-- Acción correctiva
+|   +-- Sección de Validación
+|   |   +-- Revisión
+|   |   +-- Aceptar/Rechazar
+|   +-- Hilo de Comentarios
+|
++-- Configuración (/defect-config)
+|   +-- Severidades (Alta/Media/Baja)
+|   +-- Estaciones de Inspección
+|   +-- Etapas de Producción
+|   +-- Turnos
+|   +-- Disposiciones
+|   +-- Validadores de QAR
+|
++-- Dashboard QAR (/defect-dashboard)
+|   +-- Vista Ejecutiva Agregada
+|   +-- Métricas del Sistema
+|   +-- Tendencias
+|
++-- Consulta Avanzada (/defect-query)
+|   +-- Filtros Múltiples
+|   |   +-- Cliente/Proyecto/Parte
+|   |   +-- Categoría/Tipo Defecto
+|   |   +-- Severidad/Estación/Turno
+|   |   +-- Rango de Fechas
+|   +-- Gráficas Dinámicas
+|   |   +-- Barras por Tipo/Categoría
+|   |   +-- Pie por Severidad
+|   |   +-- Serie de Tiempo
+|   +-- Exportar a Excel
+|
++-- Admin Defectos (/defect-admin)
+    +-- Catálogo de Tipos de Defecto
+    +-- Categorías
+    +-- Importación Masiva
+
+VALOR DE NEGOCIO:
+  [✓] Detección temprana de problemas
+  [✓] Comunicación inmediata con proveedores
+  [✓] Trazabilidad de inspecciones
+  [✓] Métricas de calidad en tiempo real
+  [✓] Reducción de PPMs (Partes por Millón)
+
+
+================================================================================
+                    MODULO 4: MRB
+        Material Review Board - Campañas de Inspección
+================================================================================
+
+MRB (Material Review Board)
+|
++-- Dashboard MRB (/mrb-dashboard)
+|   +-- KPIs de Campañas
+|   +-- Status: Abiertas/Cerradas/Canceladas
+|   +-- Estadísticas Generales
+|
++-- Crear MRB (/mrb-create)
+|   +-- Paso 1: Seleccionar Origen
+|   |   +-- Vincular a QAR existente
+|   |   +-- Vincular a 8D existente
+|   +-- Paso 2: Buscar y Seleccionar
+|   |   +-- Buscador por folio/título
+|   +-- Paso 3: Datos Heredados (solo lectura)
+|   |   +-- Folio origen
+|   |   +-- Cliente/Proyecto/Parte
+|   |   +-- Descripción del problema
+|   +-- Paso 4: Datos de Operación
+|       +-- Cantidad Inspeccionada
+|       +-- OK / NOK
+|       +-- Costo de Scrap
+|       +-- Costo de Personal
+|       +-- # Inspectores
+|       +-- # Supervisores por turno
+|       +-- Fotos OK/NOK
+|
++-- Lista de Campañas (/mrb-campaigns)
+|   +-- Estados: ABIERTA/EN_PROCESO/CERRADA
+|   +-- Filtros por Cliente/Status
+|   +-- Columna de Origen (QAR/8D)
+|   +-- Contadores por Status
+|
++-- Detalle Campaña (/mrb-campaign/:id)
+    +-- Tarjeta de Origen
+    |   +-- Badge clickeable (navega a origen)
+    |   +-- Botón "Cambiar Origen"
+    |   +-- Alerta si QAR escaló a 8D
+    +-- Lista de Defectos
+    +-- Respuesta y Validación
+    +-- Comentarios
+
+VALOR DE NEGOCIO:
+  [✓] Gestión de sorteos de material
+  [✓] Trazabilidad de costos de inspección
+  [✓] Control de campañas de contención
+  [✓] Vinculación con QARs y 8Ds
+  [✓] Métricas de inspectores/supervisores
+
+
+================================================================================
+                    MODULO 5: CLIENTES
+        Gestión de Clientes, Proyectos y Partes
+================================================================================
+
+CLIENTES
+|
++-- Lista de Clientes (/clients)
+|   +-- Búsqueda por Nombre
+|   +-- Importar/Exportar Excel
+|   +-- BOM Global (Bill of Materials)
+|   +-- Estadísticas: Total/Activos/Inactivos
+|
++-- Crear/Editar Cliente
+|   +-- Información Básica
+|   |   +-- Nombre, Alias
+|   |   +-- Número de Proveedor
+|   |   +-- Dirección
+|   |   +-- Contacto Principal
+|   +-- Facturación
+|   |   +-- Frecuencia de cobro
+|   |   +-- Email de facturación
+|   +-- Configuración
+|       +-- Tiempos de respuesta D4/D5
+|       +-- Requerimientos de firma
+|
++-- Detalle Cliente (/clients/:id)
+    +-- Proyectos
+    |   +-- Lista de proyectos
+    |   +-- Crear/Editar proyecto
+    |   +-- Números de parte
+    +-- Contactos
+    |   +-- Lista de contactos cliente
+    +-- Documentos
+    |   +-- Cotizaciones
+    |   +-- Especificaciones
+    |   +-- Contratos
+    +-- BOM Global
+    |   +-- Todas las partes
+    |   +-- Columnas arrastrables
+    |   +-- Importar desde Excel
+    +-- Configuración
+        +-- Editar parámetros
+
+VALOR DE NEGOCIO:
+  [✓] Base de datos centralizada de clientes
+  [✓] Gestión de proyectos y números de parte
+  [✓] Control de BOM (Bill of Materials)
+  [✓] Configuración personalizada por cliente
+  [✓] Documentación organizada
+
+
+================================================================================
+                    MODULO 6: ADMINISTRACION
+        Usuarios, Configuración y Carga de Trabajo
+================================================================================
+
+ADMINISTRACION
+|
++-- Gestión de Usuarios (/user-management)
+|   +-- Lista de Usuarios
+|   |   +-- Búsqueda y Filtros
+|   |   +-- Por Rol/Departamento/Status
+|   |   +-- Disponibilidad
+|   +-- Crear/Editar Usuario
+|   |   +-- Email, Nombre, Puesto
+|   |   +-- Rol y Departamento
+|   |   +-- Nivel Jerárquico
+|   |   +-- Manager Asignado
+|   |   +-- Team Presets (8D/ECR)
+|   +-- Organigrama Visual
+|   |   +-- Árbol jerárquico
+|   |   +-- Colores por nivel
+|   |   +-- Nodos expandibles
+|   +-- Gantt de Carga
+|       +-- Visualización de tareas
+|
++-- Workload Manager (/workload)
+|   +-- Organigrama con Niveles
+|   +-- Gráfica Gantt
+|   +-- Capacidad del Equipo
+|   +-- KPIs QCTSP
+|       +-- Q - Quality
+|       +-- C - Cost
+|       +-- T - Time/Delivery
+|       +-- S - Safety
+|       +-- P - People/Morale
+|
++-- Matriz de Riesgos (/risk-matrix-config)
+|   +-- Niveles de Severidad (1-4)
+|   +-- Niveles de Ocurrencia (1-4)
+|   +-- Matriz 4x4 (Bajo/Medio/Alto)
+|   +-- Sugerencias por Nivel de Riesgo
+|
++-- Análisis de Impacto (/impact-analysis-config)
+    +-- Áreas de Impacto
+    |   +-- Nombre, Icono, Color
+    |   +-- Descripción
+    +-- Subsecciones por Área
+    +-- Validadores por Defecto
+
+VALOR DE NEGOCIO:
+  [✓] Control de accesos por rol
+  [✓] Visualización de estructura organizacional
+  [✓] Gestión de carga de trabajo
+  [✓] KPIs de desempeño (QCTSP)
+  [✓] Configuración de matrices de riesgo
+
+
+================================================================================
+                    CARACTERISTICAS TRANSVERSALES
+================================================================================
+
+CARACTERISTICAS DEL SISTEMA
+|
++-- Autenticación
+|   +-- Login con token JWT
+|   +-- Rutas protegidas
+|   +-- Roles y permisos
+|
++-- Multi-idioma
+|   +-- Español
+|   +-- Inglés
+|
++-- Temas Visuales
+|   +-- Dark Mode
+|   +-- Light Mode
+|   +-- Ocean
+|   +-- Cream
+|   +-- Gray
+|
++-- Visualización de Datos
+|   +-- Gráficas interactivas (Recharts)
+|   +-- Dashboards configurables
+|   +-- Drag & Drop de widgets
+|
++-- Importar/Exportar
+|   +-- Excel (XLSX)
+|   +-- BOM desde archivo
+|
++-- Responsive
+    +-- Desktop
+    +-- Tablet (Captura de defectos)
+    +-- Mobile
+
+
+================================================================================
+                    RESUMEN EJECUTIVO PARA VENTA
+================================================================================
+
++---------------+------------------------------------------+----------------------------------+
+| MODULO        | PROBLEMA QUE RESUELVE                    | BENEFICIO CLAVE                  |
++---------------+------------------------------------------+----------------------------------+
+| 8D Reports    | Gestión desordenada de no conformidades  | Cumplimiento normativo + Costos  |
+| ECR/ECO       | Cambios de ingeniería sin control        | Trazabilidad + Análisis impacto  |
+| Quality Alert | Detección tardía de defectos             | Alertas tiempo real + PPM        |
+| MRB           | Sorteos de material sin seguimiento      | Control costos + Trazabilidad    |
+| Clientes      | Información dispersa de clientes         | Base centralizada + BOM          |
+| Admin         | Falta de visibilidad organizacional      | Organigrama + KPIs QCTSP         |
++---------------+------------------------------------------+----------------------------------+
+
+
+================================================================================
+                    PROPUESTA DE VALOR UNICA
+================================================================================
+
++-----------------------------------------------------------------------------+
+|                                                                             |
+|   "Un solo sistema para gestionar todo el ciclo de calidad industrial:     |
+|    desde la captura de defectos en piso hasta el cierre de acciones        |
+|    correctivas, con trazabilidad completa y cumplimiento normativo."       |
+|                                                                             |
+|   [✓] IATF 16949    [✓] ISO 9001    [✓] VDA    [✓] Metodología 8D          |
+|                                                                             |
++-----------------------------------------------------------------------------+
+
+
+================================================================================
+                    RUTAS COMPLETAS DEL SISTEMA
+================================================================================
+
+AUTENTICACION:
+  /login                    - Página de inicio de sesión
+
+HOME:
+  /                         - Launcher de aplicaciones (menú principal)
+
+MODULO 8D:
+  /dashboard                - Dashboard 8D con métricas y gráficas
+  /8d-workflow              - Crear/Editar reportes 8D
+  /8d-consultation          - Buscar y consultar 8Ds existentes
+  /lessons-learned          - Repositorio de lecciones aprendidas
+
+MODULO ECR/ECO:
+  /ecr-dashboard            - Dashboard ECR configurable (PowerBI style)
+  /ecr-dashboard-simple     - Dashboard ECR simplificado
+  /ecr-workflow             - Crear nuevo ECR
+  /ecr-workflow/:id         - Editar ECR existente
+
+MODULO QUALITY ALERT:
+  /defect-dashboard         - Dashboard ejecutivo QAR
+  /defect-capture           - Estación de captura de defectos (tablet)
+  /defect-admin             - Administración de catálogo de defectos
+  /defect-config            - Configuración de inspecciones
+  /defect-query             - Consulta avanzada y analíticas
+  /qar-create               - Crear nueva alerta de calidad
+  /qar-list                 - Lista de alertas de calidad
+  /qar-detail/:id           - Detalle de alerta de calidad
+
+MODULO MRB:
+  /mrb-dashboard            - Dashboard de campañas MRB
+  /mrb-create               - Crear nueva campaña MRB
+  /mrb-campaigns            - Lista de campañas MRB
+  /mrb-campaign/:id         - Detalle de campaña MRB
+
+MODULO CLIENTES:
+  /clients                  - Lista de clientes
+  /clients/new              - Crear nuevo cliente
+  /clients/:clientId/edit   - Editar cliente
+  /clients/:clientId        - Detalle de cliente
+
+MODULO ADMINISTRACION:
+  /user-management          - Gestión de usuarios
+  /workload                 - Gestor de carga de trabajo
+  /risk-matrix-config       - Configuración matriz de riesgos
+  /impact-analysis-config   - Configuración análisis de impacto
+
+
+================================================================================
+                    FIN DEL DOCUMENTO
+================================================================================
+
+================================================================================
+PLAN DE DESARROLLO ESTRATEGICO
+MAXIMIZACION DE COBERTURA ISO / IATF / VDA
+REUTILIZANDO MODULOS Y CODIGO EXISTENTE
+================================================================================
+
+PRINCIPIO BASE
+- No crear modulos nuevos si no es estrictamente necesario
+- Reutilizar usuarios, roles, workflows, dashboards y evidencia existentes
+- Cambiar semantica y reglas de negocio, no arquitectura
+- Vender cobertura normativa, no cantidad de modulos
+
+================================================================================
+1. MANAGEMENT REVIEW (REVISION POR LA DIRECCION)
+================================================================================
+
+TIPO:
+- NO es modulo nuevo
+- Es una VISTA EJECUTIVA + ACTA FORMAL
+
+SECCIONES REUTILIZADAS:
+- Dashboards 8D (KPIs, costos, tendencias)
+- Dashboards QAR (defectos, severidad, PPM)
+- MRB (costos de inspeccion, scrap, manpower)
+- ECR/ECO (impacto de cambios)
+- Usuarios con rol Direccion / Gerencia
+
+FUNCIONALIDAD NUEVA (MINIMA):
+- Acta de Management Review
+  - Fecha
+  - Periodo evaluado
+  - KPIs auto-cargados
+  - Comentarios de direccion
+- Checklist ISO/IATF 9.3
+- Cierre y aprobacion
+
+RUTA NUEVA:
+- /management-review
+
+NORMA CUBIERTA:
+- ISO 9001: 9.3
+- IATF 16949: 9.3
+
+VALOR COMERCIAL:
+- "La revision por la direccion lista en minutos"
+
+================================================================================
+2. AUDITORIAS INTERNAS DE PROCESO / SISTEMA
+================================================================================
+
+TIPO:
+- Extension directa del Workload / Gantt existente
+
+SECCIONES REUTILIZADAS:
+- Usuarios, roles, organigrama
+- Gantt de asignacion de trabajo
+- Evidencias (fotos, comentarios)
+- Acciones correctivas (8D)
+- QAR y MRB como salidas de auditoria
+
+FUNCIONALIDAD NUEVA:
+- Tipo de tarea = Auditoria
+- Checklist configurable
+  - Pregunta
+  - Norma / clausula
+  - Evidencia requerida
+- Resultado por pregunta:
+  - OK / NO OK / NA
+- Hallazgos:
+  - NC Mayor
+  - NC Menor
+  - Observacion
+  - Oportunidad de mejora
+- Boton directo:
+  - Crear 8D
+  - Crear QAR
+
+RUTAS NUEVAS:
+- /audits
+- /audit/:id
+
+NORMAS CUBIERTAS:
+- ISO 9001: 9.2
+- IATF 16949: 9.2.2.1 / 9.2.2.2
+- VDA 6.3: P1 a P7
+
+VALOR COMERCIAL:
+- "Auditorias que generan acciones, no PDFs"
+
+================================================================================
+3. RISK MANAGEMENT / CONTEXT OF THE ORGANIZATION
+================================================================================
+
+TIPO:
+- NO es modulo nuevo
+- Extension del Analisis de Impacto y Matriz de Riesgos
+
+SECCIONES REUTILIZADAS:
+- Matriz de riesgos existente
+- Severidad / Ocurrencia
+- Areas y procesos
+
+CAMBIOS:
+- Renombrar Analisis de Impacto a Risk Register
+- Asociar riesgos a procesos
+- Agregar revision periodica
+
+FUNCIONALIDAD NUEVA:
+- Contexto Interno
+- Contexto Externo
+- Riesgos por proceso
+- Fecha de revision
+
+RUTA NUEVA:
+- /context-risk
+
+NORMAS CUBIERTAS:
+- ISO 9001: 4.1 / 4.2 / 6.1
+- IATF 16949: 6.1.2.3
+
+VALOR COMERCIAL:
+- "Riesgos vivos, no Excel estatico"
+
+================================================================================
+4. KNOWLEDGE MANAGEMENT / LESSONS LEARNED
+================================================================================
+
+TIPO:
+- YA EXISTE, solo se potencia
+
+SECCIONES REUTILIZADAS:
+- Lessons Learned del modulo 8D
+- Busqueda y filtros existentes
+
+FUNCIONALIDAD NUEVA:
+- Clasificacion por proceso
+- Clasificacion por tipo de falla
+- Vinculo a:
+  - Auditorias
+  - MRB
+  - QAR
+  - 8D
+
+RUTA NUEVA:
+- /knowledge-base
+
+NORMAS CUBIERTAS:
+- ISO 9001: 7.1.6
+- IATF 16949: 7.1.6
+
+VALOR COMERCIAL:
+- "El sistema aprende y evita repetir errores"
+
+================================================================================
+ROADMAP DE IMPLEMENTACION (6-8 SEMANAS)
+================================================================================
+
+SEMANA 1:
+- Management Review
+
+SEMANA 2-3:
+- Auditorias (core)
+- Checklists
+- Integracion con Gantt
+
+SEMANA 4:
+- Auditorias -> 8D / QAR
+
+SEMANA 5:
+- Risk / Context
+
+SEMANA 6:
+- Knowledge Management
+
+SEMANA 7-8:
+- Pulido
+- Pitch comercial
+- Validacion ISO
+
+================================================================================
+DIAGRAMA DE ARBOL FINAL DEL SISTEMA (ISO READY)
+================================================================================
+
+QUALITY MANAGEMENT SYSTEM
+|
++-- 8D REPORTS
+|   +-- No Conformidades
+|   +-- Acciones Correctivas
+|   +-- Lessons Learned
+|
++-- QUALITY ALERT (QAR)
+|   +-- Captura de Defectos
+|   +-- Alertas de Calidad
+|
++-- MRB
+|   +-- Campañas de Inspeccion
+|   +-- Costos de Scrap / Mano de Obra
+|
++-- ECR / ECO
+|   +-- Cambios de Ingenieria
+|   +-- Analisis de Impacto
+|
++-- AUDITORIAS INTERNAS
+|   +-- Planeacion (Gantt)
+|   +-- Checklists
+|   +-- Hallazgos
+|   +-- Acciones (8D / QAR)
+|
++-- MANAGEMENT REVIEW
+|   +-- KPIs Consolidados
+|   +-- Acta y Aprobacion
+|
++-- RISK / CONTEXT
+|   +-- Contexto Interno / Externo
+|   +-- Riesgos por Proceso
+|
++-- KNOWLEDGE BASE
+|   +-- Lecciones Aprendidas
+|   +-- Prevencion
+|
++-- CLIENTES
+|   +-- Proyectos
+|   +-- Partes
+|   +-- BOM
+|
++-- ADMINISTRACION
+    +-- Usuarios
+    +-- Roles
+    +-- Workload
+    +-- KPIs QCTSP
+
+================================================================================
+MAPA ISO 9001 / IATF VS SISTEMA
+================================================================================
+
+ISO 9001 / IATF CLAUSULA -> MODULO DEL SISTEMA
+
+4.1 / 4.2 Contexto            -> Risk / Context
+5.3 Roles y responsabilidades -> Administracion
+6.1 Riesgos                   -> Risk / Context
+7.1.2 Personas                -> Administracion / Workload
+7.1.6 Conocimiento            -> Knowledge Base
+7.2 Competencia               -> Usuarios / Roles
+7.5 Documentacion             -> Clientes / ECR / 8D
+8.5 Produccion                -> QAR / MRB
+8.5.6 Cambios                 -> ECR / ECO
+8.7 Producto no conforme      -> QAR / MRB
+9.1 Analisis de datos         -> Dashboards
+9.2 Auditorias internas       -> Auditorias
+9.3 Management Review         -> Management Review
+10.2 Accion correctiva        -> 8D Reports
+
+================================================================================
+FIN DEL PLAN
+================================================================================
+

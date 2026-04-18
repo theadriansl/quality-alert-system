@@ -1,0 +1,287 @@
+================================================================================
+ PROTOCOLO OBLIGATORIO - LEER ANTES DE ESCRIBIR CÓDIGO
+================================================================================
+
+⚠️ IMPORTANTE: Este proyecto usa CONVENCIONES ESPECÍFICAS que DEBES verificar
+ANTES de escribir cualquier código. NO asumas nada.
+
+PASO 1 - VERIFICAR CONVENCIONES DEL BACKEND:
+---------------------------------------------
+✓ El backend usa utils/caseTransform.js
+✓ TODOS los datos de PostgreSQL se convierten a camelCase con transformToCamelCase()
+✓ PostgreSQL usa snake_case (ej: client_name, part_number)
+✓ Backend/Frontend esperan camelCase (ej: clientName, partNumber)
+✓ JSONB columns TAMBIÉN se transforman recursivamente (issue_users → issueUsers)
+
+ANTES de escribir código que acceda a datos del backend:
+1. Leer backend/utils/caseTransform.js para confirmar la convención
+2. Ver un ejemplo de respuesta del API (usar check_report.js o logs)
+3. Verificar que estás usando camelCase, NO snake_case
+
+PASO 2 - NO DAR VUELTAS INNECESARIAS:
+--------------------------------------
+✓ Si un fix falla 2 veces, DETENTE y explica el problema
+✓ No consumir tokens en iteraciones infinitas
+✓ Pedir ver logs/datos reales ANTES de asumir
+✓ Si no estás seguro, pregunta al usuario
+
+PASO 3 - VERIFICACIÓN ANTES DE ESCRIBIR:
+-----------------------------------------
+Antes de escribir código, pregúntate:
+□ ¿He verificado la convención de nombres del proyecto?
+□ ¿He visto un ejemplo real de los datos?
+□ ¿Estoy seguro de los nombres de campos (camelCase vs snake_case)?
+□ ¿He revisado código similar existente para ver el patrón?
+
+Si la respuesta a CUALQUIERA es "no", DETENTE y verifica primero.
+
+PASO 4 - TRANSPARENCIA:
+-----------------------
+✓ Si cometí un error, admítelo claramente
+✓ No hagas que el usuario pague por corregir TUS errores
+✓ Si estás dando vueltas, detente y pide ayuda al usuario
+
+📌 ESTE PROTOCOLO DEBE APARECER AL INICIO DE CADA RESUMEN DE SESIÓN
+
+================================================================================
+RESUMEN DE SESIÓN - 16 DE NOVIEMBRE 2025
+Sistema de Alertas de Calidad 8D - Corrección de Persistencia y D3
+================================================================================
+
+Estado del Sistema:
+-------------------
+Frontend: React en http://localhost:3000
+Backend: Node.js/Express en http://localhost:5000
+Base de Datos: PostgreSQL (quality_alert_system)
+Puerto DB: 5432
+Usuario DB: postgres
+
+================================================================================
+PROBLEMAS RESUELTOS HOY
+================================================================================
+
+1. ARCHIVOS ADJUNTOS SE BORRABAN AL GUARDAR REPORTE EXISTENTE
+--------------------------------------------------------------
+PROBLEMA: Al guardar un reporte existente, las fotos y documentos desaparecían
+CAUSA RAÍZ: En 8DWorkflow.js línea 234, SIEMPRE se llamaba createEightdReport()
+            incluso para reportes existentes, creando uno NUEVO sin adjuntos
+
+SOLUCIÓN (8DWorkflow.js:234-250):
+```javascript
+const isExistingReport = updatedData.id && !isNaN(updatedData.id);
+
+if (isExistingReport) {
+  // ACTUALIZAR reporte existente (no crear uno nuevo)
+  console.log('📝 Updating existing report ID:', updatedData.id);
+  reportId = updatedData.id;
+  await eightDService.updateEightdReport(reportId, reportData);
+  savedReport = { id: reportId };
+} else {
+  // CREAR nuevo reporte
+  console.log('🆕 Creating new report...');
+  savedReport = await eightDService.createEightdReport(reportData);
+  reportId = savedReport?.id;
+}
+```
+
+TAMBIÉN: Solo subir archivos nuevos (instanceof File), no re-subir URLs existentes:
+```javascript
+if (updatedData.photoNoGood && updatedData.photoNoGood instanceof File) {
+  // Upload solo si es File, no URL string
+}
+```
+
+2. CAMPO "RAZÓN DE NO-DETECCIÓN (5 POR QUÉS)" NO MOSTRABA DATOS
+----------------------------------------------------------------
+PROBLEMA: Los 5 campos de texto para 5 Why's no aparecían al cargar reporte
+CAUSA RAÍZ: eightDService.js devolvía array vacío [] en vez de ['', '', '', '', '']
+            Además, d3Data podía ser null si los campos DB estaban vacíos
+
+SOLUCIÓN (eightDService.js:373-396):
+```javascript
+// Ensure nonDetectionReasons has exactly 5 elements (for 5 Why's)
+const rawNonDetectionReasons = report.d3NonDetectionReasons || [];
+const normalizedNonDetectionReasons = Array.isArray(rawNonDetectionReasons) && rawNonDetectionReasons.length > 0
+  ? [...rawNonDetectionReasons, '', '', '', '', ''].slice(0, 5)  // Ensure 5 elements
+  : ['', '', '', '', ''];
+
+// Ensure detectionPoints has proper structure
+const rawDetectionPoints = report.d3DetectionPoints || {};
+const normalizedDetectionPoints = {
+  duringProcess: rawDetectionPoints.duringProcess || { yes: false, no: false },
+  afterManufacture: rawDetectionPoints.afterManufacture || { yes: false, no: false },
+  priorDespatch: rawDetectionPoints.priorDespatch || { yes: false, no: false }
+};
+
+const d3Data = {  // Siempre crear objeto, nunca null
+  detectionPoints: normalizedDetectionPoints,
+  nonDetectionReasons: normalizedNonDetectionReasons,
+  // ... otros campos
+};
+```
+
+================================================================================
+ARCHIVOS MODIFICADOS HOY
+================================================================================
+
+1. C:\...\frontend\src\pages\8DWorkflow.js
+   - Líneas 234-358: Lógica de guardado diferencia entre crear y actualizar
+   - Detecta reportes existentes por updatedData.id
+   - Solo sube archivos nuevos (File), preserva existentes (URL)
+
+2. C:\...\frontend\src\services\eightDService.js
+   - Líneas 373-396: Normalización de d3Data
+   - Garantiza 5 elementos en nonDetectionReasons
+   - Estructura correcta para detectionPoints con yes/no booleans
+   - d3Data nunca es null
+
+3. C:\...\backend\check_d3_columns.js (NUEVO - Utilidad)
+   - Script para verificar columnas D3 en base de datos
+   - Agrega columnas faltantes si es necesario
+
+================================================================================
+COLUMNAS D3 EN BASE DE DATOS (VERIFICADAS)
+================================================================================
+
+Tabla: eightd_reports
+- d3_containment_actions: jsonb
+- d3_completed: boolean
+- d3_completed_at: timestamp
+- d3_detection_points: jsonb
+- d3_non_detection_reasons: jsonb
+- d3_suspect_material_disposal: text
+- d3_conformance_guarantee: text
+- d3_requires_rework: boolean
+- d3_rework_unit_cost: numeric
+- d3_real_impact_cost: numeric
+
+================================================================================
+TRANSFORMACIÓN CAMELCASE - RECORDATORIO CRÍTICO
+================================================================================
+
+⚠️ transformToCamelCase() es RECURSIVO:
+
+PostgreSQL Column          → JavaScript Property
+------------------------   ----------------------
+issue_assigned_to          → issueAssignedTo
+d3_detection_points        → d3DetectionPoints
+d3_non_detection_reasons   → d3NonDetectionReasons
+escalation_path            → escalationPath (JSONB)
+
+DENTRO del JSONB:
+{ issue_users: [1,2,3] }   → { issueUsers: [1,2,3] }
+
+¡Los contenidos JSONB también se transforman!
+
+================================================================================
+ESTRUCTURA DEL REPORTE 8D
+================================================================================
+
+workflowData = {
+  id: 1,                           // ID numérico en DB
+  reportId: '8D-2025-001',         // ID string formateado
+  title: 'Título del problema',
+
+  // Escalation Path (usuarios asignados)
+  escalationPath: {                // camelCase! (no escalation_path)
+    issueUsers: [1, 2, 3],         // camelCase! (no issue_users)
+    countermeasureUsers: [4, 5],
+    confirmationUsers: [6]
+  },
+
+  // D3 Containment Data
+  d3Data: {
+    detectionPoints: {
+      duringProcess: { yes: false, no: false },
+      afterManufacture: { yes: false, no: false },
+      priorDespatch: { yes: false, no: false }
+    },
+    nonDetectionReasons: ['', '', '', '', ''],  // 5 Why's
+    suspectMaterialDisposal: '',
+    conformanceMaterialGuarantee: '',
+    requiresRework: null,
+    reworkUnitCost: 0,
+    realImpactCost: 0
+  },
+
+  // Attachments (URLs from DB)
+  photoNoGood: 'http://localhost:5000/uploads/...',
+  photoOK: 'http://localhost:5000/uploads/...',
+  attachedDocuments: [{ name, url, type, description }],
+
+  // Secciones del equipo
+  issueSection: { primary: {user}, approvers: [{user}...] },
+  countermeasureSection: { primary: {user}, approvers: [{user}...] },
+  confirmationSection: { primary: {user}, approvers: [{user}...] },
+
+  // Estados
+  escalationComplete: true,
+  problemAnalysisComplete: false,
+  actionsValidationComplete: false
+}
+
+================================================================================
+FLUJO DE GUARDADO (ACTUALIZADO)
+================================================================================
+
+Al guardar D1-D2-D3:
+1. handleDataUpdate recibe data.escalationComplete = true
+2. Prepara reportData con mapEscalationToReport()
+3. NUEVO: Verifica si es reporte existente (updatedData.id)
+4. Si EXISTENTE → updateEightdReport (preserva adjuntos)
+   Si NUEVO → createEightdReport (crea registro)
+5. Solo sube archivos NUEVOS (instanceof File)
+6. Recarga datos completos desde backend
+7. Actualiza workflowData con datos frescos
+
+================================================================================
+SCRIPTS DE UTILIDAD DISPONIBLES
+================================================================================
+
+cd C:\Users\The Eidrian\quality-alert-system\backend
+
+node check_report.js           # Ver estructura de respuesta API
+node test_api_response.js      # Probar API con login
+node check_d3_columns.js       # Verificar/agregar columnas D3
+node add_escalation_path.js    # Agregar columna escalation_path
+
+================================================================================
+LOGS DEBUG (REMOVER DESPUÉS DE TESTING)
+================================================================================
+
+En TeamAssignmentTab.js hay console.log de debug:
+- Líneas 289-306: DEBUG de escalation_path carga
+
+Remover estos logs cuando todo esté estable.
+
+================================================================================
+PRÓXIMOS PASOS SUGERIDOS
+================================================================================
+
+1. Probar que fotos/adjuntos se preservan al guardar múltiples veces
+2. Probar que los 5 Por Qués se guardan y cargan correctamente
+3. Verificar que D3 detection points se guardan con valores correctos
+4. Implementar D4-D5 (Causa Raíz y Acciones Correctivas)
+5. Limpiar console.logs de debug cuando todo funcione
+6. Revisar eslint warnings (variables no usadas)
+
+================================================================================
+ESTADO ACTUAL DEL REPORTE DE PRUEBA
+================================================================================
+
+ID: 1
+Report ID: 8D-2025-001
+Título: TEst
+Cliente: AAM (Americas Automotive Manufacturing)
+Proyecto: PRJ-AAM-001
+Usuarios en D1: Adrian (Issue), Carlos, Maria, Adrian (Countermeasure)
+
+El reporte tiene:
+- Fotos adjuntas (No Good, OK)
+- Documentos adjuntos
+- Usuarios asignados en escalation_path
+- Datos D3 parciales
+
+================================================================================
+FIN DEL RESUMEN - 16 DE NOVIEMBRE 2025
+================================================================================

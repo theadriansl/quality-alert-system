@@ -1,0 +1,440 @@
+================================================================================
+RESUMEN DE TRABAJO - SESIÓN 26/11/2025
+Sistema de Alertas de Calidad - Módulo 8D
+================================================================================
+
+📋 PROTOCOLO OBLIGATORIO (Del resumen anterior - 11/25/2025)
+================================================================================
+SIEMPRE verificar backend conventions (camelCase/snake_case) ANTES de escribir:
+- Consultar utils/caseTransform.js
+- Máximo 2 intentos fallidos antes de detener y explicar
+- Transparencia sobre errores
+- Este protocolo DEBE aparecer en TODOS los resúmenes de sesión
+
+================================================================================
+🎯 OBJETIVO PRINCIPAL DE ESTA SESIÓN
+================================================================================
+1. Implementar sistema de auditoría completo para trazabilidad del reporte 8D
+2. Corregir errores en componentes (users.map, approval fields)
+3. Actualizar HistoryTab para mostrar historial completo con audit log
+4. Corregir lógica de bloqueo de D3-MFG
+
+================================================================================
+✅ TRABAJO COMPLETADO
+================================================================================
+
+1. CORRECCIÓN ERROR: users.map is not a function
+   ----------------------------------------------------------------------------
+   PROBLEMA: Los componentes D3MFG, D4, D5, D6 tenían error en fetch de usuarios
+
+   CAUSA: El endpoint /users/list retorna {success: true, users: [...]}
+          pero los componentes esperaban un array directo
+
+   SOLUCIÓN: Cambió en TODOS los componentes:
+   - D3MFG.js:29           setUsers(result || []) → setUsers(result.users || [])
+   - D4TemporaryCountermeasure.js:24  setUsers(result || []) → setUsers(result.users || [])
+   - D5FinalAnalysis.js:64            setUsers(result || []) → setUsers(result.users || [])
+   - D6DefinitiveCountermeasure.js:34 setUsers(result || []) → setUsers(result.users || [])
+
+   ESTADO: ✅ COMPLETADO Y FUNCIONANDO
+
+2. CORRECCIÓN CAMPOS DE APROBACIÓN EN HISTORY TAB
+   ----------------------------------------------------------------------------
+   PROBLEMA: HistoryTab.js no mostraba aprobaciones/rechazos correctamente
+
+   CAUSA: transformToCamelCase() convierte approval_1_status → approval1Status
+          pero HistoryTab buscaba approval_1Status (con guión bajo)
+
+   SOLUCIÓN: Actualizado en HistoryTab.js (líneas 42-61):
+   - approval_1Status → approval1Status
+   - approval_1By → approval1By
+   - approval_1At → approval1At
+   - approval_1Comments → approval1Comments
+   (Y lo mismo para approval_2 y approval_3)
+
+   ESTADO: ✅ COMPLETADO Y FUNCIONANDO
+
+3. SISTEMA DE AUDITORÍA COMPLETO
+   ----------------------------------------------------------------------------
+   a) TABLA DE AUDITORÍA
+      Archivo: backend/migrations/create_audit_log.sql
+      Tabla: eightd_audit_log
+      Columnas principales:
+      - id, report_id, action_type, action_category, section_name
+      - user_id, user_name, description
+      - old_value, new_value (JSON)
+      - ip_address, user_agent, created_at
+
+      ESTADO: ✅ TABLA CREADA Y FUNCIONANDO
+
+   b) MÓDULO DE UTILIDADES DE AUDITORÍA
+      Archivo: backend/utils/auditLog.js
+      Funciones principales:
+      - logAction() - Función principal para registrar cualquier acción
+      - getAuditLog() - Obtener historial de un reporte
+      - logReportCreated() - Helper para creación
+      - logSectionUpdate() - Helper para actualizaciones de sección
+      - logApproval() - Helper para aprobaciones
+      - logRejection() - Helper para rechazos
+      - logStatusChange() - Helper para cambios de estado
+      - logDraftSaved() - Helper para guardado de borradores
+
+      ESTADO: ✅ MÓDULO CREADO Y FUNCIONANDO
+
+   c) INTEGRACIÓN EN ENDPOINTS DE APROBACIÓN/RECHAZO
+      Archivo: backend/endpoints/sequentialApprovalEndpoints.js
+
+      Cambios:
+      - Importado: const { logApproval, logRejection } = require('../utils/auditLog')
+      - approveStep1 (líneas 59-67): Registra aprobación nivel 1
+      - approveStep2 (líneas 139-147): Registra aprobación nivel 2
+      - approveStep3 (líneas 218-226): Registra aprobación nivel 3 (FINAL)
+      - rejectStep1 (líneas 309-318): Registra rechazo nivel 1 con comentarios
+      - rejectStep2 (líneas 402-411): Registra rechazo nivel 2 con comentarios
+      - rejectStep3 (líneas 495-504): Registra rechazo nivel 3 con comentarios
+
+      Cada registro incluye:
+      - ID del reporte
+      - Nivel de aprobación
+      - Usuario que aprobó/rechazó
+      - Nombre completo del usuario
+      - Comentarios (en caso de rechazo)
+
+      ESTADO: ✅ LOGS DE APROBACIÓN/RECHAZO FUNCIONANDO
+
+   d) ENDPOINT DE CONSULTA DE AUDIT LOG
+      Archivo: backend/endpoints/auditLogEndpoints.js
+      Ruta: GET /8d/reports/:reportId/audit-log
+
+      Parámetros query opcionales:
+      - limit: Número máximo de entradas (default: 100)
+      - offset: Paginación
+      - actionCategory: Filtrar por categoría (report, approval, section, status)
+      - sectionName: Filtrar por sección (d1, d2, d3, etc.)
+
+      Retorna: { success: true, auditLog: [...], total: N }
+
+      ESTADO: ✅ ENDPOINT CREADO Y REGISTRADO EN server.js
+
+   e) SERVIDOR REINICIADO
+      - Matado proceso anterior (bca3b3)
+      - Iniciado nuevo proceso (f7bf87)
+      - Endpoint /8d/reports/:reportId/audit-log DISPONIBLE
+
+      ESTADO: ✅ SERVIDOR FUNCIONANDO CON NUEVAS RUTAS
+
+4. ACTUALIZACIÓN COMPLETA DE HISTORY TAB
+   ----------------------------------------------------------------------------
+   Archivo: frontend/src/components/8D/HistoryTab.js
+
+   CAMBIOS PRINCIPALES:
+   a) Consume endpoint de audit log:
+      - Fetch a /8d/reports/${data.id}/audit-log
+      - Manejo de errores con fallback a timeline básico
+
+   b) Nuevas características:
+      - Estado de carga (loading spinner)
+      - Panel de estadísticas con contadores:
+        * Total de eventos
+        * Aprobaciones
+        * Rechazos
+        * Modificaciones
+
+   c) Tipos de eventos soportados con iconos y colores:
+      - 📋 created (creación) - azul #3b82f6
+      - ✏️ section_updated (actualización) - morado #8b5cf6
+      - 💾 draft_saved (borrador guardado) - índigo #6366f1
+      - ✅ approved (aprobación) - verde #10b981
+      - ❌ rejected (rechazo) - rojo #ef4444
+      - 🔄 status_changed (cambio estado) - ámbar #f59e0b
+      - 📤 sent_to_approval (enviado) - ámbar #f59e0b
+      - ⏳ pending (pendiente) - índigo #6366f1
+      - 🎉 completed (completado) - verde #10b981
+
+   d) Información mostrada por evento:
+      - Título descriptivo
+      - Fecha y hora con segundos
+      - Usuario que realizó la acción
+      - Categoría del evento (badge)
+      - Descripción detallada
+      - Comentarios (si existen)
+
+   e) Funciones de parseo:
+      - formatActionTitle() - Formatea título según tipo de acción
+      - parseComments() - Extrae comentarios de newValue JSON
+      - getEventStyle() - Mapea tipo de acción a icono/color
+
+   f) Fallback inteligente:
+      - Si falla fetch de audit log, usa datos del reporte directamente
+      - buildBasicTimeline() construye timeline desde datos locales
+
+   ESTADO: ✅ HISTORY TAB COMPLETAMENTE ACTUALIZADO Y FUNCIONANDO
+
+5. CORRECCIÓN MENSAJE DE BLOQUEO D3-MFG
+   ----------------------------------------------------------------------------
+   PROBLEMA: Mensaje decía "solo usuarios de Manufactura"
+            pero debía decir "usuarios responsables de Contramedidas"
+
+   RAZÓN: D3-MFG debe ser editado por el responsable de COUNTERMEASURE
+          (siguiente en la cadena de aprobación), NO necesariamente Manufactura
+
+   SOLUCIÓN: Actualizado en D3MFG.js:
+   - Línea 95 (inglés):
+     'D3-MFG can only be edited by Manufacturing responsible users'
+     →
+     'D3-MFG can only be edited by Countermeasure responsible users'
+
+   - Línea 136 (español):
+     'D3-MFG solo puede ser editado por usuarios responsables de Manufactura'
+     →
+     'D3-MFG solo puede ser editado por usuarios responsables de Contramedidas'
+
+   VALIDACIÓN: La lógica de bloqueo en 8DWorkflow.js YA ESTABA CORRECTA:
+   const isD3MFGBlocked = !isD123Approved || (!isCountermeasureResponsible() && !isAdmin);
+
+   ESTADO: ✅ MENSAJE CORREGIDO - David Supervisor (responsable de Contramedidas)
+           ahora puede editar D3-MFG sin restricciones
+
+================================================================================
+📊 ESTADO ACTUAL DEL SISTEMA
+================================================================================
+
+COMPONENTES FUNCIONANDO:
+✅ D3MFG.js - Sin errores de users.map, mensaje correcto
+✅ D4TemporaryCountermeasure.js - Sin errores de users.map
+✅ D5FinalAnalysis.js - Sin errores de users.map
+✅ D6DefinitiveCountermeasure.js - Sin errores de users.map
+✅ HistoryTab.js - Muestra audit log completo con estadísticas
+✅ Backend - Endpoints de audit log funcionando
+
+BASE DE DATOS:
+✅ Tabla eightd_audit_log creada con índices
+✅ 11 usuarios en el sistema
+✅ Reporte 8D-2025-0316 totalmente aprobado (3 niveles)
+
+AUDIT LOG FUNCIONANDO:
+✅ Aprobaciones se registran automáticamente con usuario, fecha y comentarios
+✅ Rechazos se registran automáticamente con usuario, fecha y comentarios
+✅ Endpoint de consulta retorna historial completo
+✅ Frontend muestra historial con estadísticas y timeline visual
+
+PERMISOS Y BLOQUEOS:
+✅ D1-D2-D3 bloqueadas (reporte ya aprobado) - CORRECTO
+✅ D3-MFG desbloqueada para responsable de Contramedidas - CORRECTO
+✅ D4-D5-D6 con lógica de bloqueo secuencial - FUNCIONANDO
+
+================================================================================
+⏳ TRABAJO PENDIENTE
+================================================================================
+
+PRIORIDAD ALTA - SISTEMA DE AUDITORÍA COMPLETO:
+--------------------------------------------------------------------------------
+1. AGREGAR LOGS EN CREACIÓN DE REPORTES
+   Archivo a modificar: backend/endpoints/eightDEndpoints.js
+   Función: createEightDReport
+
+   Qué hacer:
+   - Importar: const { logReportCreated } = require('../utils/auditLog')
+   - Después de INSERT exitoso del reporte, llamar:
+     await logReportCreated({
+       reportId: insertedId,
+       userId: created_by,
+       userName: `${userFirstName} ${userLastName}`,
+       reportData: { title, severity, status }
+     });
+
+   Resultado: Cuando alguien crea un reporte, se registra en audit log
+
+2. AGREGAR LOGS EN ACTUALIZACIÓN DE SECCIONES (D1-D6)
+   Archivo a modificar: backend/endpoints/eightDEndpoints.js
+   Función: updateEightDReport
+
+   Qué hacer:
+   - Importar: const { logSectionUpdate, logDraftSaved } = require('../utils/auditLog')
+   - Detectar qué sección se está actualizando (d1, d2, d3, d4, d5, d6)
+   - Después de UPDATE exitoso, llamar:
+     await logSectionUpdate({
+       reportId: reportId,
+       sectionName: 'd1', // o d2, d3, etc.
+       userId: req.user.id,
+       userName: `${req.user.firstName} ${req.user.lastName}`,
+       description: 'Sección D1 actualizada'
+     });
+
+   IMPORTANTE: Necesitarás identificar qué sección se modificó basándote en
+   qué campos vienen en req.body
+
+   Resultado: Cada modificación a una sección se registra con usuario y fecha
+
+3. AGREGAR LOGS DE CAMBIO DE ESTADO
+   Archivo a modificar: backend/endpoints/eightDEndpoints.js
+   Función: updateEightDReport
+
+   Qué hacer:
+   - Importar: const { logStatusChange } = require('../utils/auditLog')
+   - Si req.body.status está presente:
+     - Consultar el status actual del reporte
+     - Si es diferente, llamar:
+       await logStatusChange({
+         reportId: reportId,
+         userId: req.user.id,
+         userName: `${req.user.firstName} ${req.user.lastName}`,
+         oldStatus: currentStatus,
+         newStatus: req.body.status
+       });
+
+   Resultado: Cambios de estado (draft → in_progress → completed) se registran
+
+4. AGREGAR LOGS EN APROBACIÓN/RECHAZO DE D6
+   Archivo a modificar: backend/endpoints/eightDEndpoints.js
+   Funciones: approveD6, rejectD6
+
+   Qué hacer:
+   - Similar a lo que se hizo en sequentialApprovalEndpoints.js
+   - Importar logApproval y logRejection
+   - Registrar cuando se aprueba/rechaza D6
+
+   Resultado: Aprobaciones/rechazos de D6 aparecen en historial
+
+PRIORIDAD MEDIA - MEJORAS AL HISTORIAL:
+--------------------------------------------------------------------------------
+5. AGREGAR FILTROS EN HISTORY TAB
+   - Filtrar por tipo de evento (aprobaciones, rechazos, modificaciones)
+   - Filtrar por sección (D1, D2, D3, etc.)
+   - Filtrar por rango de fechas
+   - Búsqueda por usuario
+
+6. EXPORTAR HISTORIAL
+   - Botón para exportar historial a PDF
+   - Botón para exportar historial a Excel
+   - Incluir toda la información: usuario, fecha, acción, comentarios
+
+PRIORIDAD BAJA - OPTIMIZACIONES:
+--------------------------------------------------------------------------------
+7. PAGINACIÓN EN AUDIT LOG
+   - Actualmente trae máximo 100 eventos
+   - Implementar paginación si hay más de 100
+   - Botón "Cargar más" o paginación tradicional
+
+8. WEBSOCKETS PARA TIEMPO REAL
+   - Actualizar historial en tiempo real cuando otro usuario hace cambios
+   - Notificaciones push cuando hay nuevas aprobaciones/rechazos
+
+================================================================================
+🔍 INFORMACIÓN TÉCNICA IMPORTANTE
+================================================================================
+
+TRANSFORMACIÓN DE DATOS (backend/utils/caseTransform.js):
+- Backend PostgreSQL usa snake_case
+- Frontend JavaScript usa camelCase
+- transformToCamelCase() convierte automáticamente:
+  * approval_1_status → approval1Status (TODOS los guiones bajos se eliminan)
+  * d1_d2_d3_approval_status → d1D2D3ApprovalStatus
+  * created_at → createdAt
+
+RUTAS IMPORTANTES:
+- GET  /8d/reports/:reportId - Obtener reporte completo
+- PUT  /8d/reports/:reportId - Actualizar reporte
+- POST /8d/reports/:reportId/approve-step-1 - Aprobar nivel 1
+- POST /8d/reports/:reportId/approve-step-2 - Aprobar nivel 2
+- POST /8d/reports/:reportId/approve-step-3 - Aprobar nivel 3 (FINAL)
+- POST /8d/reports/:reportId/reject-step-1 - Rechazar nivel 1
+- POST /8d/reports/:reportId/reject-step-2 - Rechazar nivel 2
+- POST /8d/reports/:reportId/reject-step-3 - Rechazar nivel 3
+- GET  /8d/reports/:reportId/audit-log - Obtener historial completo ⭐ NUEVO
+
+LÓGICA DE BLOQUEO D3-MFG (8DWorkflow.js línea 138):
+const isD3MFGBlocked = !isD123Approved || (!isCountermeasureResponsible() && !isAdmin);
+
+D3-MFG está bloqueado SI:
+- D1-D2-D3 NO están aprobados, O
+- Usuario NO es responsable de Countermeasure Y NO es admin
+
+LÓGICA DE BLOQUEO D4 (8DWorkflow.js línea 147):
+const isD4Blocked = !workflowData?.d3MfgCompleted || (!isCountermeasureResponsible() && !isAdmin);
+
+D4 está bloqueado SI:
+- D3-MFG NO está completado, O
+- Usuario NO es responsable de Countermeasure Y NO es admin
+
+ESTRUCTURA ESCALATION PATH:
+{
+  issue_users: [Array de IDs],
+  countermeasure_users: [Array de IDs],
+  confirmation_users: [Array de IDs]
+}
+
+USUARIOS DE PRUEBA:
+- ID 1: Usuario creador del reporte 8D-2025-0316
+- ID 2: Aprobador 1
+- ID 5: Aprobador 2
+- ID 6: Aprobador 3
+- ID 9: David Supervisor (Responsable de Contramedidas)
+
+REPORTE DE PRUEBA:
+- ID: 4
+- Report ID: 8D-2025-0316
+- Estado: approved (todas las aprobaciones completadas)
+- D1-D2-D3: Aprobadas (bloqueadas para edición)
+- D3-MFG: Desbloqueada para David Supervisor
+- D4-D5-D6: Pendientes
+
+================================================================================
+🚨 ERRORES CONOCIDOS Y SOLUCIONES
+================================================================================
+
+ERROR: users.map is not a function
+CAUSA: Endpoint retorna {users: [...]} pero componente espera array directo
+SOLUCIÓN: Cambiar setUsers(result || []) → setUsers(result.users || [])
+ARCHIVOS: D3MFG.js, D4, D5, D6
+
+ERROR: Campos de aprobación undefined en HistoryTab
+CAUSA: transformToCamelCase() elimina TODOS los guiones bajos
+SOLUCIÓN: Usar approval1Status, no approval_1Status
+ARCHIVO: HistoryTab.js
+
+ERROR: 404 en /8d/reports/:reportId/audit-log
+CAUSA: Servidor no recargó con nuevas rutas
+SOLUCIÓN: Reiniciar servidor backend
+COMANDO: Matar proceso y reiniciar con node server.js
+
+ERROR: Mensaje incorrecto "solo Manufactura puede editar D3-MFG"
+CAUSA: Texto hardcodeado incorrecto en traducciones
+SOLUCIÓN: Cambiar "Manufactura" → "Contramedidas"
+ARCHIVO: D3MFG.js líneas 95 y 136
+
+================================================================================
+📝 NOTAS ADICIONALES
+================================================================================
+
+CONVENCIÓN DE NOMBRES DE ARCHIVOS:
+- Resumen.MM.DD.YYYY.txt para resúmenes de sesión
+- create_*.sql para migraciones de base de datos
+- *Endpoints.js para archivos de rutas
+- *Tab.js para componentes de pestañas
+
+BUENAS PRÁCTICAS:
+- SIEMPRE leer archivo antes de usar Edit tool
+- SIEMPRE verificar transformación camelCase/snake_case
+- SIEMPRE probar endpoints con Bash antes de integrar en frontend
+- SIEMPRE reiniciar servidor después de cambios en rutas
+
+TESTING:
+Para probar el sistema de auditoría:
+1. Crear un nuevo reporte 8D
+2. Hacer modificaciones a diferentes secciones
+3. Enviar a aprobación
+4. Aprobar/Rechazar en diferentes niveles
+5. Ver el historial en la pestaña "Historial"
+6. Verificar que TODOS los eventos aparezcan con usuario, fecha y detalles
+
+SIGUIENTE SESIÓN DEBE COMENZAR CON:
+1. Verificar que servidor backend esté corriendo
+2. Verificar que frontend esté corriendo
+3. Revisar este resumen
+4. Continuar con "TRABAJO PENDIENTE" sección
+5. Priorizar: Agregar logs en creación y actualización de reportes
+
+================================================================================
+FIN DEL RESUMEN - 26/11/2025
+================================================================================

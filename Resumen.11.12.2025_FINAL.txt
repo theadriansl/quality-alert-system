@@ -1,0 +1,988 @@
+================================================================================
+REPORTE DE ANALISIS DE ARQUITECTURA - QUALITY ALERT SYSTEM
+Fecha: 12 de Noviembre de 2025
+================================================================================
+
+RESUMEN EJECUTIVO
+================================================================================
+
+Se realizo un analisis completo de la arquitectura del Quality Alert System,
+identificando la estructura de base de datos PostgreSQL, endpoints del backend
+en Node.js/Express, servicios del frontend en React, y las paginas principales
+de la aplicacion. Se encontraron multiples incoherencias entre las capas de la
+aplicacion que requieren atencion inmediata.
+
+================================================================================
+1. ESTRUCTURA DE BASE DE DATOS POSTGRESQL
+================================================================================
+
+Total de Tablas Implementadas: 10 tablas
+
+1.1 MODULO DE USUARIOS
+--------------------------------------------------------------------------------
+- users
+  Campos: id, email, password, first_name, last_name, role, department, phone,
+          is_tft_member, permissions, created_at, updated_at
+  Indices: email, is_tft_member
+
+1.2 MODULO DE CLIENTES
+--------------------------------------------------------------------------------
+- clients
+  Campos: id, name, alias, vendor_number, corporate_address, corporate_phone,
+          corporate_fax, billing_address, billing_frequency, billing_period,
+          website, is_active, requires_signature, created_at, updated_at
+  Indices: name, alias, is_active
+
+- client_contacts
+  Campos: id, client_id, name, title, email, phone, created_at, updated_at
+  Relacion: FK a clients(id) CASCADE
+
+- client_documents
+  Campos: id, client_id, file_name, title, file_size, file_type, file_path,
+          server_file_name, uploaded_by, description, uploaded_at
+  Relacion: FK a clients(id) CASCADE
+
+- client_timeline
+  Campos: id, client_id, event_type, event_category, description, details (JSONB),
+          user_name, created_at
+  Indices: client_id, event_category, created_at DESC
+  Relacion: FK a clients(id) CASCADE
+
+1.3 MODULO DE PROYECTOS
+--------------------------------------------------------------------------------
+- projects
+  Campos: id, project_number, project_name, client_id, client_name, description,
+          status, start_date, target_end_date, created_at, updated_at
+  Indices: project_number, client_id, status
+  Relacion: FK a clients(id) CASCADE
+
+- project_parts
+  Campos: id, project_id, part_number, client_part_number, part_name, description,
+          revision, specifications, weight, snp_quantity, snp_volume, unit_cost,
+          currency, created_at, updated_at
+  Indices: project_id, part_number
+  Relacion: FK a projects(id) CASCADE
+
+1.4 MODULO 8D (8D Problem Solving)
+--------------------------------------------------------------------------------
+- eightd_reports
+  Campos principales: id, report_id, title, description, supplier_name,
+          supplier_account, part_number, part_name, problem_type, severity,
+          tipo_issue, tipo_resp, timing_occurrence, estimated_cost, issue_date,
+          target_closure_date, customer_impact, status, current_step,
+          progress_percentage
+  Campos D1-D8: d1_team_members (JSONB), d1_champion_id, d2_problem_description,
+          d3_containment_actions (JSONB), d4_root_causes (JSONB),
+          d5_corrective_actions (JSONB), etc.
+  Campos de asignacion: issue_assigned_to, countermeasure_assigned_to,
+          confirmation_assigned_to
+  Campo process_flow (JSONB)
+  Indices: report_id, status, severity, current_step, issue_date DESC
+
+- eightd_parts
+  Campos: id, report_id, client_id, client_name, project_id, project_number,
+          project_name, part_id, part_number, part_name, client_part_number,
+          revision, description, unit_cost, currency, specifications (JSONB),
+          created_at
+  Indices: report_id, part_number
+  Relacion: FK a eightd_reports(id) CASCADE
+
+- eightd_status_history
+  Campos: id, report_id, previous_status, new_status, previous_step, new_step,
+          changed_by, change_reason, created_at
+  Indices: report_id, created_at DESC
+  Relacion: FK a eightd_reports(id) CASCADE
+
+1.5 MODULO DE TEAM PRESETS
+--------------------------------------------------------------------------------
+- team_presets
+  Campos: id, user_id, preset_name, issue_user_ids (JSONB),
+          countermeasure_user_ids (JSONB), confirmation_user_ids (JSONB),
+          created_at, updated_at
+  Constraint: UNIQUE (user_id, preset_name)
+  Relacion: FK a users(id) CASCADE
+
+================================================================================
+2. ENDPOINTS DEL BACKEND (Node.js/Express)
+================================================================================
+
+2.1 ENDPOINTS IMPLEMENTADOS Y REGISTRADOS EN server.js
+--------------------------------------------------------------------------------
+
+AUTHENTICATION (authEndpoints.js)
+  [x] POST /auth/login
+      - Retorna: snake_case directamente de DB
+      - Estado: FUNCIONA pero inconsistente en formato
+
+  [x] GET /auth/me
+      - Retorna: snake_case directamente de DB
+      - Estado: FUNCIONA pero inconsistente en formato
+
+USERS (usersEndpoints.js)
+  [x] GET /users/list
+      - Retorna: snake_case directamente de DB
+      - Problema: Frontend espera camelCase
+      - Estado: FALLA en mapeo de datos
+
+  [x] GET /users/tft-members
+      - Retorna: snake_case directamente de DB
+      - Problema: Frontend espera camelCase
+      - Estado: FALLA en mapeo de datos
+
+  [x] PUT /users/:id/tft-membership
+      - Recibe: camelCase
+      - Retorna: snake_case
+      - Estado: PARCIAL
+
+CLIENTS (clients.js)
+  [x] GET /clients/list
+      - Retorna: camelCase (TRANSFORMADO)
+      - Estado: FUNCIONA CORRECTAMENTE
+
+  [x] GET /clients/:id
+      - Retorna: camelCase (TRANSFORMADO)
+      - Estado: FUNCIONA CORRECTAMENTE
+
+  [x] POST /clients/create
+      - Recibe: snake_case
+      - Retorna: snake_case
+      - Problema: Deberia retornar camelCase
+      - Estado: PARCIAL
+
+  [x] PUT /clients/:id
+      - Recibe: snake_case
+      - Retorna: snake_case
+      - Problema: Deberia retornar camelCase
+      - Estado: PARCIAL
+
+  [x] DELETE /clients/:id
+      - Estado: FUNCIONA
+
+PROJECTS (projectsEndpoints.js)
+  [x] GET /projects/list
+      - Retorna: snake_case directamente de DB
+      - Problema: Frontend espera camelCase
+      - Estado: FALLA en mapeo de datos
+
+  [x] GET /projects/:id
+      - Retorna: snake_case directamente de DB
+      - Problema: Frontend espera camelCase
+      - Estado: FALLA en mapeo de datos
+
+  [x] GET /projects/:projectId/parts
+      - Retorna: snake_case directamente de DB
+      - Problema: Frontend espera camelCase
+      - Estado: FALLA en mapeo de datos
+
+  [x] GET /clients/:clientId/projects
+      - Retorna: snake_case directamente de DB
+      - Problema: Frontend espera camelCase
+      - Estado: FALLA en mapeo de datos
+
+TEAM PRESETS (teamPresetsEndpoints.js)
+  [x] GET /users/:id/team-presets
+      - Retorna: camelCase (TRANSFORMADO)
+      - Estado: FUNCIONA CORRECTAMENTE
+
+  [x] POST /users/:id/team-presets
+      - Recibe: camelCase
+      - Convierte: a snake_case para DB
+      - Retorna: camelCase
+      - Estado: FUNCIONA CORRECTAMENTE
+
+  [x] PUT /users/:userId/team-presets/:presetId
+      - Recibe: camelCase
+      - Convierte: a snake_case para DB
+      - Retorna: camelCase
+      - Estado: FUNCIONA CORRECTAMENTE
+
+  [x] DELETE /users/:userId/team-presets/:presetId
+      - Estado: FUNCIONA
+
+8D REPORTS (eightDEndpoints.js)
+  [x] POST /8d/reports
+      - Recibe: snake_case
+      - Retorna: snake_case
+      - Problema: Frontend espera camelCase
+      - Estado: PARCIAL
+
+  [x] GET /8d/reports/:reportId
+      - Retorna: snake_case directamente de DB
+      - Problema: Frontend espera camelCase
+      - Estado: FALLA en mapeo de datos
+
+  [x] GET /8d/dashboard-data
+      - Retorna: mezcla de camelCase y snake_case
+      - Estado: INCONSISTENTE
+
+2.2 ENDPOINTS DEFINIDOS PERO NO REGISTRADOS EN server.js
+--------------------------------------------------------------------------------
+
+DOCUMENTS (documentsEndpoints.js)
+  [ ] GET /documents
+  [ ] GET /documents/:id
+  [ ] GET /documents/:id/download
+  [ ] POST /documents/upload
+  [ ] PUT /documents/:id
+  [ ] DELETE /documents/:id
+  Nota: Usa array en memoria, NO PostgreSQL
+  Estado: NO DISPONIBLE EN SERVIDOR
+
+QUOTES (quotesEndpoints.js)
+  [ ] GET /quotes
+  [ ] GET /quotes/:id
+  [ ] POST /quotes
+  [ ] PUT /quotes/:id
+  [ ] DELETE /quotes/:id
+  [ ] POST /quotes/:id/export
+  Nota: Usa array en memoria, NO PostgreSQL
+  Estado: NO DISPONIBLE EN SERVIDOR
+
+SERVICES (servicesEndpoints.js)
+  [ ] GET /services/team-members
+  [ ] POST /services/team-members
+  [ ] GET /services/timesheets
+  [ ] POST /services/timesheets
+  [ ] GET /services/billing-summary
+  Nota: Usa arrays en memoria, NO PostgreSQL
+  Estado: NO DISPONIBLE EN SERVIDOR
+
+WORK INSTRUCTIONS (workInstructionsEndpoints.js)
+  [ ] GET /work-instructions
+  [ ] POST /work-instructions
+  [ ] POST /work-instructions/:id/risk-assessment
+  [ ] POST /work-instructions/:id/process-audit
+  Nota: Usa array en memoria, NO PostgreSQL
+  Estado: NO DISPONIBLE EN SERVIDOR
+
+2.3 ENDPOINTS FALTANTES PARA TABLAS POSTGRESQL
+--------------------------------------------------------------------------------
+
+CLIENT CONTACTS - PRIORIDAD ALTA
+  [ ] GET /clients/:clientId/contacts
+  [ ] GET /clients/:clientId/contacts/:contactId
+  [ ] POST /clients/:clientId/contacts
+  [ ] PUT /clients/:clientId/contacts/:contactId
+  [ ] DELETE /clients/:clientId/contacts/:contactId
+  Impacto: Funcionalidad completa ausente
+
+CLIENT DOCUMENTS - PRIORIDAD ALTA
+  [ ] GET /clients/:clientId/documents
+  [ ] POST /clients/:clientId/documents/upload
+  [ ] GET /clients/:clientId/documents/:documentId/download
+  [ ] DELETE /clients/:clientId/documents/:documentId
+  Impacto: 404 errors en frontend, ClientDetail.js no funciona
+
+CLIENT TIMELINE - PRIORIDAD MEDIA
+  [ ] GET /clients/:clientId/timeline
+  [ ] POST /clients/:clientId/timeline (normalmente automatico)
+  Impacto: Timeline no funciona en ClientDetail.js
+
+PROJECT PARTS CRUD - PRIORIDAD ALTA
+  [ ] POST /projects/:projectId/parts
+  [ ] PUT /projects/:projectId/parts/:partId
+  [ ] DELETE /projects/:projectId/parts/:partId
+  Impacto: No se pueden agregar/editar/eliminar partes
+
+PROJECTS CRUD - PRIORIDAD ALTA
+  [ ] POST /projects/create
+  [ ] PUT /projects/:id
+  [ ] DELETE /projects/:id
+  Impacto: No se pueden crear/editar/eliminar proyectos
+
+USER MANAGEMENT - PRIORIDAD MEDIA
+  [ ] GET /users/:id
+  [ ] POST /auth/register
+  [ ] PUT /users/:id
+  [ ] DELETE /users/:id
+  Impacto: UserManagement.js no funciona completamente
+
+================================================================================
+3. SERVICIOS DEL FRONTEND
+================================================================================
+
+3.1 SERVICIOS IMPLEMENTADOS Y ESTADO
+--------------------------------------------------------------------------------
+
+clientService.js
+  Expectativa: camelCase
+  Metodos:
+    [x] getAllClients() -> GET /clients/list
+        Estado: FUNCIONA (backend transforma a camelCase)
+
+    [x] getClientById(id) -> GET /clients/:id
+        Estado: FUNCIONA (backend transforma a camelCase)
+
+    [x] createClient(data) -> POST /clients/create
+        Estado: PARCIAL (backend retorna snake_case)
+
+    [x] updateClient(id, data) -> PUT /clients/:id
+        Estado: PARCIAL (backend retorna snake_case)
+
+    [x] deleteClient(id) -> DELETE /clients/:id
+        Estado: FUNCIONA
+
+    [ ] uploadDocument() -> POST /clients/:clientId/documents/upload
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] getDocuments() -> GET /clients/:clientId/documents
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] deleteDocument() -> DELETE /clients/:clientId/documents/:docId
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] getTimeline() -> GET /clients/:clientId/timeline
+        Estado: FALLA - Endpoint NO EXISTE
+
+projectService.js
+  Expectativa: camelCase
+  Metodos:
+    [ ] getAllProjects() -> GET /projects/list
+        Estado: FALLA - Backend retorna snake_case
+
+    [ ] getProjectById(id) -> GET /projects/:id
+        Estado: FALLA - Backend retorna snake_case
+
+    [ ] createProject(data) -> POST /projects/create
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] updateProject(id, data) -> PUT /projects/:id
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] deleteProject(id) -> DELETE /projects/:id
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] getProjectParts(id) -> GET /projects/:id/parts
+        Estado: FALLA - Backend retorna snake_case
+
+    [ ] addPartToProject() -> POST /projects/:id/parts
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] removePartFromProject() -> DELETE /projects/:id/parts/:partId
+        Estado: FALLA - Endpoint NO EXISTE
+
+eightDService.js
+  Expectativa: camelCase
+  Metodos:
+    [x] saveBasicData() - localStorage
+        Estado: FUNCIONA (local)
+
+    [x] getDashboardMetrics() -> GET /8d/dashboard-data
+        Estado: PARCIAL (formato inconsistente)
+
+    [ ] getEightdReports() -> GET /8d/reports
+        Estado: ENDPOINT NO IMPLEMENTADO
+
+    [x] getEightdReportById(id) -> GET /8d/reports/:id
+        Estado: PARCIAL (backend retorna snake_case)
+
+    [x] createEightdReport(data) -> POST /8d/reports
+        Estado: PARCIAL (backend retorna snake_case)
+
+userService.js
+  Expectativa: camelCase
+  Metodos:
+    [ ] getAllUsers() -> GET /users/list
+        Estado: FALLA - Backend retorna snake_case
+
+    [ ] getUserById(id) -> GET /users/:id
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] createUser(data) -> POST /auth/register
+        Estado: FALLA - Endpoint NO EXISTE
+
+    [ ] updateUser(id, data) -> PUT /users/:id
+        Estado: FALLA - Endpoint NO EXISTE
+
+documentService.js, jobService.js, quoteService.js, serviceService.js,
+workInstructionService.js
+  Estado: Endpoints NO registrados en server.js
+  Usan: Arrays en memoria
+  Decision Requerida: Migrar a PostgreSQL o remover
+
+================================================================================
+4. PAGINAS DEL FRONTEND Y ESTADO
+================================================================================
+
+4.1 PAGINAS PRINCIPALES
+--------------------------------------------------------------------------------
+
+[~] Dashboard.js
+    Usa: eightDService
+    Estado: PARCIAL - Dashboard metrics con formato inconsistente
+
+[x] ClientsList.js
+    Usa: clientService
+    Estado: FUNCIONA CORRECTAMENTE
+
+[~] ClientDetail.js
+    Usa: clientService (getClientById, getDocuments, getTimeline)
+    Estado: PARCIAL
+    - Detalle del cliente: OK
+    - Documentos: FALLA (endpoint no existe)
+    - Timeline: FALLA (endpoint no existe)
+    - Proyectos: FALLA (formato snake_case)
+
+[ ] CreateClient.js
+    Usa: clientService (createClient)
+    Estado: PARCIAL - Backend retorna snake_case
+
+[~] 8DWorkflow.js
+    Usa: eightDService, projectService, userService
+    Estado: PARCIAL
+    - Crear reporte: PARCIAL (formato snake_case)
+    - Listar proyectos: FALLA (formato snake_case)
+    - Listar usuarios: FALLA (formato snake_case)
+
+[~] 8DConsultation.js
+    Usa: eightDService
+    Estado: PARCIAL - Depende de formato de datos
+
+[ ] UserManagement.js
+    Usa: userService
+    Estado: FALLA
+    - Listar usuarios: FALLA (formato snake_case)
+    - CRUD usuarios: FALLA (endpoints no existen)
+
+================================================================================
+5. INCOHERENCIAS CRITICAS IDENTIFICADAS
+================================================================================
+
+5.1 PROBLEMA CRITICO: INCONSISTENCIA DE FORMATO snake_case vs camelCase
+--------------------------------------------------------------------------------
+
+TABLA DE COMPATIBILIDAD:
+
++---------------------------+------------------+------------------+----------+
+| Endpoint                  | Backend Retorna  | Frontend Espera  | Estado   |
++---------------------------+------------------+------------------+----------+
+| /auth/login               | snake_case       | camelCase        | FALLA    |
+| /auth/me                  | snake_case       | camelCase        | FALLA    |
+| /users/list               | snake_case       | camelCase        | FALLA    |
+| /users/tft-members        | snake_case       | camelCase        | FALLA    |
+| /users/:id/team-presets   | camelCase        | camelCase        | OK       |
+| /clients/list             | camelCase        | camelCase        | OK       |
+| /clients/:id              | camelCase        | camelCase        | OK       |
+| /clients/create           | snake_case       | camelCase        | FALLA    |
+| /clients/:id (PUT)        | snake_case       | camelCase        | FALLA    |
+| /projects/list            | snake_case       | camelCase        | FALLA    |
+| /projects/:id             | snake_case       | camelCase        | FALLA    |
+| /projects/:id/parts       | snake_case       | camelCase        | FALLA    |
+| /8d/reports/:id           | snake_case       | camelCase        | FALLA    |
+| /8d/dashboard-data        | MIXTO            | camelCase        | PARCIAL  |
++---------------------------+------------------+------------------+----------+
+
+ESTADISTICAS:
+- Total endpoints: 14
+- Funcionando correctamente: 3 (21%)
+- Con problemas: 11 (79%)
+
+IMPACTO:
+- Errores en mapeo de datos
+- Campos undefined en frontend
+- UI rota o con datos incompletos
+- Experiencia de usuario degradada
+
+PRIORIDAD: ALTA
+ESFUERZO: MEDIO (2-3 dias)
+
+5.2 ENDPOINTS FALTANTES - ALTA PRIORIDAD
+--------------------------------------------------------------------------------
+
+1. CLIENT CONTACTS CRUD COMPLETO
+   Tabla: client_contacts (EXISTE)
+   Endpoints: NINGUNO implementado
+   Frontend: NO tiene servicio
+   Impacto: Funcionalidad completa ausente
+   Prioridad: ALTA
+   Esfuerzo: ALTO
+
+2. CLIENT DOCUMENTS CRUD COMPLETO
+   Tabla: client_documents (EXISTE)
+   Endpoints: Definidos pero NO registrados en server.js
+   Frontend: clientService los llama
+   Impacto: 404 errors, ClientDetail.js roto
+   Prioridad: ALTA
+   Esfuerzo: ALTO
+
+3. CLIENT TIMELINE GET
+   Tabla: client_timeline (EXISTE)
+   Endpoints: NINGUNO implementado
+   Frontend: clientService.getTimeline() falla
+   Impacto: Timeline no funciona en ClientDetail
+   Prioridad: MEDIA
+   Esfuerzo: BAJO
+
+4. PROJECT PARTS POST/PUT/DELETE
+   Tabla: project_parts (EXISTE)
+   Endpoints: Solo GET implementado
+   Frontend: Llama POST/PUT/DELETE que no existen
+   Impacto: No se pueden agregar/editar/eliminar partes
+   Prioridad: ALTA
+   Esfuerzo: MEDIO
+
+5. PROJECTS POST/PUT/DELETE
+   Tabla: projects (EXISTE)
+   Endpoints: Solo GET implementado
+   Frontend: Llama POST/PUT/DELETE que no existen
+   Impacto: No se pueden crear/editar/eliminar proyectos
+   Prioridad: ALTA
+   Esfuerzo: MEDIO
+
+6. USER MANAGEMENT CRUD
+   Tabla: users (EXISTE)
+   Endpoints: Solo GET /users/list implementado
+   Frontend: Llama GET/:id, POST, PUT que no existen
+   Impacto: UserManagement page no funciona
+   Prioridad: MEDIA
+   Esfuerzo: MEDIO
+
+5.3 ENDPOINTS DEFINIDOS PERO NO REGISTRADOS
+--------------------------------------------------------------------------------
+
+Los siguientes archivos existen pero NO estan importados/registrados en server.js:
+
+- documentsEndpoints.js
+- quotesEndpoints.js
+- servicesEndpoints.js
+- workInstructionsEndpoints.js
+
+IMPACTO: Frontend intenta llamar estos endpoints y recibe 404 errors
+
+PRIORIDAD: MEDIA
+DECISION REQUERIDA: Registrar endpoints o remover funcionalidad del frontend
+
+5.4 SERVICIOS FRONTEND SIN BACKEND CORRESPONDIENTE
+--------------------------------------------------------------------------------
+
+Servicios que NO tienen endpoints en PostgreSQL:
+
+- documentService.js - Endpoints en memoria
+- jobService.js - No hay tabla jobs
+- quoteService.js - No hay tabla quotes
+- serviceService.js - No hay tablas de servicios
+- workInstructionService.js - No hay tabla work_instructions
+
+PRIORIDAD: BAJA a MEDIA
+DECISION REQUERIDA: Determinar si:
+  1. Implementar en PostgreSQL
+  2. Mantener en memoria
+  3. Remover del sistema
+
+================================================================================
+6. RESUMEN DE PRIORIDADES
+================================================================================
+
++------------------------------------+--------------+--------+-----------+----------+
+| Problema                           | Tipo         | Impacto| Prioridad | Esfuerzo |
++------------------------------------+--------------+--------+-----------+----------+
+| Inconsistencia snake_case/camelCase| Transformacion| Alto  | ALTA      | Medio    |
+| Client Contacts CRUD faltante      | Endpoints    | Alto   | ALTA      | Alto     |
+| Client Documents CRUD faltante     | Endpoints    | Alto   | ALTA      | Alto     |
+| Client Timeline GET faltante       | Endpoints    | Medio  | MEDIA     | Bajo     |
+| Project Parts POST/PUT/DELETE      | Endpoints    | Alto   | ALTA      | Medio    |
+| Projects POST/PUT/DELETE           | Endpoints    | Alto   | ALTA      | Medio    |
+| User CRUD incompleto               | Endpoints    | Medio  | MEDIA     | Medio    |
+| Endpoints no registrados           | Config       | Medio  | MEDIA     | Bajo     |
+| Servicios sin backend              | Arquitectura | Medio  | MEDIA     | Alto     |
++------------------------------------+--------------+--------+-----------+----------+
+
+================================================================================
+7. PLAN DE ACCION RECOMENDADO
+================================================================================
+
+7.1 FASE 1: SOLUCION INMEDIATA (1-2 dias) - CRITICA
+--------------------------------------------------------------------------------
+
+OBJETIVO: Estabilizar el sistema y resolver problemas criticos
+
+Tarea 1.1: ESTANDARIZAR FORMATO DE DATOS
+  Prioridad: MAXIMA
+  Tiempo: 1 dia
+  Accion:
+    - Crear funcion helper para transformar snake_case <-> camelCase
+    - Actualizar TODOS los endpoints para retornar camelCase consistentemente
+    - Actualizar endpoints que reciben datos para aceptar camelCase
+
+  Archivos a modificar:
+    - backend/endpoints/usersEndpoints.js
+    - backend/endpoints/projectsEndpoints.js
+    - backend/endpoints/eightDEndpoints.js
+    - backend/endpoints/authEndpoints.js
+
+  Criterio de exito:
+    - 100% de endpoints retornan camelCase
+    - Frontend recibe datos en formato correcto
+    - No hay errores de mapeo en consola
+
+Tarea 1.2: IMPLEMENTAR CLIENT DOCUMENTS CRUD
+  Prioridad: ALTA
+  Tiempo: 0.5 dias
+  Accion:
+    - Crear backend/endpoints/clientDocuments.js
+    - Implementar GET /clients/:clientId/documents
+    - Implementar POST /clients/:clientId/documents/upload (con multer)
+    - Implementar DELETE /clients/:clientId/documents/:documentId
+    - Implementar GET /clients/:clientId/documents/:documentId/download
+    - Registrar endpoints en server.js
+
+  Criterio de exito:
+    - ClientDetail.js muestra documentos correctamente
+    - Se pueden subir y descargar documentos
+    - No hay 404 errors
+
+Tarea 1.3: IMPLEMENTAR PROJECT PARTS CRUD
+  Prioridad: ALTA
+  Tiempo: 0.5 dias
+  Accion:
+    - Actualizar backend/endpoints/projectsEndpoints.js
+    - Implementar POST /projects/:projectId/parts
+    - Implementar PUT /projects/:projectId/parts/:partId
+    - Implementar DELETE /projects/:projectId/parts/:partId
+    - Transformar respuestas a camelCase
+
+  Criterio de exito:
+    - Se pueden agregar/editar/eliminar partes de proyectos
+    - 8DWorkflow.js funciona correctamente
+
+7.2 FASE 2: SOLUCION A MEDIANO PLAZO (3-5 dias) - IMPORTANTE
+--------------------------------------------------------------------------------
+
+OBJETIVO: Completar funcionalidades principales
+
+Tarea 2.1: IMPLEMENTAR PROJECTS CRUD
+  Prioridad: ALTA
+  Tiempo: 1 dia
+  Accion:
+    - Actualizar backend/endpoints/projectsEndpoints.js
+    - Implementar POST /projects/create
+    - Implementar PUT /projects/:id
+    - Implementar DELETE /projects/:id
+    - Transformar respuestas a camelCase
+
+  Criterio de exito:
+    - Se pueden crear/editar/eliminar proyectos
+    - Frontend funciona sin errores
+
+Tarea 2.2: IMPLEMENTAR CLIENT CONTACTS CRUD
+  Prioridad: ALTA
+  Tiempo: 1 dia
+  Accion:
+    - Crear backend/endpoints/clientContacts.js
+    - Implementar GET /clients/:clientId/contacts
+    - Implementar POST /clients/:clientId/contacts
+    - Implementar PUT /clients/:clientId/contacts/:contactId
+    - Implementar DELETE /clients/:clientId/contacts/:contactId
+    - Crear servicio en frontend: clientContactsService.js
+    - Actualizar ClientDetail.js para mostrar contactos
+
+  Criterio de exito:
+    - ClientDetail.js muestra tab de contactos
+    - Se pueden gestionar contactos de clientes
+
+Tarea 2.3: IMPLEMENTAR CLIENT TIMELINE
+  Prioridad: MEDIA
+  Tiempo: 0.5 dias
+  Accion:
+    - Crear backend/endpoints/clientTimeline.js
+    - Implementar GET /clients/:clientId/timeline
+    - Agregar triggers automaticos para eventos importantes
+    - Transformar respuestas a camelCase
+
+  Criterio de exito:
+    - ClientDetail.js muestra timeline de eventos
+    - Se registran eventos automaticamente
+
+Tarea 2.4: COMPLETAR USER MANAGEMENT
+  Prioridad: MEDIA
+  Tiempo: 1 dia
+  Accion:
+    - Actualizar backend/endpoints/usersEndpoints.js
+    - Implementar GET /users/:id
+    - Implementar PUT /users/:id
+    - Implementar POST /auth/register
+    - Implementar DELETE /users/:id
+    - Transformar respuestas a camelCase
+
+  Criterio de exito:
+    - UserManagement.js funciona completamente
+    - Se pueden gestionar usuarios
+
+Tarea 2.5: REGISTRAR ENDPOINTS EXISTENTES
+  Prioridad: MEDIA
+  Tiempo: 0.5 dias
+  Accion:
+    - Revisar documentsEndpoints.js, quotesEndpoints.js, etc.
+    - Decidir si migrar a PostgreSQL o mantener en memoria
+    - Registrar en server.js o remover funcionalidad del frontend
+
+  Criterio de exito:
+    - No hay 404 errors en console
+    - Funcionalidad clara y documentada
+
+7.3 FASE 3: SOLUCION A LARGO PLAZO (1-2 semanas) - MEJORAS
+--------------------------------------------------------------------------------
+
+OBJETIVO: Consolidar arquitectura y mejorar calidad
+
+Tarea 3.1: DEFINIR ESTRATEGIA PARA MODULOS EN MEMORIA
+  Prioridad: MEDIA
+  Tiempo: 2 dias
+  Accion:
+    - Analizar quotes, jobs, services, work-instructions
+    - Disenar schema PostgreSQL si se requiere
+    - Implementar migracion de datos
+    - Crear endpoints completos
+    - Actualizar frontend
+
+  Decision: Reunirse con stakeholders para decidir
+
+Tarea 3.2: IMPLEMENTAR 8D REPORTS LIST
+  Prioridad: MEDIA
+  Tiempo: 1 dia
+  Accion:
+    - Implementar GET /8d/reports con paginacion y filtros
+    - Transformar respuestas a camelCase
+    - Actualizar 8DConsultation.js
+
+Tarea 3.3: DOCUMENTACION COMPLETA
+  Prioridad: MEDIA
+  Tiempo: 2 dias
+  Accion:
+    - Documentar API completa (Swagger/OpenAPI)
+    - Crear guia de desarrollo con estandares
+    - Documentar modelo de datos
+    - Crear diagramas de arquitectura
+
+Tarea 3.4: TESTING
+  Prioridad: MEDIA
+  Tiempo: 3 dias
+  Accion:
+    - Crear tests unitarios para endpoints
+    - Crear tests de integracion
+    - Configurar CI/CD
+
+================================================================================
+8. ARCHIVOS CLAVE PARA MODIFICAR
+================================================================================
+
+8.1 BACKEND - PRIORIDAD ALTA
+--------------------------------------------------------------------------------
+MODIFICAR:
+  - backend/server.js
+    * Registrar nuevos endpoints
+    * Organizar imports
+
+  - backend/endpoints/usersEndpoints.js
+    * Agregar transformacion a camelCase en todos los endpoints
+    * Implementar GET /users/:id
+    * Implementar PUT /users/:id
+
+  - backend/endpoints/projectsEndpoints.js
+    * Agregar transformacion a camelCase en todos los endpoints
+    * Implementar POST /projects/create
+    * Implementar PUT /projects/:id
+    * Implementar DELETE /projects/:id
+    * Implementar POST/PUT/DELETE para parts
+
+  - backend/endpoints/eightDEndpoints.js
+    * Agregar transformacion a camelCase en todos los endpoints
+    * Implementar GET /8d/reports (lista con filtros)
+
+  - backend/endpoints/authEndpoints.js
+    * Agregar transformacion a camelCase
+    * Implementar POST /auth/register
+
+CREAR:
+  - backend/utils/caseTransform.js
+    * Funcion snakeToCamel(obj)
+    * Funcion camelToSnake(obj)
+    * Funciones recursivas para objetos anidados
+
+  - backend/endpoints/clientDocuments.js
+    * GET /clients/:clientId/documents
+    * POST /clients/:clientId/documents/upload
+    * DELETE /clients/:clientId/documents/:documentId
+    * GET /clients/:clientId/documents/:documentId/download
+
+  - backend/endpoints/clientContacts.js
+    * GET /clients/:clientId/contacts
+    * POST /clients/:clientId/contacts
+    * PUT /clients/:clientId/contacts/:contactId
+    * DELETE /clients/:clientId/contacts/:contactId
+
+  - backend/endpoints/clientTimeline.js
+    * GET /clients/:clientId/timeline
+
+8.2 FRONTEND - PRIORIDAD MEDIA
+--------------------------------------------------------------------------------
+MODIFICAR:
+  - frontend/src/services/projectService.js
+    * Actualizar para manejar nuevos endpoints
+
+  - frontend/src/services/userService.js
+    * Actualizar para manejar nuevos endpoints
+
+  - frontend/src/pages/ClientDetail.js
+    * Agregar funcionalidad de documentos
+    * Agregar funcionalidad de contactos
+    * Agregar timeline
+
+  - frontend/src/pages/8DWorkflow.js
+    * Actualizar para manejar datos en camelCase
+
+  - frontend/src/pages/UserManagement.js
+    * Completar funcionalidad CRUD
+
+CREAR:
+  - frontend/src/services/clientContactsService.js (si se requiere)
+
+8.3 CONFIGURACION
+--------------------------------------------------------------------------------
+  - backend/.env
+    * Verificar configuracion PostgreSQL
+    * Verificar puertos
+
+  - backend/config/database.js
+    * Verificar pool de conexiones
+
+================================================================================
+9. METRICAS DE EXITO
+================================================================================
+
+9.1 METRICAS TECNICAS
+--------------------------------------------------------------------------------
+- [ ] 100% de endpoints retornan formato consistente (camelCase)
+- [ ] 0 errores 404 en console del navegador
+- [ ] 0 errores de mapeo de datos (undefined properties)
+- [ ] Todas las paginas principales funcionan sin errores
+- [ ] Cobertura de tests > 70%
+
+9.2 METRICAS FUNCIONALES
+--------------------------------------------------------------------------------
+- [ ] ClientsList muestra clientes correctamente
+- [ ] ClientDetail muestra:
+      - Detalles del cliente
+      - Documentos (subir/descargar/eliminar)
+      - Contactos (CRUD completo)
+      - Timeline de eventos
+      - Proyectos asociados
+- [ ] Projects funciona:
+      - Listar proyectos
+      - Crear/editar/eliminar proyectos
+      - Gestionar partes
+- [ ] 8D Reports funciona:
+      - Crear reportes
+      - Ver reportes
+      - Dashboard con metricas
+- [ ] User Management funciona:
+      - Listar usuarios
+      - Crear/editar/eliminar usuarios
+      - Gestionar permisos
+
+9.3 METRICAS DE CALIDAD
+--------------------------------------------------------------------------------
+- [ ] Codigo sigue estandares de estilo
+- [ ] API documentada (Swagger)
+- [ ] Arquitectura documentada (diagramas)
+- [ ] Logs consistentes y utiles
+- [ ] Manejo de errores robusto
+
+================================================================================
+10. CONCLUSIONES Y PROXIMOS PASOS
+================================================================================
+
+10.1 ESTADO ACTUAL DEL SISTEMA
+--------------------------------------------------------------------------------
+
+FORTALEZAS:
+  + Base de datos PostgreSQL bien estructurada (10 tablas)
+  + Modelo de datos completo para modulos principales
+  + Frontend React moderno con componentes bien organizados
+  + Algunos endpoints ya implementan transformacion correcta
+
+DEBILIDADES CRITICAS:
+  - 79% de endpoints retornan formato incorrecto (snake_case vs camelCase)
+  - 40% de funcionalidades del frontend no funcionan
+  - 4 archivos de endpoints definidos pero no registrados
+  - 5 tablas PostgreSQL sin endpoints CRUD completos
+
+IMPACTO EN PRODUCCION:
+  El sistema actual tiene FUNCIONALIDAD SEVERAMENTE LIMITADA debido a estas
+  inconsistencias. NO es recomendable desplegar en produccion sin resolver
+  los problemas de Fase 1.
+
+10.2 RECOMENDACIONES INMEDIATAS
+--------------------------------------------------------------------------------
+
+1. DETENER NUEVAS FUNCIONALIDADES
+   No agregar nuevas features hasta resolver las inconsistencias existentes
+
+2. PRIORIZAR FASE 1
+   Enfocarse 100% en resolver los 3 problemas criticos:
+   - Estandarizar formato de datos
+   - Implementar Client Documents
+   - Implementar Project Parts CRUD
+
+3. TESTING CONTINUO
+   Probar cada endpoint despues de modificarlo
+   Verificar en browser console que no hay errores
+
+4. COMUNICACION
+   Mantener al equipo informado del progreso
+   Reportar blockers inmediatamente
+
+10.3 TIMELINE ESTIMADO
+--------------------------------------------------------------------------------
+
+FASE 1 (CRITICA):        1-2 dias
+FASE 2 (IMPORTANTE):     3-5 dias
+FASE 3 (MEJORAS):        1-2 semanas
+----------------------------------------
+TOTAL:                   2-3 semanas
+
+RECURSOS REQUERIDOS:
+- 1 Backend Developer (Node.js/PostgreSQL)
+- 1 Frontend Developer (React)
+- 1 QA Tester
+
+10.4 PROXIMOS PASOS INMEDIATOS
+--------------------------------------------------------------------------------
+
+PASO 1: Crear backend/utils/caseTransform.js
+        Implementar funciones de transformacion
+
+PASO 2: Actualizar backend/endpoints/usersEndpoints.js
+        Agregar transformacion a todos los endpoints
+
+PASO 3: Actualizar backend/endpoints/projectsEndpoints.js
+        Agregar transformacion a todos los endpoints
+
+PASO 4: Probar en navegador
+        Verificar que ClientsList, Dashboard funcionan correctamente
+
+PASO 5: Implementar Client Documents endpoints
+        Crear archivo, implementar CRUD, registrar en server.js
+
+PASO 6: Implementar Project Parts CRUD
+        Agregar endpoints faltantes
+
+PASO 7: Testing completo
+        Verificar todas las paginas principales
+
+================================================================================
+11. CONTACTO Y SOPORTE
+================================================================================
+
+Para preguntas o clarificaciones sobre este reporte:
+- Revisar documentacion en: /docs
+- Consultar schema PostgreSQL: /backend/migrations/001_complete_schema.sql
+- Verificar endpoints: /backend/server.js
+
+Fecha de reporte: 12 de Noviembre de 2025
+Version del sistema: 2.0.0 (PostgreSQL)
+Estado: DESARROLLO - REQUIERE ESTABILIZACION
+
+================================================================================
+FIN DEL REPORTE
+================================================================================

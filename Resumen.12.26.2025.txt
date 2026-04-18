@@ -1,0 +1,868 @@
+================================================================================
+RESUMEN DE AVANCES - SISTEMA DE ALERTAS DE CALIDAD
+Fecha: 26 de Diciembre 2025
+Módulo: 8D Methodology - D6 (Contramedida Definitiva)
+================================================================================
+
+═══════════════════════════════════════════════════════════════════════════════
+📋 RESUMEN EJECUTIVO
+═══════════════════════════════════════════════════════════════════════════════
+
+Hoy completamos la implementación del sistema de seguimiento de actividades
+diarias para las acciones definitivas del módulo D6. El sistema ahora permite:
+
+✅ Agregar actividades diarias desde DOS vistas diferentes (Gantt y Tabla)
+✅ Sincronización automática entre ambas vistas
+✅ Visualización interactiva del progreso en un Gantt Chart personalizado
+✅ Tooltips informativos con detalles de cada actividad
+✅ Confirmaciones de seguridad para evitar sobrescribir o eliminar datos
+✅ Datos de ejemplo para testing rápido
+
+═══════════════════════════════════════════════════════════════════════════════
+🎯 FUNCIONALIDADES IMPLEMENTADAS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. GANTT CHART INTERACTIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Ubicación: frontend/src/components/8D/GanttChart.js
+
+   Características:
+   ─────────────────────────────────────────────────────────────────────────────
+   • Click en cualquier día del calendario para agregar/editar progreso
+   • Popup emergente con formulario de captura:
+     - Campo de progreso (0-100%)
+     - Campo de actividades realizadas (textarea)
+     - Botones Guardar / Cancelar
+
+   • Visualización de dos barras por tarea:
+     - BARRA SUPERIOR: Período planeado (gris, estática)
+     - BARRA INFERIOR: Progreso real por día (colores según prioridad)
+
+   • Línea "HOY" (roja vertical):
+     - Se calcula dinámicamente
+     - Permanece fija incluso al redimensionar la ventana
+     - Fórmula: calc(200px + (100% - 300px) * proporción)
+
+   • Tooltips informativos al hacer hover:
+     - Si NO hay progreso: "Click para agregar progreso: [fecha]"
+     - Si SÍ hay progreso:
+       "[fecha]: +X% (Acum: Y%)
+        📝 [Actividades realizadas]
+        Click para editar"
+
+   • Columna de Cumplimiento:
+     - Muestra el % de progreso real
+     - Estados: "A tiempo" o "Atrasado"
+     - Reglas:
+       * Si pasó la fecha límite Y progreso < 100% → "Atrasado" (rojo)
+       * Si no → "A tiempo" con color según %:
+         - 100%: Verde oscuro (#059669)
+         - 80-99%: Verde (#10b981)
+         - 50-79%: Amarillo (#f59e0b)
+         - <50%: Rojo (#ef4444)
+
+   • Efectos visuales:
+     - Hover en celdas: fondo azul claro (#e0f2fe)
+     - Celdas con progreso: borde gris (#d1d5db)
+     - Celda en edición: borde azul grueso
+
+   • Confirmación de actualización:
+     - Si haces click en un día que ya tiene actividad
+     - Y modificas el progreso o las actividades
+     - Al guardar, muestra alerta de confirmación con datos existentes
+     - Opción de cancelar sin perder datos
+
+
+2. VISTA DE TABLA CON HISTORIAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Ubicación: frontend/src/components/8D/D5D6D7Countermeasures.js (líneas ~1098-1283)
+
+   Características:
+   ─────────────────────────────────────────────────────────────────────────────
+   • Sección "📝 Historial de Actividades" en cada acción
+
+   • Botón "+ Agregar" que expande un formulario con:
+     - Campo de fecha (date picker)
+     - Campo de progreso (0-100%)
+     - Campo de actividades realizadas (textarea multilínea)
+     - Botón "✓ Guardar Actividad"
+
+   • Lista de actividades registradas:
+     - Ordenadas de más reciente a más antigua
+     - Cada entrada muestra:
+       * Fecha completa (ej: "mié, 25 de diciembre de 2025")
+       * Badge de progreso: "+X% → Y%" (coloreado según prioridad)
+       * Texto de actividades realizadas
+
+   • Confirmación antes de sobrescribir:
+     - Si intentas agregar actividad para fecha existente
+     - Muestra alerta con datos actuales
+     - Pregunta si deseas ACTUALIZAR o CANCELAR
+
+   • Auto-cierre del formulario:
+     - Después de guardar, el panel se cierra automáticamente
+     - Los campos se limpian (fecha vuelve a hoy, resto en blanco)
+
+
+3. SINCRONIZACIÓN BIDIRECCIONAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Mecanismo:
+   ─────────────────────────────────────────────────────────────────────────────
+   • Ambas vistas comparten el mismo estado: formData.d6DefinitiveActions
+
+   • Al agregar desde GANTT:
+     1. Usuario hace click en día
+     2. Llena progreso + actividades
+     3. Guarda → llama onTaskUpdate(taskId, updates)
+     4. onTaskUpdate → llama handleUpdateDefinitiveAction
+     5. Actualiza formData.d6DefinitiveActions
+     6. React re-renderiza automáticamente ambas vistas
+     7. Tabla muestra nueva actividad en historial
+
+   • Al agregar desde TABLA:
+     1. Usuario hace click en "+ Agregar"
+     2. Llena fecha + progreso + actividades
+     3. Guarda → llama handleAddDailyProgress
+     4. Actualiza formData.d6DefinitiveActions
+     5. React re-renderiza automáticamente ambas vistas
+     6. Gantt muestra nueva barra de color en el día correspondiente
+
+   • Flujo de datos:
+     formData.d6DefinitiveActions
+            ↓
+        ┌───────────────────┐
+        │  Normalización    │ (useEffect línea 185)
+        │  - dailyProgress  │
+        │  - recoveryPlan   │
+        │  - actualProgress │
+        └───────────────────┘
+            ↓
+     ┌──────────────┬──────────────┐
+     │ Vista Gantt  │ Vista Tabla  │
+     └──────────────┴──────────────┘
+
+
+4. DATOS DE EJEMPLO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Ubicación: Botón "📊 Cargar Ejemplos" junto al botón "+ Agregar"
+   Función: handleLoadSampleData() (línea 431)
+
+   6 Tareas de ejemplo:
+   ─────────────────────────────────────────────────────────────────────────────
+
+   1. Implementar sistema de control de temperatura (ID: 1001)
+      - Prioridad: ALTA
+      - 4 actividades registradas
+      - Estado: 65% completado
+      - Fechas: hace 10 días hasta hace 2 días
+
+   2. Capacitación de operadores (ID: 1002)
+      - Prioridad: ALTA
+      - 3 actividades registradas
+      - Estado: 40% completado
+      - Plan de recuperación incluido
+
+   3. Actualizar procedimientos de inspección (ID: 1003)
+      - Prioridad: MEDIA
+      - 1 actividad registrada
+      - Estado: 10% completado
+      - Inicia HOY
+
+   4. Instalación de sensores de calidad (ID: 1004)
+      - Prioridad: ALTA
+      - 4 actividades registradas
+      - Estado: 100% COMPLETADO
+      - Fechas: hace 15 días hasta hace 4 días
+
+   5. Revisión de proveedores (ID: 1005)
+      - Prioridad: MEDIA
+      - Sin actividades (0%)
+      - Inicia en 3 días
+
+   6. Implementar checklist diario (ID: 1006)
+      - Prioridad: BAJA
+      - 3 actividades registradas
+      - Estado: 55% completado
+
+   Cada actividad incluye:
+   - Fecha específica
+   - Progreso añadido ese día
+   - Progreso acumulado
+   - Descripción detallada de actividades realizadas
+
+
+5. SISTEMA DE CONFIRMACIONES DE SEGURIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   A. Confirmación al sobrescribir actividad (TABLA)
+   ──────────────────────────────────────────────────────────────────────────
+   Ubicación: handleAddDailyProgress() líneas 470-488
+
+   Trigger: Intentar agregar actividad con fecha que ya existe
+
+   Mensaje:
+   ⚠️ Ya existe una actividad registrada para [día completo]:
+
+   Progreso actual: X%
+   Actividades: [texto de la actividad]
+
+   ¿Deseas ACTUALIZAR esta actividad con los nuevos datos?
+
+   Si quieres mantener la actividad original, presiona "Cancelar" y
+   elige otra fecha.
+
+
+   B. Confirmación al sobrescribir actividad (GANTT)
+   ──────────────────────────────────────────────────────────────────────────
+   Ubicación: handleSaveDayProgress() en GanttChart.js líneas 124-146
+
+   Trigger: Guardar cambios en un día que ya tiene actividad Y los datos
+           fueron modificados
+
+   Nota: Si haces click en un día con actividad pero NO cambias nada,
+         NO muestra la alerta (comportamiento inteligente)
+
+   Mensaje:
+   ⚠️ Ya existe una actividad para [día completo]:
+
+   Progreso actual: X%
+   Actividades: [texto]
+
+   ¿Deseas ACTUALIZAR esta actividad con los nuevos datos?
+
+
+   C. Confirmación al eliminar acción completa
+   ──────────────────────────────────────────────────────────────────────────
+   Ubicación: handleRemoveDefinitiveAction() líneas 424-450
+
+   Trigger: Click en botón "Eliminar" de cualquier acción
+
+   Mensaje SIN actividades:
+   ⚠️ ¿Estás seguro de eliminar esta acción?
+
+   "[Nombre de la acción]"
+
+   Esta acción NO se puede deshacer.
+
+
+   Mensaje CON actividades:
+   ⚠️ ¿Estás seguro de eliminar esta acción?
+
+   "[Nombre de la acción]"
+
+   ⚠️ ATENCIÓN: Esta acción tiene X actividad(es) registrada(s).
+
+   Esta acción NO se puede deshacer.
+
+═══════════════════════════════════════════════════════════════════════════════
+🏗️ ARQUITECTURA Y ESTRUCTURA DE DATOS
+═══════════════════════════════════════════════════════════════════════════════
+
+MODELO DE DATOS - Acción Definitiva (d6DefinitiveAction)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  id: Number,                    // ID único de la acción
+  action: String,                // Descripción de la acción
+  result: String,                // Resultado esperado
+  responsible: Number,           // ID del usuario responsable
+  priority: String,              // 'alta' | 'media' | 'baja'
+  startDate: String,             // Fecha inicio (formato: YYYY-MM-DD)
+  endDate: String,               // Fecha fin (formato: YYYY-MM-DD)
+  plannedProgress: Number,       // Progreso planeado según fechas (0-100)
+  actualProgress: Number,        // Progreso real acumulado (0-100)
+
+  dailyProgress: [               // ⭐ Array de progreso diario
+    {
+      date: String,              // Fecha (YYYY-MM-DD)
+      progress: Number,          // Progreso añadido ese día (0-100)
+      accumulated: Number,       // Progreso acumulado hasta ese día (0-100)
+      activities: String         // Descripción de actividades realizadas
+    }
+  ],
+
+  recoveryPlan: String           // Plan de recuperación si hay atrasos
+}
+
+
+FUNCIONES CLAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Archivo: D5D6D7Countermeasures.js
+─────────────────────────────────────────────────────────────────────────────
+
+1. generateSampleData() - Línea 73
+   • Genera las 6 tareas de ejemplo con actividades pre-cargadas
+   • Calcula fechas relativas usando getDate(offset)
+   • Retorna array de acciones con dailyProgress poblado
+
+2. handleAddDailyProgress(actionId) - Línea 451
+   • Agrega o actualiza progreso diario desde vista de tabla
+   • Valida que existan fecha y progreso
+   • Verifica si fecha ya existe → confirmación
+   • Ordena por fecha y recalcula acumulados
+   • Actualiza actualProgress de la acción
+   • Cierra formulario automáticamente
+
+3. handleUpdateDefinitiveAction(id, updates) - Línea 445
+   • Actualiza cualquier campo de una acción
+   • Usado por Gantt para actualizar dailyProgress
+   • Hace merge de updates con acción existente
+
+4. handleRemoveDefinitiveAction(id) - Línea 424
+   • Elimina una acción completa
+   • Muestra confirmación con advertencia si tiene actividades
+   • Mensaje de éxito después de eliminar
+
+5. handleLoadSampleData() - Línea 431
+   • Carga los datos de ejemplo
+   • Reemplaza d6DefinitiveActions con sample data
+   • Muestra toast de éxito
+
+
+Archivo: GanttChart.js
+─────────────────────────────────────────────────────────────────────────────
+
+1. handleDayClick(taskId, date) - Línea 92
+   • Se ejecuta al hacer click en un día del Gantt
+   • Setea editingDay para mostrar popup
+   • Pre-carga datos si la fecha ya tiene actividad
+
+2. handleSaveDayProgress(taskId, date) - Línea 107
+   • Guarda el progreso y actividades capturados
+   • Valida progreso 0-100
+   • Verifica si hay cambios → confirmación si es actualización
+   • Ordena y recalcula acumulados
+   • Llama onTaskUpdate para sincronizar con tabla
+   • Cierra popup automáticamente
+
+3. calculateBarPosition(task, columns) - Línea 42
+   • Calcula posición left y width de las barras planeadas
+   • Usa índices de columnas para posicionamiento %
+
+4. getTodayIndex(columns) - Línea 62
+   • Encuentra el índice del día actual en el array de columnas
+   • Usado para posicionar la línea HOY
+
+
+ESTADOS DE REACT (D5D6D7Countermeasures.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+formData: {
+  d6DefinitiveActions: Array     // Array principal de acciones
+  // ... otros campos D6 y D7
+}
+
+expandedActions: {
+  [actionId]: Boolean            // Controla si panel de agregar está abierto
+}
+
+dailyEntries: {
+  [actionId]: {                  // Datos del formulario temporal
+    date: String,
+    progress: String,
+    activities: String
+  }
+}
+
+viewMode: String                 // 'gantt' | 'table'
+
+
+ESTADOS DE REACT (GanttChart.js)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+editingDay: {
+  taskId: Number,
+  date: Date
+} | null                         // Día actualmente en edición
+
+progressInput: String            // Valor del input de progreso
+
+activitiesInput: String          // Valor del textarea de actividades
+
+═══════════════════════════════════════════════════════════════════════════════
+🐛 BUGS RESUELTOS DURANTE EL DESARROLLO
+═══════════════════════════════════════════════════════════════════════════════
+
+1. PROBLEMA: Al agregar actividad en tabla, borraba las existentes
+   ────────────────────────────────────────────────────────────────────────
+   CAUSA: Usuario estaba trabajando con tarea que solo tenía 1 actividad
+          (tarea #1003) e intentaba agregar con la misma fecha (hoy)
+   SOLUCIÓN: No era bug - por diseño solo hay 1 registro por fecha
+   MEJORA: Agregada confirmación para evitar sobrescribir por accidente
+
+
+2. PROBLEMA: Tooltips en Gantt no mostraban actividades
+   ────────────────────────────────────────────────────────────────────────
+   CAUSA: Barras tenían pointerEvents: 'none', entonces tooltip del grid
+          cell se mostraba en lugar del tooltip de la barra
+   SOLUCIÓN: Movido tooltip a grid cell y hecho dinámico según si hay
+            progreso o no
+
+
+3. PROBLEMA: Scroll no funcionaba en Gantt
+   ────────────────────────────────────────────────────────────────────────
+   CAUSA: Container tenía overflow: 'hidden'
+   SOLUCIÓN: Cambiado a overflow: 'auto' con maxHeight: '600px'
+
+
+4. PROBLEMA: Línea HOY se movía al abrir/cerrar DevTools
+   ────────────────────────────────────────────────────────────────────────
+   CAUSA: Cálculo solo consideraba % del ancho, no las columnas fijas
+   SOLUCIÓN: Actualizado cálculo a:
+            calc(200px + (100% - 300px) * proporción)
+            Donde 200px = columna de tareas, 100px = columna cumplimiento
+
+
+5. PROBLEMA: Clicks en días del Gantt no funcionaban
+   ────────────────────────────────────────────────────────────────────────
+   CAUSA: Container de barras tenía z-index más alto que grid cells
+   SOLUCIÓN: Agregado pointerEvents: 'none' al container de barras
+
+
+6. PROBLEMA: Eliminación accidental de acciones al hacer scroll
+   ────────────────────────────────────────────────────────────────────────
+   CAUSA: Botón de eliminar muy accesible sin confirmación
+   SOLUCIÓN: Agregada confirmación con advertencia si tiene actividades
+
+═══════════════════════════════════════════════════════════════════════════════
+📝 REGLAS DE NEGOCIO IMPORTANTES
+═══════════════════════════════════════════════════════════════════════════════
+
+1. ÚNICA ACTIVIDAD POR FECHA
+   • Solo puede existir 1 registro de dailyProgress por fecha
+   • Si intentas agregar con fecha existente → actualiza/reemplaza
+   • Sistema muestra confirmación antes de actualizar
+
+2. PROGRESO ACUMULADO
+   • El campo 'accumulated' se calcula automáticamente
+   • Es la suma de todos los 'progress' hasta esa fecha
+   • Se recalcula cada vez que se agrega/modifica una entrada
+   • No puede exceder 100%
+
+3. PROGRESO ACTUAL DE LA ACCIÓN
+   • actualProgress = accumulated del último dailyProgress
+   • Se actualiza automáticamente al agregar/modificar actividades
+
+4. CUMPLIMIENTO
+   • Solo 2 estados posibles: "A tiempo" o "Atrasado"
+   • Atrasado = pasó fecha límite Y progreso < 100%
+   • A tiempo = todo lo demás
+   • Color depende del % de progreso real
+
+5. ORDENAMIENTO
+   • dailyProgress siempre se ordena por fecha (cronológico)
+   • Vista de tabla muestra más recientes primero (anti-cronológico)
+
+═══════════════════════════════════════════════════════════════════════════════
+🎨 COLORES Y ESTILOS
+═══════════════════════════════════════════════════════════════════════════════
+
+PRIORIDADES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Alta:   #ef4444 (Rojo)
+Media:  #f59e0b (Amarillo/Naranja)
+Baja:   #3b82f6 (Azul)
+
+
+CUMPLIMIENTO (% de Progreso)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+100%:     #059669 (Verde oscuro)
+80-99%:   #10b981 (Verde)
+50-79%:   #f59e0b (Amarillo)
+<50%:     #ef4444 (Rojo)
+Atrasado: #ef4444 (Rojo) - siempre, sin importar el %
+
+
+OTROS ELEMENTOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Planeado (barra):     #d1d5db (Gris claro)
+Línea HOY:            #ef4444 (Rojo)
+Hover cell:           #e0f2fe (Azul muy claro)
+Border edición:       #3b82f6 (Azul)
+Background historial: #f9fafb (Gris muy claro)
+
+═══════════════════════════════════════════════════════════════════════════════
+📂 ARCHIVOS MODIFICADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. frontend/src/components/8D/D5D6D7Countermeasures.js
+   ────────────────────────────────────────────────────────────────────────
+   Cambios principales:
+   • Agregado handleLoadSampleData() con botón en UI
+   • Modificado generateSampleData() para incluir activities en dailyProgress
+   • Actualizado handleAddDailyProgress() para:
+     - Guardar campo activities
+     - Mostrar confirmación si fecha existe
+     - Cerrar panel automáticamente después de guardar
+   • Actualizado handleRemoveDefinitiveAction() para:
+     - Mostrar confirmación antes de eliminar
+     - Advertencia especial si tiene actividades
+   • Agregada sección de historial de actividades en vista de tabla
+   • Agregado formulario expandible para captura desde tabla
+   • Limpieza de console.log de debug
+
+   Líneas clave:
+   - 73-182:   generateSampleData() con actividades
+   - 424-450:  handleRemoveDefinitiveAction() con confirmación
+   - 431-439:  handleLoadSampleData()
+   - 451-545:  handleAddDailyProgress() con confirmación
+   - 926-960:  Botón "📊 Cargar Ejemplos" en UI
+   - 1098-1283: Sección de historial con formulario expandible
+
+
+2. frontend/src/components/8D/GanttChart.js
+   ────────────────────────────────────────────────────────────────────────
+   Cambios principales:
+   • Agregado estado activitiesInput
+   • Actualizado handleDayClick() para cargar activities existentes
+   • Actualizado handleSaveDayProgress() para:
+     - Guardar campo activities
+     - Mostrar confirmación si hay cambios en entrada existente
+   • Actualizado handleCancelEdit() para limpiar activitiesInput
+   • Agregado textarea de actividades en popup (líneas 387-403)
+   • Actualizado tooltip dinámico en grid cells para mostrar activities
+   • Removido tooltip duplicado de barras de progreso
+   • Limpieza de código y variables no usadas
+
+   Líneas clave:
+   - 6:        Estado activitiesInput
+   - 92-104:   handleDayClick() carga activities
+   - 107-186:  handleSaveDayProgress() con confirmación
+   - 313-321:  Tooltip dinámico en grid cells
+   - 387-403:  Textarea de actividades en popup
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ TESTING REALIZADO
+═══════════════════════════════════════════════════════════════════════════════
+
+CASOS DE PRUEBA EXITOSOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Carga de datos de ejemplo
+   - 6 tareas se cargan correctamente
+   - Cada tarea tiene su dailyProgress poblado
+   - Actividades se muestran en tooltips
+
+✅ Agregar actividad desde Gantt
+   - Click en día sin actividad → popup aparece
+   - Campos de progreso y actividades funcionan
+   - Guardar → actualiza ambas vistas
+   - Nueva barra aparece en día correcto
+
+✅ Agregar actividad desde Tabla
+   - Click en "+ Agregar" → formulario se expande
+   - Campos funcionan correctamente
+   - Guardar → actualiza ambas vistas
+   - Nueva entrada aparece en historial
+
+✅ Editar actividad existente (Gantt)
+   - Click en día con actividad → popup pre-cargado
+   - Modificar datos → muestra confirmación
+   - Confirmar → actualiza correctamente
+   - Cancelar → no hace cambios
+
+✅ Editar actividad existente (Tabla)
+   - Agregar con fecha existente → muestra confirmación
+   - Muestra datos actuales en alerta
+   - Confirmar → actualiza
+   - Cancelar → formulario permanece abierto
+
+✅ Sincronización entre vistas
+   - Cambios en Gantt → inmediatos en Tabla
+   - Cambios en Tabla → inmediatos en Gantt
+   - Sin necesidad de recargar
+
+✅ Eliminar acción
+   - Click en eliminar → muestra confirmación
+   - Si tiene actividades → advertencia especial
+   - Cancelar → no elimina
+   - Confirmar → elimina y muestra éxito
+
+✅ Tooltips
+   - Hover en día sin actividad → texto correcto
+   - Hover en día con actividad → muestra fecha, progreso, actividades
+   - Tooltip multi-línea funciona
+
+✅ Cálculos automáticos
+   - Progreso acumulado se calcula correctamente
+   - actualProgress se actualiza
+   - Cumplimiento se calcula según reglas
+   - Línea HOY está en posición correcta
+
+═══════════════════════════════════════════════════════════════════════════════
+🔮 PRÓXIMOS PASOS SUGERIDOS
+═══════════════════════════════════════════════════════════════════════════════
+
+CORTO PLAZO (Funcionalidad básica)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] 1. Integración con Backend
+    • Asegurar que dailyProgress.activities se guarda en base de datos
+    • Verificar que se recupera correctamente
+    • Probar ciclo completo: guardar → recargar → ver datos
+
+[ ] 2. Edición de actividades existentes desde Tabla
+    • Actualmente solo se puede editar desde Gantt (click en día)
+    • Agregar botón "✏️ Editar" en cada entrada del historial
+    • Popup o formulario inline para editar
+
+[ ] 3. Eliminar actividad individual
+    • Botón "🗑️" en cada entrada del historial
+    • Confirmación antes de eliminar
+    • Recalcular acumulados después de eliminar
+
+[ ] 4. Validaciones adicionales
+    • Fecha no puede ser futura (opcional, depende de reglas de negocio)
+    • Fecha debe estar entre startDate y endDate de la acción
+    • Progreso total no puede exceder 100%
+
+
+MEDIANO PLAZO (Mejoras UX)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] 5. Filtros y búsqueda en historial
+    • Filtrar por rango de fechas
+    • Buscar en texto de actividades
+    • Ordenar ascendente/descendente
+
+[ ] 6. Exportar historial
+    • Exportar a Excel todas las actividades de una acción
+    • Incluir fecha, progreso, actividades
+
+[ ] 7. Estadísticas
+    • Gráfica de progreso en el tiempo
+    • Promedio de progreso por día
+    • Días sin actividad registrada
+
+[ ] 8. Notificaciones
+    • Alerta si no se ha registrado actividad en X días
+    • Alerta si se está atrasando vs planeado
+
+[ ] 9. Mejoras visuales en Gantt
+    • Zoom in/out para ver más o menos días
+    • Vista mensual vs semanal vs diaria
+    • Imprimir Gantt
+
+
+LARGO PLAZO (Features avanzadas)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] 10. Adjuntar evidencias
+     • Subir fotos/documentos en cada actividad diaria
+     • Galería de evidencias
+
+[ ] 11. Comentarios y colaboración
+     • Otros usuarios pueden comentar en actividades
+     • Menciones (@usuario)
+     • Historial de cambios (quién modificó qué)
+
+[ ] 12. Plantillas de actividades
+     • Guardar actividades frecuentes como plantillas
+     • Auto-completar texto al escribir
+
+[ ] 13. Plan de recuperación automático
+     • Si se detecta atraso, sugerir plan
+     • Redistribuir progreso pendiente
+
+═══════════════════════════════════════════════════════════════════════════════
+⚠️ CONSIDERACIONES TÉCNICAS
+═══════════════════════════════════════════════════════════════════════════════
+
+PERFORMANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Gantt re-renderiza al cambiar formData.d6DefinitiveActions
+  → Considerar useMemo para cálculos pesados si crece mucho
+
+• Tooltips se calculan en cada render del map
+  → No es problema actual, pero vigilar si hay muchas columnas
+
+• Array.sort() se ejecuta en cada guardado
+  → Costo bajo con pocos elementos, pero considerar optimización si
+    una acción tiene >100 actividades diarias
+
+
+SEGURIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Todas las confirmaciones usan window.confirm
+  → Funcional pero básico, considerar modal custom para mejor UX
+
+• No hay validación de permisos en frontend
+  → Backend debe validar que usuario puede modificar acciones
+
+• XSS: activities es texto libre del usuario
+  → React escapa automáticamente, pero validar en backend también
+
+
+COMPATIBILIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• toLocaleDateString('es-ES') funciona en navegadores modernos
+  → IE11 podría tener problemas (pero ya es legacy)
+
+• window.confirm es estándar pero no customizable
+  → Considerar librería de modales si se necesita branding
+
+• Flexbox y Grid funcionan en todos los navegadores actuales
+  → Sin problemas de compatibilidad esperados
+
+═══════════════════════════════════════════════════════════════════════════════
+📊 MÉTRICAS DEL PROYECTO
+═══════════════════════════════════════════════════════════════════════════════
+
+LÍNEAS DE CÓDIGO AGREGADAS/MODIFICADAS (aproximado)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+D5D6D7Countermeasures.js:  ~400 líneas (modificaciones + nuevas)
+GanttChart.js:              ~200 líneas (modificaciones + nuevas)
+TOTAL:                      ~600 líneas
+
+
+TIEMPO INVERTIDO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Desarrollo:        ~6-7 horas
+Testing/Debug:     ~2-3 horas
+Documentación:     ~1 hora
+TOTAL:             ~9-11 horas (casi todo el día)
+
+
+FEATURES COMPLETADAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Gantt interactivo con popup
+✅ Vista de tabla con historial
+✅ Sincronización bidireccional
+✅ Tooltips informativos
+✅ Confirmaciones de seguridad (3 tipos)
+✅ Datos de ejemplo
+✅ Cálculos automáticos
+✅ Validaciones de entrada
+✅ Mensajes de éxito/error
+
+═══════════════════════════════════════════════════════════════════════════════
+🎓 LECCIONES APRENDIDAS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. IMPORTANCIA DE LA CONFIRMACIÓN
+   • Usuarios pueden cometer errores fácilmente (scroll, clicks rápidos)
+   • Mejor prevenir con confirmaciones que tener que implementar "undo"
+   • Las confirmaciones deben ser claras y mostrar datos relevantes
+
+2. SINCRONIZACIÓN DE ESTADO
+   • Mantener una sola fuente de verdad (formData) simplifica todo
+   • Actualizaciones automáticas con React son poderosas
+   • No necesitamos código complejo si estructuramos bien el estado
+
+3. UX DE FORMULARIOS
+   • Auto-cerrar formularios después de guardar reduce clics
+   • Pre-cargar datos al editar mejora la experiencia
+   • Campos de fecha deben tener valor por defecto (hoy)
+
+4. TOOLTIPS DINÁMICOS
+   • Un mismo elemento puede tener diferentes tooltips según estado
+   • Importante usar \n para líneas múltiples
+   • No abusar - solo información realmente útil
+
+5. VALIDACIONES PROGRESIVAS
+   • Validar temprano (antes de abrir confirmaciones)
+   • Mensajes de error claros y específicos
+   • Números fuera de rango deben rechazarse inmediatamente
+
+6. TESTING INCREMENTAL
+   • Probar cada feature antes de avanzar a la siguiente
+   • Console.log temporal es útil para debug
+   • Limpiar logs antes de finalizar
+
+═══════════════════════════════════════════════════════════════════════════════
+🚀 ESTADO ACTUAL DEL PROYECTO
+═══════════════════════════════════════════════════════════════════════════════
+
+MÓDULO D6: ████████████████████░░ 90% Completado
+
+Completado:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Formulario de acciones definitivas
+✅ Gantt Chart interactivo
+✅ Sistema de progreso diario
+✅ Captura de actividades realizadas
+✅ Sincronización entre vistas
+✅ Tooltips informativos
+✅ Confirmaciones de seguridad
+✅ Datos de ejemplo
+✅ Cálculo automático de cumplimiento
+✅ Visualización de historial
+
+Pendiente:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏳ Integración completa con backend (verificar guardado de activities)
+⏳ Edición de actividades individuales desde tabla
+⏳ Eliminación de actividades individuales
+⏳ Plan de recuperación (UI existe pero sin funcionalidad)
+
+═══════════════════════════════════════════════════════════════════════════════
+💡 NOTAS FINALES
+═══════════════════════════════════════════════════════════════════════════════
+
+REGLA DE ORO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ Solo puede haber UNA actividad por fecha.
+
+Si necesitas registrar múltiples actividades en el mismo día, debes:
+• Concatenarlas en el campo de actividades, O
+• Elegir la actividad más importante y registrar solo esa
+
+Esto es por diseño para mantener el modelo de datos simple y el Gantt limpio.
+
+
+DEBUGGING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si algo no funciona:
+
+1. Abre DevTools (F12) → Console
+2. Busca errores en rojo
+3. Verifica que formData.d6DefinitiveActions existe
+4. Verifica estructura de dailyProgress:
+   console.log(formData.d6DefinitiveActions[0].dailyProgress)
+5. Debe ser un array con objetos que tengan: date, progress, accumulated, activities
+
+
+PARA CONTINUAR MAÑANA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Verifica que el backend esté guardando el campo "activities"
+   • Crea una acción
+   • Agrega actividades
+   • Guarda
+   • Recarga la página
+   • Verifica que las actividades siguen ahí
+
+2. Si se pierden las actividades al recargar:
+   • Problema está en backend
+   • Revisar modelo de base de datos
+   • Asegurar que dailyProgress se está serializando/deserializando correctamente
+
+3. Implementar edición/eliminación de actividades individuales
+   • Ver sección "Próximos pasos" arriba
+
+═══════════════════════════════════════════════════════════════════════════════
+✨ FIN DEL RESUMEN
+═══════════════════════════════════════════════════════════════════════════════
+
+Este fue un gran día de trabajo. El sistema de seguimiento de actividades está
+casi completo y funcionando muy bien. La sincronización entre vistas es fluida
+y las confirmaciones de seguridad previenen errores.
+
+¡Excelente progreso! 🎉
+
+Generado: 26 de Diciembre 2025
+Por: Claude Code (Anthropic)
+Estado: Listo para continuar

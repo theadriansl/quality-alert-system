@@ -1,0 +1,381 @@
+================================================================================
+RESUMEN DE SESIÓN - 05 de Diciembre 2025
+Sistema de Alertas de Calidad - Módulo 8D
+================================================================================
+
+PROTOCOLO OBLIGATORIO AL CONTINUAR:
+-----------------------------------
+1. Backend: cd "C:\Users\The Eidrian\quality-alert-system\backend" && node server.js (ejecutar en background)
+2. Frontend: cd "C:\Users\The Eidrian\quality-alert-system\frontend" && npm start (ejecutar en background)
+3. Leer este archivo COMPLETO antes de hacer cualquier cambio
+4. Base de datos: PostgreSQL (usuario: postgres, database: quality_alert_system)
+
+================================================================================
+ESTADO ACTUAL DEL PROYECTO
+================================================================================
+
+MÓDULOS COMPLETADOS:
+-------------------
+✅ D0: Configuración inicial y creación de reporte
+✅ D1: Formación de equipo multidisciplinario
+✅ D2: Descripción del problema
+✅ D3: Acciones de contención inmediatas
+✅ D3-MFG: Acciones Inmediatas de Contención (Manufactura) - COMPLETADO HOY
+✅ D4: Análisis de Causa Raíz (con 4M y 5 Whys)
+
+TRABAJO REALIZADO HOY (05/12/2025):
+====================================
+
+1. PERSISTENCIA DE DATOS - D3-MFG
+----------------------------------
+PROBLEMA INICIAL:
+- El auto-guardado funcionaba pero los datos se perdían al recargar la página
+- Arrays aparecían vacíos después de actualizar el navegador
+
+CAUSA RAÍZ IDENTIFICADA:
+- El backend transformaba automáticamente snake_case a camelCase
+- El servicio frontend esperaba snake_case pero el backend enviaba camelCase
+- Mismatch en nombres de campos: `d3_mfg_temporary_controls` vs `d3MfgTemporaryControls`
+
+SOLUCIÓN IMPLEMENTADA:
+- Archivo: C:\Users\The Eidrian\quality-alert-system\frontend\src\services\eightDService.js
+- Líneas 921-936: Actualizado mapD456FromBackend para usar camelCase
+- Se agregó validación Array.isArray() para todos los campos de array:
+  * d3MfgTemporaryControls
+  * d3MfgInspectionPoints
+  * d3MfgParametersAdjusted
+  * d3MfgPokaYokeDevices
+  * d3MfgLineModifications
+  * d3MfgOperatorTraining
+  * d3MfgEffectivenessValidation
+
+CÓDIGO ESPECÍFICO:
+```javascript
+frontendData.d3MfgTemporaryControls = Array.isArray(report.d3MfgTemporaryControls)
+                                       ? report.d3MfgTemporaryControls
+                                       : [];
+```
+
+2. CAMPO "PERSONAS INVOLUCRADAS EN EL EVENTO"
+----------------------------------------------
+PROBLEMA:
+- Solo guardaba la primera persona seleccionada
+- No persistía el listado completo después de recargar
+
+CAUSA RAÍZ:
+- Había DOS columnas en la BD:
+  * d3_mfg_responsible_user_id (integer) - campo singular obsoleto
+  * d3_mfg_responsible_user_ids (jsonb) - campo para múltiples usuarios
+- El sistema guardaba en el campo singular en lugar del plural
+
+SOLUCIÓN IMPLEMENTADA:
+- Archivo: C:\Users\The Eidrian\quality-alert-system\frontend\src\pages\8DWorkflow.js
+- Línea 571: Cambiado de `d3_mfg_responsible_user_id` a `d3_mfg_responsible_user_ids`
+- Ahora guarda como array JSONB completo en lugar de solo el primer elemento
+
+ANTES:
+```javascript
+d3_mfg_responsible_user_id: data.d3MfgResponsibleUserIds?.[0] || null
+```
+
+DESPUÉS:
+```javascript
+d3_mfg_responsible_user_ids: data.d3MfgResponsibleUserIds || []
+```
+
+- Archivo: eightDService.js líneas 934-936
+- Actualizado para leer del campo correcto con validación Array.isArray()
+
+3. OPTIMIZACIÓN DE AUTO-GUARDADO
+---------------------------------
+PROBLEMA:
+- Auto-guardado se disparaba constantemente (cada 2 segundos)
+- Generaba demasiados logs y llamadas al backend
+- Riesgo de saturar memoria
+
+SOLUCIÓN IMPLEMENTADA:
+- Archivos modificados:
+  * D3MFG.js línea 206: Cambió de 2000ms a 60000ms (1 minuto)
+  * D4ContainmentRootCause.js línea 145: Cambió de 2000ms a 60000ms
+
+- Agregado flag isInitialLoad para evitar auto-guardado en carga inicial:
+  * Línea 28 D3MFG.js: useState para isInitialLoad
+  * Línea 171: setIsInitialLoad(false) después de cargar datos
+  * Línea 181: Validación que previene guardado si isInitialLoad === true
+
+- Eliminación de visual de auto-guardado (líneas 993-1019 D3MFG.js)
+- Auto-guardado ahora es silencioso con solo console.logs
+
+4. INDICADOR VISUAL DE AUTO-GUARDADO
+-------------------------------------
+DECISIÓN DEL USUARIO:
+"mejor quitame ese boton de Guardado, es medio molesto, distrae al capturar"
+
+IMPLEMENTACIÓN:
+- Removido completamente el indicador visual de auto-guardado
+- Mantenido solo console.logs para debugging:
+  * "💾 Auto-guardando Acciones Inmediatas..."
+  * "✅ Auto-guardado completado"
+  * "❌ Error en auto-guardado"
+
+5. ERROR DE VALIDACIÓN DE FECHAS PostgreSQL
+--------------------------------------------
+PROBLEMA:
+- PostgreSQL rechazaba strings vacíos en campos tipo DATE
+- Error: "invalid input syntax for type date: ''"
+
+SOLUCIÓN IMPLEMENTADA:
+- Archivo: backend/endpoints/eightDEndpoints.js línea 665-666
+- Conversión de string vacío a null antes de guardar en BD
+
+CÓDIGO:
+```javascript
+values.push(d3_mfg_implementation_date === '' ? null : d3_mfg_implementation_date);
+```
+
+- Frontend (8DWorkflow.js líneas 573-575):
+- Validación para enviar null si string vacío o solo whitespace
+
+6. HISTORIAL DE RAZONES DE ATRASO (D4)
+---------------------------------------
+PROBLEMA:
+- No mostraba el historial de atrasos guardado en la base de datos
+
+CAUSA RAÍZ:
+- Similar al problema de D3-MFG: mismatch entre snake_case y camelCase
+- Servicio buscaba `d4_delay_history` pero backend enviaba `d4DelayHistory`
+
+SOLUCIÓN IMPLEMENTADA:
+- Archivo: eightDService.js líneas 976-986
+- Agregado debug logging y validación para ambos formatos
+- Soporte para leer tanto camelCase como snake_case
+
+CÓDIGO:
+```javascript
+frontendData.d4DelayHistory = Array.isArray(report.d4DelayHistory)
+                               ? report.d4DelayHistory
+                               : (Array.isArray(report.d4_delay_history)
+                                  ? report.d4_delay_history
+                                  : []);
+```
+
+7. FECHA DE IMPLEMENTACIÓN OBLIGATORIA
+---------------------------------------
+REQUERIMIENTO:
+- Campo "Fecha de Implementación" debe ser obligatorio
+- Debe tener valor por defecto: día actual
+- Debe persistir después de guardar y recargar
+
+IMPLEMENTACIÓN:
+
+A) MARCADO COMO OBLIGATORIO:
+- Archivo: D3MFG.js línea 1214
+- Agregado asterisco rojo (*) al label
+- Agregado atributo `required` al input (línea 1221)
+
+B) VALIDACIÓN PRE-ENVÍO:
+- Archivo: D3MFG.js líneas 351-360
+- Validación antes de enviar a aprobación:
+```javascript
+if (!formData.d3MfgImplementationDate || formData.d3MfgImplementationDate.trim() === '') {
+  alert('⚠️ La Fecha de Implementación es obligatoria');
+  return;
+}
+```
+- También valida que haya al menos una persona involucrada
+
+C) VALOR POR DEFECTO:
+- Línea 13: Estado inicial con fecha actual
+- Líneas 159-161: Si carga dato vacío, usa fecha actual
+
+D) CONVERSIÓN DE FORMATO:
+- Archivo: eightDService.js líneas 937-943
+- Problema: Backend devolvía timestamp completo "2025-12-03T06:00:00.000Z"
+- Input type="date" necesita formato "YYYY-MM-DD"
+- Solución: Conversión automática al cargar datos
+
+CÓDIGO:
+```javascript
+if (report.d3MfgImplementationDate) {
+  const date = new Date(report.d3MfgImplementationDate);
+  frontendData.d3MfgImplementationDate = date.toISOString().split('T')[0];
+} else {
+  frontendData.d3MfgImplementationDate = null;
+}
+```
+
+================================================================================
+ARCHIVOS MODIFICADOS HOY
+================================================================================
+
+FRONTEND:
+---------
+1. C:\Users\The Eidrian\quality-alert-system\frontend\src\services\eightDService.js
+   - Líneas 921-936: Mapeo camelCase para D3-MFG arrays
+   - Líneas 929-936: Validación Array.isArray() para d3MfgResponsibleUserIds
+   - Líneas 937-943: Conversión de formato de fecha
+   - Líneas 976-986: Soporte para d4DelayHistory en ambos formatos
+
+2. C:\Users\The Eidrian\quality-alert-system\frontend\src\components\8D\D3MFG.js
+   - Línea 28: Agregado isInitialLoad flag
+   - Línea 171: setIsInitialLoad(false) después de carga
+   - Línea 181: Validación isInitialLoad en auto-guardado
+   - Línea 206: Cambio de timeout a 60000ms (1 minuto)
+   - Líneas 351-360: Validación de campos obligatorios antes de enviar
+   - Línea 1214: Asterisco rojo en label de fecha
+   - Línea 1221: Atributo required en input de fecha
+   - Removidas líneas 993-1019: Indicador visual de auto-guardado
+
+3. C:\Users\The Eidrian\quality-alert-system\frontend\src\pages\8DWorkflow.js
+   - Línea 571: Cambio a d3_mfg_responsible_user_ids (array JSONB)
+   - Líneas 573-575: Validación de fecha vacía (convertir a null)
+
+4. C:\Users\The Eidrian\quality-alert-system\frontend\src\components\8D\D4ContainmentRootCause.js
+   - Línea 145: Cambio de timeout a 60000ms (1 minuto)
+
+BACKEND:
+--------
+5. C:\Users\The Eidrian\quality-alert-system\backend\endpoints\eightDEndpoints.js
+   - Líneas 625-630: Debug logging para d3_mfg_temporary_controls
+   - Líneas 665-666: Conversión string vacío a null para fechas
+
+================================================================================
+ESTRUCTURA DE DATOS - D3-MFG
+================================================================================
+
+CAMPOS EN BASE DE DATOS (PostgreSQL):
+--------------------------------------
+d3_mfg_temporary_controls (jsonb)        - Controles temporales del proceso
+d3_mfg_inspection_points (jsonb)         - Puntos de inspección agregados
+d3_mfg_parameters_adjusted (jsonb)       - Parámetros ajustados
+d3_mfg_poka_yoke_devices (jsonb)         - Dispositivos poka-yoke
+d3_mfg_line_modifications (jsonb)        - Modificaciones de línea
+d3_mfg_operator_training (jsonb)         - Capacitación de operadores
+d3_mfg_effectiveness_validation (jsonb)  - Validación de efectividad
+d3_mfg_responsible_user_ids (jsonb)      - IDs de personas involucradas (ARRAY)
+d3_mfg_implementation_date (date)        - Fecha de implementación
+d3_mfg_completed (boolean)               - Estado de completado
+d3_mfg_status (varchar)                  - Estado del flujo
+d3_mfg_current_approval_step (integer)   - Paso actual de aprobación
+
+TRANSFORMACIÓN BACKEND → FRONTEND:
+-----------------------------------
+Backend envía (camelCase):     Frontend recibe (camelCase):
+- d3MfgTemporaryControls    →  d3MfgTemporaryControls
+- d3MfgResponsibleUserIds   →  d3MfgResponsibleUserIds
+- d3MfgImplementationDate   →  d3MfgImplementationDate (convertido a YYYY-MM-DD)
+
+FRONTEND → BACKEND:
+-------------------
+Frontend envía (snake_case):      Backend guarda en:
+- d3_mfg_temporary_controls    →  d3_mfg_temporary_controls (JSONB)
+- d3_mfg_responsible_user_ids  →  d3_mfg_responsible_user_ids (JSONB array)
+- d3_mfg_implementation_date   →  d3_mfg_implementation_date (DATE)
+
+================================================================================
+FLUJO DE AUTO-GUARDADO
+================================================================================
+
+1. Usuario hace cambios en formulario D3-MFG
+2. useEffect detecta cambio en formData
+3. Se verifica: !isInitialLoad && !isFormBlocked && data existe
+4. setTimeout inicia cuenta de 60 segundos
+5. Si usuario hace otro cambio, el timeout se reinicia (debounce)
+6. Después de 60 segundos sin cambios:
+   - Verifica que haya contenido en al menos un campo
+   - Llama onDataUpdate(formData)
+   - onDataUpdate llama eightDService.updateEightdReport()
+   - Backend guarda en PostgreSQL
+7. Console.log muestra resultado (✅ o ❌)
+
+IMPORTANTE: El auto-guardado NO se ejecuta:
+- Durante la carga inicial (isInitialLoad === true)
+- Si el formulario está bloqueado (isFormBlocked === true)
+- Si no hay data cargada aún
+
+================================================================================
+PROBLEMAS RESUELTOS HOY
+================================================================================
+
+1. ✅ Persistencia de arrays D3-MFG después de recargar página
+2. ✅ Campo "Personas Involucradas" ahora guarda múltiples usuarios
+3. ✅ Auto-guardado optimizado de 2s a 60s
+4. ✅ Eliminado indicador visual molesto de auto-guardado
+5. ✅ Error PostgreSQL de fecha vacía resuelto
+6. ✅ Historial de razones de atraso D4 ahora se muestra correctamente
+7. ✅ Fecha de implementación obligatoria con validación
+8. ✅ Fecha de implementación persiste correctamente (conversión de formato)
+9. ✅ Valor por defecto de fecha = día actual
+
+================================================================================
+PENDIENTES / PRÓXIMOS PASOS
+================================================================================
+
+FUNCIONALIDADES A IMPLEMENTAR:
+-------------------------------
+1. D5: Acciones Correctivas Permanentes
+2. D6: Implementación y Validación de Acciones Permanentes
+3. D7: Prevenir Recurrencia
+4. D8: Reconocimiento del Equipo y Cierre
+
+MEJORAS SUGERIDAS:
+------------------
+1. Agregar indicador discreto de "último guardado" sin ser molesto
+2. Considerar validación en tiempo real de campos obligatorios
+3. Agregar confirmación visual cuando se completa auto-guardado exitoso
+4. Implementar retry automático si falla el auto-guardado
+
+BUGS CONOCIDOS:
+---------------
+Ninguno reportado al momento
+
+================================================================================
+NOTAS IMPORTANTES PARA MAÑANA
+================================================================================
+
+1. SIEMPRE ejecutar backend y frontend antes de iniciar
+2. El auto-guardado está configurado en 60 segundos (1 minuto)
+3. Todos los arrays D3-MFG tienen validación Array.isArray()
+4. El campo de fecha SIEMPRE debe tener valor (obligatorio)
+5. Backend ya maneja conversión de strings vacíos a null para fechas
+6. El sistema usa camelCase en comunicación backend→frontend
+7. Frontend envía snake_case al backend
+8. No olvidar que d3_mfg_responsible_user_ids es JSONB array, no integer
+
+COMANDOS ÚTILES:
+----------------
+# Ver logs del backend
+BashOutput con bash_id del servidor backend
+
+# Verificar datos en PostgreSQL
+cd "C:\Users\The Eidrian\quality-alert-system\backend" && node -e "require('dotenv').config(); const { Pool } = require('pg'); const pool = new Pool({ user: process.env.DB_USER, host: process.env.DB_HOST, database: process.env.DB_NAME, password: process.env.DB_PASSWORD, port: process.env.DB_PORT }); pool.query('SELECT * FROM eightd_reports ORDER BY id DESC LIMIT 1').then(res => { console.log(JSON.stringify(res.rows[0], null, 2)); pool.end(); });"
+
+# Reiniciar backend si es necesario
+KillShell con bash_id actual, luego:
+cd "C:\Users\The Eidrian\quality-alert-system\backend" && node server.js (background)
+
+================================================================================
+ESTADO DEL SISTEMA AL FINALIZAR
+================================================================================
+
+✅ Backend corriendo en puerto 5000
+✅ Frontend corriendo en puerto 3000
+✅ Base de datos PostgreSQL operativa
+✅ Auto-guardado funcionando cada 60 segundos
+✅ Todos los campos D3-MFG persistiendo correctamente
+✅ Validaciones implementadas y funcionando
+✅ Fecha de implementación obligatoria y funcionando
+
+USUARIOS DE PRUEBA:
+-------------------
+Total: 11 usuarios en el sistema
+Usuario actual de prueba: ID 2
+
+REPORTES DE PRUEBA:
+-------------------
+Último reporte: 8D-2025-0316 (ID: 4)
+Con datos D3-MFG guardados correctamente
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================

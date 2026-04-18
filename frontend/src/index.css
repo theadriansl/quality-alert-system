@@ -1,0 +1,663 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   INDUSTRIAL DESIGN SYSTEM - B2B Enterprise
+   Corporate Industrial Style
+
+   Color Distribution:
+   - 70% Whites/Grays
+   - 25% Industrial Blue
+   - 5% Status Colors (only for critical states)
+   ============================================ */
+
+:root {
+  /* Primary Colors */
+  --ind-primary: #0F3B5F;
+  --ind-secondary: #5C6770;
+  --ind-accent: #0072CE;
+
+  /* Background Colors */
+  --ind-background: #F4F6F8;
+  --ind-surface: #FFFFFF;
+  --ind-section: #E6EAEE;
+
+  /* Status Colors - Minimal Use (5%) */
+  --ind-success: #2E7D32;
+  --ind-success-light: #E8F5E9;
+  --ind-warning: #C77700;
+  --ind-warning-light: #FFF3E0;
+  --ind-error: #B00020;
+  --ind-error-light: #FFEBEE;
+  --ind-info: #1565C0;
+  --ind-info-light: #E3F2FD;
+
+  /* Text Colors */
+  --ind-text-primary: #1C1F23;
+  --ind-text-secondary: #6B7280;
+  --ind-text-muted: #A0A4A8;
+
+  /* Neutral Grays - Technical (70%) */
+  --ind-gray-50: #FAFBFC;
+  --ind-gray-100: #F4F6F8;
+  --ind-gray-200: #E6EAEE;
+  --ind-gray-300: #D1D5DB;
+  --ind-gray-400: #9CA3AF;
+  --ind-gray-500: #6B7280;
+  --ind-gray-600: #5C6770;
+  --ind-gray-700: #4B5563;
+  --ind-gray-800: #374151;
+  --ind-gray-900: #1C1F23;
+
+  /* Border Colors */
+  --ind-border-light: #E6EAEE;
+  --ind-border-medium: #D1D5DB;
+  --ind-border-dark: #9CA3AF;
+
+  /* Shadows - Subtle */
+  --ind-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --ind-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07);
+
+  /* Border Radius - Industrial (minimal) */
+  --ind-radius: 4px;
+
+  /* Typography */
+  --ind-font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Spacing */
+  --ind-space-xs: 4px;
+  --ind-space-sm: 8px;
+  --ind-space-md: 16px;
+  --ind-space-lg: 24px;
+  --ind-space-xl: 32px;
+  --ind-space-2xl: 48px;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--ind-font-sans);
+  background-color: var(--ind-background);
+  color: var(--ind-text-primary);
+  line-height: 1.5;
+}
+
+/* ============================================
+   TYPOGRAPHY - Industrial Hierarchy
+   ============================================ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--ind-text-primary);
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: 1.5rem; line-height: 1.2; }    /* 24px */
+h2 { font-size: 1.25rem; line-height: 1.25; }  /* 20px */
+h3 { font-size: 1rem; line-height: 1.3; }      /* 16px */
+h4 { font-size: 0.875rem; line-height: 1.4; }  /* 14px */
+h5 { font-size: 0.75rem; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.05em; }
+h6 { font-size: 0.75rem; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ind-text-muted); }
+
+p {
+  color: var(--ind-text-secondary);
+  line-height: 1.6;
+}
+
+small, .text-sm {
+  font-size: 0.875rem;
+  color: var(--ind-text-secondary);
+}
+
+.text-xs {
+  font-size: 0.75rem;
+  color: var(--ind-text-muted);
+}
+
+/* ============================================
+   INDUSTRIAL LAYOUT COMPONENTS
+   ============================================ */
+
+/* Page Container */
+.ind-page {
+  min-height: 100vh;
+  background-color: var(--ind-background);
+  padding: var(--ind-space-lg);
+}
+
+/* Section */
+.ind-section {
+  background-color: var(--ind-section);
+  border-radius: var(--ind-radius);
+  padding: var(--ind-space-lg);
+  margin-bottom: var(--ind-space-lg);
+}
+
+/* Card - Clean, minimal */
+.ind-card {
+  background: var(--ind-surface);
+  border: 1px solid var(--ind-border-light);
+  border-radius: var(--ind-radius);
+  box-shadow: var(--ind-shadow);
+}
+
+.ind-card-header {
+  padding: var(--ind-space-md) var(--ind-space-lg);
+  border-bottom: 1px solid var(--ind-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ind-card-body {
+  padding: var(--ind-space-lg);
+}
+
+/* Header Bar */
+.ind-header {
+  background: var(--ind-surface);
+  border-bottom: 1px solid var(--ind-border-light);
+  padding: var(--ind-space-md) var(--ind-space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Sidebar */
+.ind-sidebar {
+  background: var(--ind-secondary);
+  width: 240px;
+  min-height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+
+.ind-sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: var(--ind-space-sm) var(--ind-space-md);
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+  border-left: 4px solid transparent;
+}
+
+.ind-sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ind-sidebar-item.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-left-color: var(--ind-accent);
+}
+
+/* ============================================
+   FORM ELEMENTS - Industrial Style
+   ============================================ */
+
+/* Input Fields */
+.ind-input {
+  width: 100%;
+  padding: var(--ind-space-sm) var(--ind-space-md);
+  font-size: 0.875rem;
+  color: var(--ind-text-primary);
+  background: var(--ind-surface);
+  border: 1px solid var(--ind-border-medium);
+  border-radius: var(--ind-radius);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ind-input:focus {
+  outline: none;
+  border-color: var(--ind-primary);
+  box-shadow: 0 0 0 2px rgba(15, 59, 95, 0.1);
+}
+
+.ind-input:disabled {
+  background: var(--ind-gray-100);
+  color: var(--ind-text-muted);
+  cursor: not-allowed;
+}
+
+.ind-input.error {
+  border-color: var(--ind-error);
+}
+
+/* Select */
+.ind-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+/* Textarea */
+.ind-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Label */
+.ind-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ind-text-secondary);
+  margin-bottom: var(--ind-space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   BUTTONS - Industrial Style
+   ============================================ */
+
+.ind-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ind-space-sm);
+  padding: var(--ind-space-sm) var(--ind-space-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--ind-radius);
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+  text-decoration: none;
+}
+
+.ind-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.ind-btn-primary {
+  background: var(--ind-primary);
+  color: white;
+}
+
+.ind-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* Secondary Button */
+.ind-btn-secondary {
+  background: var(--ind-gray-100);
+  color: var(--ind-text-secondary);
+  border: 1px solid var(--ind-border-medium);
+}
+
+.ind-btn-secondary:hover:not(:disabled) {
+  background: var(--ind-gray-200);
+}
+
+/* Accent Button */
+.ind-btn-accent {
+  background: var(--ind-accent);
+  color: white;
+}
+
+.ind-btn-accent:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* Danger Button */
+.ind-btn-danger {
+  background: var(--ind-error);
+  color: white;
+}
+
+.ind-btn-danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* Ghost Button */
+.ind-btn-ghost {
+  background: transparent;
+  color: var(--ind-text-secondary);
+}
+
+.ind-btn-ghost:hover:not(:disabled) {
+  background: var(--ind-gray-100);
+}
+
+/* Button Sizes */
+.ind-btn-sm {
+  padding: var(--ind-space-xs) var(--ind-space-sm);
+  font-size: 0.75rem;
+}
+
+.ind-btn-lg {
+  padding: var(--ind-space-md) var(--ind-space-lg);
+  font-size: 1rem;
+}
+
+/* ============================================
+   TABLE - Industrial Data Display
+   ============================================ */
+
+.ind-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.ind-table th {
+  background: var(--ind-gray-50);
+  padding: var(--ind-space-sm) var(--ind-space-md);
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ind-text-secondary);
+  border-bottom: 2px solid var(--ind-border-medium);
+}
+
+.ind-table td {
+  padding: var(--ind-space-sm) var(--ind-space-md);
+  border-bottom: 1px solid var(--ind-border-light);
+  color: var(--ind-text-primary);
+}
+
+.ind-table tr:hover td {
+  background: var(--ind-gray-50);
+}
+
+/* ============================================
+   STATUS INDICATORS - Minimal
+   ============================================ */
+
+.ind-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--ind-radius);
+}
+
+.ind-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ind-status-success {
+  color: var(--ind-success);
+  background: var(--ind-success-light);
+}
+.ind-status-success::before { background: var(--ind-success); }
+
+.ind-status-error {
+  color: var(--ind-error);
+  background: var(--ind-error-light);
+}
+.ind-status-error::before { background: var(--ind-error); }
+
+.ind-status-warning {
+  color: var(--ind-warning);
+  background: var(--ind-warning-light);
+}
+.ind-status-warning::before { background: var(--ind-warning); }
+
+.ind-status-info {
+  color: var(--ind-info);
+  background: var(--ind-info-light);
+}
+.ind-status-info::before { background: var(--ind-info); }
+
+.ind-status-neutral {
+  color: var(--ind-text-muted);
+  background: var(--ind-gray-100);
+}
+.ind-status-neutral::before { background: var(--ind-gray-400); }
+
+/* ============================================
+   KPI CARDS - Industrial Metrics
+   ============================================ */
+
+.ind-kpi {
+  background: var(--ind-surface);
+  border: 1px solid var(--ind-border-light);
+  border-radius: var(--ind-radius);
+  box-shadow: var(--ind-shadow);
+  padding: var(--ind-space-lg);
+}
+
+.ind-kpi-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ind-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--ind-space-sm);
+}
+
+.ind-kpi-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--ind-text-primary);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.ind-kpi-value.primary { color: var(--ind-primary); }
+.ind-kpi-value.accent { color: var(--ind-accent); }
+.ind-kpi-value.success { color: var(--ind-success); }
+.ind-kpi-value.error { color: var(--ind-error); }
+
+.ind-kpi-trend {
+  font-size: 0.75rem;
+  margin-top: var(--ind-space-sm);
+  color: var(--ind-text-muted);
+}
+
+/* ============================================
+   BADGES - Minimal
+   ============================================ */
+
+.ind-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--ind-radius);
+  background: var(--ind-gray-100);
+  color: var(--ind-text-secondary);
+}
+
+.ind-badge-primary {
+  background: var(--ind-primary);
+  color: white;
+}
+
+.ind-badge-accent {
+  background: var(--ind-accent);
+  color: white;
+}
+
+.ind-badge-error {
+  background: var(--ind-error);
+  color: white;
+}
+
+.ind-badge-success {
+  background: var(--ind-success);
+  color: white;
+}
+
+/* ============================================
+   TABS - Industrial Navigation
+   ============================================ */
+
+.ind-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--ind-border-light);
+  gap: 0;
+  margin-bottom: var(--ind-space-lg);
+}
+
+.ind-tab {
+  padding: var(--ind-space-md) var(--ind-space-lg);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ind-text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -1px;
+}
+
+.ind-tab:hover {
+  color: var(--ind-text-primary);
+}
+
+.ind-tab.active {
+  color: var(--ind-primary);
+  border-bottom-color: var(--ind-primary);
+}
+
+/* ============================================
+   PROGRESS STEPS - Industrial D1-D8
+   ============================================ */
+
+.ind-steps {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ind-step {
+  padding: var(--ind-space-xs) var(--ind-space-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ind-text-muted);
+  background: var(--ind-gray-100);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ind-step:first-child {
+  border-radius: var(--ind-radius) 0 0 var(--ind-radius);
+}
+
+.ind-step:last-child {
+  border-radius: 0 var(--ind-radius) var(--ind-radius) 0;
+}
+
+.ind-step.completed {
+  background: var(--ind-secondary);
+  color: white;
+}
+
+.ind-step.active {
+  background: var(--ind-primary);
+  color: white;
+}
+
+.ind-step.pending {
+  background: var(--ind-gray-100);
+  color: var(--ind-text-muted);
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+/* Spacing */
+.py-6 { padding-top: var(--ind-space-lg); padding-bottom: var(--ind-space-lg); }
+.py-8 { padding-top: var(--ind-space-xl); padding-bottom: var(--ind-space-xl); }
+.p-6 { padding: var(--ind-space-lg); }
+.mb-6 { margin-bottom: var(--ind-space-lg); }
+
+/* Text colors using industrial palette */
+.text-ind-primary { color: var(--ind-primary) !important; }
+.text-ind-accent { color: var(--ind-accent) !important; }
+.text-ind-success { color: var(--ind-success) !important; }
+.text-ind-error { color: var(--ind-error) !important; }
+.text-ind-warning { color: var(--ind-warning) !important; }
+.text-ind-muted { color: var(--ind-text-muted) !important; }
+
+/* Background colors */
+.bg-ind-background { background: var(--ind-background); }
+.bg-ind-surface { background: var(--ind-surface); }
+.bg-ind-section { background: var(--ind-section); }
+
+/* ============================================
+   ANIMATIONS - Subtle
+   ============================================ */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ============================================
+   SCROLLBAR - Industrial
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ind-gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ind-gray-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ind-gray-400);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  html { font-size: 13px; }
+
+  .ind-sidebar { display: none; }
+
+  .ind-page { padding: var(--ind-space-md); }
+}

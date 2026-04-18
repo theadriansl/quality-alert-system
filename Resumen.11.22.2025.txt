@@ -1,0 +1,561 @@
+================================================================================
+PROTOCOLO OBLIGATORIO - LEER ANTES DE ESCRIBIR CÓDIGO
+================================================================================
+
+⚠️ IMPORTANTE: Este proyecto usa CONVENCIONES ESPECÍFICAS que DEBES verificar
+ANTES de escribir cualquier código. NO asumas nada.
+
+PASO 1 - VERIFICAR CONVENCIONES DEL BACKEND:
+---------------------------------------------
+✓ El backend usa utils/caseTransform.js
+✓ TODOS los datos de PostgreSQL se convierten a camelCase con transformToCamelCase()
+✓ PostgreSQL usa snake_case (ej: client_name, part_number)
+✓ Backend/Frontend esperan camelCase (ej: clientName, partNumber)
+
+ANTES de escribir código que acceda a datos del backend:
+1. Leer backend/utils/caseTransform.js para confirmar la convención
+2. Ver un ejemplo de respuesta del API (usar check_report.js o logs)
+3. Verificar que estás usando camelCase, NO snake_case
+
+PASO 2 - NO DAR VUELTAS INNECESARIAS:
+--------------------------------------
+✓ Si un fix falla 2 veces, DETENTE y explica el problema
+✓ No consumir tokens en iteraciones infinitas
+✓ Pedir ver logs/datos reales ANTES de asumir
+✓ Si no estás seguro, pregunta al usuario
+
+PASO 3 - VERIFICACIÓN ANTES DE ESCRIBIR:
+-----------------------------------------
+Antes de escribir código, pregúntate:
+□ ¿He verificado la convención de nombres del proyecto?
+□ ¿He visto un ejemplo real de los datos?
+□ ¿Estoy seguro de los nombres de campos (camelCase vs snake_case)?
+□ ¿He revisado código similar existente para ver el patrón?
+
+Si la respuesta a CUALQUIERA es "no", DETENTE y verifica primero.
+
+PASO 4 - TRANSPARENCIA:
+-----------------------
+✓ Si cometí un error, admítelo claramente
+✓ No hagas que el usuario pague por corregir TUS errores
+✓ Si estás dando vueltas, detente y pide ayuda al usuario
+
+📌 ESTE PROTOCOLO DEBE APARECER AL INICIO DE CADA RESUMEN DE SESIÓN
+
+================================================================================
+QUALITY ALERT SYSTEM - 8D MODULE
+RESUMEN DE AVANCE - 22 de Noviembre, 2025
+================================================================================
+
+================================================================================
+PROTOCOLO DE INICIO DEL SISTEMA
+================================================================================
+
+1. INICIAR BACKEND (PostgreSQL + Node.js)
+   -----------------------------------------
+   Terminal 1:
+   cd C:\Users\The Eidrian\quality-alert-system\backend
+   node server.js
+
+   El backend debe mostrar:
+   ✅ PostgreSQL Database Connected
+   📊 Server running on: http://localhost:5000
+   👥 Total Users: [número de usuarios]
+
+2. INICIAR FRONTEND (React)
+   -----------------------------------------
+   Terminal 2:
+   cd C:\Users\The Eidrian\quality-alert-system\frontend
+   npm start
+
+   El frontend debe abrir automáticamente en:
+   📱 http://localhost:3000
+
+3. VERIFICAR CONEXIÓN
+   -----------------------------------------
+   - Abrir navegador en http://localhost:3000
+   - Login con credenciales de usuario
+   - Dashboard debe cargar correctamente
+
+================================================================================
+FUNCIONALIDADES IMPLEMENTADAS (Sesión 22/11/2025)
+================================================================================
+
+1. SISTEMA DE APROBACIÓN SECUENCIAL D1-D2-D3
+   ============================================
+
+   A) MIGRACIÓN DE BASE DE DATOS ✅
+      - Archivo: backend/add_sequential_approval_columns.js
+      - 13 columnas nuevas agregadas a tabla eightd_reports:
+        * current_approval_step (0-4)
+        * approval_1_status, approval_1_by, approval_1_at, approval_1_comments
+        * approval_2_status, approval_2_by, approval_2_at, approval_2_comments
+        * approval_3_status, approval_3_by, approval_3_at, approval_3_comments
+
+   B) ENDPOINTS DE BACKEND ✅
+      - Archivo: backend/endpoints/sequentialApprovalEndpoints.js
+      - 6 nuevos endpoints registrados en server.js:
+
+        Aprobación:
+        * POST /8d/reports/:reportId/approve-step-1
+        * POST /8d/reports/:reportId/approve-step-2
+        * POST /8d/reports/:reportId/approve-step-3
+
+        Rechazo (requiere comentarios obligatorios):
+        * POST /8d/reports/:reportId/reject-step-1
+        * POST /8d/reports/:reportId/reject-step-2
+        * POST /8d/reports/:reportId/reject-step-3
+
+   C) FLUJO DE APROBACIÓN SECUENCIAL ✅
+
+      Estado Draft (step 0):
+      → Emisor completa D1-D2-D3
+      → Presiona "Complete Assignment"
+      → Sistema cambia a step 1 (pending_approval_1)
+
+      Aprobador 1 (step 1):
+      ✅ Aprueba → Avanza a Aprobador 2 (step 2)
+      ❌ Rechaza → Regresa al Emisor (step 0) con comentarios
+
+      Aprobador 2 (step 2):
+      ✅ Aprueba → Avanza a Aprobador 3 (step 3)
+      ❌ Rechaza → Regresa a Aprobador 1 (step 1) con comentarios
+
+      Aprobador 3 (step 3):
+      ✅ Aprueba → D1-D2-D3 APROBADO (step 4)
+      ❌ Rechaza → Regresa a Aprobador 2 (step 2) con comentarios
+
+   D) INTERFAZ DE USUARIO (UI) ✅
+      - Archivo: frontend/src/components/8D/TeamAssignmentTab.js
+
+      Componentes agregados:
+      * Indicador visual de progreso (3 tarjetas de aprobadores)
+      * Código de colores:
+        - Verde: Aprobado
+        - Rojo: Rechazado
+        - Azul: Pendiente (paso actual)
+        - Gris: En espera
+
+      * Historial de aprobaciones con timestamps
+      * Botones Aprobar/Rechazar (solo visibles para aprobador actual)
+      * Modal de rechazo con textarea para comentarios obligatorios
+      * Mensajes informativos según el estado
+      * Mensaje de celebración cuando está completamente aprobado
+
+2. SISTEMA DE BLOQUEO DE CAMPOS
+   ================================
+
+   A) LÓGICA DE BLOQUEO (función isD123Locked) ✅
+
+      Reglas implementadas:
+
+      Estado "draft":
+      → Solo el CREADOR puede editar
+      → Otros usuarios: bloqueado
+
+      Estado "pending_approval":
+      → APROBADORES (Issue Card) pueden editar
+      → EMISOR solo puede VISUALIZAR (bloqueado)
+      → Otros usuarios: bloqueado
+
+      Estado "approved":
+      → TODO bloqueado para todos (excepto admins)
+
+      Estado "rejected":
+      → Solo el CREADOR puede editar
+      → Otros usuarios: bloqueado
+
+      EXCEPCIÓN IMPORTANTE:
+      → ADMINISTRADORES pueden editar TODO siempre
+      → Nunca están bloqueados
+
+   B) CAMPOS BLOQUEADOS ✅
+
+      Todos los inputs de D1-D2-D3:
+      * Selección de Cliente y Proyecto
+      * Checkboxes de Partes
+      * Descripción del Problema (textarea)
+      * Tipo de Problema (select)
+      * Fotos del Problema
+      * Fotos de Containment
+      * Documentos adjuntos
+      * Checkboxes de Detección (D3)
+      * 5 Porqués (5 Whys)
+      * Textareas de D3
+      * Radio buttons de Rework
+      * Costo de Rework
+      * Todas las celdas de asignación de equipos (Issue, Countermeasure, Confirmation)
+
+   C) BOTONES BLOQUEADOS ✅
+
+      Los siguientes botones están DISABLED cuando fieldsLocked = true:
+
+      1. 📥 Botón "Cargar Atajo"
+         - Tooltip: "No disponible - Campos bloqueados"
+         - Color gris, opacidad 0.5
+
+      2. 💾 Botón "Guardar Atajo"
+         - Muestra: "🔒 Campos Bloqueados"
+         - Color gris, opacidad 0.5
+
+      3. 📝 Botón "Guardar Borrador D1"
+         - Tooltip: "No disponible - Campos bloqueados"
+         - Color gris, opacidad 0.5
+
+      4. 📝 Botón "Guardar Borrador D2"
+         - Tooltip: "No disponible - Campos bloqueados"
+         - Color gris, opacidad 0.5
+
+      5. 📝 Botón "Guardar Borrador" (Final)
+         - Tooltip: "No disponible - Campos bloqueados"
+         - Color gris, opacidad 0.5
+
+      6. ✅ Botón "Complete Assignment"
+         - Tooltip: "No disponible - Campos bloqueados"
+         - Color gris, opacidad 0.5
+
+3. DOCUMENTACIÓN
+   ==============
+
+   A) ARCHIVO: WORKFLOW_APROBACION_8D.md ✅
+      - Diagrama de flujo de estados
+      - Matriz de permisos por rol
+      - Schema de base de datos
+      - Eventos de notificación
+      - Reglas de negocio
+      - Preguntas de diseño resueltas
+
+================================================================================
+ESTRUCTURA DE ARCHIVOS MODIFICADOS/CREADOS
+================================================================================
+
+BACKEND:
+--------
+✅ backend/add_sequential_approval_columns.js (NUEVO)
+   → Script de migración de BD
+
+✅ backend/endpoints/sequentialApprovalEndpoints.js (NUEVO)
+   → 6 funciones de aprobación/rechazo secuencial
+
+✅ backend/endpoints/eightDEndpoints.js (MODIFICADO)
+   → Agregado destructuring de 12 campos de aprobación
+   → Agregado update condicional de campos de aprobación
+
+✅ backend/server.js (MODIFICADO)
+   → Importado sequentialApprovalEndpoints
+   → Registradas 6 nuevas rutas de aprobación
+
+FRONTEND:
+---------
+✅ frontend/src/components/8D/TeamAssignmentTab.js (MODIFICADO)
+   → Agregados 4 nuevos estados:
+     - currentApprovalStep
+     - showRejectModal
+     - rejectComments
+     - approvalHistory
+
+   → Agregadas 3 nuevas funciones:
+     - handleApprove(step)
+     - handleReject(step)
+     - isCurrentApprover()
+
+   → Agregado 1 nuevo useEffect:
+     - Sincronización de estados de aprobación con data
+
+   → Actualizada función isD123Locked():
+     - Agregada excepción para administradores
+     - Refinada lógica de bloqueo por estado
+
+   → Agregados componentes UI:
+     - Sección de Sistema de Aprobación Secuencial
+     - Indicadores de progreso visual
+     - Historial de aprobaciones
+     - Botones Aprobar/Rechazar (condicionales)
+     - Modal de rechazo con validación
+     - Mensajes informativos
+
+   → Bloqueados 6 botones con fieldsLocked:
+     - Cargar Atajo
+     - Guardar Atajo
+     - Guardar Borrador D1
+     - Guardar Borrador D2
+     - Guardar Borrador (Final)
+     - Complete Assignment
+
+DOCUMENTACIÓN:
+--------------
+✅ WORKFLOW_APROBACION_8D.md (NUEVO)
+   → Documentación completa del sistema de aprobación
+
+================================================================================
+ESTADO ACTUAL DEL SISTEMA
+================================================================================
+
+✅ Frontend compilando exitosamente en http://localhost:3000
+✅ Backend ejecutándose en http://localhost:5000
+✅ Base de datos PostgreSQL conectada
+✅ Migración de columnas de aprobación completada
+✅ 6 endpoints de aprobación/rechazo funcionando
+✅ UI de aprobación completamente implementada
+✅ Sistema de bloqueo de campos funcionando
+✅ Todos los botones de acción bloqueados correctamente
+
+⚠️ Warnings menores de ESLint (no afectan funcionalidad):
+   - Variables no utilizadas
+   - Dependencias de hooks
+
+================================================================================
+SIGUIENTES PASOS SUGERIDOS
+================================================================================
+
+PRIORIDAD ALTA (Seguridad y Validación):
+==========================================
+
+1. VALIDACIÓN DE PERMISOS EN BACKEND
+   -----------------------------------
+   Problema: Actualmente los endpoints confían en el frontend
+   Solución: Agregar validación en cada endpoint para verificar:
+
+   ✓ Verificar que el usuario actual ES el aprobador correcto para el step
+   ✓ Verificar que el step actual coincide con el esperado
+   ✓ Prevenir manipulación directa via API
+
+   Archivos a modificar:
+   - backend/endpoints/sequentialApprovalEndpoints.js
+
+   Ejemplo de validación a agregar:
+   ```javascript
+   // En approveStep1
+   const report = await query('SELECT * FROM eightd_reports WHERE id = $1', [reportId]);
+   const issueApprovers = JSON.parse(report.issue_approvers);
+
+   if (issueApprovers.primary.id !== userId) {
+     return res.status(403).json({
+       success: false,
+       message: 'No tiene permiso para aprobar en este paso'
+     });
+   }
+   ```
+
+2. TESTING DEL FLUJO COMPLETO
+   ----------------------------
+   Probar todos los escenarios:
+
+   ✓ Emisor crea reporte → Envía a aprobación
+   ✓ Aprobador 1 aprueba → Avanza a Aprobador 2
+   ✓ Aprobador 2 aprueba → Avanza a Aprobador 3
+   ✓ Aprobador 3 aprueba → Reporte completamente aprobado
+
+   ✓ Aprobador 1 rechaza → Regresa al Emisor
+   ✓ Aprobador 2 rechaza → Regresa a Aprobador 1
+   ✓ Aprobador 3 rechaza → Regresa a Aprobador 2
+
+   ✓ Verificar que comentarios de rechazo son obligatorios
+   ✓ Verificar que emisor NO puede editar durante aprobación
+   ✓ Verificar que admin SIEMPRE puede editar
+   ✓ Verificar que botones están correctamente deshabilitados
+
+3. MANEJO DE CASOS EDGE
+   ---------------------
+   ✓ ¿Qué pasa si el aprobador ya no existe en el sistema?
+   ✓ ¿Qué pasa si se cambian los aprobadores durante el proceso?
+   ✓ ¿Se puede cancelar una aprobación en proceso?
+   ✓ ¿El emisor puede ver quién está aprobando actualmente?
+
+PRIORIDAD MEDIA (Mejoras de UX):
+=================================
+
+4. NOTIFICACIONES (Pendiente)
+   ---------------------------
+   El sistema de notificaciones está marcado como pendiente pero no es
+   crítico para el funcionamiento del workflow de aprobación.
+
+   Cuando se implemente:
+
+   A) Crear tabla de notificaciones:
+      ```sql
+      CREATE TABLE notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        report_id INTEGER REFERENCES eightd_reports(id),
+        type VARCHAR(50),
+        message TEXT,
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      ```
+
+   B) Eventos que deben generar notificaciones:
+      - Reporte enviado a aprobación → Notificar a Aprobador 1
+      - Aprobador 1 aprueba → Notificar a Aprobador 2
+      - Aprobador 2 aprueba → Notificar a Aprobador 3
+      - Aprobador 3 aprueba → Notificar al Emisor (completado)
+      - Cualquier rechazo → Notificar a la persona anterior
+
+   C) Tipos de notificación:
+      - Email (usar nodemailer o servicio externo)
+      - In-App (badge en navbar + panel de notificaciones)
+
+   Archivos a crear:
+   - backend/endpoints/notificationsEndpoints.js
+   - backend/services/emailService.js
+   - frontend/src/components/Notifications.js
+
+5. INDICADOR DE "QUIÉN ESTÁ REVISANDO"
+   ------------------------------------
+   Agregar en la UI un indicador visual que muestre:
+
+   "Este reporte está siendo revisado por: [Nombre del Aprobador Actual]"
+
+   Mostrar:
+   - Foto de perfil del aprobador (si existe)
+   - Nombre completo
+   - Posición
+   - Tiempo que lleva en revisión
+
+6. HISTORIAL DETALLADO DE CAMBIOS
+   -------------------------------
+   Crear una tabla de audit trail para registrar:
+
+   ```sql
+   CREATE TABLE eightd_audit_log (
+     id SERIAL PRIMARY KEY,
+     report_id INTEGER REFERENCES eightd_reports(id),
+     user_id INTEGER REFERENCES users(id),
+     action VARCHAR(100),
+     old_value TEXT,
+     new_value TEXT,
+     timestamp TIMESTAMP DEFAULT NOW()
+   );
+   ```
+
+   Registrar:
+   - Quién modificó qué campo
+   - Cuándo se hizo el cambio
+   - Valor anterior y nuevo valor
+   - Mostrar en la UI como timeline
+
+PRIORIDAD BAJA (Optimizaciones):
+=================================
+
+7. RECORDATORIOS AUTOMÁTICOS
+   --------------------------
+   Si un aprobador no responde en X días:
+   - Enviar email de recordatorio
+   - Notificación in-app
+   - Opción de escalar al supervisor
+
+8. MÉTRICAS Y REPORTES
+   --------------------
+   Dashboard de métricas:
+   - Tiempo promedio de aprobación por nivel
+   - Tasa de rechazo por aprobador
+   - Reportes que toman más tiempo
+   - Cuellos de botella en el proceso
+
+9. PLANTILLAS DE COMENTARIOS DE RECHAZO
+   -------------------------------------
+   Facilitar al aprobador con plantillas predefinidas:
+   - "Falta información en [sección]"
+   - "Los 5 Porqués no son suficientes"
+   - "Se requiere más evidencia fotográfica"
+   - + Opción de texto personalizado
+
+================================================================================
+POSIBLES PROBLEMAS Y SOLUCIONES
+================================================================================
+
+PROBLEMA 1: El frontend no carga después de reiniciar
+------------------------------------------------------
+Solución:
+1. Verificar que el backend esté corriendo (http://localhost:5000/health)
+2. Verificar que PostgreSQL esté corriendo
+3. Limpiar cache del navegador
+4. En frontend: rm -rf node_modules && npm install
+
+PROBLEMA 2: Error "Cannot read property of undefined" en aprobación
+--------------------------------------------------------------------
+Solución:
+1. Verificar que los datos del reporte incluyan los campos de aprobación
+2. Verificar que el useEffect de sincronización esté ejecutándose
+3. Revisar console.log para ver qué datos llegan del backend
+
+PROBLEMA 3: Los botones de Aprobar/Rechazar no aparecen
+--------------------------------------------------------
+Solución:
+1. Verificar que currentApprovalStep > 0
+2. Verificar que isCurrentApprover() retorna true
+3. Revisar que el usuario actual esté en la lista de aprobadores del Issue Card
+4. Verificar que el paso actual coincida con la posición del aprobador
+
+PROBLEMA 4: Campos no se bloquean correctamente
+------------------------------------------------
+Solución:
+1. Verificar que fieldsLocked esté calculándose correctamente
+2. Verificar que data.d1D2D3ApprovalStatus tenga el valor correcto
+3. Revisar que currentUser.id esté disponible
+4. Verificar rol del usuario (admins nunca se bloquean)
+
+================================================================================
+NOTAS IMPORTANTES
+================================================================================
+
+1. CONVENCIONES DE NOMBRES:
+   - Backend usa snake_case (approval_1_status)
+   - Frontend usa camelCase (approval1Status)
+   - La conversión se hace automáticamente via utils/caseTransform.js
+
+2. ROLES DE USUARIO:
+   - 'Administrador' o 'Admin' = Acceso completo siempre
+   - Emisor = Solo edita en draft y rejected
+   - Aprobadores (Issue Card) = Editan durante pending_approval
+
+3. ESTADOS DE APROBACIÓN (d1_d2_d3_approval_status):
+   - 'draft' = Borrador inicial
+   - 'pending_approval_1' = Esperando Aprobador 1
+   - 'pending_approval_2' = Esperando Aprobador 2
+   - 'pending_approval_3' = Esperando Aprobador 3
+   - 'approved' = Completamente aprobado
+   - 'rejected_by_a1' = Rechazado por Aprobador 1
+   - 'rejected_by_a2' = Rechazado por Aprobador 2
+   - 'rejected_by_a3' = Rechazado por Aprobador 3
+
+4. CURRENT_APPROVAL_STEP:
+   - 0 = Draft o Rejected (no en aprobación)
+   - 1 = Esperando Aprobador 1
+   - 2 = Esperando Aprobador 2
+   - 3 = Esperando Aprobador 3
+   - 4 = Completamente aprobado
+
+5. SEGURIDAD:
+   - Todos los endpoints de aprobación requieren autenticación (verifyToken)
+   - Los comentarios de rechazo son obligatorios
+   - Las transacciones de BD usan BEGIN/COMMIT/ROLLBACK para integridad
+   - Se recomienda agregar validación de permisos en backend
+
+================================================================================
+CONTACTO Y RECURSOS
+================================================================================
+
+Documentación del Proyecto:
+- WORKFLOW_APROBACION_8D.md (sistema de aprobación)
+- README.md (instrucciones generales del proyecto)
+
+Repositorio:
+- Ubicación: C:\Users\The Eidrian\quality-alert-system
+
+Base de Datos:
+- PostgreSQL en localhost
+- Nombre de BD: (verificar en backend/config/database.js)
+
+Puertos:
+- Backend: http://localhost:5000
+- Frontend: http://localhost:3000
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================
+
+Última actualización: 22 de Noviembre, 2025
+Sistema: Quality Alert System - 8D Problem Solving Module v2.0
+Estado: Sistema de Aprobación Secuencial D1-D2-D3 Completamente Implementado ✅

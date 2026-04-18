@@ -1,0 +1,10 @@
+-- Backup of eightd_comments data
+
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (1, 1, 1, 'Customer complaint received. Investigating brake pad composition and manufacturing process.', 'status_update', true, '2025-09-20T02:19:21.198Z');
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (2, 1, 2, 'Lab analysis shows contamination in brake pad material. Supplier audit scheduled.', 'general', true, '2025-09-20T02:19:21.198Z');
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (3, 2, 3, 'Paint adhesion test results show humidity control issue during curing process.', 'status_update', true, '2025-09-20T02:19:21.198Z');
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (4, 3, 1, 'Software bug confirmed in ECU version 2.1.5. Patch development in progress.', 'escalation', true, '2025-09-20T02:19:21.198Z');
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (5, 3, 2, 'Field test of software patch successful. Preparing for production deployment.', 'status_update', true, '2025-09-20T02:19:21.198Z');
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (6, 4, 4, 'Seat belt buckle spring mechanism shows metallurgical defects. Material analysis required.', 'general', true, '2025-09-20T02:19:21.198Z');
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (7, 5, 3, 'Temperature cycling test protocol updated. New housing design validated.', 'resolution', true, '2025-09-20T02:19:21.198Z');
+INSERT INTO eightd_comments (id, report_id, user_id, comment_text, comment_type, is_internal, created_at) VALUES (8, 5, 2, 'Issue closed. Improved housing design approved for production.', 'resolution', true, '2025-09-20T02:19:21.198Z');

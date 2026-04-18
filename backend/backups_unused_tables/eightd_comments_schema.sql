@@ -1,0 +1,1 @@
+CREATE TABLE eightd_comments (id integer(32,0) NOT NULL, report_id integer(32,0), user_id integer(32,0) NOT NULL, comment_text text NOT NULL, comment_type character varying(50), is_internal boolean, created_at timestamp without time zone);

@@ -1,0 +1,394 @@
+================================================================================
+RESUMEN COMPLETO DEL PROYECTO - QUALITY ALERT SYSTEM
+Fecha: 11/05/2025
+================================================================================
+
+CONTEXO GENERAL
+================================================================================
+
+Proyecto: Quality Alert System - Sistema integral para gestión de calidad en manufactura
+
+Tecnologías:
+- Backend: Node.js + Express (Puerto 5000)
+- Frontend: React (Puerto 3000)
+- Arquitectura: Cliente-Servidor REST API
+
+MÓDULOS DEL SISTEMA
+================================================================================
+
+El sistema incluye múltiples módulos:
+- Clients: Gestión de clientes
+- Jobs: Trabajos/proyectos por cliente
+- 8D Reports: Reportes de análisis de problemas
+- Audits: Auditorías de calidad
+- Services: ← MÓDULO EN EL QUE TRABAJAMOS
+- Documents: Gestión documental
+- Quotes: Cotizaciones
+
+TRABAJO REALIZADO EN ESTA SESIÓN
+================================================================================
+
+MÓDULO SERVICES - Team Members & Timesheets
+
+Implementamos un sistema completo de gestión de servicios de personal con las siguientes funcionalidades:
+
+================================================================================
+1. SISTEMA DE HORAS SEPARADAS (REGULAR VS OVERTIME)
+================================================================================
+
+Problema Original:
+------------------
+El sistema tenía un solo campo "hoursWorked" que no diferenciaba entre horas regulares y overtime.
+
+Solución Implementada:
+----------------------
+Separamos las horas en dos campos independientes:
+- regularHours: Horas normales de trabajo
+- overtimeHours: Horas extra trabajadas
+
+Archivos Modificados:
+---------------------
+
+BACKEND:
+
+backend/data/services.js
+------------------------
+const timesheets = [
+  {
+    id: 1,
+    jobId: 1,
+    teamMemberId: 1,
+    date: '2025-11-04',
+    regularHours: 8,        // ← NUEVO
+    overtimeHours: 0,       // ← NUEVO
+    shiftType: 'shift1',
+    description: 'Quality inspection',
+    overtimeApprovedBy: null,
+    status: 'Approved'
+  }
+];
+
+backend/endpoints/servicesEndpoints.js
+--------------------------------------
+- POST /services/timesheets: Acepta regularHours y overtimeHours
+- PUT /services/timesheets/:id: Actualiza ambos campos
+- GET /services/billing-summary: Calcula costos con tarifas diferenciadas:
+  * Regular: baseRate × shiftMultiplier
+  * Overtime: baseRate × shiftMultiplier × 1.5
+- GET /services/hours-summary: Suma ambos tipos de horas
+
+FRONTEND:
+
+frontend/src/pages/JobDetail.js (Cambios principales)
+------------------------------------------------------
+
+1. Estados actualizados:
+const [newTimesheet, setNewTimesheet] = useState({
+  teamMemberId: '',
+  date: new Date().toISOString().split('T')[0],
+  regularHours: 8,      // ← NUEVO
+  overtimeHours: 0,     // ← NUEVO
+  shiftType: 'shift1',
+  description: '',
+  overtimeApprovedBy: ''
+});
+
+2. Función de cálculo semanal actualizada:
+const getWeeklyHours = (teamMemberId, targetDate) => {
+  // ... filtrado de semana ...
+  return weeklyEntries.reduce((sum, ts) =>
+    sum + (ts.regularHours || 0) + (ts.overtimeHours || 0), 0
+  );
+};
+
+3. Formularios actualizados (Add & Edit):
+- Dos campos separados: "Regular Hours" y "Overtime Hours"
+- Indicador de acumulación semanal: Muestra horas totales de la semana
+- Validación condicional: Solo requiere overtimeApprovedBy si overtimeHours > 0
+
+4. Tabla de timesheets actualizada:
+| Date | Team Member | Regular | Overtime | Total | Shift Type | Description | Status | Actions |
+
+- 3 columnas de horas con colores diferenciados
+- Regular: azul (#1e40af)
+- Overtime: naranja (#f59e0b)
+- Total: gris oscuro (#111827)
+
+================================================================================
+2. CONTROL DE OVERTIME CON THRESHOLD CONFIGURABLE
+================================================================================
+
+Funcionalidad:
+--------------
+- Threshold semanal: 40 o 48 horas (configurable)
+- Indicador visual: Muestra acumulado semanal bajo el nombre del empleado
+- Alertas: Color verde si está dentro del límite, rojo si lo excede
+- Aprobación requerida: Campo obligatorio cuando se registra overtime
+
+Ejemplo en Pantalla:
+--------------------
+John Smith
+Supervisor
+Week total: 42.0h (⚠️ +2.0h)  ← Rojo si excede threshold
+
+================================================================================
+3. SISTEMA DE GENERACIÓN DE REPORTES (LO MÁS RECIENTE)
+================================================================================
+
+Ubicación:
+----------
+Sección Services → Panel "Generate Hours Report" (arriba de "Team Members")
+
+Componentes:
+------------
+
+Selector de Fechas:
+// Estados
+const [reportStartDate, setReportStartDate] = useState('');
+const [reportEndDate, setReportEndDate] = useState('');
+const [showReportModal, setShowReportModal] = useState(false);
+const [reportData, setReportData] = useState(null);
+
+Función de Generación:
+const handleGenerateReport = () => {
+  // 1. Valida fechas
+  // 2. Filtra timesheets por rango
+  // 3. Agrupa por empleado
+  // 4. Calcula totales con tarifas diferenciadas
+  // 5. Genera estructura de reporte
+  // 6. Muestra modal
+};
+
+Estructura del Reporte:
+-----------------------
+reportData = {
+  startDate: '2025-11-01',
+  endDate: '2025-11-30',
+  jobName: 'Job Name',
+  clientName: 'Client Name',
+  members: [
+    {
+      id: 1,
+      name: 'John Smith',
+      role: 'Supervisor',
+      regularHours: 160.0,
+      overtimeHours: 12.0,
+      totalHours: 172.0,
+      regularAmount: 4640.00,
+      overtimeAmount: 522.00,
+      totalAmount: 5162.00
+    }
+  ],
+  grandTotals: {
+    regularHours: 480.0,
+    overtimeHours: 36.0,
+    totalHours: 516.0,
+    regularAmount: 13920.00,
+    overtimeAmount: 1566.00,
+    totalAmount: 15486.00
+  }
+}
+
+Modal del Reporte:
+------------------
+- Header (oculto en impresión):
+  * Botón "Print" (azul)
+  * Botón "Export PDF" (verde)
+  * Botón cerrar (X)
+
+- Contenido printable:
+  * Título y datos del job/cliente
+  * Período del reporte
+  * 3 tarjetas de resumen (Regular/Overtime/Total)
+  * Tabla detallada por empleado
+  * Fila de totales generales
+
+Estilos de Impresión:
+---------------------
+@media print {
+  .no-print { display: none !important; }
+  body * { visibility: hidden; }
+  #hours-report-content, #hours-report-content * { visibility: visible; }
+  #hours-report-content { position: absolute; left: 0; top: 0; width: 100%; }
+  @page { margin: 0.5in; }
+}
+
+================================================================================
+MULTIPLICADORES DE TARIFAS IMPLEMENTADOS
+================================================================================
+
+const rateMultipliers = {
+  shift1: 1.0,      // Turno regular
+  shift2_3: 1.0,    // Turnos 2 y 3
+  overtime: 1.5,    // Overtime manual
+  saturday: 1.5,    // Sábado
+  sunday: 1.5,      // Domingo
+  holiday: 1.85     // Día festivo
+};
+
+Cálculo final:
+- Regular: baseRate × shiftMultiplier
+- Overtime: baseRate × shiftMultiplier × 1.5
+
+================================================================================
+ARCHIVOS PRINCIPALES MODIFICADOS
+================================================================================
+
+Backend:
+--------
+1. backend/data/services.js - Datos de ejemplo actualizados
+2. backend/endpoints/servicesEndpoints.js - 4 endpoints actualizados
+
+Frontend:
+---------
+1. frontend/src/pages/JobDetail.js - 400+ líneas agregadas/modificadas:
+   - Estados nuevos (reportes)
+   - Funciones de reporte
+   - Selector de fechas UI
+   - Modal de reporte completo
+   - Estilos de impresión
+
+2. Imports agregados:
+import { Printer, FileDown } from 'lucide-react';
+
+================================================================================
+FLUJO DE USUARIO COMPLETO
+================================================================================
+
+Registrar Horas:
+----------------
+1. Click "Log Hours"
+2. Seleccionar empleado y fecha
+3. Ver acumulado semanal
+4. Ingresar horas regulares (ej: 6h)
+5. Ingresar horas overtime (ej: 4h)
+6. Si hay overtime > 0 → Aparece campo "Overtime Approved By" (obligatorio)
+7. Seleccionar tipo de turno
+8. Agregar descripción
+9. Guardar
+
+Ver Acumulación:
+----------------
+- Cada empleado muestra su total semanal en la tabla
+- Color verde: dentro del threshold
+- Color rojo: excede el threshold con indicador de cuánto (+2.0h)
+
+Generar Reporte:
+----------------
+1. Seleccionar "From Date" y "To Date"
+2. Click "Generate Report"
+3. Ver reporte en modal
+4. Opciones:
+   - Print: Ctrl+P o botón Print
+   - Export PDF: Usar "Save as PDF" en el diálogo de impresión
+   - Close: Cerrar y volver
+
+================================================================================
+ESTADO ACTUAL DEL SISTEMA
+================================================================================
+
+Servidores Corriendo:
+---------------------
+✓ Backend: http://localhost:5000
+✓ Frontend: http://localhost:3000
+✓ Compilación exitosa con warnings menores de ESLint (no críticos)
+
+Funcionalidades Operativas:
+----------------------------
+✓ CRUD de Team Members
+✓ CRUD de Timesheets con regular/overtime separados
+✓ Cálculo de billing automático
+✓ Threshold configurable (40/48h)
+✓ Acumulación semanal visible
+✓ Generación de reportes por rango de fechas
+✓ Impresión y exportación a PDF
+
+================================================================================
+DATOS DE EJEMPLO ACTUALES
+================================================================================
+
+Team Members:
+-------------
+- John Smith (Supervisor, $29/hr)
+- Sarah Johnson (Inspector, $26/hr)
+- Mike Chen (Inspector, $26/hr)
+
+Timesheets de Ejemplo:
+----------------------
+- 2025-11-04: 3 entradas (todos con 8h regulares)
+- 2025-11-05: 2 entradas (1 con overtime de 2h)
+
+================================================================================
+PRÓXIMOS PASOS POTENCIALES
+================================================================================
+
+Si quieres continuar, podrías:
+
+1. Agregar más validaciones:
+   - Evitar sobrelapamiento de horas
+   - Validar límites máximos diarios
+
+2. Mejorar reportes:
+   - Agregar gráficas
+   - Exportar a Excel
+   - Enviar por email
+
+3. Dashboard de Services:
+   - Resumen visual de horas
+   - Alertas de overtime excesivo
+   - Trending de costos
+
+4. Integración con otros módulos:
+   - Vincular con Quotes
+   - Comparar estimado vs real
+
+================================================================================
+COMANDOS ÚTILES
+================================================================================
+
+Backend:
+--------
+cd "C:\Users\The Eidrian\quality-alert-system\backend"
+node server.js
+
+Frontend:
+---------
+cd "C:\Users\The Eidrian\quality-alert-system\frontend"
+npm start
+
+Ver puertos en uso:
+-------------------
+netstat -ano | findstr :5000
+netstat -ano | findstr :3000
+
+Matar proceso:
+--------------
+taskkill //F //PID <PID>
+
+================================================================================
+RESUMEN EJECUTIVO
+================================================================================
+
+Lo que logramos hoy:
+--------------------
+1. ✓ Separación de horas regulares y overtime
+2. ✓ Sistema de threshold configurable con alertas visuales
+3. ✓ Generación de reportes profesionales por rango de fechas
+4. ✓ Funcionalidad de impresión y exportación a PDF
+5. ✓ Cálculo automático de costos con tarifas diferenciadas
+
+Archivos críticos:
+------------------
+- backend/data/services.js
+- backend/endpoints/servicesEndpoints.js
+- frontend/src/pages/JobDetail.js
+
+Estado: ✓ Sistema completamente funcional y operativo
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================
+
+Este resumen te permite retomar el trabajo en cualquier momento sin perder
+contexto. Todos los cambios están guardados y el sistema está listo para
+seguir desarrollando nuevas funcionalidades.
