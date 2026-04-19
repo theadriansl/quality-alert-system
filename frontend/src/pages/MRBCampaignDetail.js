@@ -302,7 +302,6 @@ const MRBCampaignDetail = () => {
 
       const data = await res.json();
       if (data.success) {
-        loadMrb();
         if (data.validationEmails?.length > 0) {
           const subject = encodeURIComponent(`[MRB ${mrbCase.campaignNumber}] Disposición registrada — Pendiente de validación`);
           const body = encodeURIComponent(
@@ -316,6 +315,7 @@ const MRBCampaignDetail = () => {
         } else {
           alert(data.message);
         }
+        setTimeout(() => window.location.reload(), 800);
       } else {
         alert(data.message || 'Error al enviar respuesta');
       }

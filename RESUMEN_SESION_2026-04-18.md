@@ -53,7 +53,16 @@
 
 ---
 
-## 🔲 Pendientes identificados hoy (no implementados)
+## ✅ Fixes adicionales (continuación de sesión — 19 abril 2026)
+
+### Bugs corregidos
+5. **Respuesta no editable tras rechazo** — `canRespond` solo era true cuando status=`ABIERTA`. Fix: también true cuando `status=EN_PROCESO && !respondedBy`. `canValidate` también corregido: solo true cuando hay `respondedBy` activo. Backend `POST /respond` ahora limpia `validation_status = NULL` al re-enviar.
+6. **Columna `acknowledged_at` faltante en `mrb_recipients`** — causaba 500 en `POST /respond`. Fix: `ALTER TABLE mrb_recipients ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMP` + migración `062_mrb_recipients_acknowledged_at.sql`.
+7. **mailto al validador al enviar respuesta** — Backend `POST /respond` retorna `validationEmails` + `validationNames`. Frontend abre mailto a validadores con link al MRB. `setTimeout 800ms` antes de `window.location.reload()` para que el mailto dispare primero.
+
+---
+
+## 🔲 Pendientes identificados (no implementados)
 
 - [ ] **UI para gestionar `can_validate_mrb`** — actualmente solo Adrian Salazar lo tiene. Falta interfaz para asignarlo a otros usuarios desde admin.
 - [ ] **Git commits continuos** — hacer commit después de cada sesión de trabajo para mantener historial limpio en GitHub.
