@@ -8,6 +8,17 @@ const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
 const { sendMrbBulkNotifications } = require('../utils/emailService');
 
+// Helper: check if user is admin or recipient of an MRB campaign
+async function isMrbAuthorized(userId, userRole, campaignId, recipientType = null) {
+  if (userRole === 'admin') return true;
+  const typeFilter = recipientType ? `AND recipient_type = '${recipientType}'` : '';
+  const result = await query(
+    `SELECT 1 FROM mrb_recipients WHERE mrb_campaign_id = $1 AND user_id = $2 ${typeFilter} LIMIT 1`,
+    [campaignId, userId]
+  );
+  return result.rows.length > 0;
+}
+
 // ============================================================================
 // MULTER CONFIGURATION FOR MRB Campaign PHOTOS
 // ============================================================================
@@ -288,6 +299,9 @@ router.patch('/:id/quarantine', authenticateToken, async (req, res) => {
   const { syncFrom8D, warehouse, process, transit, customer } = req.body;
 
   try {
+    if (!await isMrbAuthorized(req.user.id, req.user.role, id)) {
+      return res.status(403).json({ success: false, message: 'No autorizado para modificar este MRB' });
+    }
     let qWarehouse = parseInt(warehouse) || 0;
     let qProcess   = parseInt(process)   || 0;
     let qTransit   = parseInt(transit)   || 0;
@@ -1939,6 +1953,9 @@ router.post('/:id/attachments', authenticateToken, mrbAttachUpload.single('file'
   const userId = req.user.id;
 
   try {
+    if (!await isMrbAuthorized(userId, req.user.role, id)) {
+      return res.status(403).json({ success: false, message: 'No autorizado para modificar este MRB' });
+    }
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No se proporcionó ningún archivo' });
     }
@@ -2023,6 +2040,9 @@ router.delete('/:id/attachments/:attachId', authenticateToken, async (req, res) 
   const { id, attachId } = req.params;
 
   try {
+    if (!await isMrbAuthorized(req.user.id, req.user.role, id)) {
+      return res.status(403).json({ success: false, message: 'No autorizado para modificar este MRB' });
+    }
     const result = await query(
       'DELETE FROM mrb_attachments WHERE id = $1 AND mrb_id = $2 RETURNING file_path',
       [attachId, id]
@@ -2726,7 +2746,7 @@ router.put('/:id/source', authenticateToken, async (req, res) => {
 // LINK 8D to an INCOMING campaign (only sets source_8d_id, preserves source_type)
 router.patch('/:id/link-8d', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { source8dId } = req.body;
+  const { source8dId, adoptFields = {}, source = {} } = req.body;
 
   if (!source8dId) {
     return res.status(400).json({ success: false, message: 'source8dId es requerido' });
@@ -2752,14 +2772,35 @@ router.patch('/:id/link-8d', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: '8D no encontrado' });
     }
 
+    // Build dynamic SET clause for adopted fields
+    const sets = ['source_8d_id = $1', 'updated_at = CURRENT_TIMESTAMP'];
+    const params = [source8dId];
+    const addParam = (val) => { params.push(val); return `$${params.length}`; };
+
+    if (adoptFields.title && source.title)                           sets.push(`title = ${addParam(`MRB - ${source.folio} - ${source.title}`)}`);
+    if (adoptFields.client && source.clientId)                       sets.push(`client_id = ${addParam(source.clientId)}`);
+    if (adoptFields.parts  && source.partId)                         sets.push(`part_id = ${addParam(source.partId)}`);
+    if (adoptFields.parts  && source.partsList)                      sets.push(`parts_list = ${addParam(JSON.stringify(source.partsList))}`);
+    if (adoptFields.defectDescription && source.defectDescription)   sets.push(`description = ${addParam(source.defectDescription)}`);
+    if (adoptFields.criteria && source.inspectionCriteria)           sets.push(`inspection_criteria = ${addParam(source.inspectionCriteria)}`);
+    if (adoptFields.disposition && source.dispositionInstructions)   sets.push(`disposition_instructions = ${addParam(source.dispositionInstructions)}`);
+    if (adoptFields.quarantine) {
+      if (source.qtyWarehouse != null)  sets.push(`qty_quarantine_warehouse = ${addParam(source.qtyWarehouse)}`);
+      if (source.qtyInProcess != null)  sets.push(`qty_quarantine_process = ${addParam(source.qtyInProcess)}`);
+      if (source.qtyInTransit != null)  sets.push(`qty_quarantine_transit = ${addParam(source.qtyInTransit)}`);
+      if (source.qtyWithCustomer != null) sets.push(`qty_quarantine_customer = ${addParam(source.qtyWithCustomer)}`);
+    }
+
+    params.push(id);
     const result = await query(
-      `UPDATE mrb_campaigns SET source_8d_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
-      [source8dId, id]
+      `UPDATE mrb_campaigns SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
     );
 
+    const adoptedList = Object.entries(adoptFields).filter(([,v]) => v).map(([k]) => k).join(', ');
     await query(
       'INSERT INTO mrb_comments (mrb_campaign_id, user_id, comment, comment_type) VALUES ($1, $2, $3, $4)',
-      [id, req.user.id, `8D ${eightdCheck.rows[0].report_id} vinculado a campaña ${mrbCheck.rows[0].campaign_number}`, 'status_change']
+      [id, req.user.id, `8D ${eightdCheck.rows[0].report_id} vinculado — campos adoptados: ${adoptedList}`, 'status_change']
     );
 
     res.json({ success: true, mrb: transformToCamelCase(result.rows[0]), message: '8D vinculado correctamente' });
@@ -2778,7 +2819,8 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     const result = await query(`
       INSERT INTO mrb_comments (mrb_campaign_id, user_id, comment, comment_type)
       VALUES ($1, $2, $3, $4)
-      RETURNING *
+      RETURNING *,
+        (SELECT first_name || ' ' || last_name FROM users WHERE id = $2) as user_name
     `, [id, req.user.id, comment, commentType]);
 
     res.json({
@@ -2799,16 +2841,9 @@ router.post('/:id/respond', authenticateToken, async (req, res) => {
   const { rootCause, correctiveAction, resolutionNotes } = req.body;
 
   try {
-    // Verify user is a response recipient
-    const recipientCheck = await query(`
-      SELECT * FROM mrb_recipients
-      WHERE mrb_campaign_id = $1 AND user_id = $2 AND recipient_type = 'response'
-    `, [id, req.user.id]);
-
-    // Allow response even if not a recipient (admin/assigned user)
-    // if (recipientCheck.rows.length === 0) {
-    //   return res.status(403).json({ success: false, message: 'No autorizado para responder' });
-    // }
+    if (!await isMrbAuthorized(req.user.id, req.user.role, id, 'response')) {
+      return res.status(403).json({ success: false, message: 'No autorizado para responder este MRB' });
+    }
 
     // Update MRB Campaign with disposition
     const result = await query(`

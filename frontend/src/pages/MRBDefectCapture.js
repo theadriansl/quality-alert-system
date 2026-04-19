@@ -65,6 +65,7 @@ const MRBDefectCapture = () => {
   const [hasDowntime, setHasDowntime]               = useState(false);
   const [downtimeMinutes, setDowntimeMinutes]       = useState('');
   const [lotNumber, setLotNumber]                   = useState('');
+  const lotNumberRef                                = useRef('');
   const [comment, setComment]                       = useState('');
   const [selectedDefect, setSelectedDefect]         = useState(null);
   const [stagedEvidence, setStagedEvidence]         = useState([]); // { file, previewUrl }
@@ -343,6 +344,7 @@ const MRBDefectCapture = () => {
   // ── SERIAL CHECK (debounce 300ms) ─────────────────────────────────────────
   const handleSerialChange = (val) => {
     setLotNumber(val);
+    lotNumberRef.current = val;
     if (serialCheckTimer.current) clearTimeout(serialCheckTimer.current);
     if (!val || !selectedCampaign) return;
     serialCheckTimer.current = setTimeout(async () => {
@@ -361,6 +363,8 @@ const MRBDefectCapture = () => {
     }, 300);
   };
 
+  const isClosed = selectedCampaign?.status === 'CERRADA';
+
   // ── INDIVIDUAL MODE HANDLERS ──────────────────────────────────────────────
   const handlePiezaOk = useCallback(async () => {
     if (!selectedCampaign) return showMsg('Selecciona una campaña MRB', true);
@@ -371,12 +375,13 @@ const MRBDefectCapture = () => {
       const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/capture-ok`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ quantity: 1, shiftId: selectedShift.id, partId: selectedPart?.id, lotNumber: lotNumber.trim() || undefined, inspectionDate: new Date().toLocaleDateString('en-CA') })
+        body: JSON.stringify({ quantity: 1, shiftId: selectedShift.id, partId: selectedPart?.id, lotNumber: lotNumberRef.current.trim() || undefined, inspectionDate: new Date().toLocaleDateString('en-CA') })
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
       setSelectedCampaign(prev => ({ ...prev, ...result.mrb }));
       setLotNumber('');
+      lotNumberRef.current = '';
       showMsg('✓ Pieza OK');
       refocusScan();
     } catch (e) { showMsg(e.message || 'Error', true); refocusScan(); }
@@ -710,15 +715,16 @@ const MRBDefectCapture = () => {
           {(c?.qtyRework > 0) && <div style={s.counter('#f59e0b', '#fef3c7')}><RotateCcw size={14} /> {c.qtyRework} RW</div>}
           {(c?.qtyScrap  > 0) && <div style={s.counter('#ef4444', '#fee2e2')}><Scissors size={14} /> {c.qtyScrap} SC</div>}
           {captureMode === 'individual' && (
-            <button style={{ ...s.piezaOkBtn, opacity: (submitting || !isOkValid) ? 0.5 : 1 }} onClick={handlePiezaOk} disabled={submitting || !isOkValid} title={!lotNumber.trim() ? 'Escanea el serial primero' : ''}>
+            <button style={{ ...s.piezaOkBtn, opacity: (submitting || !isOkValid || isClosed) ? 0.5 : 1 }} onClick={handlePiezaOk} disabled={submitting || !isOkValid || isClosed} title={isClosed ? 'Campaña cerrada' : !lotNumber.trim() ? 'Escanea el serial primero' : ''}>
               <CheckCircle size={18} /> PIEZA OK
             </button>
           )}
           {captureMode === 'individual' && c && selectedShift && (
             <button
               onClick={() => setShowCloseModal(true)}
-              disabled={closingShift}
-              style={{ padding: '8px 16px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              disabled={closingShift || isClosed}
+              style={{ padding: '8px 16px', backgroundColor: isClosed ? '#9ca3af' : '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: isClosed ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              title={isClosed ? 'Campaña cerrada' : ''}
             >
               <CheckCircle size={15} /> Registrar Turno
             </button>
@@ -726,8 +732,9 @@ const MRBDefectCapture = () => {
           {captureMode === 'bulk' && c && selectedShift && (
             <button
               onClick={() => setShowCloseModal(true)}
-              disabled={closingShift}
-              style={{ padding: '8px 16px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              disabled={closingShift || isClosed}
+              style={{ padding: '8px 16px', backgroundColor: isClosed ? '#9ca3af' : '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: isClosed ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              title={isClosed ? 'Campaña cerrada' : ''}
             >
               <CheckCircle size={15} /> Registrar Turno
               {savedCount > 0 && <span style={{ backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>{savedCount}</span>}
@@ -990,7 +997,7 @@ const MRBDefectCapture = () => {
                   ? `${selectedPart?.captureDisplayName || selectedPart?.partNumber || 'Parte'} │ ${selectedDefect.name} │ ${selectedDisposition ? dispositions.find(d => d.id === selectedDisposition.id)?.name : 'Sin disposición'}`
                   : 'Selecciona un defecto para continuar'}
               </div>
-              <button style={s.submitBtn(!isIndividualValid || submitting)} onClick={handleSubmitDefect} disabled={!isIndividualValid || submitting}>
+              <button style={s.submitBtn(!isIndividualValid || submitting || isClosed)} onClick={handleSubmitDefect} disabled={!isIndividualValid || submitting || isClosed} title={isClosed ? 'Campaña cerrada' : ''}>
                 <Plus size={18} /> {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO NOK'}
               </button>
             </div>
@@ -1210,7 +1217,20 @@ const MRBDefectCapture = () => {
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => { setShowDuplicateModal(false); setSelectedShift(null); }} style={{ flex: 1, padding: '12px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={() => setShowDuplicateModal(false)} style={{ flex: 2, padding: '12px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Continuar de todas formas</button>
+              <button onClick={async () => {
+                setShowDuplicateModal(false);
+                try {
+                  const token = localStorage.getItem('token');
+                  await fetch(`${API_URL}/mrb/${selectedCampaign.id}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                      type: 'post_shift_capture',
+                      content: `Inspector continuó capturando en turno ${selectedShift?.code} — ${selectedShift?.name} después de haberlo registrado formalmente.`
+                    })
+                  });
+                } catch (_) { /* silent */ }
+              }} style={{ flex: 2, padding: '12px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Continuar de todas formas</button>
             </div>
           </div>
         </div>

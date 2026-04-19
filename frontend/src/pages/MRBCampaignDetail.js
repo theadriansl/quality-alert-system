@@ -136,7 +136,11 @@ const MRBCampaignDetail = () => {
   const [sourcesLoading, setSourcesLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNewSource, setSelectedNewSource] = useState(null);
-  const [isLinking8d, setIsLinking8d] = useState(false); // true = link-8d endpoint, false = change-source endpoint
+  const [isLinking8d, setIsLinking8d] = useState(false);
+  const [adoptFields, setAdoptFields] = useState({
+    title: true, client: true, parts: true, defectDescription: true,
+    quarantine: true, photos: true, criteria: true, disposition: true
+  }); // true = link-8d endpoint, false = change-source endpoint
 
   useEffect(() => {
     loadMrb();
@@ -215,6 +219,19 @@ const MRBCampaignDetail = () => {
     }
   };
 
+  const logHistory = async (comment, commentType = 'audit') => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ comment, commentType })
+      });
+      const data = await res.json();
+      if (data.success && data.comment) setComments(prev => [...prev, data.comment]);
+    } catch (_) {}
+  };
+
   const handleSaveQuarantine = async (syncFrom8D = false) => {
     setSavingQuarantine(true);
     const token = localStorage.getItem('token');
@@ -243,6 +260,12 @@ const MRBCampaignDetail = () => {
         setQTransit(q.qtyQuarantineTransit     || 0);
         setQCustomer(q.qtyQuarantineCustomer   || 0);
         setShowQuarantineEdit(false);
+        await logHistory(
+          syncFrom8D
+            ? 'Cuarentena sincronizada desde 8D'
+            : `Cuarentena actualizada — Almacén: ${qWarehouse}, Proceso: ${qProcess}, Tránsito: ${qTransit}, Cliente: ${qCustomer}`,
+          'audit'
+        );
         alert(syncFrom8D ? 'Cuarentena sincronizada desde 8D ✓' : 'Cuarentena actualizada ✓');
       } else {
         alert(data.message || 'Error al actualizar cuarentena');
@@ -407,6 +430,7 @@ const MRBCampaignDetail = () => {
     setIsLinking8d(true);
     setSourceType('8D');
     setSelectedNewSource(null);
+    setAdoptFields({ title: true, client: true, parts: true, defectDescription: true, quarantine: true, photos: true, criteria: true, disposition: true });
     setSearchTerm('');
     setShowSourceModal(true);
     loadSources('8D');
@@ -419,28 +443,62 @@ const MRBCampaignDetail = () => {
       return;
     }
 
+    // Warn about empty fields before proceeding (only for 8D sources)
+    const src = selectedNewSource;
+    if (src.sourceType === '8D' || isLinking8d) {
+      const partsList = src.partsList?.filter(p => p && p.partNumber) || [];
+      const emptyFields = [];
+      if (adoptFields.title             && !src.title)                                          emptyFields.push('Título de la Campaña');
+      if (adoptFields.client            && !src.clientId)                                       emptyFields.push('Cliente / Proyecto');
+      if (adoptFields.parts             && partsList.length === 0 && !src.partNumber)           emptyFields.push('Número(s) de Parte');
+      if (adoptFields.defectDescription && !src.defectDescription)                             emptyFields.push('Descripción del Problema');
+      if (adoptFields.quarantine        && !src.qtyWarehouse && !src.qtyInProcess && !src.qtyInTransit && !src.qtyWithCustomer) emptyFields.push('Cantidades de Cuarentena');
+      if (adoptFields.photos            && !src.photoNokPath && !src.photoOkPath)              emptyFields.push('Fotos NOK / OK');
+      if (adoptFields.criteria          && !src.inspectionCriteria)                            emptyFields.push('Criterio de Inspección (D3)');
+      if (adoptFields.disposition       && !src.dispositionInstructions)                       emptyFields.push('Instrucciones de Disposición (D3)');
+
+      if (emptyFields.length > 0) {
+        const proceed = window.confirm(
+          `Los siguientes campos no tienen datos en el 8D ${src.folio}:\n\n${emptyFields.map(f => `• ${f}`).join('\n')}\n\n¿Deseas continuar de todos modos? Se limpiarán esos campos.\n\nSí = continuar  /  No = revisar selección`
+        );
+        if (!proceed) return;
+      }
+    }
+
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
 
       let res;
       if (isLinking8d) {
-        // Only link the 8D without changing source_type
         res = await fetch(`${API_URL}/mrb/${id}/link-8d`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ source8dId: selectedNewSource.id })
+          body: JSON.stringify({ source8dId: selectedNewSource.id, adoptFields, source: selectedNewSource })
         });
       } else {
+        const effectiveType = selectedNewSource?.sourceType || sourceType;
         res = await fetch(`${API_URL}/mrb/${id}/source`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            sourceType: sourceType,
-            sourceQarId: sourceType === 'QAR' ? selectedNewSource.id : null,
-            source8dId: sourceType === '8D' ? selectedNewSource.id : null
+            sourceType: effectiveType,
+            sourceQarId: effectiveType === 'QAR' ? selectedNewSource.id : null,
+            source8dId: effectiveType === '8D' ? selectedNewSource.id : null
           })
         });
+        // If changing to 8D source, also apply adopted fields
+        if (effectiveType === '8D' && (await res.json()).success) {
+          await fetch(`${API_URL}/mrb/${id}/link-8d`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ source8dId: selectedNewSource.id, adoptFields, source: selectedNewSource })
+          });
+          setShowSourceModal(false);
+          setIsLinking8d(false);
+          loadMrb();
+          return;
+        }
       }
 
       const data = await res.json();
@@ -577,7 +635,10 @@ const MRBCampaignDetail = () => {
           body: fd
         });
         const data = await res.json();
-        if (data.success) setAttachments(prev => [...prev, data.attachment]);
+        if (data.success) {
+          setAttachments(prev => [...prev, data.attachment]);
+          await logHistory(`Archivo adjuntado: ${file.name}`, 'audit');
+        }
       } catch (err) {
         console.error('Error uploading attachment:', err);
       }
@@ -594,8 +655,10 @@ const MRBCampaignDetail = () => {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
+      const att = attachments.find(a => a.id === attachId);
       if ((await res.json()).success) {
         setAttachments(prev => prev.filter(a => a.id !== attachId));
+        await logHistory(`Archivo eliminado: ${att?.filename || attachId}`, 'audit');
       }
     } catch (err) {
       console.error('Error deleting attachment:', err);
@@ -2471,7 +2534,7 @@ const MRBCampaignDetail = () => {
               Historial ({comments.length})
             </div>
 
-            <div style={styles.timeline}>
+            <div style={{ ...styles.timeline, maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
               {comments.map((c, idx) => {
                 const dotColor =
                   c.commentType === 'status_change' ? t.accent :
@@ -2682,75 +2745,69 @@ const MRBCampaignDetail = () => {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <div style={{ fontWeight: '700', color: t.accent, fontFamily: 'monospace', marginBottom: '4px' }}>
-                          {source.folio}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: '700', color: t.accent, fontFamily: 'monospace', fontSize: '14px' }}>{source.folio}</span>
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: source.status === 'completed' ? '#22c55e33' : '#C7770033', color: source.status === 'completed' ? '#22c55e' : '#C77700' }}>{source.status}</span>
+                          {source.mrbCampaigns && source.mrbCampaigns.map((mc, mi) => {
+                            const mrbColor = mc.status === 'CERRADA' ? { bg: '#22c55e22', color: '#16a34a' } : mc.status === 'BORRADOR' ? { bg: '#6b728022', color: '#6b7280' } : { bg: '#f59e0b22', color: '#b45309' };
+                            return <span key={mi} style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: mrbColor.bg, color: mrbColor.color }}>MRB {mc.campaignNumber} · {mc.status}</span>;
+                          })}
                         </div>
-                        <div style={{ color: t.text, fontSize: '13px' }}>
-                          {source.title || source.partNumber || '-'}
-                        </div>
-                        <div style={{ color: t.textDim, fontSize: '12px' }}>
-                          {source.clientName} • {source.partNumber}
-                        </div>
+                        <div style={{ color: t.text, fontSize: '13px', marginBottom: '4px' }}>{source.title || source.partNumber || '-'}</div>
+                        <div style={{ color: t.textDim, fontSize: '12px' }}>{source.clientName} • {Array.isArray(source.partsList) && source.partsList.length > 1 ? 'Multiple Parts' : source.partNumber || '-'}</div>
                       </div>
-                      <div style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        fontWeight: '600',
-                        backgroundColor: source.status === 'CERRADA' || source.status === 'completed' ? '#22c55e33' : '#C7770033',
-                        color: source.status === 'CERRADA' || source.status === 'completed' ? '#22c55e' : '#C77700'
-                      }}>
-                        {source.status}
-                      </div>
+                      <div style={{ textAlign: 'right', color: t.textDim, fontSize: '11px', flexShrink: 0, marginLeft: '12px' }}>{source.createdAt ? new Date(source.createdAt).toLocaleDateString('es-MX') : ''}</div>
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div style={{
-              padding: '16px 20px',
-              borderTop: `1px solid ${t.border}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span style={{ color: t.textDim, fontSize: '13px' }}>
-                {selectedNewSource ? `Seleccionado: ${selectedNewSource.folio}` : 'Ninguno seleccionado'}
-              </span>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => setShowSourceModal(false)}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: t.textMuted,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleChangeSource}
-                  disabled={!selectedNewSource || submitting}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: selectedNewSource ? '#2E7D32' : t.textMuted,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: selectedNewSource ? 'pointer' : 'not-allowed',
-                    opacity: submitting ? 0.7 : 1
-                  }}
-                >
-                  {submitting ? 'Guardando...' : isLinking8d ? 'Vincular 8D' : 'Guardar Cambio'}
-                </button>
+            {/* Adopt panel — when selecting a 8D source (linking or changing) */}
+            {selectedNewSource && (selectedNewSource.sourceType === '8D' || isLinking8d) && (
+              <div style={{ borderTop: `2px solid ${t.accent}40`, padding: '16px 20px', backgroundColor: `${t.accent}06` }}>
+                <div style={{ fontWeight: '700', fontSize: '13px', color: t.text, marginBottom: '10px' }}>
+                  Adoptar datos de <span style={{ color: t.accent }}>{selectedNewSource.folio}</span>:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: '14px' }}>
+                  {[
+                    { key: 'title',             label: 'Título de la Campaña' },
+                    { key: 'client',            label: 'Cliente / Proyecto' },
+                    { key: 'parts',             label: 'Número(s) de Parte' },
+                    { key: 'defectDescription', label: 'Descripción del Problema' },
+                    { key: 'quarantine',        label: 'Cantidades de Cuarentena' },
+                    { key: 'photos',            label: 'Fotos NOK / OK' },
+                    { key: 'criteria',          label: 'Criterio de Inspección (D3)' },
+                    { key: 'disposition',       label: 'Instrucciones de Disposición (D3)' },
+                  ].map(f => (
+                    <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: t.text }}>
+                      <input type="checkbox" checked={adoptFields[f.key] ?? true} onChange={() => setAdoptFields(prev => ({ ...prev, [f.key]: !prev[f.key] }))} style={{ width: '15px', height: '15px' }} />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => setShowSourceModal(false)} style={{ padding: '10px 16px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
+                  <button onClick={handleChangeSource} disabled={submitting} style={{ padding: '10px 20px', backgroundColor: '#0072CE', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: submitting ? 0.7 : 1 }}>
+                    ✓ {submitting ? 'Vinculando...' : 'Adoptar seleccionados'}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Footer — only when no 8D source selected */}
+            {!(selectedNewSource && (selectedNewSource.sourceType === '8D' || isLinking8d)) && (
+              <div style={{ padding: '16px 20px', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: t.textDim, fontSize: '13px' }}>{selectedNewSource ? `Seleccionado: ${selectedNewSource.folio}` : 'Ninguno seleccionado'}</span>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button onClick={() => setShowSourceModal(false)} style={{ padding: '10px 20px', backgroundColor: t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
+                  <button onClick={handleChangeSource} disabled={!selectedNewSource || submitting} style={{ padding: '10px 20px', backgroundColor: selectedNewSource ? '#2E7D32' : t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: selectedNewSource ? 'pointer' : 'not-allowed', opacity: submitting ? 0.7 : 1 }}>
+                    {submitting ? 'Guardando...' : 'Guardar Cambio'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
