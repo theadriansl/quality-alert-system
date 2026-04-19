@@ -2854,6 +2854,7 @@ router.post('/:id/respond', authenticateToken, async (req, res) => {
         responded_by = $4,
         response_date = CURRENT_TIMESTAMP,
         status = 'EN_PROCESO',
+        validation_status = NULL,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $5
       RETURNING *
@@ -2875,10 +2876,19 @@ router.post('/:id/respond', authenticateToken, async (req, res) => {
       WHERE mrb_campaign_id = $1 AND user_id = $2
     `, [id, req.user.id]);
 
+    // Get validation recipients for mailto notification
+    const validationRecipientsRes = await query(`
+      SELECT u.email, u.first_name, u.last_name
+      FROM mrb_recipients r JOIN users u ON r.user_id = u.id
+      WHERE r.mrb_campaign_id = $1 AND r.recipient_type = 'validation'
+    `, [id]);
+
     res.json({
       success: true,
       mrb: transformToCamelCase(result.rows[0]),
-      message: 'Disposición registrada - Pendiente de validación'
+      message: 'Disposición registrada - Pendiente de validación',
+      validationEmails: validationRecipientsRes.rows.map(r => r.email),
+      validationNames: validationRecipientsRes.rows.map(r => `${r.first_name} ${r.last_name}`)
     });
   } catch (error) {
     console.error('Error responding to MRB Campaign:', error);

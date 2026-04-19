@@ -302,8 +302,20 @@ const MRBCampaignDetail = () => {
 
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
         loadMrb();
+        if (data.validationEmails?.length > 0) {
+          const subject = encodeURIComponent(`[MRB ${mrbCase.campaignNumber}] Disposición registrada — Pendiente de validación`);
+          const body = encodeURIComponent(
+            `${data.validationNames?.join(', ') || 'Validador'},\n\n` +
+            `Se ha registrado una disposición en la campaña MRB ${mrbCase.campaignNumber} y está pendiente de tu validación.\n\n` +
+            `Por favor accede al sistema para revisar y aprobar o rechazar:\n` +
+            `${window.location.origin}/mrb-campaign/${id}\n\n` +
+            `— ${mrbCase.respondedByName || 'Responsable'}`
+          );
+          window.location.href = `mailto:${data.validationEmails.join(',')}?subject=${subject}&body=${body}`;
+        } else {
+          alert(data.message);
+        }
       } else {
         alert(data.message || 'Error al enviar respuesta');
       }
@@ -706,8 +718,8 @@ const MRBCampaignDetail = () => {
   const responseRecipients = recipients.filter(r => r.recipientType === 'response');
   const validationRecipients = recipients.filter(r => r.recipientType === 'validation');
 
-  const canRespond = mrbCase?.status === 'ABIERTA';
-  const canValidate = mrbCase?.status === 'EN_PROCESO';
+  const canRespond = mrbCase?.status === 'ABIERTA' || (mrbCase?.status === 'EN_PROCESO' && !mrbCase?.respondedBy);
+  const canValidate = mrbCase?.status === 'EN_PROCESO' && !!mrbCase?.respondedBy;
   const isDraft = mrbCase?.status === 'BORRADOR';
 
   const styles = {
