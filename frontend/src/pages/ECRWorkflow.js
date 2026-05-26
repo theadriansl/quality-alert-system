@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
@@ -20,7 +20,7 @@ const STAGES_CONFIG = [
     id: 'ecr1',
     label: 'ECR-1',
     title: 'Change Request Board',
-    subtitle: 'Asignación de equipos y áreas',
+    subtitle: 'Asignación de equipos y TFT',
     icon: '1',
     component: ECRTeamTab,
     colorKey: 'primary'
@@ -38,7 +38,7 @@ const STAGES_CONFIG = [
     id: 'ecr2b',
     label: 'ECR-2B',
     title: 'Impact Analysis',
-    subtitle: 'Análisis de Impacto (IATF 8.5.6.1)',
+    subtitle: 'Análisis de Impacto',
     icon: '3',
     component: ECRImpactAnalysis,
     colorKey: 'warning'
@@ -66,6 +66,7 @@ const STAGES_CONFIG = [
 const ECRWorkflow = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const { showSuccess, showError } = useToast();
   const { theme: t } = useTheme();
 
@@ -73,7 +74,20 @@ const ECRWorkflow = () => {
   const canEdit = canUserEdit('ecr');
   const readOnly = isReadOnly('ecr');
 
+  const [showLog, setShowLog] = useState(false);
+  const [auditLog, setAuditLog] = useState([]);
+  const [loadingLog, setLoadingLog] = useState(false);
+
   const [currentStage, setCurrentStage] = useState(() => {
+    // Nuevo ECR (sin ID) siempre inicia en ECR-1
+    if (!id) return 0;
+    // Honor ?stage= query param (e.g. from audit requests page)
+    const params = new URLSearchParams(location.search);
+    const stageParam = params.get('stage');
+    if (stageParam) {
+      const idx = STAGES_CONFIG.findIndex(s => s.id === stageParam);
+      if (idx !== -1) return idx;
+    }
     const saved = localStorage.getItem(`ecr-current-stage-${id}`);
     return saved ? parseInt(saved) : 0;
   });
@@ -149,6 +163,7 @@ const ECRWorkflow = () => {
     isirFirstArticle: '',
     initialScrap: '',
     processStability: '',
+    cpPostChange: '',
     cpkPostChange: '',
     productionEvidence: [],
     detectedRisks: '',
@@ -166,6 +181,9 @@ const ECRWorkflow = () => {
       totalSavings: 0,
       netImpact: 0
     },
+    // Closure type tracking
+    closureType: null, // 'approved' or 'rejected'
+    rejectionReason: '', // Reason when closing as rejected
     // Stage completion tracking
     stageCompletionStatus: {
       ecr1: { completed: false },
@@ -245,7 +263,7 @@ const ECRWorkflow = () => {
           );
 
           if (areasWithoutRisk.length > 0) {
-            showError('Por favor completa la evaluación de riesgo para todas las áreas de impacto seleccionadas antes de guardar');
+            showError('Por favor completa la evaluación de riesgo para todas las TFT de impacto seleccionadas antes de guardar');
             return; // Don't save
           }
         }
@@ -301,6 +319,11 @@ const ECRWorkflow = () => {
         approvers: workflowData.approvers,
 
         // ECR-4 Closure fields
+        isirFirstArticle: workflowData.isirFirstArticle,
+        initialScrap: workflowData.initialScrap,
+        processStability: workflowData.processStability,
+        cpPostChange: workflowData.cpPostChange,
+        cpkPostChange: workflowData.cpkPostChange,
         impactVerifications: workflowData.impactVerifications,
         ppapStatus: workflowData.ppapStatus,
         detectedRisks: workflowData.detectedRisks,
@@ -314,12 +337,19 @@ const ECRWorkflow = () => {
         isCompleted: workflowData.isCompleted,
         financialImpact: workflowData.financialImpact,
 
+        // Production Results
+        productionJudgment: workflowData.productionJudgment,
+        productionComments: workflowData.productionComments,
+
         // Closure Audit
         requiresClosureAudit: workflowData.requiresClosureAudit,
         closureAuditItems: workflowData.closureAuditItems,
 
         // Stage completion status
-        stageCompletionStatus: workflowData.stageCompletionStatus
+        stageCompletionStatus: workflowData.stageCompletionStatus,
+
+        // Audit log hint
+        _auditStageLabel: STAGES[currentStage]?.label || null
       };
 
       let result;
@@ -405,7 +435,7 @@ const ECRWorkflow = () => {
 
       if (pendingAreas.length > 0) {
         showError(
-          `Las siguientes áreas de impacto deben ser verificadas (Aprobado o Condicional) antes de enviar a aprobación:\n\n` +
+          `Las siguientes TFT de impacto deben ser verificadas (Aprobado o Condicional) antes de enviar a aprobación:\n\n` +
           `• ${pendingAreas.slice(0, 5).join('\n• ')}` +
           (pendingAreas.length > 5 ? `\n... y ${pendingAreas.length - 5} más` : '')
         );
@@ -433,6 +463,55 @@ const ECRWorkflow = () => {
         return;
       }
 
+      // Validate Production Results (must be OK)
+      const productionErrors = [];
+      if (workflowData.isirFirstArticle === 'nok') {
+        productionErrors.push('ISIR/First Article es NOK');
+      }
+      if (workflowData.cpPostChange !== '' && workflowData.cpPostChange !== undefined) {
+        const cpVal = parseFloat(workflowData.cpPostChange);
+        if (!isNaN(cpVal) && cpVal < 1.0) {
+          productionErrors.push(`Cp (${cpVal}) es menor a 1.0`);
+        }
+      }
+      if (workflowData.cpkPostChange !== '' && workflowData.cpkPostChange !== undefined) {
+        const cpkVal = parseFloat(workflowData.cpkPostChange);
+        if (!isNaN(cpkVal) && cpkVal < 1.0) {
+          productionErrors.push(`Cpk (${cpkVal}) es menor a 1.0`);
+        }
+      }
+
+      if (productionErrors.length > 0) {
+        showError(
+          `No se puede enviar a aprobación. Resultados de Producción NOK:\n\n` +
+          `• ${productionErrors.join('\n• ')}\n\n` +
+          `Los resultados de producción deben ser OK para enviar a aprobación.`
+        );
+        return;
+      }
+
+      // Validate audit items (if audit is required)
+      if (workflowData.requiresClosureAudit && workflowData.closureAuditItems?.length > 0) {
+        const pendingAudits = workflowData.closureAuditItems.filter(item => !item.auditorCompleted);
+        const nokAudits = workflowData.closureAuditItems.filter(item => item.auditorJudgment === 'NOK');
+
+        if (pendingAudits.length > 0 || nokAudits.length > 0) {
+          const auditErrors = [];
+          if (pendingAudits.length > 0) {
+            auditErrors.push(`${pendingAudits.length} item(s) de auditoría pendiente(s) de verificar`);
+          }
+          if (nokAudits.length > 0) {
+            auditErrors.push(`${nokAudits.length} item(s) de auditoría con resultado NOK`);
+          }
+          showError(
+            `No se puede enviar a aprobación. Problemas en Auditoría:\n\n` +
+            `• ${auditErrors.join('\n• ')}\n\n` +
+            `Todos los items de auditoría deben estar verificados como OK.`
+          );
+          return;
+        }
+      }
+
       // Confirm action
       if (!window.confirm('¿Estás seguro de enviar este ECR a aprobación?\n\nUna vez enviado, no podrás editar hasta que sea aprobado o rechazado.')) {
         return;
@@ -449,10 +528,22 @@ const ECRWorkflow = () => {
         userId: currentUser.id,
         userName: `${currentUser.firstName} ${currentUser.lastName}`,
         timestamp: now,
-        notes: 'ECR enviado a aprobación'
+        notes: 'ECR enviado a aprobación de cierre'
       };
 
       const approvalHistory = [...(workflowData.approvalHistory || []), newHistoryEntry];
+
+      // Add to closure approval history as well
+      const closureHistoryEntry = {
+        action: 'submitted',
+        userId: currentUser.id,
+        userName: `${currentUser.firstName} ${currentUser.lastName}`,
+        timestamp: now,
+        level: 'submit',
+        notes: 'Enviado a aprobación de cierre'
+      };
+
+      const closureApprovalHistory = [...(workflowData.closureApprovalHistory || []), closureHistoryEntry];
 
       // Save current data and change status to pending_approval
       const payload = {
@@ -460,14 +551,57 @@ const ECRWorkflow = () => {
         status: 'pending_approval',
         submittedAt: now,
         submittedBy: currentUser.id,
-        approvalHistory
+        approvalHistory,
+        closureApprovalHistory
       };
 
       const result = await ecrService.updateECR(workflowData.id, payload);
 
       if (result.success) {
         setWorkflowData(result.ecr);
-        showSuccess('ECR enviado a aprobación. Los aprobadores serán notificados.');
+        showSuccess('ECR enviado a aprobación.');
+
+        // Generate mailto to first approver
+        try {
+          const usersResponse = await axios.get('http://localhost:5000/users/list', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          const users = usersResponse.data.users || [];
+
+          // Find first assigned approver
+          const approverLevels = ['level1', 'level2', 'level3'];
+          const approvers = workflowData.approvers || {};
+          let firstApprover = null;
+
+          for (const level of approverLevels) {
+            if (approvers[level]) {
+              firstApprover = users.find(u => u.id === approvers[level]);
+              break;
+            }
+          }
+
+          if (firstApprover?.email) {
+            const ecrNumber = workflowData.ecrNumber || `ECR-${workflowData.id}`;
+            const changeTitle = workflowData.changeTitle || '';
+            const isResubmit = workflowData.status === 'rejected';
+
+            const subject = encodeURIComponent(
+              isResubmit
+                ? `ECR ${ecrNumber} - Re-enviado a Aprobación de Cierre`
+                : `ECR ${ecrNumber} - Pendiente de Aprobación de Cierre`
+            );
+            const body = encodeURIComponent(
+              `Hola ${firstApprover.firstName || ''},\n\n` +
+              `El ECR "${ecrNumber} - ${changeTitle}" ha sido ${isResubmit ? 're-enviado' : 'enviado'} para aprobación de cierre.\n\n` +
+              `Por favor revisa y firma en el sistema.\n\n` +
+              `Saludos`
+            );
+
+            window.open(`mailto:${firstApprover.email}?subject=${subject}&body=${body}`, '_blank');
+          }
+        } catch (mailtoError) {
+          console.error('Error generating mailto:', mailtoError);
+        }
       }
     } catch (error) {
       console.error('Error submitting ECR for approval:', error);
@@ -509,6 +643,21 @@ const ECRWorkflow = () => {
 
   // Handle stage completion toggle
   const handleStageCompletion = async (stageId, completed) => {
+    // Validate ECR-2B before marking as complete
+    if (stageId === 'ecr2b' && completed) {
+      const impactAnalysis = workflowData.impactAnalysis || [];
+      if (impactAnalysis.length > 0) {
+        const areasWithoutRisk = impactAnalysis.filter(area =>
+          !area.severity || !area.occurrence
+        );
+        if (areasWithoutRisk.length > 0) {
+          const areaNames = areasWithoutRisk.map(a => a.areaName).join(', ');
+          showError(`No puedes marcar ECR-2B como completada. Evaluación de riesgo pendiente: ${areaNames}`);
+          return;
+        }
+      }
+    }
+
     const currentUser = getCurrentUser();
     const now = new Date().toISOString();
 
@@ -532,10 +681,13 @@ const ECRWorkflow = () => {
     // Auto-save completion status if ECR exists
     if (workflowData.id) {
       try {
+        const stageConfig = STAGES.find(s => s.id === stageId);
+        const stageDisplay = stageConfig?.label || stageId.toUpperCase();
         await ecrService.updateECR(workflowData.id, {
-          stageCompletionStatus: newCompletionStatus
+          stageCompletionStatus: newCompletionStatus,
+          _auditStageLabel: completed ? `${stageDisplay} marcada completada` : `${stageDisplay} desmarcada`
         });
-        showSuccess(completed ? `Etapa ${stageId.toUpperCase()} marcada como completada` : `Etapa ${stageId.toUpperCase()} desmarcada`);
+        showSuccess(completed ? `Etapa ${stageDisplay} marcada como completada` : `Etapa ${stageDisplay} desmarcada`);
       } catch (error) {
         console.error('Error saving stage completion:', error);
         showError('Error al guardar el estado de la etapa');
@@ -546,6 +698,19 @@ const ECRWorkflow = () => {
   // Check if stage is completed
   const isStageCompleted = (stageId) => {
     return workflowData.stageCompletionStatus?.[stageId]?.completed || false;
+  };
+
+  const isStageAccessible = (index) => {
+    if (isAdmin()) return true;
+    if (index === 0) return true;
+    if (index <= currentStage) return true; // backwards always free
+    const fullyUnlocked = isFullyApproved() || workflowData.status === 'approved' || workflowData.status === 'closed';
+    if (fullyUnlocked) return true;
+    // All previous stages must be completed
+    for (let i = 0; i < index; i++) {
+      if (!isStageCompleted(STAGES[i].id)) return false;
+    }
+    return true;
   };
 
   const handleNextStage = () => {
@@ -560,14 +725,31 @@ const ECRWorkflow = () => {
         );
 
         if (areasWithoutRisk.length > 0) {
-          showError('Por favor completa la evaluación de riesgo para todas las áreas de impacto seleccionadas');
+          showError('Por favor completa la evaluación de riesgo para todas las TFT de impacto seleccionadas');
           return; // Don't advance
         }
       }
     }
 
     // If validation passes or not ECR-2B, advance to next stage
+    isManualStageChange.current = true;
     setCurrentStage(prev => prev + 1);
+  };
+
+  const fetchAuditLog = async () => {
+    if (!id) return;
+    setLoadingLog(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5000/ecr/${id}/audit-log`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) setAuditLog(response.data.auditLog);
+    } catch (err) {
+      console.error('Error fetching ECR audit log:', err);
+    } finally {
+      setLoadingLog(false);
+    }
   };
 
   const handleGoBack = () => {
@@ -581,6 +763,39 @@ const ECRWorkflow = () => {
       localStorage.setItem(`ecr-current-stage-${id}`, currentStage);
     }
   }, [currentStage, id]);
+
+  // Track if stage change is manual (user interaction) vs initial load
+  const isManualStageChange = React.useRef(false);
+
+  // Scroll to top only on manual stage changes
+  useEffect(() => {
+    if (isManualStageChange.current) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      isManualStageChange.current = false;
+    }
+  }, [currentStage]);
+
+  const handleStageChange = (index) => {
+    if (isStageAccessible(index)) {
+      // Validate ECR-2B before leaving (only when going forward)
+      if (STAGES[currentStage].id === 'ecr2b' && index > currentStage) {
+        const impactAnalysis = workflowData.impactAnalysis || [];
+        if (impactAnalysis.length > 0) {
+          const areasWithoutRisk = impactAnalysis.filter(area =>
+            !area.severity || !area.occurrence
+          );
+          if (areasWithoutRisk.length > 0) {
+            const areaNames = areasWithoutRisk.map(a => a.areaName).join(', ');
+            showError(`Completa la evaluación de riesgo antes de continuar. TFT pendientes: ${areaNames}`);
+            return;
+          }
+        }
+      }
+      isManualStageChange.current = true;
+      setCurrentStage(index);
+      setShowLog(false);
+    }
+  };
 
   // Use scroll memory hook - saves/restores scroll position per stage
   const { containerRef, clearPosition } = useScrollMemory(`ecr-${id}-stage-${currentStage}`, {
@@ -696,16 +911,20 @@ const ECRWorkflow = () => {
         <div style={styles.headerRight}>
           <span style={{
             ...styles.statusBadge,
-            backgroundColor: isFullyApproved() || workflowData.status === 'approved' ? t.success :
-                           workflowData.status === 'draft' ? t.textMuted :
-                           workflowData.status === 'pending_approval' ? t.warning : t.success
+            backgroundColor:
+              workflowData.status === 'closed' ? t.success :
+              workflowData.status === 'pending_closure' ? '#3b82f6' :
+              workflowData.status === 'pending_approval' ? t.warning :
+              workflowData.status === 'rejected' ? '#ef4444' :
+              t.textMuted
           }}>
-            {isFullyApproved() || workflowData.status === 'approved' ? 'Aprobado' :
-             workflowData.status === 'draft' ? 'Borrador' :
-             workflowData.status === 'pending_approval' ? 'Pendiente Aprobación' :
-             workflowData.status === 'rejected' ? 'Rechazado' : workflowData.status}
+            {workflowData.status === 'closed' ? 'Cerrado' :
+             workflowData.status === 'pending_closure' ? 'Pendiente de Cierre' :
+             workflowData.status === 'pending_approval' ? 'Pendiente de Firmas' :
+             workflowData.status === 'rejected' ? 'Rechazado' :
+             workflowData.status === 'draft' ? 'Borrador' : workflowData.status}
           </span>
-          {workflowData.status === 'draft' && (
+          {(workflowData.status === 'draft' || workflowData.status === 'pending_closure') && (
             <button
               onClick={() => handleSave(true)}
               disabled={saving}
@@ -753,16 +972,20 @@ const ECRWorkflow = () => {
         {STAGES.map((stage, index) => (
           <div key={stage.id} style={styles.stageContainer}>
             <button
-              onClick={() => setCurrentStage(index)}
+              onClick={() => handleStageChange(index)}
+              disabled={!isStageAccessible(index)}
+              title={!isStageAccessible(index) ? `Completa ${STAGES[index - 1]?.label} primero` : undefined}
               style={{
                 ...styles.stageButton,
-                ...(currentStage === index ? styles.stageButtonActive : {}),
+                ...(currentStage === index && !showLog ? styles.stageButtonActive : {}),
                 borderColor: isStageCompleted(stage.id) ? t.success : stage.color,
-                backgroundColor: isStageCompleted(stage.id) && currentStage !== index ? t.bgPanel : (currentStage === index ? t.bgPanel : t.bgCard)
+                backgroundColor: isStageCompleted(stage.id) && (currentStage !== index || showLog) ? t.bgPanel : (currentStage === index && !showLog ? t.bgPanel : t.bgCard),
+                opacity: isStageAccessible(index) ? 1 : 0.4,
+                cursor: isStageAccessible(index) ? 'pointer' : 'not-allowed'
               }}
             >
               <span style={styles.stageIcon}>
-                {isStageCompleted(stage.id) ? '' : stage.icon}
+                {isStageCompleted(stage.id) ? '✓' : stage.icon}
               </span>
               <div style={styles.stageInfo}>
                 <div style={styles.stageLabel}>{stage.label}</div>
@@ -771,6 +994,26 @@ const ECRWorkflow = () => {
             </button>
           </div>
         ))}
+        {/* Log Button */}
+        {id && (
+          <div style={styles.stageContainer}>
+            <button
+              onClick={() => { setShowLog(true); fetchAuditLog(); }}
+              style={{
+                ...styles.stageButton,
+                ...(showLog ? styles.stageButtonActive : {}),
+                borderColor: showLog ? t.accent : t.border,
+                backgroundColor: showLog ? t.bgPanel : t.bgCard
+              }}
+            >
+              <span style={styles.stageIcon}>📋</span>
+              <div style={styles.stageInfo}>
+                <div style={styles.stageLabel}>Log</div>
+                <div style={styles.stageTitle}>Historial</div>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Locked Banner */}
@@ -797,20 +1040,61 @@ const ECRWorkflow = () => {
 
       {/* Content Area */}
       <div ref={containerRef} style={styles.content}>
-        <CurrentStageComponent
-          data={workflowData}
-          onDataUpdate={isECRLocked() ? () => {} : handleDataUpdate}
-          isLocked={isECRLocked()}
-          isAdmin={isAdmin()}
-        />
+        {showLog ? (
+          <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '700', color: t.text, margin: 0 }}>Historial de Actividad</h2>
+              <button onClick={fetchAuditLog} style={{ padding: '6px 14px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, cursor: 'pointer', fontSize: '12px' }}>
+                Actualizar
+              </button>
+            </div>
+            {loadingLog ? (
+              <p style={{ color: t.textMuted, fontSize: '13px' }}>Cargando historial...</p>
+            ) : auditLog.length === 0 ? (
+              <p style={{ color: t.textMuted, fontSize: '13px' }}>Sin actividad registrada aún.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                {auditLog.map((entry, idx) => (
+                  <div key={entry.id} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '160px 130px 1fr',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    backgroundColor: idx % 2 === 0 ? t.bgCard : t.bgPanel,
+                    borderBottom: `1px solid ${t.border}`,
+                    fontSize: '12px',
+                    alignItems: 'start'
+                  }}>
+                    <span style={{ color: t.textMuted, fontVariantNumeric: 'tabular-nums' }}>
+                      {new Date(entry.createdAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'medium' })}
+                    </span>
+                    <span style={{ color: t.accent, fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {entry.userName || 'Sistema'}
+                    </span>
+                    <span style={{ color: t.text }}>{entry.description}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <CurrentStageComponent
+            data={workflowData}
+            onDataUpdate={isECRLocked() ? () => {} : handleDataUpdate}
+            isLocked={isECRLocked()}
+            isAdmin={isAdmin()}
+            onApprovalStatusChange={loadECRData}
+            onSaveDraft={workflowData.id ? () => handleSave(true) : null}
+          />
+        )}
       </div>
 
       {/* Footer Actions */}
       <div style={styles.footer}>
         <div style={styles.footerLeft}>
-          {currentStage > 0 && (
+          {currentStage > 0 && !showLog && (
             <button
-              onClick={() => setCurrentStage(prev => prev - 1)}
+              onClick={() => { isManualStageChange.current = true; setCurrentStage(prev => prev - 1); }}
               style={{...styles.button, ...styles.secondaryButton}}
             >
               ← Anterior
@@ -818,8 +1102,8 @@ const ECRWorkflow = () => {
           )}
         </div>
         <div style={styles.footerRight}>
-          {/* Stage Completion Checkbox */}
-          {workflowData.id && !isECRLocked() && (
+          {/* Stage Completion Checkbox - Hide when showing Log */}
+          {workflowData.id && !isECRLocked() && !showLog && (
             <label style={styles.footerCompletionCheckbox}>
               <input
                 type="checkbox"
@@ -832,38 +1116,136 @@ const ECRWorkflow = () => {
               </span>
             </label>
           )}
-          {currentStage < STAGES.length - 1 ? (
+          {/* Close as Rejected Checkbox - Only in ECR-4 and when in draft/pending_closure */}
+          {workflowData.id && !showLog && STAGES[currentStage].id === 'ecr4' &&
+           (workflowData.status === 'draft' || workflowData.status === 'pending_closure' || workflowData.status === 'rejected') &&
+           workflowData.closureApprovalStatus !== 'pending' && (
+            <label style={{...styles.footerCompletionCheckbox, marginLeft: '16px', backgroundColor: workflowData.closureType === 'rejected' ? '#fee2e2' : 'transparent', border: workflowData.closureType === 'rejected' ? '2px solid #dc2626' : '2px solid transparent', borderRadius: '6px', padding: '6px 10px'}}>
+              <input
+                type="checkbox"
+                checked={workflowData.closureType === 'rejected'}
+                onChange={async (e) => {
+                  const newClosureType = e.target.checked ? 'rejected' : null;
+                  setWorkflowData(prev => ({ ...prev, closureType: newClosureType }));
+                  // Auto-save to backend
+                  try {
+                    await ecrService.updateECR(workflowData.id, { closureType: newClosureType });
+                    showSuccess(newClosureType === 'rejected' ? 'Marcado para cerrar como rechazado' : 'Desmarcado cierre como rechazado');
+                  } catch (error) {
+                    console.error('Error saving closureType:', error);
+                    showError('Error al guardar el tipo de cierre');
+                  }
+                }}
+                style={styles.footerCheckbox}
+              />
+              <span style={{...styles.footerCheckboxLabel, color: workflowData.closureType === 'rejected' ? '#dc2626' : t.textMuted}}>
+                CERRAR COMO RECHAZADO
+              </span>
+            </label>
+          )}
+          {showLog ? (
+            <span style={{ color: t.textMuted, fontSize: '13px' }}>Vista de consulta</span>
+          ) : currentStage < STAGES.length - 1 ? (
             <button
               onClick={handleNextStage}
-              style={{...styles.button, ...styles.primaryButton}}
+              disabled={!isAdmin() && !isStageCompleted(STAGES[currentStage].id)}
+              title={!isAdmin() && !isStageCompleted(STAGES[currentStage].id) ? 'Marca esta etapa como completada para continuar' : undefined}
+              style={{
+                ...styles.button, ...styles.primaryButton,
+                opacity: !isAdmin() && !isStageCompleted(STAGES[currentStage].id) ? 0.4 : 1,
+                cursor: !isAdmin() && !isStageCompleted(STAGES[currentStage].id) ? 'not-allowed' : 'pointer'
+              }}
             >
               Siguiente →
             </button>
           ) : (
-            // Show submit button only if: not locked AND not fully approved AND status is draft
-            (!isECRLocked() && !isFullyApproved() && workflowData.status === 'draft') ? (
+            // Show submit button if: not locked AND not fully approved AND (status is draft OR rejected)
+            (!isECRLocked() && !isFullyApproved() && (workflowData.status === 'draft' || workflowData.status === 'rejected')) ? (
               <button
                 onClick={handleSubmitForApproval}
                 disabled={saving || !workflowData.id}
-                style={{...styles.button, ...styles.submitButton}}
+                style={{
+                  ...styles.button,
+                  ...styles.submitButton,
+                  backgroundColor: workflowData.status === 'rejected' ? '#C77700' : t.accent
+                }}
               >
-                {saving ? 'Enviando...' : ' Enviar a Aprobación'}
+                {saving ? 'Enviando...' : workflowData.status === 'rejected' ? '↻ Re-enviar a Aprobación' : ' Enviar a Aprobación'}
               </button>
             ) : (
               <span style={{
                 padding: '10px 20px',
-                backgroundColor: isFullyApproved() || workflowData.status === 'approved' ? t.success : t.warning,
+                backgroundColor:
+                  workflowData.status === 'closed' ? t.success :
+                  workflowData.status === 'closed_rejected' ? '#991b1b' :
+                  workflowData.status === 'pending_rejected_closure' ? '#dc2626' :
+                  workflowData.status === 'pending_closure' ? '#3b82f6' :
+                  workflowData.status === 'pending_approval' ? t.warning :
+                  t.textMuted,
                 color: 'white',
                 borderRadius: '8px',
                 fontWeight: '600'
               }}>
-                {isFullyApproved() || workflowData.status === 'approved' ? ' Aprobado' :
-                 workflowData.status === 'pending_approval' ? ' Pendiente de Aprobación' : ' Completado'}
+                {workflowData.status === 'closed' ? ' Cerrado' :
+                 workflowData.status === 'closed_rejected' ? ' Cerrado como Rechazado' :
+                 workflowData.status === 'pending_rejected_closure' ? ' Pendiente de Cierre como Rechazado' :
+                 workflowData.status === 'pending_closure' ? ' Pendiente de Cierre' :
+                 workflowData.status === 'pending_approval' ? ' Pendiente de Firmas' : ' Borrador'}
               </span>
             )
           )}
         </div>
       </div>
+
+      {/* Closure Approval History - Only show in ECR-4, below footer */}
+      {STAGES[currentStage].id === 'ecr4' && workflowData.closureApprovalHistory && workflowData.closureApprovalHistory.length > 0 && (
+        <div style={{ margin: '0 24px 24px 24px', padding: '16px', backgroundColor: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: t.text }}>
+            Historial de Firmas de Cierre
+          </h4>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ backgroundColor: t.bg }}>
+                <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Acción</th>
+                <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Usuario</th>
+                <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Fecha</th>
+                <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {workflowData.closureApprovalHistory.map((entry, index) => {
+                const actionStyles = {
+                  submitted: { bg: '#dbeafe', color: '#1e40af', label: '→ Enviado' },
+                  submitted_rejected: { bg: '#fef2f2', color: '#991b1b', label: '→ Enviado (No Adoptable)' },
+                  approved: { bg: '#d1fae5', color: '#166534', label: '✓ Firmado' },
+                  rejected: { bg: '#fee2e2', color: '#991b1b', label: '✗ Rechazado' }
+                };
+                const style = actionStyles[entry.action] || actionStyles.submitted;
+                return (
+                  <tr key={index}>
+                    <td style={{ padding: '8px' }}>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        fontSize: '12px',
+                        backgroundColor: style.bg,
+                        color: style.color
+                      }}>
+                        {style.label}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px' }}>{entry.userName}</td>
+                    <td style={{ padding: '8px', color: t.textMuted }}>
+                      {new Date(entry.timestamp).toLocaleString('es-MX', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td style={{ padding: '8px', color: t.textMuted }}>{entry.notes || '-'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

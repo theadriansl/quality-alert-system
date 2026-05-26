@@ -3,6 +3,7 @@ import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 import axios from 'axios';
 import { isUserAdmin } from '../../utils/permissions';
+import ECRApprovalModal from './ECRApprovalModal';
 
 // Default closure audit items (same as D7)
 const DEFAULT_CLOSURE_AUDIT_ITEMS = [
@@ -28,17 +29,243 @@ const formatDateForInput = (dateString) => {
   }
 };
 
+// Closure Approval Modal - Same 2-step flow as ECR-3 (ECRApprovalModal)
+const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rejectionReason, onApprove, onReject, onClose }) => {
+  const [action, setAction] = React.useState(null); // 'approve' or 'reject'
+  const [comments, setComments] = React.useState('');
+  const [error, setError] = React.useState(null);
+
+  const isClosingAsRejected = closureType === 'rejected';
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (action === 'reject' && !comments.trim()) {
+      setError('Los comentarios son obligatorios al rechazar');
+      return;
+    }
+    if (action === 'approve') {
+      onApprove(comments);
+    } else {
+      onReject(comments);
+    }
+  };
+
+  const levelNumber = closureApprovalLevel.replace('level', '');
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        backgroundColor: t.bgCard,
+        borderRadius: '8px',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+        padding: '24px',
+        width: '100%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflowY: 'auto'
+      }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: isClosingAsRejected ? '#991b1b' : t.text, marginBottom: '20px' }}>
+          {isClosingAsRejected ? ' Cierre como NO ADOPTABLE' : 'Revisar Firma de Cierre'}
+        </h2>
+
+        {/* Warning for closing as rejected */}
+        {isClosingAsRejected && (
+          <div style={{
+            marginBottom: '20px',
+            padding: '16px',
+            backgroundColor: '#fef2f2',
+            border: '2px solid #dc2626',
+            borderRadius: '8px'
+          }}>
+            <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>
+              Este ECR será cerrado como NO ADOPTABLE
+            </p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7f1d1d' }}>
+              El cambio no será implementado. Al firmar, confirmas que el ECR debe cerrarse sin adoptar.
+            </p>
+            {rejectionReason && (
+              <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Motivo del rechazo:</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#991b1b' }}>{rejectionReason}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ marginBottom: '20px' }}>
+          <p style={{ fontSize: '13px', color: t.textMuted, marginBottom: '4px' }}>Nivel de Aprobador</p>
+          <p style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>Aprobador {levelNumber}</p>
+        </div>
+
+        {!action && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
+              onClick={() => setAction('approve')}
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                fontWeight: '600',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                backgroundColor: isClosingAsRejected ? '#991b1b' : '#2E7D32',
+                color: 'white'
+              }}
+            >
+              {isClosingAsRejected ? ' Confirmar Cierre como No Adoptable' : ' Aprobar Cierre'}
+            </button>
+            <button
+              onClick={() => setAction('reject')}
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                fontWeight: '600',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                backgroundColor: isClosingAsRejected ? '#C77700' : '#ef4444',
+                color: 'white'
+              }}
+            >
+              {isClosingAsRejected ? '↩ Devolver - Considerar Adoptar' : ' Rechazar'}
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                fontWeight: '600',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                backgroundColor: t.bgPanel,
+                color: t.text
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
+
+        {action && (
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                Comentarios {action === 'reject' && <span style={{ color: '#ef4444' }}>*</span>}
+              </label>
+              <textarea
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                rows="4"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  outline: 'none',
+                  backgroundColor: t.bgCard,
+                  color: t.text
+                }}
+                placeholder={action === 'reject' ? 'Explica la razón del rechazo...' : 'Comentarios adicionales (opcional)'}
+                required={action === 'reject'}
+              />
+              {action === 'reject' && (
+                <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>
+                  Debes proporcionar una razón para rechazar
+                </p>
+              )}
+            </div>
+
+            {error && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: '#fee2e2',
+                border: '1px solid #fca5a5',
+                borderRadius: '6px',
+                color: '#ef4444',
+                fontSize: '14px'
+              }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="submit"
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  backgroundColor: action === 'approve'
+                    ? (isClosingAsRejected ? '#991b1b' : '#2E7D32')
+                    : (isClosingAsRejected ? '#C77700' : '#ef4444')
+                }}
+              >
+                {action === 'approve'
+                  ? (isClosingAsRejected ? 'Confirmar Cierre No Adoptable' : 'Confirmar Aprobación')
+                  : (isClosingAsRejected ? 'Devolver para Reconsideración' : 'Confirmar Rechazo')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAction(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  cursor: 'pointer'
+                }}
+              >
+                Atrás
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
   const { showSuccess, showError } = useToast();
   const [users, setUsers] = useState([]);
   const [uploadingEvidence, setUploadingEvidence] = useState(null);
+  const [qualityTargets, setQualityTargets] = useState({ cpTarget: 1.33, cpkTarget: 1.33, processStabilityTarget: 95, initialScrapTarget: 5 });
 
   // Audit states
-  const [auditors, setAuditors] = useState([]);
+  // TFT members: reviewBoard stores IDs → resolve to user objects from users list
+  const tftMemberIds = [
+    ...(data.reviewBoard?.primary ? [data.reviewBoard.primary] : []),
+    ...(data.reviewBoard?.members || [])
+  ].filter(Boolean);
+  const tftMembers = tftMemberIds.map(id => users.find(u => u.id === id)).filter(Boolean);
   const [auditItems, setAuditItems] = useState([]);
-  const [sendingToAudit, setSendingToAudit] = useState(false);
   const [auditRequests, setAuditRequests] = useState([]);
   // Closure audit states (D7-style)
   const [closureAuditItems, setClosureAuditItems] = useState([]);
@@ -61,6 +288,9 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
   const [historyData, setHistoryData] = useState({ history: [], currentRound: 1, itemName: '' });
   const [currentImpactArea, setCurrentImpactArea] = useState(null); // For modal context
   const [expandedAreas, setExpandedAreas] = useState({}); // Track which areas are expanded
+  // Closure approval modal state
+  const [showClosureApprovalModal, setShowClosureApprovalModal] = useState(false);
+  const [closureApprovalLevel, setClosureApprovalLevel] = useState(null);
 
   // Get impact analysis from ECR-2B
   const impactAnalysis = data.impactAnalysis || [];
@@ -114,16 +344,18 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
     isirFirstArticle: data.isirFirstArticle || '',
     initialScrap: data.initialScrap || '',
     processStability: data.processStability || '',
+    cpPostChange: data.cpPostChange || '',
     cpkPostChange: data.cpkPostChange || '',
     productionEvidence: data.productionEvidence || [],
+    productionJudgment: data.productionJudgment || '',
+    productionComments: data.productionComments || '',
 
-    // PPAP Status (IATF 8.3.5.2)
-    ppapStatus: data.ppapStatus || {
-      level: '',
-      submittedDate: '',
-      approvedDate: '',
-      evidence: []
-    },
+    // PPAP Status
+    ppapStatus: data.ppapStatus ? {
+      ...data.ppapStatus,
+      submittedDate: formatDateForInput(data.ppapStatus.submittedDate),
+      approvedDate: formatDateForInput(data.ppapStatus.approvedDate)
+    } : { level: '', submittedDate: '', approvedDate: '', evidence: [] },
 
     // Lessons learned
     detectedRisks: data.detectedRisks || '',
@@ -142,6 +374,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
       level3: { signedBy: null, signedByName: '', signedAt: null }
     },
     rejectionReason: data.rejectionReason || '',
+    closureApprovalHistory: data.closureApprovalHistory || [],
+    closureApprovalStatus: data.closureApprovalStatus || 'draft',
     closureNotes: data.closureNotes || '',
     effectiveDate: formatDateForInput(data.effectiveDate),
     adoptionLotNumber: data.adoptionLotNumber || '',
@@ -180,32 +414,28 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
       }
     };
     fetchUsers();
-  }, []);
 
-  // Load auditors and existing audit requests
-  useEffect(() => {
-    const fetchAuditData = async () => {
+    const fetchTargets = async () => {
       try {
         const token = localStorage.getItem('token');
-        // Get auditors
-        const auditorsRes = await axios.get('http://localhost:5000/audit/auditors', {
+        const r = await axios.get('http://localhost:5000/ecr/quality-targets', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setAuditors(auditorsRes.data.auditors || []);
-
-        // Get existing audit requests for this ECR
-        if (data.id) {
-          const requestsRes = await axios.get(`http://localhost:5000/audit/requests?sourceType=ECR&sourceId=${data.id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+        if (r.data.success && r.data.targets) {
+          const d = r.data.targets;
+          setQualityTargets({
+            cpTarget: parseFloat(d.cp_target),
+            cpkTarget: parseFloat(d.cpk_target),
+            processStabilityTarget: parseFloat(d.process_stability_target),
+            initialScrapTarget: parseFloat(d.initial_scrap_target)
           });
-          setAuditRequests(requestsRes.data.requests || []);
         }
-      } catch (error) {
-        console.error('Error fetching audit data:', error);
-      }
+      } catch (e) { /* use defaults */ }
     };
-    fetchAuditData();
-  }, [data.id]);
+    fetchTargets();
+  }, []);
+
+  // No external audit system — auditors are TFT members from reviewBoard
 
   // Initialize audit items from impact areas
   useEffect(() => {
@@ -225,7 +455,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
               areaIcon: area.icon,
               subsectionKey,
               name: `${area.areaName} - ${subsectionKey}`,
-              checkItem: `Verificar implementación de ${subsectionKey} en área ${area.areaName}`,
+              checkItem: `Verificar implementación de ${subsectionKey} en TFT ${area.areaName}`,
               assignedAuditors: existingRequest?.assignedAuditors || [],
               dueDate: existingRequest?.dueDate || '',
               sentToAudit: !!existingRequest,
@@ -239,64 +469,6 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
     }
   }, [impactAnalysis, auditRequests]);
 
-  // Send to audit function
-  const sendToAuditRequest = async () => {
-    const itemsToSend = auditItems.filter(item =>
-      !item.sentToAudit &&
-      item.assignedAuditors &&
-      item.assignedAuditors.length > 0
-    );
-
-    if (itemsToSend.length === 0) {
-      showError('No hay items con auditores asignados para enviar');
-      return;
-    }
-
-    if (!window.confirm(`¿Enviar ${itemsToSend.length} item(s) a solicitud de auditoría?`)) {
-      return;
-    }
-
-    setSendingToAudit(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:5000/audit/requests',
-        {
-          sourceType: 'ECR',
-          sourceId: data.id,
-          sourceNumber: data.ecrNumber || `ECR-${data.id}`,
-          items: itemsToSend.map(item => ({
-            name: item.name,
-            checkItem: item.checkItem,
-            comments: `Área: ${item.areaName}, Subsección: ${item.subsectionKey}`,
-            dueDate: item.dueDate || null,
-            assignedAuditors: item.assignedAuditors
-          }))
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (response.data.success) {
-        showSuccess(`${itemsToSend.length} item(s) enviados a auditoría`);
-        // Update local state
-        setAuditItems(prev => prev.map(item =>
-          itemsToSend.find(i => i.id === item.id)
-            ? { ...item, sentToAudit: true }
-            : item
-        ));
-        // Reload audit requests
-        const requestsRes = await axios.get(`http://localhost:5000/audit/requests?sourceType=ECR&sourceId=${data.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setAuditRequests(requestsRes.data.requests || []);
-      }
-    } catch (error) {
-      console.error('Error sending to audit:', error);
-      showError('Error al enviar a auditoría');
-    } finally {
-      setSendingToAudit(false);
-    }
-  };
 
   // Update audit item
   const updateAuditItem = (itemId, field, value) => {
@@ -322,12 +494,15 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
 
         // Merge with audit request status
         const itemsWithStatus = data.closureAuditItems.map(item => {
-          const request = auditRequests.find(r => r.itemName === item.name);
+          const itemName = item.itemName || item.name || '';
+          const request = auditRequests.find(r => r.itemName === itemName);
           return {
             ...item,
-            sentToAudit: !!request,
+            name: itemName,
+            dueDate: formatDateForInput(item.dueDate),
+            sentToAudit: item.sentToAudit || !!request,
             auditRequestId: request?.id || null,
-            auditorCompleted: request?.status === 'completed',
+            auditorCompleted: item.auditorCompleted || request?.status === 'completed',
             auditorJudgment: request?.judgment || item.auditorJudgment || '',
             auditorComments: request?.comments || item.auditorComments || ''
           };
@@ -344,6 +519,20 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
       }
     }
   }, [data.closureAuditItems, auditRequests]);
+
+  // Re-hydrate assignedAuditorsInfo from IDs when users list is available
+  useEffect(() => {
+    if (users.length === 0) return;
+    setClosureAuditItems(prev => prev.map(item => {
+      if (item.assignedAuditorsInfo?.length > 0) return item;
+      if (!item.assignedAuditors?.length) return item;
+      const hydrated = item.assignedAuditors.map(id => {
+        const u = users.find(u => u.id === id);
+        return u ? { id: u.id, name: `${u.firstName || ''} ${u.lastName || ''}`.trim(), firstName: u.firstName, email: u.email } : null;
+      }).filter(Boolean);
+      return hydrated.length > 0 ? { ...item, assignedAuditorsInfo: hydrated } : item;
+    }));
+  }, [users]);
 
   // Add a closure audit item to a specific impact area
   const addClosureAuditItem = (impactArea, itemTemplate = null) => {
@@ -483,35 +672,61 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
 
   // Re-send item to audit (after NOK/OBS)
   const resendClosureAuditItem = async (item) => {
-    if (!window.confirm(`¿Re-enviar "${item.name}" a auditoría? Se incrementará la ronda.`)) return;
+    const currentJudgment = item.leaderJudgment || item.auditorJudgment || '';
+    const defaultReason = item.auditorComments || item.comments || `Hallazgo ${currentJudgment}: requiere corrección`;
+    const reason = window.prompt(
+      `Re-enviar "${item.name}" a Ronda ${(item.auditRound || 1) + 1}\n\nRazón del ${currentJudgment} (se mostrará en el historial):`,
+      defaultReason
+    );
+    if (reason === null) return; // cancelled
 
-    const newRound = (item.auditRound || 1) + 1;
-
-    // Save current state to history before resending
-    setSendingToAudit(true);
     try {
       const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `http://localhost:5000/ecr/${data.id}/closure-audit-items/${item.id}/resend`,
+        { closureNotes: reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      // Update item with new round and reset audit status
-      const updatedItem = {
-        ...item,
-        auditRound: newRound,
-        sentToAudit: false,
-        auditorCompleted: false,
-        auditorJudgment: '',
-        auditorComments: ''
-      };
+      if (response.data.success) {
+        const newRound = response.data.newRound;
+        setClosureAuditItems(prev => prev.map(i =>
+          i.id === item.id ? {
+            ...i,
+            auditRound: newRound,
+            sentToAudit: true,
+            auditorCompleted: false,
+            auditorJudgment: '',
+            auditorComments: '',
+            auditedByName: null,
+            verificationDate: null
+          } : i
+        ));
 
-      setClosureAuditItems(prev => prev.map(i =>
-        i.id === item.id ? updatedItem : i
-      ));
+        // Abrir mailto a auditores asignados
+        const auditorEmails = (item.assignedAuditorsInfo || []).map(a => a.email).filter(Boolean).join(',');
+        if (auditorEmails) {
+          const ecrNumber = data.ecrNumber || `ECR-${data.id}`;
+          const subject = encodeURIComponent(`[RE-ENVÍO] Auditoría ECR ${ecrNumber} — ${item.name} (Ronda ${newRound})`);
+          const body = encodeURIComponent(
+            `Estimado Auditor,\n\n` +
+            `Se ha re-enviado un ítem de auditoría de cierre.\n\n` +
+            `📋 ECR: ${ecrNumber}\n` +
+            `📎 Ítem: ${item.name}\n` +
+            `🔄 Ronda: ${newRound}\n` +
+            `📝 Razón: ${reason}\n\n` +
+            `Acceso directo: http://localhost:3000/ecr-workflow/${data.id}\n\n` +
+            `Por favor ingrese al sistema y registre su juicio en ECR-4.\n\n` +
+            `Sistema de Calidad`
+          );
+          window.open(`mailto:${auditorEmails}?subject=${subject}&body=${body}`, '_blank');
+        }
 
-      showSuccess(`Item preparado para ronda ${newRound}. Asigna auditores y envía.`);
+        showSuccess(`Ítem re-enviado a Ronda ${newRound}. Historial guardado.`);
+      }
     } catch (error) {
-      console.error('Error resending item:', error);
-      showError('Error al preparar re-envío');
-    } finally {
-      setSendingToAudit(false);
+      console.error('Error resending audit item:', error);
+      showError('Error al re-enviar el ítem');
     }
   };
 
@@ -574,65 +789,66 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
     }
   }, [closureAuditItems]);
 
-  // Send closure audit items to audit request
-  const sendClosureAuditToRequest = async () => {
-    const itemsToSend = closureAuditItems.filter(item =>
+  // Notify assigned TFT auditors via mailto and lock item assignments
+  const notifyAuditors = () => {
+    const itemsToNotify = closureAuditItems.filter(item =>
       item.checkItem &&
-      !item.sentToAudit &&
-      item.assignedAuditors &&
-      item.assignedAuditors.length > 0
+      !item.auditorCompleted &&
+      item.assignedAuditors?.length > 0
     );
 
-    if (itemsToSend.length === 0) {
-      showError('No hay items con auditores asignados para enviar');
+    if (itemsToNotify.length === 0) {
+      showError('No hay ítems con auditor asignado para notificar');
       return;
     }
 
-    if (!window.confirm(`¿Enviar ${itemsToSend.length} item(s) a solicitud de auditoría?`)) {
+    const ecrNumber = data.ecrNumber || `ECR-${data.id}`;
+
+    // Collect all unique auditor emails from assigned TFT members
+    const auditorEmailSet = new Set();
+    itemsToNotify.forEach(item => {
+      (item.assignedAuditors || []).forEach(auditorId => {
+        const member = tftMembers.find(m => m.id === auditorId);
+        if (member?.email) auditorEmailSet.add(member.email);
+      });
+    });
+
+    const toEmails = [...auditorEmailSet].join(',');
+    if (!toEmails) {
+      showError('Los auditores asignados no tienen correo registrado');
       return;
     }
 
-    setSendingToAudit(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:5000/audit/requests',
-        {
-          sourceType: 'ECR',
-          sourceId: data.id,
-          sourceNumber: data.ecrNumber || `ECR-${data.id}`,
-          items: itemsToSend.map(item => ({
-            name: item.name || `Item ${Math.abs(item.id)}`,
-            checkItem: item.checkItem,
-            comments: item.comments || '',
-            dueDate: item.dueDate || null,
-            assignedAuditors: item.assignedAuditors,
-            ecrClosureAuditItemId: item.id > 0 ? item.id : null // Only send if saved in DB
-          }))
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    const subject = `Auditoría de Cierre Pendiente — ${ecrNumber}`;
+    const body = [
+      `Equipo TFT,`,
+      ``,
+      `Tienen ${itemsToNotify.length} ítem(s) pendientes de auditoría de cierre en ${ecrNumber}:`,
+      ``,
+      ...itemsToNotify.map((i, idx) => {
+        const itemLabel = i.name || i.itemName || `Ítem ${idx + 1}`;
+        const auditorNames = (i.assignedAuditors || [])
+          .map(id => { const m = tftMembers.find(m => m.id === id); return m ? `${m.firstName} ${m.lastName}` : null; })
+          .filter(Boolean).join(', ');
+        return `${idx + 1}. ${itemLabel}${i.checkItem ? ': ' + i.checkItem : ''}${auditorNames ? ' — Auditor(es): ' + auditorNames : ''}${i.dueDate ? ' (Vence: ' + i.dueDate + ')' : ''}`;
+      }),
+      ``,
+      `Acceso directo: http://localhost:3000/ecr-workflow/${data.id}`,
+      ``,
+      `Por favor ingresen al sistema y registren su juicio de auditoría en ECR-4.`,
+      ``,
+      `Sistema de Calidad`
+    ].join('\n');
 
-      if (response.data.success) {
-        showSuccess(`${itemsToSend.length} item(s) enviados a auditoría`);
-        // Update local state
-        setClosureAuditItems(prev => prev.map(item =>
-          itemsToSend.find(i => i.id === item.id)
-            ? { ...item, sentToAudit: true }
-            : item
-        ));
-        // Reload audit requests
-        const requestsRes = await axios.get(`http://localhost:5000/audit/requests?sourceType=ECR&sourceId=${data.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setAuditRequests(requestsRes.data.requests || []);
-      }
-    } catch (error) {
-      console.error('Error sending to audit:', error);
-      showError('Error al enviar a auditoría');
-    } finally {
-      setSendingToAudit(false);
-    }
+    window.open(`mailto:${toEmails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+
+    // Lock assignments: mark items as notified
+    const notifiedIds = new Set(itemsToNotify.map(i => i.id));
+    setClosureAuditItems(prev => prev.map(item =>
+      notifiedIds.has(item.id) ? { ...item, sentToAudit: true } : item
+    ));
+
+    showSuccess(`${itemsToNotify.length} ítem(s) notificados. Guarda el ECR para persistir.`);
   };
 
   // Track if we already initialized defaults to prevent loops
@@ -647,9 +863,37 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
       !defaultsInitializedRef.current
     ) {
       defaultsInitializedRef.current = true;
-      setClosureAuditItems([...DEFAULT_CLOSURE_AUDIT_ITEMS]);
+
+      const areas = (data.impactAnalysis || []).filter(
+        area => area.selectedSubsections && area.selectedSubsections.length > 0
+      );
+
+      if (areas.length === 0) {
+        // No areas yet — add unkeyed defaults (visible once areas are added)
+        setClosureAuditItems([...DEFAULT_CLOSURE_AUDIT_ITEMS]);
+        return;
+      }
+
+      // Generate one copy of each default item per area/subsection
+      let tempId = -1;
+      const allItems = [];
+      for (const area of areas) {
+        for (const sub of area.selectedSubsections) {
+          for (const template of DEFAULT_CLOSURE_AUDIT_ITEMS) {
+            allItems.push({
+              ...template,
+              id: tempId--,
+              impactAreaKey: area.areaKey,
+              impactAreaName: area.areaName,
+              impactSubsection: sub
+            });
+          }
+        }
+      }
+      setNextClosureAuditId(tempId);
+      setClosureAuditItems(allItems);
     }
-  }, [formData.requiresClosureAudit, data.closureAuditItems?.length]);
+  }, [formData.requiresClosureAudit, data.closureAuditItems?.length, data.impactAnalysis]);
 
   // Reset ref when requiresClosureAudit is disabled
   useEffect(() => {
@@ -658,56 +902,54 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
     }
   }, [formData.requiresClosureAudit]);
 
-  // Sync data from backend changes
-  // Track what we've synced to prevent overwriting user edits
-  const lastSyncedDataRef = useRef({ id: null, effectiveDate: null, adoptionLotNumber: null });
+  // Sync data from backend changes - ONLY on ECR load (data.id change)
+  const lastSyncedIdRef = useRef(null);
 
   useEffect(() => {
     if (!data.id) return;
 
-    // Check if this is new data from backend (not user edits)
-    const isNewECR = lastSyncedDataRef.current.id !== data.id;
-    const hasNewEffectiveDate = data.effectiveDate && lastSyncedDataRef.current.effectiveDate !== data.effectiveDate;
-    const hasNewLotNumber = data.adoptionLotNumber && lastSyncedDataRef.current.adoptionLotNumber !== data.adoptionLotNumber;
+    // Only sync when loading a different ECR
+    if (lastSyncedIdRef.current === data.id) return;
+    lastSyncedIdRef.current = data.id;
 
-    if (isNewECR || hasNewEffectiveDate || hasNewLotNumber) {
-      // Update ref with current backend values
-      lastSyncedDataRef.current = {
-        id: data.id,
-        effectiveDate: data.effectiveDate,
-        adoptionLotNumber: data.adoptionLotNumber
-      };
-
-      setFormData(prev => ({
-        ...prev,
-        impactVerifications: initializeVerifications(),
-        ppapStatus: data.ppapStatus || prev.ppapStatus,
-        detectedRisks: data.detectedRisks || prev.detectedRisks,
-        appliedImprovements: data.appliedImprovements || prev.appliedImprovements,
-        closureSignatures: data.closureSignatures || prev.closureSignatures,
-        rejectionSignatures: data.rejectionSignatures || prev.rejectionSignatures,
-        rejectionReason: data.rejectionReason || prev.rejectionReason,
-        effectiveDate: formatDateForInput(data.effectiveDate) || prev.effectiveDate,
-        adoptionLotNumber: data.adoptionLotNumber || prev.adoptionLotNumber,
-        closureNotes: data.closureNotes || prev.closureNotes,
-        financialImpact: data.financialImpact || prev.financialImpact,
-        requiresClosureAudit: data.requiresClosureAudit ?? prev.requiresClosureAudit
-      }));
-    }
-  }, [data.id, data.effectiveDate, data.adoptionLotNumber, data.closureNotes, data.financialImpact, data.requiresClosureAudit]);
+    setFormData(prev => ({
+      ...prev,
+      impactVerifications: initializeVerifications(),
+      ppapStatus: data.ppapStatus ? { ...data.ppapStatus, submittedDate: formatDateForInput(data.ppapStatus.submittedDate), approvedDate: formatDateForInput(data.ppapStatus.approvedDate) } : prev.ppapStatus,
+      detectedRisks: data.detectedRisks || prev.detectedRisks,
+      appliedImprovements: data.appliedImprovements || prev.appliedImprovements,
+      closureSignatures: data.closureSignatures || prev.closureSignatures,
+      closureApprovalHistory: data.closureApprovalHistory || prev.closureApprovalHistory,
+      closureApprovalStatus: data.closureApprovalStatus || prev.closureApprovalStatus,
+      rejectionSignatures: data.rejectionSignatures || prev.rejectionSignatures,
+      rejectionReason: data.rejectionReason || prev.rejectionReason,
+      effectiveDate: formatDateForInput(data.effectiveDate) || prev.effectiveDate,
+      adoptionLotNumber: data.adoptionLotNumber || prev.adoptionLotNumber,
+      closureNotes: data.closureNotes || prev.closureNotes,
+      financialImpact: data.financialImpact || prev.financialImpact,
+      requiresClosureAudit: data.requiresClosureAudit ?? prev.requiresClosureAudit,
+      productionJudgment: data.productionJudgment || prev.productionJudgment,
+      productionComments: data.productionComments || prev.productionComments
+    }));
+  }, [data.id]);
 
   // Update parent when data changes - include closureAuditItems
   // Skip if we just loaded items from parent to prevent loop
+  // Also skip if local items are empty but parent has items (prevents overwriting on mount)
   useEffect(() => {
     if (closureItemsLoadedRef.current) {
       // Data was just loaded from parent, don't sync back yet
+      return;
+    }
+    // Don't overwrite parent's items with empty array (race condition on mount)
+    if (closureAuditItems.length === 0 && data.closureAuditItems?.length > 0) {
       return;
     }
     onDataUpdate({
       ...formData,
       closureAuditItems: closureAuditItems
     });
-  }, [formData, closureAuditItems]);
+  }, [formData, closureAuditItems, data.closureAuditItems?.length]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -768,7 +1010,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
       : ` ATENCIÓN\n\n` +
         `Al firmar esta verificación como ${verdictLabel}:\n` +
         '• Se guardará en el historial de revisiones\n' +
-        '• El área quedará disponible para correcciones\n' +
+        '• El TFT quedará disponible para correcciones\n' +
         '• Podrá volver a revisar después de las correcciones\n\n' +
         '¿Está seguro de que desea firmar?';
 
@@ -908,108 +1150,214 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
     }
   };
 
-  const handleSignClosure = async (levelKey, action = 'approved') => {
+  // Generate mailto for closure approvals (same logic as ECR-3)
+  const generateClosureMailto = (actionType, levelKey, rejectionNotes = '') => {
     const currentUser = getCurrentUser();
-    const assignedApproverId = approvers[levelKey];
-    const userIsAdmin = isAdmin || isUserAdmin(currentUser);
+    const ecrNumber = data.ecrNumber || data.ecr_number || `ECR-${data.id}`;
+    const changeTitle = data.changeTitle || '';
 
-    // Check if current user is the assigned approver or admin
-    if (currentUser.id !== assignedApproverId && !userIsAdmin) {
-      showError('Solo el aprobador asignado puede firmar este nivel');
+    // Get creator info
+    const creator = users.find(u => u.id === data.createdBy);
+    const creatorEmail = creator?.email;
+    const creatorName = creator ? `${creator.firstName || ''} ${creator.lastName || ''}`.trim() : '';
+
+    // Get Review Board emails
+    const reviewBoardIds = data.reviewBoard?.members || [];
+    const reviewBoardEmails = reviewBoardIds
+      .map(id => users.find(u => u.id === id)?.email)
+      .filter(Boolean);
+
+    // Get all approver emails
+    const approverEmails = approverLevels
+      .map(l => users.find(u => u.id === approvers[l.key])?.email)
+      .filter(Boolean);
+
+    let toEmails = [];
+    let ccEmails = [];
+    let subject = '';
+    let body = '';
+
+    if (actionType === 'approved') {
+      // Find next approver
+      const levelIndex = approverLevels.findIndex(l => l.key === levelKey);
+      const nextLevel = approverLevels[levelIndex + 1];
+
+      if (nextLevel) {
+        // Next approver exists
+        const nextApprover = users.find(u => u.id === approvers[nextLevel.key]);
+        if (nextApprover?.email) {
+          toEmails = [nextApprover.email];
+          subject = encodeURIComponent(`ECR ${ecrNumber} - Pendiente de tu Firma de Cierre`);
+          body = encodeURIComponent(
+            `Hola ${nextApprover.firstName || ''},\n\n` +
+            `El ECR "${ecrNumber} - ${changeTitle}" ha sido firmado en el nivel anterior y ahora está pendiente de tu firma de cierre.\n\n` +
+            `Por favor revisa y firma en el sistema.\n\n` +
+            `Saludos`
+          );
+        }
+      } else {
+        // Last approval - notify everyone
+        toEmails = [...new Set([...approverEmails, ...reviewBoardEmails])];
+        if (creatorEmail) toEmails.push(creatorEmail);
+        toEmails = [...new Set(toEmails)];
+
+        subject = encodeURIComponent(`ECR ${ecrNumber} - CERRADO Completamente`);
+        body = encodeURIComponent(
+          `Equipo,\n\n` +
+          `El ECR "${ecrNumber} - ${changeTitle}" ha sido CERRADO completamente con todas las firmas requeridas.\n\n` +
+          `El cambio ha sido formalmente adoptado.\n\n` +
+          `Saludos`
+        );
+      }
+    } else {
+      // Rejected - notify creator + Review Board
+      toEmails = creatorEmail ? [creatorEmail] : [];
+      ccEmails = [...new Set([...reviewBoardEmails, ...approverEmails])];
+
+      subject = encodeURIComponent(`ECR ${ecrNumber} - Cierre Rechazado`);
+      body = encodeURIComponent(
+        `Hola ${creatorName || ''},\n\n` +
+        `El cierre del ECR "${ecrNumber} - ${changeTitle}" ha sido RECHAZADO.\n\n` +
+        `Motivo:\n${rejectionNotes}\n\n` +
+        `Por favor realiza las correcciones necesarias.\n\n` +
+        `Saludos`
+      );
+    }
+
+    if (toEmails.length > 0) {
+      let mailtoLink = `mailto:${toEmails.join(',')}?subject=${subject}&body=${body}`;
+      if (ccEmails.length > 0) {
+        mailtoLink = `mailto:${toEmails.join(',')}?cc=${ccEmails.join(',')}&subject=${subject}&body=${body}`;
+      }
+      window.open(mailtoLink, '_blank');
+    }
+  };
+
+  // Send closure for approval - changes status from draft to pending
+  const handleSendForClosureApproval = async () => {
+    const isClosingAsRejected = data.closureType === 'rejected';
+
+    // Check stage completion first
+    if (!data.stageCompletionStatus?.ecr4?.completed) {
+      showError('Debes marcar la etapa ECR-4 como completada antes de enviar a aprobación');
       return;
     }
 
-    const isRejection = action === 'rejected';
-    let rejectionNotes = '';
+    // If closing as rejected, require rejection reason
+    if (isClosingAsRejected && !formData.rejectionReason?.trim()) {
+      showError('Debes proporcionar un motivo de rechazo para cerrar como rechazado');
+      return;
+    }
 
-    if (isRejection) {
-      rejectionNotes = window.prompt(
-        ' RECHAZO DE ECR\n\n' +
-        'Por favor, ingrese el motivo del rechazo:\n' +
-        '(Este motivo será registrado en el historial)'
-      );
-      if (!rejectionNotes) {
-        showError('Debe ingresar un motivo para rechazar');
+    // Validate before sending - SKIP validations if closing as rejected
+    if (!isClosingAsRejected) {
+      const validationStatus = getClosureValidationStatus();
+      if (!validationStatus.canApprove) {
+        showError(`No se puede enviar a aprobación:\n${validationStatus.errors.slice(0, 5).join('\n')}${validationStatus.errors.length > 5 ? `\n...y ${validationStatus.errors.length - 5} más` : ''}`);
         return;
       }
     }
 
-    const confirmMessage = isRejection
-      ? ' ATENCIÓN\n\n' +
-        'Al rechazar:\n' +
-        '• El ECR volverá a estado editable\n' +
-        '• Se registrará el motivo del rechazo\n\n' +
-        '¿Está seguro de que desea RECHAZAR este ECR?'
-      : ' ATENCIÓN\n\n' +
-        'Al aprobar:\n' +
-        '• Su firma quedará registrada permanentemente\n' +
-        '• Esta acción no se puede deshacer\n\n' +
-        '¿Está seguro de que desea APROBAR este nivel?';
+    const confirmMessage = isClosingAsRejected
+      ? '¿Estás seguro de que quieres enviar el ECR para CIERRE COMO RECHAZADO?\n\nLos aprobadores deberán firmar el rechazo.'
+      : '¿Estás seguro de que quieres enviar el cierre a aprobación?';
 
-    const confirmed = window.confirm(confirmMessage);
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
 
-    if (confirmed) {
-      const now = new Date().toISOString();
-      const assignedUser = users.find(u => u.id === assignedApproverId);
+    const currentUser = getCurrentUser();
+    const ecrNumber = data.ecrNumber || data.ecr_number || `ECR-${data.id}`;
+    const changeTitle = data.changeTitle || '';
 
-      // Add to approval history
-      const historyEntry = {
-        action: action,
-        userId: currentUser.id,
-        userName: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim(),
-        timestamp: now,
-        level: levelKey,
-        notes: isRejection ? rejectionNotes : `Nivel ${levelKey} aprobado`,
-        onBehalfOf: userIsAdmin && currentUser.id !== assignedApproverId
-          ? `${assignedUser?.firstName || ''} ${assignedUser?.lastName || ''}`.trim()
-          : null
-      };
+    // Call backend endpoint to submit for closure approval
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `http://localhost:5000/ecr/${data.id}/closure-submit`,
+        {
+          closureType: isClosingAsRejected ? 'rejected' : 'approved',
+          rejectionReason: isClosingAsRejected ? formData.rejectionReason : ''
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const newHistory = [...(data.approvalHistory || []), historyEntry];
-
-      if (isRejection) {
-        // Rejection: clear signatures and set status back to draft
-        const rejectionData = {
-          closureSignatures: {},
-          approvalHistory: newHistory,
-          status: 'draft'
-        };
-
+      if (response.data.success) {
+        // Update local state with backend response
         setFormData(prev => ({
           ...prev,
-          ...rejectionData
+          closureApprovalStatus: response.data.closureApprovalStatus,
+          closureApprovalHistory: response.data.closureApprovalHistory
         }));
 
-        // Save rejection to backend immediately
-        try {
-          const token = localStorage.getItem('token');
-          await axios.put(`http://localhost:5000/ecr/reports/${data.id}`, rejectionData, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          showSuccess('ECR rechazado y devuelto a borrador. El solicitante podrá hacer correcciones.');
-          // Reload page to reflect changes
-          window.location.reload();
-        } catch (error) {
-          console.error('Error saving rejection:', error);
-          showError('Error al guardar el rechazo');
+        showSuccess(isClosingAsRejected ? 'ECR enviado para cierre como rechazado' : 'Cierre enviado a aprobación');
+
+        // Generate mailto to first approver
+        const firstApprover = users.find(u => u.id === approvers.level1);
+        if (firstApprover?.email) {
+          const subjectType = isClosingAsRejected ? 'CIERRE COMO RECHAZADO' : 'Cierre';
+          const subject = encodeURIComponent(`ECR ${ecrNumber} - ${subjectType} Pendiente de Firma (Nivel 1)`);
+          const body = encodeURIComponent(
+            `Hola ${firstApprover.firstName || ''},\n\n` +
+            `El ECR "${ecrNumber} - ${changeTitle}" ha sido enviado para ${isClosingAsRejected ? 'CIERRE COMO RECHAZADO' : 'cierre'} y está pendiente de tu firma.\n\n` +
+            (isClosingAsRejected ? `Motivo del rechazo: ${formData.rejectionReason}\n\n` : '') +
+            `Por favor revisa y firma en el sistema.\n\n` +
+            `Enviado por: ${currentUser.firstName || ''} ${currentUser.lastName || ''}\n\n` +
+            `Saludos`
+          );
+          window.open(`mailto:${firstApprover.email}?subject=${subject}&body=${body}`, '_blank');
         }
-      } else {
-        // Approval: add signature
+
+        // Reload to show new status
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error submitting closure for approval:', error);
+      const errorMsg = error.response?.data?.message || 'Error al enviar a aprobación';
+      showError(errorMsg);
+    }
+  };
+
+  const handleSignClosure = async (levelKey, action = 'approved', comments = '') => {
+    const isRejection = action === 'rejected';
+    const levelNumber = levelKey.replace('level', '');
+
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = isRejection ? 'closure-reject' : 'closure-approve';
+
+      const response = await axios.post(
+        `http://localhost:5000/ecr/${data.id}/${endpoint}`,
+        { level: levelKey, comments },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        // Update local state with backend response
         setFormData(prev => ({
           ...prev,
-          closureSignatures: {
-            ...prev.closureSignatures,
-            [levelKey]: {
-              signedBy: currentUser.id,
-              signedByName: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim(),
-              signedAt: now,
-              action: 'approved'
-            }
-          },
-          approvalHistory: newHistory
+          closureSignatures: response.data.closureSignatures,
+          closureApprovalHistory: response.data.closureApprovalHistory,
+          closureApprovalStatus: response.data.closureApprovalStatus
         }));
-        showSuccess('Nivel aprobado exitosamente');
+
+        if (isRejection) {
+          showSuccess(`Cierre rechazado por Nivel ${levelNumber}. Hacer correcciones y re-enviar.`);
+          generateClosureMailto('rejected', levelKey, comments);
+          window.location.reload();
+        } else {
+          const allSigned = response.data.allSigned;
+          showSuccess(allSigned ? 'ECR completamente cerrado' : 'Nivel aprobado exitosamente');
+          generateClosureMailto('approved', levelKey, comments);
+          if (allSigned) {
+            window.location.reload();
+          }
+        }
       }
+    } catch (error) {
+      console.error(`Error ${isRejection ? 'rejecting' : 'approving'} closure:`, error);
+      const errorMsg = error.response?.data?.message || `Error al ${isRejection ? 'rechazar' : 'aprobar'} el cierre`;
+      showError(errorMsg);
     }
   };
 
@@ -1038,6 +1386,73 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
     }
 
     return true;
+  };
+
+  // Validation function to check if all sections are ready for closure approval
+  const getClosureValidationStatus = () => {
+    const errors = [];
+
+    // 0. Check stage completion
+    if (!data.stageCompletionStatus?.ecr4?.completed) {
+      errors.push('Etapa ECR-4 no está marcada como completada');
+    }
+
+    // 1. Check Impact Verifications (TFT) - all must be 'approved' or 'conditional' and signed
+    const impactAreas = data.impactAnalysis || [];
+    for (const area of impactAreas) {
+      const areaKey = area.areaKey || area.id;
+      const areaName = area.areaName || area.name || areaKey;
+      const subsections = area.subsections || [];
+
+      for (const subsection of subsections) {
+        const subKey = subsection.key || subsection.id;
+        const subName = subsection.name || subKey;
+        const verification = formData.impactVerifications?.[areaKey]?.[subKey];
+
+        if (!verification?.verdict) {
+          errors.push(`TFT "${areaName} - ${subName}": Sin veredicto`);
+        } else if (verification.verdict === 'rejected') {
+          errors.push(`TFT "${areaName} - ${subName}": Rechazado`);
+        } else if (verification.verdict !== 'approved' && verification.verdict !== 'conditional') {
+          errors.push(`TFT "${areaName} - ${subName}": No aprobada`);
+        } else if (!verification?.signedBy) {
+          errors.push(`TFT "${areaName} - ${subName}": No firmada`);
+        }
+      }
+    }
+
+    // 2. Check Production Results - requires judgment
+    if (!formData.productionJudgment || formData.productionJudgment === '') {
+      errors.push('Producción: Falta Juicio de Resultados');
+    } else if (formData.productionJudgment.toUpperCase() === 'NOK') {
+      errors.push('Producción: Juicio es NOK');
+    } else if (formData.productionJudgment.toUpperCase() === 'CONDITIONAL' || formData.productionJudgment.toUpperCase() === 'CONDICIONAL') {
+      if (!formData.productionComments || formData.productionComments.trim() === '') {
+        errors.push('Producción: Juicio Condicional requiere comentarios');
+      }
+    }
+
+    // 3. Check Audit Items (always check if there are items, regardless of requiresClosureAudit flag)
+    if (closureAuditItems && closureAuditItems.length > 0) {
+      const pendingAudits = closureAuditItems.filter(item => !item.auditorCompleted);
+      // Check both leaderJudgment and auditorJudgment for NOK
+      const nokAudits = closureAuditItems.filter(item =>
+        (item.leaderJudgment && item.leaderJudgment.toUpperCase() === 'NOK') ||
+        (item.auditorJudgment && item.auditorJudgment.toUpperCase() === 'NOK')
+      );
+
+      if (pendingAudits.length > 0) {
+        errors.push(`Auditoría: ${pendingAudits.length} item(s) pendiente(s)`);
+      }
+      if (nokAudits.length > 0) {
+        errors.push(`Auditoría: ${nokAudits.length} item(s) con NOK`);
+      }
+    }
+
+    return {
+      canApprove: errors.length === 0,
+      errors
+    };
   };
 
   const isFullyCompleted = approverLevels.length > 0 && approverLevels.every(
@@ -1126,13 +1541,13 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
           : null
       };
 
-      const newHistory = [...(data.approvalHistory || []), historyEntry];
+      const newHistory = [...(data.closureApprovalHistory || []), historyEntry];
 
       if (isRejectingRejection) {
         // Cancel rejection: clear signatures and set status back to draft
         const cancelData = {
           rejectionSignatures: {},
-          approvalHistory: newHistory,
+          closureApprovalHistory: newHistory,
           status: 'draft'
         };
 
@@ -1173,7 +1588,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
 
         const updateData = {
           rejectionSignatures: newSignatures,
-          approvalHistory: newHistory,
+          closureApprovalHistory: newHistory,
           ...(allSigned ? { status: 'closed_rejected' } : {})
         };
 
@@ -1237,7 +1652,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
 
       const closeData = {
         status: 'closed_rejected',
-        approvalHistory: [...(data.approvalHistory || []), historyEntry],
+        closureApprovalHistory: [...(data.closureApprovalHistory || []), historyEntry],
         closedAt: now,
         closedBy: currentUser.id,
         closedByName: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim(),
@@ -1427,29 +1842,35 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
     area.selectedSubsections && area.selectedSubsections.length > 0
   );
 
+  // Permission helpers
+  const currentUser = getCurrentUser();
+  const isTFTLeader = isAdmin || currentUser?.id === data.reviewBoard?.primary?.id;
+  const isAssignedToItem = (item) =>
+    isAdmin || (item.assignedAuditors || []).includes(currentUser?.id);
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <h2 style={styles.title}> ECR-4: Cierre y Verificación</h2>
         <p style={styles.subtitle}>
-          Verificación de que las áreas de impacto identificadas no presentaron afectaciones
+          Verificación de que las TFT de impacto identificadas no presentaron afectaciones
         </p>
       </div>
 
-      {/* 1. Verificación de Áreas de Impacto (Dynamic from ECR-2B) */}
+      {/* 1. Verificación de TFT de Impacto (Dynamic from ECR-2B) */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>1. Verificación de Áreas de Impacto</span>
+          <span style={styles.badge}>1. Verificación de TFT de Impacto</span>
         </h3>
         <p style={styles.sectionDescription}>
-          Verifica cada área y subsección identificada en ECR-2B. Confirma que no hubo afectación y proporciona evidencia.
+          Verifica cada TFT y subsección identificada en ECR-2B. Confirma que no hubo afectación y proporciona evidencia.
         </p>
 
         {impactedAreas.length === 0 ? (
           <div style={styles.emptyState}>
-            <p>No hay áreas de impacto seleccionadas en ECR-2B</p>
+            <p>No hay TFT de impacto seleccionadas en ECR-2B</p>
             <p style={{ fontSize: '13px', marginTop: '8px', color: t.textMuted }}>
-              Regresa a ECR-2B y selecciona las áreas afectadas
+              Regresa a ECR-2B y selecciona las TFT afectadas
             </p>
           </div>
         ) : (
@@ -1761,7 +2182,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
         </div>
       </div>
 
-      {/* 3B. Estado PPAP (IATF 8.3.5.2) */}
+      {/* 3B. Estado PPAP */}
       <div style={{
         ...styles.section,
         backgroundColor: formData.ppapStatus.level === 'full' || formData.ppapStatus.level === 'partial' ? '#fef3c7' : t.bg,
@@ -1772,7 +2193,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
             ...styles.badge,
             backgroundColor: formData.ppapStatus.level ? '#C77700' : t.accent
           }}>
-            3. Estado PPAP (IATF 8.3.5.2)
+            3. Estado PPAP
           </span>
         </h3>
         <p style={styles.sectionDescription}>
@@ -1926,6 +2347,192 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
         )}
       </div>
 
+      {/* 3C. Resultados de Producción */}
+      <div style={styles.section}>
+        <h3 style={styles.sectionTitle}>
+          <span style={{ ...styles.badge, backgroundColor: t.accent }}>3C. Resultados de Producción</span>
+        </h3>
+        <p style={styles.sectionDescription}>
+          Métricas de calidad del proceso post-cambio
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '12px' }}>
+
+          {/* ISIR / First Article */}
+          <div>
+            <label style={styles.label}>ISIR / First Article</label>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
+              {['Aprobado', 'Rechazado', 'Pendiente', 'N/A'].map(opt => (
+                <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="isirFirstArticle"
+                    value={opt}
+                    checked={formData.isirFirstArticle === opt}
+                    onChange={e => setFormData(prev => ({ ...prev, isirFirstArticle: e.target.value }))}
+                    disabled={isLocked}
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrap Inicial */}
+          <div>
+            <label style={styles.label}>Scrap Inicial (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.initialScrap}
+              onChange={e => setFormData(prev => ({ ...prev, initialScrap: e.target.value }))}
+              disabled={isLocked}
+              placeholder="Ej: 2.5"
+              style={{ ...styles.input, width: '100%' }}
+            />
+          </div>
+
+          {/* Estabilidad de Proceso */}
+          <div>
+            <label style={styles.label}>Estabilidad de Proceso (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.processStability}
+              onChange={e => setFormData(prev => ({ ...prev, processStability: e.target.value }))}
+              disabled={isLocked}
+              placeholder="Ej: 95.0"
+              style={{ ...styles.input, width: '100%' }}
+            />
+          </div>
+
+          {/* CP Post-Cambio */}
+          <div>
+            <label style={styles.label}>
+              CP Post-Cambio
+              {formData.cpPostChange !== '' && (() => {
+                const val = parseFloat(formData.cpPostChange);
+                const target = qualityTargets.cpTarget;
+                const color = val >= target ? '#166534' : val >= 1.0 ? '#92400e' : '#991b1b';
+                const label = val >= target ? '✓ Capaz' : val >= 1.0 ? '⚠ Marginal' : '✗ No capaz';
+                return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '700', color }}>{label}</span>;
+              })()}
+            </label>
+            <input
+              type="number" min="0" step="0.001"
+              value={formData.cpPostChange}
+              onChange={e => setFormData(prev => ({ ...prev, cpPostChange: e.target.value }))}
+              disabled={isLocked}
+              placeholder="Ej: 1.45"
+              style={{
+                ...styles.input, width: '100%',
+                borderColor: formData.cpPostChange !== '' ? (parseFloat(formData.cpPostChange) >= qualityTargets.cpTarget ? '#166534' : parseFloat(formData.cpPostChange) >= 1.0 ? '#C77700' : '#991b1b') : t.border
+              }}
+            />
+            <p style={{ fontSize: '10px', color: t.textDim, margin: '4px 0 0' }}>Meta: ≥ {qualityTargets.cpTarget}</p>
+          </div>
+
+          {/* CPK Post-Cambio */}
+          <div>
+            <label style={styles.label}>
+              CPK Post-Cambio
+              {formData.cpkPostChange !== '' && (() => {
+                const val = parseFloat(formData.cpkPostChange);
+                const target = qualityTargets.cpkTarget;
+                const color = val >= target ? '#166534' : val >= 1.0 ? '#92400e' : '#991b1b';
+                const label = val >= target ? '✓ Capaz' : val >= 1.0 ? '⚠ Marginal' : '✗ No capaz';
+                return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '700', color }}>{label}</span>;
+              })()}
+            </label>
+            <input
+              type="number" min="0" step="0.001"
+              value={formData.cpkPostChange}
+              onChange={e => setFormData(prev => ({ ...prev, cpkPostChange: e.target.value }))}
+              disabled={isLocked}
+              placeholder="Ej: 1.45"
+              style={{
+                ...styles.input, width: '100%',
+                borderColor: formData.cpkPostChange !== '' ? (parseFloat(formData.cpkPostChange) >= qualityTargets.cpkTarget ? '#166534' : parseFloat(formData.cpkPostChange) >= 1.0 ? '#C77700' : '#991b1b') : t.border
+              }}
+            />
+            <p style={{ fontSize: '10px', color: t.textDim, margin: '4px 0 0' }}>Meta: ≥ {qualityTargets.cpkTarget}</p>
+          </div>
+
+        </div>
+
+        {/* Juicio de Producción */}
+        <div style={{
+          marginTop: '20px',
+          padding: '16px',
+          backgroundColor: formData.productionJudgment === 'OK' ? '#dcfce7' :
+                          formData.productionJudgment === 'Condicional' ? '#fef3c7' :
+                          formData.productionJudgment === 'NOK' ? '#fee2e2' : '#f9fafb',
+          border: `2px solid ${formData.productionJudgment === 'OK' ? '#22c55e' :
+                              formData.productionJudgment === 'Condicional' ? '#f59e0b' :
+                              formData.productionJudgment === 'NOK' ? '#ef4444' : '#d1d5db'}`,
+          borderRadius: '8px'
+        }}>
+          <label style={{ ...styles.label, fontWeight: '700', marginBottom: '12px', display: 'block' }}>
+            Juicio de Resultados de Producción *
+          </label>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
+            {['OK', 'Condicional', 'NOK'].map(opt => (
+              <label key={opt} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                backgroundColor: formData.productionJudgment === opt ? (
+                  opt === 'OK' ? '#166534' : opt === 'Condicional' ? '#92400e' : '#991b1b'
+                ) : t.bgCard,
+                color: formData.productionJudgment === opt ? 'white' : t.text,
+                borderRadius: '6px',
+                cursor: isLocked ? 'not-allowed' : 'pointer',
+                border: `1px solid ${opt === 'OK' ? '#22c55e' : opt === 'Condicional' ? '#f59e0b' : '#ef4444'}`,
+                fontWeight: '600',
+                fontSize: '14px'
+              }}>
+                <input
+                  type="radio"
+                  name="productionJudgment"
+                  value={opt}
+                  checked={formData.productionJudgment === opt}
+                  onChange={e => setFormData(prev => ({ ...prev, productionJudgment: e.target.value }))}
+                  disabled={isLocked}
+                  style={{ display: 'none' }}
+                />
+                {opt === 'OK' ? '✓ ' : opt === 'Condicional' ? '⚠ ' : '✗ '}{opt}
+              </label>
+            ))}
+          </div>
+
+          {/* Comentarios - obligatorio si es Condicional */}
+          <div>
+            <label style={styles.label}>
+              Comentarios {formData.productionJudgment === 'Condicional' && <span style={{ color: '#dc2626' }}>*</span>}
+            </label>
+            <textarea
+              value={formData.productionComments}
+              onChange={e => setFormData(prev => ({ ...prev, productionComments: e.target.value }))}
+              disabled={isLocked}
+              placeholder={formData.productionJudgment === 'Condicional' ?
+                'Obligatorio: Justifica las condiciones bajo las cuales se acepta...' :
+                'Observaciones adicionales sobre los resultados de producción...'}
+              rows={3}
+              style={{
+                ...styles.input,
+                width: '100%',
+                resize: 'vertical',
+                borderColor: formData.productionJudgment === 'Condicional' && !formData.productionComments?.trim() ? '#dc2626' : t.border
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* 4. Cierre Formal */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
@@ -1986,7 +2593,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
             marginBottom: '20px'
           }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '600', color: t.text }}>
-               Checklist de Auditoría por Área de Impacto
+               Checklist de Auditoría por TFT de Impacto
             </h4>
 
             {/* Impact Areas from ECR-2B */}
@@ -2001,7 +2608,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                 marginBottom: '16px'
               }}>
                 <p style={{ margin: 0, fontSize: '14px' }}>
-                   No hay áreas de impacto definidas en ECR-2B. Define las áreas de impacto primero.
+                   No hay TFT de impacto definidas en ECR-2B. Define las TFT de impacto primero.
                 </p>
               </div>
             ) : (
@@ -2105,8 +2712,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                               </tr>
                             </thead>
                             <tbody>
-                              {areaItems.map(item => (
-                                <tr key={item.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: item.sentToAudit ? '#fffbeb' : t.bgCard }}>
+                              {areaItems.map((item, idx) => (
+                                <tr key={`${item.id}-${idx}`} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: item.sentToAudit ? '#fffbeb' : t.bgCard }}>
                                   {/* Item Name with Round Badge */}
                                   <td style={{ padding: '8px', verticalAlign: 'top' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2125,7 +2732,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                       value={item.checkItem || ''}
                                       onChange={(e) => updateClosureAuditItem(item.id, 'checkItem', e.target.value)}
                                       placeholder="¿Qué debe verificar el auditor?"
-                                      disabled={item.sentToAudit && item.auditorCompleted}
+                                      disabled={!isTFTLeader || (item.sentToAudit && item.auditorCompleted)}
                                       rows={2}
                                       style={{ width: '100%', padding: '6px', border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', resize: 'vertical' }}
                                     />
@@ -2157,7 +2764,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                       value={item.comments || ''}
                                       onChange={(e) => updateClosureAuditItem(item.id, 'comments', e.target.value)}
                                       placeholder="Comentarios del líder"
-                                      disabled={item.auditorCompleted}
+                                      disabled={!isTFTLeader || item.auditorCompleted}
                                       rows={2}
                                       style={{ width: '100%', padding: '6px', border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', resize: 'vertical' }}
                                     />
@@ -2169,7 +2776,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                       type="date"
                                       value={item.dueDate || ''}
                                       onChange={(e) => updateClosureAuditItem(item.id, 'dueDate', e.target.value)}
-                                      disabled={item.sentToAudit && item.auditorCompleted}
+                                      disabled={!isTFTLeader || (item.sentToAudit && item.auditorCompleted)}
                                       style={{ padding: '4px', border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', width: '100%' }}
                                     />
                                     {item.dueDate && new Date(item.dueDate) < new Date() && !item.auditorCompleted && (
@@ -2177,13 +2784,14 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                     )}
                                   </td>
 
-                                  {/* Auditors */}
+                                  {/* Auditors — TFT members only, leader/admin can always reassign */}
                                   <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                                    {!item.auditorCompleted ? (
+                                    {isTFTLeader ? (
+                                      // Leader can assign from TFT members
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                        {item.assignedAuditorsInfo?.map(a => (
+                                        {(item.assignedAuditorsInfo || []).map(a => (
                                           <span key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '2px 6px', backgroundColor: '#dbeafe', borderRadius: '10px', fontSize: '10px' }}>
-                                            {a.name?.split(' ')[0]}
+                                            {a.firstName || a.name?.split(' ')[0]}
                                             <button type="button" onClick={() => {
                                               const newIds = (item.assignedAuditors || []).filter(id => id !== a.id);
                                               const newInfo = (item.assignedAuditorsInfo || []).filter(info => info.id !== a.id);
@@ -2191,30 +2799,41 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                             }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '10px', color: '#B00020' }}>×</button>
                                           </span>
                                         ))}
-                                        <select
-                                          value=""
-                                          onChange={(e) => {
-                                            if (!e.target.value) return;
-                                            const auditorId = parseInt(e.target.value);
-                                            const auditor = auditors.find(a => a.id === auditorId);
-                                            if (auditor && !(item.assignedAuditors || []).includes(auditorId)) {
-                                              updateClosureAuditItemMultiple(item.id, {
-                                                assignedAuditors: [...(item.assignedAuditors || []), auditorId],
-                                                assignedAuditorsInfo: [...(item.assignedAuditorsInfo || []), { id: auditor.id, name: `${auditor.firstName} ${auditor.lastName}`, email: auditor.email }]
-                                              });
-                                            }
-                                          }}
-                                          style={{ padding: '4px', border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '10px' }}
-                                        >
-                                          <option value="">+ Auditor</option>
-                                          {auditors.filter(a => !(item.assignedAuditors || []).includes(a.id)).map(a => (
-                                            <option key={a.id} value={a.id}>{a.firstName} {a.lastName?.charAt(0)}.</option>
-                                          ))}
-                                        </select>
+                                        {tftMembers.length > 0 && (
+                                          <select
+                                            value=""
+                                            onChange={(e) => {
+                                              if (!e.target.value) return;
+                                              const memberId = parseInt(e.target.value);
+                                              const member = tftMembers.find(m => m.id === memberId);
+                                              if (member && !(item.assignedAuditors || []).includes(memberId)) {
+                                                updateClosureAuditItemMultiple(item.id, {
+                                                  assignedAuditors: [...(item.assignedAuditors || []), memberId],
+                                                  assignedAuditorsInfo: [...(item.assignedAuditorsInfo || []), {
+                                                    id: member.id,
+                                                    name: `${member.firstName || ''} ${member.lastName || ''}`.trim(),
+                                                    firstName: member.firstName,
+                                                    email: member.email
+                                                  }]
+                                                });
+                                              }
+                                            }}
+                                            style={{ padding: '4px', border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '10px' }}
+                                          >
+                                            <option value="">+ Auditor TFT</option>
+                                            {tftMembers.filter(m => !(item.assignedAuditors || []).includes(m.id)).map((m, mIdx) => (
+                                              <option key={`${m.id}-${mIdx}`} value={m.id}>{m.firstName} {m.lastName?.charAt(0)}.</option>
+                                            ))}
+                                          </select>
+                                        )}
+                                        {tftMembers.length === 0 && (
+                                          <span style={{ fontSize: '10px', color: t.textDim }}>Sin miembros TFT</span>
+                                        )}
                                       </div>
                                     ) : (
+                                      // Non-leader: read-only
                                       <span style={{ fontSize: '11px', color: t.textDim }}>
-                                        {item.assignedAuditorsInfo?.map(a => a.name?.split(' ')[0]).join(', ')}
+                                        {(item.assignedAuditorsInfo || []).map(a => a.firstName || a.name?.split(' ')[0]).join(', ') || '-'}
                                       </span>
                                     )}
                                   </td>
@@ -2227,6 +2846,15 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                         {item.verificationDate && (
                                           <div style={{ color: t.textDim, fontSize: '9px' }}>
                                             {new Date(item.verificationDate).toLocaleDateString()}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : item.leaderJudgmentByName ? (
+                                      <div style={{ fontSize: '10px' }}>
+                                        <div style={{ fontWeight: '600' }}>{item.leaderJudgmentByName?.split(' ')[0]}</div>
+                                        {item.leaderJudgmentAt && (
+                                          <div style={{ color: t.textDim, fontSize: '9px' }}>
+                                            {new Date(item.leaderJudgmentAt).toLocaleDateString()}
                                           </div>
                                         )}
                                       </div>
@@ -2253,7 +2881,16 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                   <td style={{ padding: '8px', verticalAlign: 'top', textAlign: 'center', backgroundColor: '#f0f9ff' }}>
                                     <select
                                       value={item.leaderJudgment || ''}
-                                      onChange={(e) => updateClosureAuditItem(item.id, 'leaderJudgment', e.target.value)}
+                                      onChange={(e) => {
+                                        const currentUser = getCurrentUser();
+                                        const judgment = e.target.value;
+                                        updateClosureAuditItemMultiple(item.id, {
+                                          leaderJudgment: judgment,
+                                          leaderJudgmentBy: judgment ? currentUser.id : null,
+                                          leaderJudgmentByName: judgment ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() : null,
+                                          leaderJudgmentAt: judgment ? new Date().toISOString() : null
+                                        });
+                                      }}
                                       style={{
                                         padding: '4px 8px',
                                         border: `1px solid ${t.border}`,
@@ -2270,20 +2907,54 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                       <option value="OBS"> OBS</option>
                                       <option value="NA">— N/A</option>
                                     </select>
+                                    {item.leaderJudgmentByName && (
+                                      <div style={{ fontSize: '9px', color: t.textDim, marginTop: '4px' }}>
+                                        {item.leaderJudgmentByName?.split(' ')[0]}
+                                      </div>
+                                    )}
                                   </td>
 
-                                  {/* Auditor Findings */}
+                                  {/* Auditor Findings — editable only by assigned auditor */}
                                   <td style={{ padding: '8px', verticalAlign: 'top', backgroundColor: '#fffbeb' }}>
-                                    {item.auditorCompleted ? (
+                                    {item.sentToAudit && isAssignedToItem(item) && !item.auditorCompleted ? (
+                                      // Assigned auditor can fill judgment + comments
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <select
+                                          value={item.auditorJudgment || ''}
+                                          onChange={(e) => updateClosureAuditItem(item.id, 'auditorJudgment', e.target.value)}
+                                          style={{
+                                            padding: '4px', border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '10px', fontWeight: '600',
+                                            backgroundColor: item.auditorJudgment === 'OK' ? '#dcfce7' : item.auditorJudgment === 'NOK' ? '#fee2e2' : item.auditorJudgment === 'OBS' ? '#fef3c7' : t.bgCard,
+                                            color: item.auditorJudgment === 'OK' ? '#166534' : item.auditorJudgment === 'NOK' ? '#991b1b' : item.auditorJudgment === 'OBS' ? '#92400e' : t.text
+                                          }}
+                                        >
+                                          <option value="">Juicio...</option>
+                                          <option value="OK"> OK</option>
+                                          <option value="NOK"> NOK</option>
+                                          <option value="OBS"> OBS</option>
+                                          <option value="NA">— N/A</option>
+                                        </select>
+                                        <textarea
+                                          value={item.auditorComments || ''}
+                                          onChange={(e) => updateClosureAuditItem(item.id, 'auditorComments', e.target.value)}
+                                          placeholder="Hallazgos del auditor..."
+                                          rows={2}
+                                          style={{ width: '100%', padding: '4px', border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '10px', resize: 'vertical' }}
+                                        />
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', cursor: 'pointer' }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={item.auditorCompleted || false}
+                                            onChange={(e) => updateClosureAuditItem(item.id, 'auditorCompleted', e.target.checked)}
+                                          />
+                                          Marcar completado
+                                        </label>
+                                      </div>
+                                    ) : item.auditorCompleted ? (
                                       <div>
                                         {item.auditorJudgment && (
                                           <span style={{
-                                            display: 'inline-block',
-                                            padding: '2px 8px',
-                                            borderRadius: '8px',
-                                            fontSize: '10px',
-                                            fontWeight: '700',
-                                            marginBottom: '4px',
+                                            display: 'inline-block', padding: '2px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: '700', marginBottom: '4px',
                                             backgroundColor: item.auditorJudgment === 'OK' ? '#dcfce7' : item.auditorJudgment === 'NOK' ? '#fee2e2' : '#fef3c7',
                                             color: item.auditorJudgment === 'OK' ? '#166534' : item.auditorJudgment === 'NOK' ? '#991b1b' : '#92400e'
                                           }}>
@@ -2296,52 +2967,78 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                                       </div>
                                     ) : (
                                       <span style={{ fontSize: '10px', color: t.textDim, fontStyle: 'italic' }}>
-                                        Pendiente de auditoría
+                                        {item.sentToAudit ? 'Esperando auditor...' : 'Notificar para habilitar'}
                                       </span>
                                     )}
                                   </td>
 
                                   {/* Actions */}
                                   <td style={{ padding: '8px', verticalAlign: 'top', textAlign: 'center' }}>
-                                    <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                      {/* Re-send button - show if completed with NOK/OBS */}
-                                      {item.auditorCompleted && (item.auditorJudgment === 'NOK' || item.auditorJudgment === 'OBS') && (
-                                        <button
-                                          onClick={() => resendClosureAuditItem(item)}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '2px' }}
-                                          title="Re-enviar a auditoría"
-                                        >
-                                          ↻
-                                        </button>
-                                      )}
-                                      {/* History button - show if has rounds > 1 */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                                      {/* Historial - siempre visible si hay rondas */}
                                       {item.auditRound > 1 && (
                                         <button
                                           onClick={() => openHistoryModal(item)}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '2px' }}
-                                          title="Ver historial"
+                                          style={{ padding: '3px 8px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          title="Ver historial de rondas"
                                         >
-                                          
+                                          Historial
                                         </button>
                                       )}
-                                      {/* Duplicate button */}
-                                      {!item.sentToAudit && (
+                                      {/* Re-enviar: TFT líder, enviado, con NOK/OBS en cualquier juicio */}
+                                      {isTFTLeader && item.sentToAudit && !item.auditorCompleted &&
+                                        (['NOK', 'OBS'].includes(item.leaderJudgment) || ['NOK', 'OBS'].includes(item.auditorJudgment)) && (
+                                        <button
+                                          onClick={() => resendClosureAuditItem(item)}
+                                          style={{ padding: '3px 8px', backgroundColor: '#0369a1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          title={`Re-enviar a ronda ${(item.auditRound || 1) + 1}`}
+                                        >
+                                          ↻ Ronda {(item.auditRound || 1) + 1}
+                                        </button>
+                                      )}
+                                      {/* Revertir completado: solo admin */}
+                                      {isAdmin && item.auditorCompleted && (
+                                        <button
+                                          onClick={async () => {
+                                            const reason = window.prompt('Motivo del revert (requerido):');
+                                            if (!reason?.trim()) return;
+                                            try {
+                                              const token = localStorage.getItem('token');
+                                              const response = await axios.post(
+                                                `http://localhost:5000/ecr/${data.id}/closure-audit-items/${item.id}/revert`,
+                                                { reason: reason.trim() },
+                                                { headers: { Authorization: `Bearer ${token}` } }
+                                              );
+                                              if (response.data.success) {
+                                                updateClosureAuditItem(item.id, 'auditorCompleted', false);
+                                              }
+                                            } catch (err) {
+                                              showError('Error al revertir el ítem');
+                                            }
+                                          }}
+                                          style={{ padding: '3px 8px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          title="Revertir a pendiente (admin)"
+                                        >
+                                          ↩ Revertir
+                                        </button>
+                                      )}
+                                      {/* Duplicar / Eliminar: solo si no enviado y es líder */}
+                                      {isTFTLeader && !item.sentToAudit && (
                                         <button
                                           onClick={() => duplicateClosureAuditItem(item)}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '2px' }}
-                                          title="Duplicar item"
+                                          style={{ padding: '3px 8px', backgroundColor: '#0369a1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          title="Duplicar ítem"
                                         >
-                                          
+                                          + Fila
                                         </button>
                                       )}
-                                      {/* Delete button */}
-                                      {!item.sentToAudit && (
+                                      {isTFTLeader && !item.sentToAudit && (
                                         <button
                                           onClick={() => deleteClosureAuditItem(item.id)}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '2px', color: '#B00020' }}
-                                          title="Eliminar"
+                                          style={{ padding: '3px 8px', backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          title="Eliminar ítem"
                                         >
-                                          
+                                          Eliminar
                                         </button>
                                       )}
                                     </div>
@@ -2377,7 +3074,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                 fontSize: '13px'
               }}>
                 <span> <strong>Total items:</strong> {closureAuditItems.length}</span>
-                <span> <strong>Enviados:</strong> {closureAuditItems.filter(i => i.sentToAudit).length}</span>
+                <span> <strong>Notificados:</strong> {closureAuditItems.filter(i => i.sentToAudit).length}</span>
                 <span> <strong>Completados:</strong> {closureAuditItems.filter(i => i.auditorCompleted).length}</span>
                 <span style={{ color: closureAuditItems.filter(i => i.auditorJudgment === 'NOK').length > 0 ? '#B00020' : t.textDim }}>
                    <strong>NOK:</strong> {closureAuditItems.filter(i => i.auditorJudgment === 'NOK').length}
@@ -2402,22 +3099,24 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
               >
                  Agregar Categoría
               </button>
-              <button
-                onClick={sendClosureAuditToRequest}
-                disabled={sendingToAudit || !closureAuditItems.some(item => item.checkItem && !item.sentToAudit && item.assignedAuditors?.length > 0)}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: closureAuditItems.some(item => item.checkItem && !item.sentToAudit && item.assignedAuditors?.length > 0) ? '#ef4444' : t.border,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: closureAuditItems.some(item => item.checkItem && !item.sentToAudit && item.assignedAuditors?.length > 0) ? 'pointer' : 'not-allowed'
-                }}
-              >
-                {sendingToAudit ? ' Enviando...' : ' Enviar a Solicitud de Auditoría'}
-              </button>
+              {isTFTLeader && (
+                <button
+                  onClick={notifyAuditors}
+                  disabled={!closureAuditItems.some(item => item.checkItem && !item.auditorCompleted && item.assignedAuditors?.length > 0)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: closureAuditItems.some(item => item.checkItem && !item.auditorCompleted && item.assignedAuditors?.length > 0) ? '#0369a1' : t.border,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: closureAuditItems.some(item => item.checkItem && !item.auditorCompleted && item.assignedAuditors?.length > 0) ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                   Notificar Auditores
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -2624,9 +3323,281 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
           )}
         </div>
 
-        {/* Signatures Section - Based on ECR-2B Approvers */}
-        <div style={styles.signaturesSection}>
-          <h4 style={styles.signaturesTitle}>Firmas de Cierre (Aprobadores de ECR-2B)</h4>
+        {/* Closure Status Panel - Same style as ECR-3 */}
+        <div style={{ marginTop: '24px', padding: '20px', backgroundColor: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '16px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>
+            Estado de Aprobación de Cierre
+          </h4>
+
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ fontSize: '13px', color: t.textMuted, marginBottom: '6px' }}>Estado de Cierre:</p>
+            <span style={{
+              display: 'inline-block',
+              padding: '6px 16px',
+              borderRadius: '20px',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: '600',
+              backgroundColor:
+                data.status === 'closed' ? '#2E7D32' :
+                data.status === 'closed_rejected' ? '#7f1d1d' :
+                data.status === 'pending_rejected_closure' ? '#dc2626' :
+                data.status === 'pending_approval' ? '#C77700' :
+                '#6b7280'
+            }}>
+              {data.status === 'closed' ? ' Cerrado' :
+               data.status === 'closed_rejected' ? ' Cerrado como Rechazado' :
+               data.status === 'pending_rejected_closure' ? ' Pendiente - NO ADOPTABLE' :
+               data.status === 'pending_approval' ? ' Pendiente de Firmas' :
+               ' Borrador'}
+            </span>
+          </div>
+
+          {/* Rejected status box */}
+          {data.status === 'rejected' && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#fee2e2',
+              border: '2px solid #fca5a5',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>
+                 ECR Rechazado
+              </p>
+              <p style={{ margin: 0, fontSize: '13px', color: '#991b1b' }}>
+                El ECR fue rechazado. Revisa los comentarios en el historial y realiza las correcciones necesarias.
+                Puedes re-enviar a aprobación usando el botón en el footer.
+              </p>
+            </div>
+          )}
+
+          {/* Pending approval info */}
+          {data.status === 'pending_approval' && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#fef3c7',
+              border: '2px solid #f59e0b',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px', color: '#92400e' }}>
+                 El ECR está pendiente de firmas de cierre. Los aprobadores pueden firmar en secuencia a continuación.
+              </p>
+            </div>
+          )}
+
+          {/* Pending rejected closure info */}
+          {data.status === 'pending_rejected_closure' && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#fef2f2',
+              border: '2px solid #dc2626',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>
+                 CIERRE COMO NO ADOPTABLE - Pendiente de Firmas
+              </p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7f1d1d' }}>
+                Este ECR será cerrado como NO ADOPTABLE. Los aprobadores deben confirmar el rechazo del cambio.
+              </p>
+              {data.rejectionReason && (
+                <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Motivo:</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#991b1b' }}>{data.rejectionReason}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Draft status info */}
+          {data.status === 'draft' && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#f3f4f6',
+              border: '2px dashed #d1d5db',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                 Completa la información de cierre y envía a aprobación usando el botón en el footer.
+              </p>
+            </div>
+          )}
+
+          {/* Fully closed info - only show if ALL closure signatures are complete */}
+          {data.status === 'closed' && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#d1fae5',
+              border: '2px solid #22c55e',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#166534' }}>
+                 ECR Completamente Cerrado
+              </p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#166534' }}>
+                Todas las firmas de cierre han sido completadas exitosamente
+              </p>
+            </div>
+          )}
+
+          {/* Closed as rejected info */}
+          {data.status === 'closed_rejected' && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#fef2f2',
+              border: '2px solid #991b1b',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>
+                 ECR Cerrado como RECHAZADO
+              </p>
+              <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7f1d1d' }}>
+                Este ECR ha sido cerrado como rechazado. Todas las firmas de rechazo han sido completadas.
+              </p>
+              {data.rejectionReason && (
+                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#fff', border: '1px solid #fca5a5', borderRadius: '6px' }}>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Motivo del rechazo:</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#991b1b' }}>{data.rejectionReason}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Pending closure - draft (not yet sent for approval) */}
+          {(data.status === 'pending_closure' || data.status === 'draft') && formData.closureApprovalStatus === 'draft' && (() => {
+            const validationStatus = getClosureValidationStatus();
+            // Check if there was a recent rejection
+            const lastHistoryEntry = formData.closureApprovalHistory?.[formData.closureApprovalHistory.length - 1];
+            const wasRejected = lastHistoryEntry?.action === 'rejected';
+            const isClosingAsRejected = data.closureType === 'rejected';
+
+            return (
+              <div style={{
+                padding: '16px',
+                backgroundColor: isClosingAsRejected ? '#fef2f2' : (wasRejected ? '#fee2e2' : '#f3f4f6'),
+                border: isClosingAsRejected ? '2px solid #dc2626' : (wasRejected ? '2px solid #ef4444' : '2px dashed #9ca3af'),
+                borderRadius: '8px'
+              }}>
+                {/* Header based on state */}
+                {isClosingAsRejected ? (
+                  <>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>
+                       CIERRE COMO RECHAZADO
+                    </p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7f1d1d' }}>
+                      Este ECR será cerrado como RECHAZADO. Los aprobadores deberán firmar el rechazo.
+                    </p>
+                    {/* Rejection Reason Field */}
+                    <div style={{ marginTop: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#991b1b', marginBottom: '6px' }}>
+                        Motivo del Rechazo *
+                      </label>
+                      <textarea
+                        value={formData.rejectionReason}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, rejectionReason: e.target.value }));
+                          onDataUpdate({ rejectionReason: e.target.value });
+                        }}
+                        placeholder="Explique por qué este ECR debe cerrarse como rechazado (ej: no hay presupuesto, no es viable técnicamente, el cliente no lo aprobó, etc.)"
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #fca5a5',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontFamily: 'inherit',
+                          resize: 'vertical',
+                          backgroundColor: '#fff'
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : wasRejected ? (
+                  <>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>
+                       Cierre Rechazado
+                    </p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#991b1b' }}>
+                      Rechazado por <strong>{lastHistoryEntry.userName}</strong> en {lastHistoryEntry.level?.replace('level', 'Nivel ')}.
+                    </p>
+                    {lastHistoryEntry.notes && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: '#fff',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '6px'
+                      }}>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Motivo:</p>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#991b1b' }}>{lastHistoryEntry.notes}</p>
+                      </div>
+                    )}
+                    <p style={{ margin: '12px 0 0 0', fontSize: '13px', color: '#6b7280' }}>
+                      Realiza las correcciones necesarias y re-envía a aprobación. El cierre irá directamente al nivel que rechazó.
+                    </p>
+                  </>
+                ) : (
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                     Borrador de Cierre
+                  </p>
+                )}
+
+                {/* Validation errors - skip if closing as rejected */}
+                {!isClosingAsRejected && !validationStatus.canApprove ? (
+                  <>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280' }}>
+                      Completa los siguientes pendientes antes de {wasRejected ? 're-enviar' : 'enviar'} a aprobación:
+                    </p>
+                    <ul style={{ margin: '12px 0 0 0', paddingLeft: '20px', fontSize: '13px', color: '#dc2626' }}>
+                      {validationStatus.errors.slice(0, 5).map((error, idx) => (
+                        <li key={idx} style={{ marginBottom: '4px' }}>{error}</li>
+                      ))}
+                      {validationStatus.errors.length > 5 && (
+                        <li style={{ color: '#6b7280' }}>...y {validationStatus.errors.length - 5} más</li>
+                      )}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    {!isClosingAsRejected && (
+                      <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6b7280' }}>
+                        Todas las validaciones están completas.
+                      </p>
+                    )}
+                    {/* Show button if: normal flow with validations complete, OR closing as rejected with reason */}
+                    {(validationStatus.canApprove || (isClosingAsRejected && formData.rejectionReason?.trim())) && (
+                      <button
+                        onClick={handleSendForClosureApproval}
+                        disabled={isClosingAsRejected && !formData.rejectionReason?.trim()}
+                        style={{
+                          marginTop: '16px',
+                          padding: '10px 20px',
+                          backgroundColor: isClosingAsRejected ? '#dc2626' : (wasRejected ? '#C77700' : '#2563eb'),
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: (isClosingAsRejected && !formData.rejectionReason?.trim()) ? 'not-allowed' : 'pointer',
+                          opacity: (isClosingAsRejected && !formData.rejectionReason?.trim()) ? 0.5 : 1
+                        }}
+                      >
+                        {isClosingAsRejected ? ' Enviar para Cierre como Rechazado' : (wasRejected ? ' Re-enviar a Aprobación de Cierre' : ' Enviar a Aprobación de Cierre')}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
+
+        </div>
+
+        {/* Approval Flow - Visual Chain (always visible like ECR-3) */}
+        <div style={{ marginTop: '24px' }}>
+          <h4 style={{ fontSize: '15px', fontWeight: '600', color: t.text, marginBottom: '16px' }}>
+            Flujo de Aprobación de Cierre
+          </h4>
 
           {approverLevels.length === 0 ? (
             <div style={{
@@ -2639,91 +3610,169 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
             }}>
               <p style={{ margin: 0, fontWeight: '600' }}> No hay aprobadores definidos</p>
               <p style={{ margin: '8px 0 0 0', fontSize: '13px' }}>
-                Regresa a ECR-2B y asigna los aprobadores en el Resumen del Flujo de Aprobación
+                Regresa a ECR-2B y asigna los aprobadores
               </p>
             </div>
           ) : (
-            approverLevels.map((level, index) => {
-              const approverUser = getUserById(approvers[level.key]);
-              const signature = formData.closureSignatures[level.key];
-              const isSigned = signature?.signedBy;
-              const canSign = canSignClosure(level.key);
+            <>
+              {/* Horizontal Flow */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                {approverLevels.map((level, index) => {
+                  const approverUser = getUserById(approvers[level.key]);
+                  const signature = formData.closureSignatures[level.key];
+                  const isSigned = signature?.signedBy;
+                  const previousLevelPending = index > 0 && !formData.closureSignatures[approverLevels[index - 1].key]?.signedBy;
 
-              // Check if previous level is pending
-              const previousLevelPending = index > 0 && !formData.closureSignatures[approverLevels[index - 1].key]?.signedBy;
+                  // Determine status - if closure not sent for approval yet, all show 'not_started'
+                  let status = 'not_started';
+                  if (isSigned) status = 'approved';
+                  else if (formData.closureApprovalStatus === 'pending' && (index === 0 || !previousLevelPending)) status = 'pending';
 
-              return (
-                <div key={level.key} style={{
-                  ...styles.signatureCard,
-                  backgroundColor: isSigned ? '#f0fdf4' : t.bgCard,
-                  border: isSigned ? '2px solid #2E7D32' : `2px solid ${t.border}`
-                }}>
-                  <div style={styles.signatureHeader}>
-                    <h5 style={styles.signatureRole}>
-                      {level.icon} {level.label}: {approverUser?.firstName} {approverUser?.lastName}
-                    </h5>
-                    {isSigned ? (
-                      <span style={{...styles.statusBadge, backgroundColor: '#2E7D32'}}>
-                         Firmado
-                      </span>
+                  const statusStyle = {
+                    approved: { bg: '#dcfce7', border: '#22c55e', color: '#166534', text: 'Firmado' },
+                    pending: { bg: '#fef3c7', border: '#f59e0b', color: '#92400e', text: 'Pendiente' },
+                    not_started: { bg: '#f3f4f6', border: '#d1d5db', color: '#6b7280', text: 'Esperando' }
+                  }[status];
+
+                  return (
+                    <React.Fragment key={level.key}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '12px 16px',
+                        backgroundColor: statusStyle.bg,
+                        border: `2px solid ${statusStyle.border}`,
+                        borderRadius: '8px',
+                        minWidth: '200px'
+                      }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          backgroundColor: statusStyle.border,
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          fontWeight: '700',
+                          flexShrink: 0
+                        }}>
+                          {index + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>
+                            {approverUser?.firstName} {approverUser?.lastName}
+                          </div>
+                          <div style={{ fontSize: '11px', color: t.textMuted }}>
+                            {level.label}
+                          </div>
+                          <div style={{
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: statusStyle.color,
+                            marginTop: '2px'
+                          }}>
+                            {isSigned ? `✓ ${statusStyle.text}` : statusStyle.text}
+                          </div>
+                          {isSigned && signature.signedAt && (
+                            <div style={{ fontSize: '10px', color: t.textDim }}>
+                              {new Date(signature.signedAt).toLocaleDateString('es-MX')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {index < approverLevels.length - 1 && (
+                        <span style={{ fontSize: '20px', color: t.textMuted }}>→</span>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons for Current User */}
+              {(() => {
+                // Find the current pending level that the user can sign
+                const currentPendingLevel = approverLevels.find((level, index) => {
+                  const signature = formData.closureSignatures[level.key];
+                  const isSigned = signature?.signedBy;
+                  const previousLevelPending = index > 0 && !formData.closureSignatures[approverLevels[index - 1].key]?.signedBy;
+                  return !isSigned && !previousLevelPending && canSignClosure(level.key);
+                });
+
+                if (!currentPendingLevel) return null;
+
+                const approverUser = getUserById(approvers[currentPendingLevel.key]);
+
+                const validationStatus = getClosureValidationStatus();
+
+                return (
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: validationStatus.canApprove ? '#eff6ff' : '#fef3c7',
+                    border: `2px solid ${validationStatus.canApprove ? '#3b82f6' : '#C77700'}`,
+                    borderRadius: '8px'
+                  }}>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: t.text }}>
+                      <strong>{approverUser?.firstName} {approverUser?.lastName}</strong> - Es tu turno de firmar el cierre
+                    </p>
+
+                    {/* Show validation errors if any */}
+                    {!validationStatus.canApprove && (
+                      <div style={{
+                        marginBottom: '12px',
+                        padding: '12px',
+                        backgroundColor: '#fee2e2',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '6px'
+                      }}>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600', color: '#991b1b' }}>
+                           No se puede aprobar el cierre. Pendientes:
+                        </p>
+                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#7f1d1d' }}>
+                          {validationStatus.errors.slice(0, 5).map((error, idx) => (
+                            <li key={idx}>{error}</li>
+                          ))}
+                          {validationStatus.errors.length > 5 && (
+                            <li>...y {validationStatus.errors.length - 5} más</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {formData.closureApprovalStatus === 'pending' ? (
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                          onClick={() => {
+                            setClosureApprovalLevel(currentPendingLevel.key);
+                            setShowClosureApprovalModal(true);
+                          }}
+                          disabled={!validationStatus.canApprove}
+                          style={{
+                            padding: '10px 24px',
+                            backgroundColor: validationStatus.canApprove ? '#2E7D32' : '#9ca3af',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: validationStatus.canApprove ? 'pointer' : 'not-allowed',
+                            opacity: validationStatus.canApprove ? 1 : 0.7
+                          }}
+                        >
+                           Revisar y Aprobar/Rechazar
+                        </button>
+                      </div>
                     ) : (
-                      <span style={{...styles.statusBadge, backgroundColor: t.textDim}}>
-                        Pendiente
-                      </span>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#C77700', fontStyle: 'italic' }}>
+                         El cierre debe ser enviado a aprobación primero
+                      </p>
                     )}
                   </div>
-
-                  {isSigned ? (
-                    <div style={styles.signatureInfo}>
-                      <p style={styles.signedBy}>
-                        <strong>Firmado por:</strong> {signature.signedByName}
-                      </p>
-                      <p style={styles.signedAt}>
-                        <strong>Fecha:</strong> {new Date(signature.signedAt).toLocaleString('es-MX')}
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p style={styles.signatureDescription}>
-                        El aprobador debe confirmar el cierre formal del ECR
-                      </p>
-                      {previousLevelPending && (
-                        <p style={styles.warningText}>
-                           El nivel anterior debe firmar primero
-                        </p>
-                      )}
-                      {canSign && data.status === 'pending_approval' && (
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                          <button
-                            onClick={() => handleSignClosure(level.key, 'approved')}
-                            style={{...styles.signButton, backgroundColor: '#2E7D32'}}
-                          >
-                             Aprobar
-                          </button>
-                          <button
-                            onClick={() => handleSignClosure(level.key, 'rejected')}
-                            style={{...styles.signButton, backgroundColor: '#ef4444'}}
-                          >
-                             Rechazar
-                          </button>
-                        </div>
-                      )}
-                      {canSign && data.status === 'draft' && (
-                        <p style={{ fontSize: '12px', color: '#C77700', fontStyle: 'italic', margin: '8px 0 0 0' }}>
-                           El ECR debe ser enviado a aprobación primero
-                        </p>
-                      )}
-                      {!canSign && !previousLevelPending && (
-                        <p style={{ fontSize: '12px', color: t.textMuted, fontStyle: 'italic', margin: '8px 0 0 0' }}>
-                          Solo {approverUser?.firstName} {approverUser?.lastName} puede firmar este nivel
-                          {isAdmin && ' (o un administrador)'}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })
+                );
+              })()}
+            </>
           )}
         </div>
 
@@ -2736,216 +3785,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
             </p>
           </div>
         )}
+
       </div>
-
-      {/* 5. Cierre como Rechazado (Alternative flow) */}
-      {!isFullyCompleted && data.status !== 'closed_rejected' && data.status !== 'approved' && data.status !== 'completed' && (
-        <div style={{...styles.section, backgroundColor: '#fef2f2', border: '2px solid #fecaca'}}>
-          <h3 style={{...styles.sectionTitle, color: '#991b1b'}}>
-            <span style={{...styles.badge, backgroundColor: '#B00020', color: 'white'}}>Opción: Cierre como Rechazado</span>
-          </h3>
-          <p style={{ fontSize: '14px', color: '#7f1d1d', marginBottom: '16px' }}>
-            Si este ECR no puede ser adoptado (falta de presupuesto, no viable técnicamente, etc.),
-            los aprobadores pueden firmar el cierre como RECHAZADO. Cualquier nivel puede rechazar el rechazo
-            si considera que el ECR sí debe aprobarse.
-          </p>
-
-          {/* Rejection Reason */}
-          <div style={styles.field}>
-            <label style={{...styles.label, color: '#991b1b'}}>Motivo del Rechazo *</label>
-            <textarea
-              style={{...styles.textarea, border: '1px solid #fca5a5'}}
-              value={formData.rejectionReason}
-              onChange={(e) => handleInputChange('rejectionReason', e.target.value)}
-              placeholder="Explique por qué este ECR debe cerrarse como rechazado (ej: no hay presupuesto, no es viable técnicamente, el cliente no lo aprobó, etc.)"
-              rows={3}
-            />
-          </div>
-
-          {/* Rejection Signatures */}
-          {formData.rejectionReason && formData.rejectionReason.trim() && (
-            <div style={{...styles.signaturesSection, backgroundColor: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '16px'}}>
-              <h4 style={{...styles.signaturesTitle, color: '#991b1b'}}>Firmas de Rechazo</h4>
-              <p style={{ fontSize: '13px', color: '#7f1d1d', marginBottom: '16px' }}>
-                Los mismos aprobadores deben confirmar el rechazo. Cualquier nivel puede "Rechazar el Rechazo"
-                si considera que el ECR sí debe aprobarse.
-              </p>
-
-              {approverLevels.map((level, index) => {
-                const approverUser = getUserById(approvers[level.key]);
-                const signature = formData.rejectionSignatures[level.key];
-                const isSigned = signature?.signedBy;
-                const canSign = canSignRejection(level.key);
-
-                // Check if previous level is pending
-                const previousLevelPending = index > 0 && !formData.rejectionSignatures[approverLevels[index - 1].key]?.signedBy;
-
-                return (
-                  <div key={level.key} style={{
-                    ...styles.signatureCard,
-                    backgroundColor: isSigned ? '#fecaca' : t.bgCard,
-                    border: isSigned ? '2px solid #B00020' : `2px solid ${t.border}`
-                  }}>
-                    <div style={styles.signatureHeader}>
-                      <h5 style={styles.signatureRole}>
-                        {level.icon} {level.label}: {approverUser?.firstName} {approverUser?.lastName}
-                      </h5>
-                      {isSigned ? (
-                        <span style={{...styles.statusBadge, backgroundColor: '#B00020'}}>
-                           Rechazo Firmado
-                        </span>
-                      ) : (
-                        <span style={{...styles.statusBadge, backgroundColor: t.textDim}}>
-                          Pendiente
-                        </span>
-                      )}
-                    </div>
-
-                    {isSigned ? (
-                      <div style={styles.signatureInfo}>
-                        <p style={styles.signedBy}>
-                          <strong>Firmado por:</strong> {signature.signedByName}
-                        </p>
-                        <p style={styles.signedAt}>
-                          <strong>Fecha:</strong> {new Date(signature.signedAt).toLocaleString('es-MX')}
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <p style={styles.signatureDescription}>
-                          El aprobador debe confirmar el rechazo del ECR o rechazar el rechazo si considera que debe aprobarse
-                        </p>
-                        {previousLevelPending && (
-                          <p style={styles.warningText}>
-                             El nivel anterior debe firmar primero
-                          </p>
-                        )}
-                        {canSign && data.status === 'pending_approval' && (
-                          <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                            <button
-                              onClick={() => handleSignRejection(level.key, 'approved')}
-                              style={{...styles.signButton, backgroundColor: '#B00020'}}
-                            >
-                               Confirmar Rechazo
-                            </button>
-                            <button
-                              onClick={() => handleSignRejection(level.key, 'rejected')}
-                              style={{...styles.signButton, backgroundColor: '#C77700'}}
-                            >
-                              ↩ No Rechazar - Devolver a Revisión
-                            </button>
-                          </div>
-                        )}
-                        {canSign && data.status === 'draft' && (
-                          <p style={{ fontSize: '12px', color: '#C77700', fontStyle: 'italic', margin: '8px 0 0 0' }}>
-                             El ECR debe ser enviado a aprobación primero
-                          </p>
-                        )}
-                        {!canSign && !previousLevelPending && (
-                          <p style={{ fontSize: '12px', color: t.textMuted, fontStyle: 'italic', margin: '8px 0 0 0' }}>
-                            Solo {approverUser?.firstName} {approverUser?.lastName} puede firmar este nivel
-                            {isAdmin && ' (o un administrador)'}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Rejection Completion Status */}
-          {isFullyRejected && (
-            <div style={{
-              marginTop: '24px',
-              padding: '20px',
-              backgroundColor: '#7f1d1d',
-              borderRadius: '12px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ margin: '0 0 8px 0', color: 'white', fontSize: '18px' }}>
-                 ECR Cerrado como Rechazado
-              </h3>
-              <p style={{ margin: 0, color: '#fecaca', fontSize: '14px' }}>
-                Todos los niveles han confirmado el rechazo de este ECR
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Approval History Section */}
-      {(data.approvalHistory && data.approvalHistory.length > 0) && (
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}> Historial de Aprobaciones</h3>
-          <div style={{
-            backgroundColor: t.bgCard,
-            borderRadius: '8px',
-            border: `1px solid ${t.border}`,
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ backgroundColor: t.bg }}>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, fontWeight: '600' }}>Acción</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, fontWeight: '600' }}>Usuario</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, fontWeight: '600' }}>Fecha y Hora</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, fontWeight: '600' }}>Notas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.approvalHistory.map((entry, index) => (
-                  <tr key={index} style={{ borderBottom: `1px solid ${t.border}` }}>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        backgroundColor: entry.action === 'submitted' ? '#dbeafe' :
-                                       entry.action === 'approved' ? '#d1fae5' :
-                                       entry.action === 'rejected' ? '#fee2e2' :
-                                       entry.action === 'closed_rejected' ? '#7f1d1d' :
-                                       entry.action === 'rejection_approved' ? '#fecaca' :
-                                       entry.action === 'rejection_cancelled' ? '#bbf7d0' : t.bgPanel,
-                        color: entry.action === 'submitted' ? t.accent :
-                               entry.action === 'approved' ? '#2E7D32' :
-                               entry.action === 'rejected' ? '#B00020' :
-                               entry.action === 'closed_rejected' ? t.bgCard :
-                               entry.action === 'rejection_approved' ? '#991b1b' :
-                               entry.action === 'rejection_cancelled' ? '#166534' : t.textMuted
-                      }}>
-                        {entry.action === 'submitted' && ' Enviado'}
-                        {entry.action === 'approved' && ' Aprobado'}
-                        {entry.action === 'rejected' && ' Rechazado'}
-                        {entry.action === 'closed_rejected' && ' Cerrado Rechazado'}
-                        {entry.action === 'rejection_approved' && ' Rechazo Confirmado'}
-                        {entry.action === 'rejection_cancelled' && '↩ Devuelto a Revisión'}
-                        {!['submitted', 'approved', 'rejected', 'closed_rejected', 'rejection_approved', 'rejection_cancelled'].includes(entry.action) && entry.action}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: '500' }}>{entry.userName}</td>
-                    <td style={{ padding: '12px', color: t.textMuted }}>
-                      {new Date(entry.timestamp).toLocaleString('es-MX', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </td>
-                    <td style={{ padding: '12px', color: t.textMuted, maxWidth: '300px' }}>{entry.notes || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Show closed as rejected banner */}
       {data.status === 'closed_rejected' && (
@@ -2991,7 +3832,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
             </h3>
             {currentImpactArea && (
               <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: t.textMuted, padding: '8px 12px', backgroundColor: '#f0f9ff', borderRadius: '6px', border: '1px solid #bae6fd' }}>
-                 Área: <strong>{currentImpactArea.areaName}</strong> - {currentImpactArea.subsection}
+                 TFT: <strong>{currentImpactArea.areaName}</strong> - {currentImpactArea.subsection}
               </p>
             )}
 
@@ -3113,14 +3954,26 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
                       </span>
                     </div>
                     {h.auditorComments && (
-                      <p style={{ fontSize: '13px', color: t.text, margin: '0 0 8px 0' }}>
-                        {h.auditorComments}
+                      <p style={{ fontSize: '13px', color: t.text, margin: '0 0 6px 0' }}>
+                        <strong>Hallazgos:</strong> {h.auditorComments}
                       </p>
                     )}
-                    <p style={{ fontSize: '11px', color: t.textDim, margin: 0 }}>
-                      {h.auditedByName && `Por: ${h.auditedByName} • `}
-                      {h.verificationDate && new Date(h.verificationDate).toLocaleDateString('es-MX')}
-                    </p>
+                    {h.closureNotes && (
+                      <p style={{ fontSize: '12px', color: '#92400e', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '4px', margin: '0 0 6px 0' }}>
+                        <strong>Razón de re-envío:</strong> {h.closureNotes}
+                      </p>
+                    )}
+                    <div style={{ fontSize: '11px', color: t.textDim, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {h.auditedByName && (
+                        <span> Auditado por: <strong>{h.auditedByName}</strong></span>
+                      )}
+                      {h.verificationDate && (
+                        <span>{new Date(h.verificationDate).toLocaleDateString('es-MX')}</span>
+                      )}
+                      {h.closedByName && (
+                        <span>Cerrado por: {h.closedByName}</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -3139,6 +3992,25 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false }) =
             </div>
           </div>
         </div>
+      )}
+
+      {/* Closure Approval Modal - Same style as ECR-3 */}
+      {showClosureApprovalModal && closureApprovalLevel && (
+        <ClosureApprovalModalContent
+          t={t}
+          closureApprovalLevel={closureApprovalLevel}
+          closureType={data.closureType}
+          rejectionReason={data.rejectionReason}
+          onApprove={(comments) => {
+            handleSignClosure(closureApprovalLevel, 'approved', comments);
+            setShowClosureApprovalModal(false);
+          }}
+          onReject={(comments) => {
+            handleSignClosure(closureApprovalLevel, 'rejected', comments);
+            setShowClosureApprovalModal(false);
+          }}
+          onClose={() => setShowClosureApprovalModal(false)}
+        />
       )}
     </div>
   );

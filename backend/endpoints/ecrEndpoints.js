@@ -1,5 +1,6 @@
 const { query, pool } = require('../config/database');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { logECRAction, getECRAuditLog: fetchECRAuditLog } = require('../utils/ecrAuditLog');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -153,6 +154,9 @@ async function getECRById(req, res) {
       impactAnalysis: rawRow.impact_analysis,
       validationEvidence: rawRow.validation_evidence,
       closureSignatures: rawRow.closure_signatures,
+      closureApprovalHistory: rawRow.closure_approval_history || [],
+      closureApprovalStatus: rawRow.closure_approval_status || 'draft',
+      closureType: rawRow.closure_type || null,
       rejectionSignatures: rawRow.rejection_signatures || {},
       ppapStatus: rawRow.ppap_status_detail,
       approvalHistory: rawRow.approval_history || [],
@@ -169,13 +173,30 @@ async function getECRById(req, res) {
         totalCost: 0,
         totalSavings: 0,
         netImpact: 0
-      }
+      },
+      // ECR-2 Parts selection fields - preserve as-is
+      selectedParts: rawRow.selected_parts || [],
+      selectedProjects: rawRow.selected_projects || [],
+      // Date fields - ensure correct format for HTML date input (YYYY-MM-DD)
+      plannedAdoptionDate: rawRow.planned_adoption_date
+        ? (typeof rawRow.planned_adoption_date === 'string'
+            ? rawRow.planned_adoption_date.split('T')[0]
+            : new Date(rawRow.planned_adoption_date).toISOString().split('T')[0])
+        : ''
     };
 
     const ecr = transformToCamelCase(rawRow);
 
     // Restore preserved JSONB fields (override the transformed ones)
     Object.assign(ecr, preservedFields);
+
+    // Build selectedClient object for frontend (ECR-2 needs {id, name} not just clientId)
+    if (rawRow.client_id) {
+      ecr.selectedClient = {
+        id: rawRow.client_id,
+        name: rawRow.client_name || ''
+      };
+    }
 
     // Convert change_category (string) to changeCategories (array) for frontend
     if (ecr.changeCategory) {
@@ -411,6 +432,9 @@ async function createECRReport(req, res) {
 
     console.log(`✅ ECR report created: ${ecrNumber} (ID: ${newECR.id})`);
 
+    const creatorName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    logECRAction({ ecrId: newECR.id, actionType: 'created', actionCategory: 'report', userId: req.user?.id, userName: creatorName, description: `ECR creado: ${ecrNumber}` });
+
     res.status(201).json({
       success: true,
       message: 'ECR report created successfully',
@@ -439,6 +463,24 @@ async function updateECRReport(req, res) {
     console.log(`🔄 Updating ECR report ID: ${id}`);
 
     await client.query('BEGIN');
+
+    // Fetch current values for change detection
+    const prevResult = await client.query(
+      `SELECT change_title, change_description, change_type, priority, status,
+              trial_plan, implementation_plan, closure_notes, lessons_learned,
+              before_condition_description, after_condition_description,
+              isir_first_article, initial_scrap, process_stability, cpk_post_change,
+              released_revisions, dms_update, traceability_evidence, affected_parts,
+              ppap_status, detected_risks, applied_improvements,
+              requestor_name, requestor_department, requestor_email, requestor_phone,
+              adoption_lot_number, rejection_reason, planned_adoption_date, effective_date,
+              requires_closure_audit,
+              selected_parts, affected_documents, review_board, validation_teams,
+              involved_areas, validation_areas, impact_analysis, risk_assessment,
+              financial_impact, change_attachments, validation_actions
+       FROM ecr_reports WHERE id = $1`, [id]
+    );
+    const prev = prevResult.rows[0] || {};
 
     const {
       changeTitle,
@@ -654,11 +696,21 @@ async function updateECRReport(req, res) {
       updates.push(`closure_reason = $${paramIndex++}`);
       values.push(req.body.closureReason || null);
     }
+    // Closure type fields (for close as rejected flow)
+    if (req.body.closureType !== undefined) {
+      updates.push(`closure_type = $${paramIndex++}`);
+      values.push(req.body.closureType || null);
+    }
+    if (req.body.rejectionReason !== undefined) {
+      updates.push(`rejection_reason = $${paramIndex++}`);
+      values.push(req.body.rejectionReason || null);
+    }
     if (currentStage !== undefined) {
       updates.push(`current_stage = $${paramIndex++}`);
       values.push(currentStage);
     }
-    if (clientId !== undefined) {
+    // Only update client_id if explicitly provided (not null from failed frontend state)
+    if (clientId !== undefined && clientId !== null) {
       updates.push(`client_id = $${paramIndex++}`);
       values.push(clientId);
     }
@@ -731,19 +783,31 @@ async function updateECRReport(req, res) {
     }
     if (req.body.initialScrap !== undefined) {
       updates.push(`initial_scrap = $${paramIndex++}`);
-      values.push(req.body.initialScrap);
+      values.push(req.body.initialScrap !== '' ? parseFloat(req.body.initialScrap) : null);
     }
     if (req.body.processStability !== undefined) {
       updates.push(`process_stability = $${paramIndex++}`);
-      values.push(req.body.processStability);
+      values.push(req.body.processStability !== '' ? parseFloat(req.body.processStability) : null);
+    }
+    if (req.body.cpPostChange !== undefined) {
+      updates.push(`cp_post_change = $${paramIndex++}`);
+      values.push(req.body.cpPostChange !== '' ? parseFloat(req.body.cpPostChange) : null);
     }
     if (req.body.cpkPostChange !== undefined) {
       updates.push(`cpk_post_change = $${paramIndex++}`);
-      values.push(req.body.cpkPostChange);
+      values.push(req.body.cpkPostChange !== '' ? parseFloat(req.body.cpkPostChange) : null);
     }
     if (req.body.productionEvidence !== undefined) {
       updates.push(`production_evidence = $${paramIndex++}`);
       values.push(JSON.stringify(req.body.productionEvidence));
+    }
+    if (req.body.productionJudgment !== undefined) {
+      updates.push(`production_judgment = $${paramIndex++}`);
+      values.push(req.body.productionJudgment);
+    }
+    if (req.body.productionComments !== undefined) {
+      updates.push(`production_comments = $${paramIndex++}`);
+      values.push(req.body.productionComments);
     }
     if (req.body.releasedRevisions !== undefined) {
       updates.push(`released_revisions = $${paramIndex++}`);
@@ -841,6 +905,14 @@ async function updateECRReport(req, res) {
     if (req.body.requiresClosureAudit !== undefined) {
       updates.push(`requires_closure_audit = $${paramIndex++}`);
       values.push(req.body.requiresClosureAudit);
+    }
+    if (req.body.closureApprovalHistory !== undefined) {
+      updates.push(`closure_approval_history = $${paramIndex++}`);
+      values.push(JSON.stringify(req.body.closureApprovalHistory));
+    }
+    if (req.body.closureApprovalStatus !== undefined) {
+      updates.push(`closure_approval_status = $${paramIndex++}`);
+      values.push(req.body.closureApprovalStatus);
     }
 
     // Always update updated_at
@@ -945,6 +1017,8 @@ async function updateECRReport(req, res) {
       impactAnalysis: rawRow.impact_analysis,
       validationEvidence: rawRow.validation_evidence,
       closureSignatures: rawRow.closure_signatures,
+      closureApprovalHistory: rawRow.closure_approval_history || [],
+      closureApprovalStatus: rawRow.closure_approval_status || 'draft',
       rejectionSignatures: rawRow.rejection_signatures || {},
       ppapStatus: rawRow.ppap_status_detail,
       approvalHistory: rawRow.approval_history || [],
@@ -977,6 +1051,89 @@ async function updateECRReport(req, res) {
     };
 
     console.log(`✅ ECR report updated: ${updatedECR.ecrNumber}`);
+
+    const updaterName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    const stageLabel = req.body._auditStageLabel || updatedECR.currentStage || null;
+
+    // Detect field-level changes
+    const normalize = (v) => (v === null || v === undefined || v === '') ? '' : String(v).trim();
+
+    const scalarFields = {
+      change_title:                  ['Título',                   changeTitle],
+      change_description:            ['Descripción del cambio',   changeDescription],
+      change_type:                   ['Tipo de cambio',           changeType],
+      priority:                      ['Prioridad',                priority],
+      trial_plan:                    ['Plan de prueba',           trialPlan],
+      implementation_plan:           ['Plan de implementación',   implementationPlan],
+      closure_notes:                 ['Notas de cierre',          closureNotes],
+      lessons_learned:               ['Lecciones aprendidas',     lessonsLearned],
+      before_condition_description:  ['Condición antes',          beforeConditionDescription],
+      after_condition_description:   ['Condición después',        afterConditionDescription],
+      isir_first_article:            ['ISIR / First Article',     req.body.isirFirstArticle],
+      initial_scrap:                 ['Scrap inicial',            req.body.initialScrap],
+      process_stability:             ['Estabilidad del proceso',  req.body.processStability],
+      cp_post_change:                ['CP post-cambio',           req.body.cpPostChange],
+      cpk_post_change:               ['CPK post-cambio',          req.body.cpkPostChange],
+      released_revisions:            ['Revisiones liberadas',     req.body.releasedRevisions],
+      dms_update:                    ['Actualización DMS',        req.body.dmsUpdate],
+      traceability_evidence:         ['Evidencia de trazabilidad',req.body.traceabilityEvidence],
+      affected_parts:                ['Partes afectadas',         req.body.affectedParts],
+      ppap_status:                   ['Estatus PPAP',             req.body.ppapStatus],
+      detected_risks:                ['Riesgos detectados',       req.body.detectedRisks],
+      applied_improvements:          ['Mejoras aplicadas',        req.body.appliedImprovements],
+      requestor_name:                ['Solicitante',              requestorName],
+      requestor_department:          ['Departamento',             requestorDepartment],
+      requestor_email:               ['Email solicitante',        requestorEmail],
+      requestor_phone:               ['Teléfono solicitante',     requestorPhone],
+      adoption_lot_number:           ['Núm. lote adopción',       req.body.adoptionLotNumber],
+      rejection_reason:              ['Motivo de rechazo',        req.body.rejectionReason],
+      planned_adoption_date:         ['Fecha adopción planeada',  req.body.plannedAdoptionDate],
+      effective_date:                ['Fecha efectiva',           req.body.effectiveDate],
+      requires_closure_audit:        ['Requiere auditoría cierre',req.body.requiresClosureAudit],
+    };
+
+    const jsonbFields = {
+      selected_parts:     ['Partes seleccionadas',       selectedParts],
+      affected_documents: ['Documentos afectados',       affectedDocuments],
+      review_board:       ['Review Board',               reviewBoard],
+      validation_teams:   ['Equipos de validación',      validationTeams],
+      involved_areas:     ['TFT involucradas',           involvedAreas],
+      validation_areas:   ['TFT de validación',          validationAreas],
+      impact_analysis:    ['Análisis de impacto',        impactAnalysis],
+      risk_assessment:    ['Evaluación de riesgo',       riskAssessment],
+      financial_impact:   ['Impacto financiero',         req.body.financialImpact],
+      change_attachments: ['Archivos adjuntos',          changeAttachments],
+      validation_actions: ['Acciones de validación',     validationActions],
+    };
+
+    const changedFields = [];
+
+    for (const [col, [label, newVal]] of Object.entries(scalarFields)) {
+      if (newVal === undefined) continue;
+      if (normalize(newVal) !== normalize(prev[col])) {
+        const oldDisplay = normalize(prev[col]) || '—';
+        const newDisplay = String(newVal).substring(0, 80);
+        changedFields.push(`${label}: "${oldDisplay}" → "${newDisplay}"`);
+      }
+    }
+
+    for (const [col, [label, newVal]] of Object.entries(jsonbFields)) {
+      if (newVal === undefined) continue;
+      const oldJson = JSON.stringify(prev[col] ?? null);
+      const newJson = JSON.stringify(newVal ?? null);
+      if (oldJson !== newJson) {
+        changedFields.push(`${label} actualizado`);
+      }
+    }
+
+    if (changedFields.length > 0) {
+      for (const change of changedFields) {
+        logECRAction({ ecrId: updatedECR.id, actionType: 'field_changed', actionCategory: 'report', sectionName: stageLabel, userId: req.user?.id, userName: updaterName, description: `Campo modificado — ${change}` });
+      }
+    } else {
+      const stageDesc = stageLabel ? ` — ${stageLabel}` : '';
+      logECRAction({ ecrId: updatedECR.id, actionType: 'saved', actionCategory: 'report', sectionName: stageLabel, userId: req.user?.id, userName: updaterName, description: `ECR guardado${stageDesc}` });
+    }
 
     res.json({
       success: true,
@@ -1023,6 +1180,9 @@ async function submitECRForValidation(req, res) {
     const updatedECR = transformToCamelCase(result.rows[0]);
 
     console.log(`✅ ECR ${updatedECR.ecrNumber} submitted for validation`);
+
+    const submitterName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    logECRAction({ ecrId: updatedECR.id, actionType: 'submitted_validation', actionCategory: 'report', userId: req.user?.id, userName: submitterName, description: 'ECR enviado a validación' });
 
     res.json({
       success: true,
@@ -1073,6 +1233,9 @@ async function closeECR(req, res) {
     const closedECR = transformToCamelCase(result.rows[0]);
 
     console.log(`✅ ECR ${closedECR.ecrNumber} closed successfully`);
+
+    const closerName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    logECRAction({ ecrId: closedECR.id, actionType: 'closed', actionCategory: 'report', userId: req.user?.id, userName: closerName, description: 'ECR cerrado' });
 
     res.json({
       success: true,
@@ -1196,6 +1359,10 @@ async function uploadECREvidence(req, res) {
     }));
 
     console.log(`✅ Uploaded ${files.length} file(s) for ECR ${id}`);
+
+    const uploaderName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    const fileNames = files.map(f => f.originalName).join(', ');
+    logECRAction({ ecrId: parseInt(id), actionType: 'file_uploaded', actionCategory: 'file', userId: req.user?.id, userName: uploaderName, description: `Archivo(s) subido(s): ${fileNames}`, newValue: { files: files.map(f => f.originalName) } });
 
     res.json({
       success: true,
@@ -1403,6 +1570,9 @@ async function saveClosureAuditItems(req, res) {
       }
     }
 
+    const saverName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    logECRAction({ ecrId: parseInt(id), actionType: 'closure_items_saved', actionCategory: 'closure', sectionName: 'ecr-4', userId: req.user?.id, userName: saverName, description: `Items de auditoría ECR-4 guardados (${items?.length || 0} items)` });
+
     res.json({ success: true, message: 'Closure audit items saved' });
   } catch (error) {
     console.error('Error saving closure audit items:', error);
@@ -1419,6 +1589,9 @@ async function deleteClosureAuditItem(req, res) {
       DELETE FROM ecr_closure_audit_items
       WHERE id = $1 AND ecr_id = $2 AND sent_to_audit = false
     `, [itemId, id]);
+
+    const deleterName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    logECRAction({ ecrId: parseInt(id), actionType: 'closure_item_deleted', actionCategory: 'closure', sectionName: 'ecr-4', userId: req.user?.id, userName: deleterName, description: `Item de auditoría eliminado (ID: ${itemId})` });
 
     res.json({ success: true, message: 'Item deleted' });
   } catch (error) {
@@ -1445,6 +1618,9 @@ async function uploadClosureAuditItemFile(req, res) {
       ) VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `, [itemId, req.file.originalname, fileUrl, req.file.mimetype, userId]);
+
+    const uploaderName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    logECRAction({ ecrId: parseInt(id), actionType: 'closure_file_uploaded', actionCategory: 'file', sectionName: 'ecr-4', userId: req.user?.id, userName: uploaderName, description: `Archivo subido en item ECR-4: ${req.file.originalname}` });
 
     res.json({
       success: true,
@@ -1476,6 +1652,10 @@ async function deleteClosureAuditItemFile(req, res) {
 
     await query('DELETE FROM ecr_closure_audit_item_files WHERE id = $1', [fileId]);
 
+    const delName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    const deletedFileName = fileResult.rows[0]?.file_url?.split('/').pop() || fileId;
+    logECRAction({ ecrId: parseInt(req.params.id), actionType: 'closure_file_deleted', actionCategory: 'file', sectionName: 'ecr-4', userId: req.user?.id, userName: delName, description: `Archivo eliminado de item ECR-4: ${deletedFileName}` });
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting closure audit file:', error);
@@ -1483,15 +1663,125 @@ async function deleteClosureAuditItemFile(req, res) {
   }
 }
 
+// POST /ecr/:id/closure-audit-items/:itemId/resend
+async function resendClosureAuditItem(req, res) {
+  const { itemId } = req.params;
+  const { closureNotes } = req.body;
+  const userId = req.user?.id;
+  const userName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : '';
+
+  try {
+    // Get current item state
+    const itemResult = await query(`
+      SELECT * FROM ecr_closure_audit_items WHERE id = $1
+    `, [itemId]);
+
+    if (!itemResult.rows.length) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    const item = itemResult.rows[0];
+    const currentRound = item.audit_round || 1;
+
+    // Save current state to history
+    const savedJudgment = item.auditor_judgment || item.leader_judgment || '';
+    await query(`
+      INSERT INTO ecr_closure_audit_history (
+        ecr_closure_audit_item_id, audit_round,
+        auditor_judgment, auditor_comments,
+        audited_by, audited_by_name, verification_date,
+        check_item, leader_comments, due_date,
+        closed_at, closed_by, closure_notes
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),$11,$12)
+    `, [
+      itemId, currentRound,
+      savedJudgment, item.auditor_comments || '',
+      item.audited_by || userId, item.audited_by_name || userName,
+      item.verification_date || new Date(),
+      item.check_item || '', item.comments || '', item.due_date || null,
+      userId, closureNotes || `Re-enviado por juicio ${savedJudgment}`
+    ]);
+
+    // Increment round, reset auditor fields
+    const newRound = currentRound + 1;
+    await query(`
+      UPDATE ecr_closure_audit_items SET
+        audit_round = $1,
+        auditor_judgment = '', auditor_comments = '',
+        auditor_completed = false,
+        audited_by = NULL, audited_by_name = NULL, verification_date = NULL,
+        sent_to_audit = true,
+        updated_at = NOW()
+      WHERE id = $2
+    `, [newRound, itemId]);
+
+    logECRAction({ ecrId: parseInt(req.params.id), actionType: 'closure_item_resent', actionCategory: 'closure', sectionName: 'ecr-4', userId, userName, description: `Item re-enviado a auditoría (ronda ${newRound})` });
+
+    res.json({ success: true, newRound });
+  } catch (error) {
+    console.error('Error resending closure audit item:', error);
+    res.status(500).json({ success: false, message: 'Error resending item' });
+  }
+}
+
 // GET /ecr/:id/closure-audit-items/:itemId/history
+async function revertClosureAuditItem(req, res) {
+  const { itemId } = req.params;
+  const { reason } = req.body;
+  const userId = req.user?.id;
+  const userName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : '';
+
+  try {
+    const itemResult = await query(`SELECT * FROM ecr_closure_audit_items WHERE id = $1`, [itemId]);
+    if (!itemResult.rows.length) return res.status(404).json({ success: false, message: 'Item not found' });
+
+    const item = itemResult.rows[0];
+    const savedJudgment = item.auditor_judgment || item.leader_judgment || '';
+
+    await query(`
+      INSERT INTO ecr_closure_audit_history (
+        ecr_closure_audit_item_id, audit_round,
+        auditor_judgment, auditor_comments,
+        audited_by, audited_by_name, verification_date,
+        check_item, leader_comments, due_date,
+        closed_at, closed_by, closure_notes
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),$11,$12)
+    `, [
+      itemId, item.audit_round || 1,
+      savedJudgment, item.auditor_comments || '',
+      item.audited_by || userId, item.audited_by_name || userName,
+      item.verification_date || new Date(),
+      item.check_item || '', item.comments || '', item.due_date || null,
+      userId, reason || 'Revertido por administrador'
+    ]);
+
+    await query(`
+      UPDATE ecr_closure_audit_items SET
+        auditor_completed = false,
+        updated_at = NOW()
+      WHERE id = $1
+    `, [itemId]);
+
+    logECRAction({ ecrId: parseInt(req.params.id), actionType: 'closure_item_reverted', actionCategory: 'closure', sectionName: 'ecr-4', userId, userName, description: `Item revertido por admin. Motivo: ${reason || 'Sin motivo'}` });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error reverting closure audit item:', error);
+    res.status(500).json({ success: false, message: 'Error reverting item' });
+  }
+}
+
 async function getClosureAuditItemHistory(req, res) {
   const { itemId } = req.params;
 
   try {
     const result = await query(`
-      SELECT * FROM ecr_closure_audit_history
-      WHERE ecr_closure_audit_item_id = $1
-      ORDER BY audit_round DESC
+      SELECT h.*,
+        closer.first_name || ' ' || closer.last_name AS closed_by_name
+      FROM ecr_closure_audit_history h
+      LEFT JOIN users closer ON h.closed_by = closer.id
+      WHERE h.ecr_closure_audit_item_id = $1
+      ORDER BY h.audit_round DESC
     `, [itemId]);
 
     // Get current round from item
@@ -1507,6 +1797,17 @@ async function getClosureAuditItemHistory(req, res) {
   } catch (error) {
     console.error('Error fetching audit history:', error);
     res.status(500).json({ success: false, message: 'Error fetching history' });
+  }
+}
+
+async function getECRAuditLog(req, res) {
+  const { id } = req.params;
+  try {
+    const entries = await fetchECRAuditLog(id);
+    res.json({ success: true, auditLog: entries.map(e => transformToCamelCase(e)) });
+  } catch (error) {
+    console.error('Error fetching ECR audit log:', error);
+    res.status(500).json({ success: false, message: 'Error fetching audit log' });
   }
 }
 
@@ -1527,6 +1828,9 @@ module.exports = {
   deleteClosureAuditItem,
   uploadClosureAuditItemFile,
   deleteClosureAuditItemFile,
+  resendClosureAuditItem,
+  revertClosureAuditItem,
   getClosureAuditItemHistory,
-  closureAuditUpload
+  closureAuditUpload,
+  getECRAuditLog
 };

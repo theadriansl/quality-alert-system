@@ -31,7 +31,10 @@ const authenticateToken = async (req, res, next) => {
       req.user = {
         id: result.rows[0].id,
         email: result.rows[0].email,
-        role: result.rows[0].system_role
+        role: result.rows[0].system_role,
+        firstName: result.rows[0].first_name,
+        lastName: result.rows[0].last_name,
+        systemRole: result.rows[0].system_role
       };
 
       // Check write permissions
@@ -46,7 +49,7 @@ const authenticateToken = async (req, res, next) => {
   }
 
   // Verificar el token JWT real
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, decoded) => {
+  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', async (err, decoded) => {
     if (err) {
       console.log('JWT verification error:', err.message);
       return res.status(403).json({
@@ -55,12 +58,33 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // El token es válido, agregar la info del usuario a req
-    req.user = {
-      id: decoded.userId,
-      email: decoded.email,
-      role: decoded.role
-    };
+    // Get full user data from database
+    try {
+      const result = await query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
+      if (result.rows.length > 0) {
+        req.user = {
+          id: result.rows[0].id,
+          email: result.rows[0].email,
+          role: result.rows[0].system_role,
+          firstName: result.rows[0].first_name,
+          lastName: result.rows[0].last_name,
+          systemRole: result.rows[0].system_role
+        };
+      } else {
+        req.user = {
+          id: decoded.userId,
+          email: decoded.email,
+          role: decoded.role
+        };
+      }
+    } catch (dbErr) {
+      console.error('Error fetching user data:', dbErr);
+      req.user = {
+        id: decoded.userId,
+        email: decoded.email,
+        role: decoded.role
+      };
+    }
 
     // Check write permissions
     checkWritePermission(req, res, next);
