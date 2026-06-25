@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Building2, Plus, Trash2, FileText, Upload, Target } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const CreateClient = () => {
   const navigate = useNavigate();
   const { clientId } = useParams();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const isEditMode = !!clientId;
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEditMode);
@@ -251,24 +253,29 @@ const CreateClient = () => {
                 : 'Complete el formulario para dar de alta un nuevo cliente'}
             </p>
           </div>
-          <button
-            onClick={handleBack}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 20px',
-              backgroundColor: t.bgCard,
-              border: `1px solid ${t.border}`,
-              borderRadius: '6px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              color: t.text
-            }}
-          >
-            <ArrowLeft size={16} />
-            Volver
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
+            <button
+              onClick={handleBack}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                backgroundColor: t.bgCard,
+                border: `1px solid ${t.border}`,
+                borderRadius: '6px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                color: t.text
+              }}
+            >
+              <ArrowLeft size={16} />
+              Volver
+            </button>
+          </div>
         </div>
       </div>
 

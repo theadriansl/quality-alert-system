@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isUserAdmin } from '../utils/permissions';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const DefectConfig = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // State
   const [loading, setLoading] = useState(true);
@@ -15,8 +17,13 @@ const DefectConfig = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // Active tab
-  const [activeTab, setActiveTab] = useState('severities');
+  // Active tab - read from URL hash if present
+  const getInitialTab = () => {
+    const hash = window.location.hash.replace('#', '');
+    const validTabs = ['severities', 'shifts', 'dispositions', 'validators', 'hospitalUsers'];
+    return validTabs.includes(hash) ? hash : 'severities';
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
 
   // Catalog data
   const [severities, setSeverities] = useState([]);
@@ -25,7 +32,11 @@ const DefectConfig = () => {
   const [shifts, setShifts] = useState([]);
   const [dispositions, setDispositions] = useState([]);
   const [qarValidators, setQarValidators] = useState([]);
+  const [hospitalUsers, setHospitalUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [userFilter, setUserFilter] = useState(''); // Filtro para QAR y Hospital users
 
   // Edit modal
   const [showModal, setShowModal] = useState(false);
@@ -45,17 +56,18 @@ const DefectConfig = () => {
   const loadCatalogData = useCallback(async () => {
     try {
       setLoading(true);
-      const [sevRes, staRes, stgRes, shfRes, disRes, userRes] = await Promise.all([
+      const [sevRes, staRes, stgRes, shfRes, disRes, userRes, deptRes] = await Promise.all([
         fetch(`${API_BASE_URL}/inspection-catalogs/severities?includeInactive=true`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/inspection-catalogs/stations?includeInactive=true`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/inspection-catalogs/stages?includeInactive=true`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/inspection-catalogs/shifts?includeInactive=true`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/inspection-catalogs/dispositions?includeInactive=true`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/auth/me`, { headers: getAuthHeaders() })
+        fetch(`${API_BASE_URL}/auth/me`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE_URL}/departments?flat=true`, { headers: getAuthHeaders() })
       ]);
 
-      const [sevData, staData, stgData, shfData, disData, userData] = await Promise.all([
-        sevRes.json(), staRes.json(), stgRes.json(), shfRes.json(), disRes.json(), userRes.json()
+      const [sevData, staData, stgData, shfData, disData, userData, deptData] = await Promise.all([
+        sevRes.json(), staRes.json(), stgRes.json(), shfRes.json(), disRes.json(), userRes.json(), deptRes.json()
       ]);
 
       setSeverities(sevData.items || []);
@@ -63,13 +75,22 @@ const DefectConfig = () => {
       setStages(stgData.items || []);
       setShifts(shfData.items || []);
       setDispositions(disData.items || []);
+      setDepartments(deptData.departments || []);
       setCurrentUser(userData.user || null);
 
-      // Load QAR validators if admin
+      // Load QAR validators and Hospital users if admin
       if (isUserAdmin(userData.user)) {
-        const valRes = await fetch(`${API_BASE_URL}/users/qar-validators`, { headers: getAuthHeaders() });
-        const valData = await valRes.json();
+        const [valRes, usersRes, hospRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/users/qar-validators`, { headers: getAuthHeaders() }),
+          fetch(`${API_BASE_URL}/users/list`, { headers: getAuthHeaders() }),
+          fetch(`${API_BASE_URL}/defects-v2/authorized-users`, { headers: getAuthHeaders() })
+        ]);
+        const [valData, usersData, hospData] = await Promise.all([
+          valRes.json(), usersRes.json(), hospRes.json()
+        ]);
         setQarValidators(valData.users || []);
+        setAllUsers(usersData.users || []);
+        setHospitalUsers(hospData.users || []);
       }
     } catch (err) {
       setError('Error cargando catálogos');
@@ -86,23 +107,23 @@ const DefectConfig = () => {
   const getCurrentItems = () => {
     switch (activeTab) {
       case 'severities': return severities;
-      case 'stations': return stations;
-      case 'stages': return stages;
       case 'shifts': return shifts;
       case 'dispositions': return dispositions;
       case 'qarValidators': return qarValidators;
+      case 'hospitalUsers': return hospitalUsers;
       default: return [];
     }
   };
 
-  // Tab configuration
+  // Tab configuration (Estaciones y Etapas movidos a /defect-admin)
   const tabs = [
     { id: 'severities', label: 'Severidades', icon: '' },
-    { id: 'stations', label: 'Estaciones', icon: '' },
-    { id: 'stages', label: 'Etapas', icon: '' },
     { id: 'shifts', label: 'Turnos', icon: '' },
     { id: 'dispositions', label: 'Disposiciones', icon: '' },
-    ...(isUserAdmin(currentUser) ? [{ id: 'qarValidators', label: 'Validadores QAR', icon: '' }] : [])
+    ...(isUserAdmin(currentUser) ? [
+      { id: 'qarValidators', label: 'Validadores QAR', icon: '' },
+      { id: 'hospitalUsers', label: 'Usuarios Hospital', icon: '' }
+    ] : [])
   ];
 
   // Handle add new item
@@ -112,10 +133,6 @@ const DefectConfig = () => {
     switch (activeTab) {
       case 'severities':
         setFormData({ ...defaultData, color: '#6b7280', qarThresholdCount: 5, qarThresholdHours: 8 });
-        break;
-      case 'stations':
-      case 'stages':
-        setFormData({ ...defaultData, description: '' });
         break;
       case 'shifts':
         setFormData({ ...defaultData, startTime: '06:00', endTime: '14:00' });
@@ -149,10 +166,16 @@ const DefectConfig = () => {
 
       const method = editingItem ? 'PUT' : 'POST';
 
+      // Para stages, generar código automático basado en el nombre si no existe
+      let dataToSend = { ...formData };
+      if (activeTab === 'stages' && !dataToSend.code) {
+        dataToSend.code = formData.name.toUpperCase().replace(/\s+/g, '_').substring(0, 50);
+      }
+
       const response = await fetch(url, {
         method,
         headers: getAuthHeaders(),
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSend)
       });
 
       const data = await response.json();
@@ -216,10 +239,64 @@ const DefectConfig = () => {
       setSuccess(data.message);
       setTimeout(() => setSuccess(null), 3000);
 
-      // Reload validators
-      const valRes = await fetch(`${API_BASE_URL}/users/qar-validators`, { headers: getAuthHeaders() });
-      const valData = await valRes.json();
+      // Reload validators and allUsers
+      const [valRes, usersRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/users/qar-validators`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE_URL}/users/list`, { headers: getAuthHeaders() })
+      ]);
+      const [valData, usersData] = await Promise.all([valRes.json(), usersRes.json()]);
       setQarValidators(valData.users || []);
+      setAllUsers(usersData.users || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Load hospital users (global, sin cliente)
+  const loadHospitalUsers = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/defects-v2/authorized-users`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      setHospitalUsers(data.users || []);
+    } catch (err) {
+      console.error('Error loading hospital users:', err);
+      setHospitalUsers([]);
+    }
+  };
+
+  // Toggle hospital user permission (global, sin cliente)
+  const handleToggleHospitalPermission = async (userId, permission) => {
+    const existingUser = hospitalUsers.find(u => u.userId === userId) || {};
+    const currentPerms = {
+      canRepair: existingUser.canRepair || false,
+      canRelease: existingUser.canRelease || false,
+      canApproveRepair: existingUser.canApproveRepair || false,
+      canApproveRelease: existingUser.canApproveRelease || false
+    };
+    // Toggle the specific permission
+    currentPerms[permission] = !currentPerms[permission];
+
+    try {
+      setSaving(true);
+      const response = await fetch(`${API_BASE_URL}/defects-v2/authorized-users`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          userId,
+          ...currentPerms
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Error actualizando permisos');
+      }
+
+      setSuccess('Permisos actualizados');
+      setTimeout(() => setSuccess(null), 2000);
+      loadHospitalUsers();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -303,7 +380,7 @@ const DefectConfig = () => {
     },
     tabActive: {
       color: t.accent,
-      borderBottomColor: t.accent
+      borderBottom: `2px solid ${t.accent}`
     },
     card: {
       backgroundColor: t.bgCard,
@@ -496,15 +573,14 @@ const DefectConfig = () => {
   const renderTable = () => {
     const items = getCurrentItems();
 
-    if (items.length === 0) {
+    // Los tabs de usuarios tienen su propio manejo de estado vacío
+    if (items.length === 0 && activeTab !== 'qarValidators' && activeTab !== 'hospitalUsers') {
       return (
         <div style={styles.emptyState}>
-          <p>{activeTab === 'qarValidators' ? 'No hay usuarios en el sistema.' : 'No hay items configurados.'}</p>
-          {activeTab !== 'qarValidators' && (
-            <button style={styles.addButton} onClick={handleAddNew}>
-              + Agregar primer item
-            </button>
-          )}
+          <p>No hay items configurados.</p>
+          <button style={styles.addButton} onClick={handleAddNew}>
+            + Agregar primer item
+          </button>
         </div>
       );
     }
@@ -666,51 +742,231 @@ const DefectConfig = () => {
         );
 
       case 'qarValidators':
+        // Si no hay usuarios cargados, mostrar mensaje
+        if (allUsers.length === 0) {
+          return (
+            <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+              No hay usuarios en el sistema.
+            </div>
+          );
+        }
+
+        // Usar allUsers y merge con qarValidators para mostrar todos los usuarios
+        const qarUsersWithStatus = allUsers.map(user => {
+          const validator = qarValidators.find(v => v.id === user.id);
+          return {
+            ...user,
+            canValidateQar: validator ? validator.canValidateQar : false
+          };
+        });
+
+        const filteredQarUsers = qarUsersWithStatus.filter(item => {
+          if (!userFilter) return true;
+          const search = userFilter.toLowerCase();
+          const fullName = `${item.firstName || ''} ${item.lastName || ''}`.toLowerCase();
+          return fullName.includes(search) ||
+                 (item.email || '').toLowerCase().includes(search) ||
+                 (item.department || '').toLowerCase().includes(search);
+        });
+
         return (
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Usuario</th>
-                <th style={styles.th}>Departamento</th>
-                <th style={styles.th}>Rol</th>
-                <th style={styles.th}>Puede Validar QAR</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id}>
-                  <td style={styles.td}>
-                    <strong>{item.firstName} {item.lastName}</strong>
-                    <div style={{ fontSize: '11px', color: t.textMuted }}>{item.email}</div>
-                  </td>
-                  <td style={styles.td}>{item.department || '-'}</td>
-                  <td style={styles.td}>{item.role || '-'}</td>
-                  <td style={styles.td}>
-                    <button
-                      style={{
-                        ...styles.actionButton,
-                        backgroundColor: item.canValidateQar ? '#dcfce7' : '#fee2e2',
-                        color: item.canValidateQar ? '#166534' : '#B00020',
-                        minWidth: '80px'
-                      }}
-                      onClick={() => handleToggleValidator(item)}
-                    >
-                      {item.canValidateQar ? ' Sí' : ' No'}
-                    </button>
-                  </td>
+          <div>
+            {/* Filtro de búsqueda */}
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ fontWeight: '500' }}>Buscar:</label>
+              <input
+                type="text"
+                style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, minWidth: '300px', backgroundColor: t.bgPanel, color: t.text }}
+                placeholder="Filtrar por nombre, email o departamento..."
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+              />
+              {userFilter && (
+                <button
+                  style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, cursor: 'pointer', color: t.text }}
+                  onClick={() => setUserFilter('')}
+                >
+                  Limpiar
+                </button>
+              )}
+              <span style={{ color: t.textMuted, fontSize: '13px' }}>
+                {filteredQarUsers.length} de {qarUsersWithStatus.length} usuarios
+              </span>
+            </div>
+
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Usuario</th>
+                  <th style={styles.th}>Departamento</th>
+                  <th style={styles.th}>Rol</th>
+                  <th style={styles.th}>Puede Validar QAR</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredQarUsers.map(item => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>
+                      <strong>{item.firstName} {item.lastName}</strong>
+                      <div style={{ fontSize: '11px', color: t.textMuted }}>{item.email}</div>
+                    </td>
+                    <td style={styles.td}>{item.department || '-'}</td>
+                    <td style={styles.td}>{item.role || '-'}</td>
+                    <td style={styles.td}>
+                      <button
+                        style={{
+                          ...styles.actionButton,
+                          backgroundColor: item.canValidateQar ? '#dcfce7' : '#fee2e2',
+                          color: item.canValidateQar ? '#166534' : '#B00020',
+                          minWidth: '80px'
+                        }}
+                        onClick={() => handleToggleValidator(item)}
+                      >
+                        {item.canValidateQar ? ' Sí' : ' No'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         );
 
-      default: // stations, stages
+      case 'hospitalUsers':
+        // Si no hay usuarios cargados, mostrar mensaje
+        if (allUsers.length === 0) {
+          return (
+            <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+              No hay usuarios en el sistema.
+            </div>
+          );
+        }
+
+        // Merge allUsers with hospitalUsers permissions (global, sin cliente)
+        const usersWithPermissions = allUsers.map(user => {
+          const perms = hospitalUsers.find(h => h.userId === user.id) || {};
+          return {
+            ...user,
+            canRepair: perms.canRepair || false,
+            canRelease: perms.canRelease || false,
+            canApproveRepair: perms.canApproveRepair || false,
+            canApproveRelease: perms.canApproveRelease || false
+          };
+        });
+
+        // Aplicar filtro
+        const filteredHospitalUsers = usersWithPermissions.filter(user => {
+          if (!userFilter) return true;
+          const search = userFilter.toLowerCase();
+          const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+          return fullName.includes(search) ||
+                 (user.email || '').toLowerCase().includes(search) ||
+                 (user.department || '').toLowerCase().includes(search);
+        });
+
+        const PermButton = ({ value, onClick, disabled }) => (
+          <button
+            style={{
+              ...styles.actionButton,
+              backgroundColor: value ? '#dcfce7' : '#f3f4f6',
+              color: value ? '#166534' : '#9ca3af',
+              minWidth: '40px',
+              opacity: disabled ? 0.5 : 1,
+              cursor: disabled ? 'not-allowed' : 'pointer'
+            }}
+            onClick={onClick}
+            disabled={disabled}
+          >
+            {value ? '✓' : '—'}
+          </button>
+        );
+
+        return (
+          <div>
+            {/* Filtro de búsqueda */}
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ fontWeight: '500' }}>Buscar:</label>
+              <input
+                type="text"
+                style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, minWidth: '300px', backgroundColor: t.bgPanel, color: t.text }}
+                placeholder="Filtrar por nombre, email o departamento..."
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+              />
+              {userFilter && (
+                <button
+                  style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, cursor: 'pointer', color: t.text }}
+                  onClick={() => setUserFilter('')}
+                >
+                  Limpiar
+                </button>
+              )}
+              <span style={{ color: t.textMuted, fontSize: '13px' }}>
+                {filteredHospitalUsers.length} de {usersWithPermissions.length} usuarios
+              </span>
+            </div>
+
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Usuario</th>
+                  <th style={styles.th}>Departamento</th>
+                  <th style={{ ...styles.th, textAlign: 'center' }}>Reparar</th>
+                  <th style={{ ...styles.th, textAlign: 'center' }}>Liberar</th>
+                  <th style={{ ...styles.th, textAlign: 'center' }}>Aprobar Rep.</th>
+                  <th style={{ ...styles.th, textAlign: 'center' }}>Aprobar Lib.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredHospitalUsers.map(user => (
+                  <tr key={user.id}>
+                    <td style={styles.td}>
+                      <strong>{user.firstName} {user.lastName}</strong>
+                      <div style={{ fontSize: '11px', color: t.textMuted }}>{user.email}</div>
+                    </td>
+                    <td style={styles.td}>{user.department || '-'}</td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                      <PermButton
+                        value={user.canRepair}
+                        onClick={() => handleToggleHospitalPermission(user.id, 'canRepair')}
+                        disabled={saving}
+                      />
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                      <PermButton
+                        value={user.canRelease}
+                        onClick={() => handleToggleHospitalPermission(user.id, 'canRelease')}
+                        disabled={saving}
+                      />
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                      <PermButton
+                        value={user.canApproveRepair}
+                        onClick={() => handleToggleHospitalPermission(user.id, 'canApproveRepair')}
+                        disabled={saving}
+                      />
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                      <PermButton
+                        value={user.canApproveRelease}
+                        onClick={() => handleToggleHospitalPermission(user.id, 'canApproveRelease')}
+                        disabled={saving}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+
+      default:
         return (
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>Nombre</th>
                 <th style={styles.th}>Código</th>
+                <th style={styles.th}>Nombre</th>
                 <th style={styles.th}>Descripción</th>
                 <th style={styles.th}>Estado</th>
                 <th style={styles.th}>Acciones</th>
@@ -719,8 +975,8 @@ const DefectConfig = () => {
             <tbody>
               {items.map(item => (
                 <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
-                  <td style={styles.td}><strong>{item.name}</strong></td>
                   <td style={styles.td}>{item.code}</td>
+                  <td style={styles.td}><strong>{item.name}</strong></td>
                   <td style={styles.td}>{item.description || '-'}</td>
                   <td style={styles.td}>
                     <span style={{ ...styles.badge, ...(item.isActive ? styles.badgeActive : styles.badgeInactive) }}>
@@ -913,7 +1169,7 @@ const DefectConfig = () => {
           </>
         );
 
-      default: // stations, stages
+      default:
         return (
           <>
             {commonFields}
@@ -962,9 +1218,14 @@ const DefectConfig = () => {
           <h1 style={styles.title}>Configuración de Inspección</h1>
           <p style={styles.subtitle}>Catálogos globales de la compañía</p>
         </div>
-        <button style={styles.backButton} onClick={() => navigate('/defect-capture')}>
-          Volver
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
+          <button style={styles.backButton} onClick={() => navigate('/defect-admin')}>
+            Volver a Admin
+          </button>
+        </div>
       </div>
 
       {/* Alerts */}
@@ -986,7 +1247,7 @@ const DefectConfig = () => {
           <button
             key={tab.id}
             style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : {}) }}
-            onClick={() => { setActiveTab(tab.id); setShowModal(false); }}
+            onClick={() => { setActiveTab(tab.id); setShowModal(false); setUserFilter(''); }}
           >
             <span>{tab.icon}</span>
             {tab.label}
@@ -1000,7 +1261,7 @@ const DefectConfig = () => {
           <span style={{ fontWeight: '500' }}>
             {getTabLabel()} ({getCurrentItems().length})
           </span>
-          {activeTab !== 'qarValidators' && (
+          {activeTab !== 'qarValidators' && activeTab !== 'hospitalUsers' && (
             <button style={styles.addButton} onClick={handleAddNew}>
               + Agregar
             </button>
@@ -1040,7 +1301,7 @@ const DefectConfig = () => {
               <button
                 style={{ ...styles.saveButton, opacity: saving ? 0.7 : 1 }}
                 onClick={handleSave}
-                disabled={saving || !formData.code || !formData.name}
+                disabled={saving || (activeTab !== 'stages' && !formData.code) || !formData.name}
               >
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>

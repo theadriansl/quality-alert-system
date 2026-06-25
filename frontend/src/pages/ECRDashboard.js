@@ -9,6 +9,7 @@ import {
   BarChart, Bar
 } from 'recharts';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // Default colors for subcomponents (outside main component)
 const DEFAULT_COLORS = {
@@ -40,20 +41,20 @@ const STATUS_COLORS = {
 };
 
 const PERIODS = [
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This Week' },
-  { value: 'month', label: 'This Month' },
-  { value: 'quarter', label: 'This Quarter' },
-  { value: 'year', label: 'This Year' },
-  { value: 'all', label: 'All Time' }
+  { value: 'today', label: 'Hoy' },
+  { value: 'week', label: 'Esta Semana' },
+  { value: 'month', label: 'Este Mes' },
+  { value: 'quarter', label: 'Este Trimestre' },
+  { value: 'year', label: 'Este Año' },
+  { value: 'all', label: 'Todo el Tiempo' }
 ];
 
 const STAGES = [
-  { id: 'ecr1', label: 'ECR-1', name: 'Change Request Board' },
-  { id: 'ecr2', label: 'ECR-2', name: 'Change Description' },
-  { id: 'ecr2b', label: 'ECR-2B', name: 'Impact Analysis' },
-  { id: 'ecr3', label: 'ECR-3', name: 'Validation & Implementation' },
-  { id: 'ecr4', label: 'ECR-4', name: 'Closure & Confirmation' }
+  { id: 'ecr1', label: 'ECR-1', name: 'Junta de Cambio' },
+  { id: 'ecr2', label: 'ECR-2', name: 'Descripción del Cambio' },
+  { id: 'ecr2b', label: 'ECR-2B', name: 'Análisis de Impacto' },
+  { id: 'ecr3', label: 'ECR-3', name: 'Validación e Implementación' },
+  { id: 'ecr4', label: 'ECR-4', name: 'Cierre y Confirmación' }
 ];
 
 const getPeriodDates = (period) => {
@@ -171,6 +172,7 @@ const ECRDashboard = () => {
 
   // Global Theme
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // Dynamic colors based on theme
   const COLORS = {
@@ -198,12 +200,17 @@ const ECRDashboard = () => {
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [ecrs, setEcrs] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('list');
   const [deleting, setDeleting] = useState(null);
-  const [period, setPeriod] = useState('all');
+  const [period, setPeriod] = useState(() => localStorage.getItem('ecr_dashboard_period') || 'month');
   const [clientId, setClientId] = useState('');
   const [department, setDepartment] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [clients, setClients] = useState([]);
+
+  useEffect(() => {
+    localStorage.setItem('ecr_dashboard_period', period);
+  }, [period]);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -244,20 +251,19 @@ const ECRDashboard = () => {
     let filtered = [...ecrs];
     if (clientId) filtered = filtered.filter(ecr => String(ecr.clientId) === String(clientId));
     if (department) filtered = filtered.filter(ecr => ecr.requestorDepartment === department);
+    if (statusFilter) filtered = filtered.filter(ecr => ecr.status === statusFilter);
     if (period !== 'all') {
       const { startDate, endDate } = getPeriodDates(period);
       if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
         filtered = filtered.filter(ecr => {
-          const ecrDate = new Date(ecr.createdAt);
-          return ecrDate >= start && ecrDate <= end;
+          // Compare dates as strings (YYYY-MM-DD) to avoid timezone issues
+          const ecrDateStr = ecr.createdAt ? ecr.createdAt.split('T')[0] : '';
+          return ecrDateStr >= startDate && ecrDateStr <= endDate;
         });
       }
     }
     return filtered;
-  }, [ecrs, clientId, department, period]);
+  }, [ecrs, clientId, department, statusFilter, period]);
 
   const loadClients = useCallback(async () => {
     try {
@@ -370,7 +376,11 @@ const ECRDashboard = () => {
             <div style={styles.themeSelector}>
               <ThemeSelector />
             </div>
-            <button style={styles.btnSecondary} onClick={() => navigate('/')}>Modules</button>
+            <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
+            <button style={styles.btnSecondary} onClick={() => navigate('/')}>{language === 'es' ? 'Módulos' : 'Modules'}</button>
+            <button style={styles.btnSecondary} onClick={() => navigate('/ecr-dashboard')}>Dashboard</button>
             <button style={styles.btnPrimary} onClick={() => navigate('/ecr-workflow')}>+ New ECR</button>
           </div>
         </div>
@@ -387,10 +397,20 @@ const ECRDashboard = () => {
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <select value={department} onChange={(e) => setDepartment(e.target.value)} style={styles.filterSelect}>
-            <option value="">All Departments</option>
+            <option value="">Todos los Departamentos</option>
             {departments.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
-          {loading && <span style={{ fontSize: '12px', color: COLORS.gray[400], alignSelf: 'center' }}>Loading...</span>}
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={styles.filterSelect}>
+            <option value="">Todos los Estados</option>
+            <option value="draft">📝 Borrador</option>
+            <option value="submitted">📤 Enviado</option>
+            <option value="pending_approval">⏳ Pend. Aprobación</option>
+            <option value="approved">✅ Aprobado</option>
+            <option value="pending_closure">📋 Pend. Cierre</option>
+            <option value="closed">🔒 Cerrado</option>
+            <option value="closed_rejected">❌ No Adoptable</option>
+          </select>
+          {loading && <span style={{ fontSize: '12px', color: COLORS.gray[400], alignSelf: 'center' }}>Cargando...</span>}
         </div>
 
         {error && (
@@ -399,173 +419,32 @@ const ECRDashboard = () => {
           </div>
         )}
 
-        {/* Tabs */}
-        <div style={styles.tabs}>
-          {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'list', label: 'ECR List' },
-            { id: 'config', label: 'Configuration' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : {}) }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <>
-            <div style={styles.kpiGrid}>
-              <KPICard title="Total ECRs" value={kpis.total || 0} color={COLORS.primary} />
-              <KPICard title="Open" value={kpis.open || 0} subtitle="Draft + Submitted" color={COLORS.warning} />
-              <KPICard title="In Process" value={kpis.submitted || 0} color={COLORS.primaryLight} />
-              <KPICard title="Approved" value={kpis.approved || 0} color={COLORS.success} />
-              <KPICard title="Rejected" value={kpis.rejected || 0} color={COLORS.danger} />
-            </div>
-
-            <div style={styles.chartsRow}>
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>
-                  <div style={{ ...styles.chartIndicator, backgroundColor: COLORS.primary }}></div>
-                  Monthly Trend
-                </div>
-                <div style={{ height: '280px' }}>
-                  {trends.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trends} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={COLORS.gray[200]} />
-                        <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} stroke={COLORS.gray[400]} />
-                        <YAxis tick={{ fontSize: 11 }} stroke={COLORS.gray[400]} />
-                        <Tooltip contentStyle={tooltipStyle} />
-                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                        <Line type="monotone" dataKey="created" stroke={COLORS.primary} name="Created" strokeWidth={2} dot={{ r: 3 }} />
-                        <Line type="monotone" dataKey="approved" stroke={COLORS.success} name="Approved" strokeWidth={2} dot={{ r: 3 }} />
-                        <Line type="monotone" dataKey="rejected" stroke={COLORS.danger} name="Rejected" strokeWidth={2} dot={{ r: 3 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div style={{ textAlign: 'center', color: COLORS.gray[400], paddingTop: '100px' }}>No trend data</div>
-                  )}
-                </div>
-              </div>
-
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>
-                  <div style={{ ...styles.chartIndicator, backgroundColor: COLORS.success }}></div>
-                  By Change Type
-                </div>
-                <div style={{ height: '280px' }}>
-                  {byType.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={byType} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2} dataKey="value" nameKey="name" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={{ stroke: COLORS.gray[400], strokeWidth: 1 }}>
-                          {byType.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={[COLORS.primary, COLORS.success, COLORS.warning, COLORS.danger, COLORS.gray[600]][index % 5]} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div style={{ textAlign: 'center', color: COLORS.gray[400], paddingTop: '100px' }}>No data</div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.chartsRow}>
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>
-                  <div style={{ ...styles.chartIndicator, backgroundColor: COLORS.warning }}></div>
-                  By Priority
-                </div>
-                <div style={{ height: '250px' }}>
-                  {byPriority.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={byPriority} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={COLORS.gray[200]} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke={COLORS.gray[400]} />
-                        <YAxis tick={{ fontSize: 11 }} stroke={COLORS.gray[400]} />
-                        <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="value" name="Count" radius={[4, 4, 0, 0]}>
-                          {byPriority.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={PRIORITY_COLORS[entry.name] || COLORS.gray[500]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div style={{ textAlign: 'center', color: COLORS.gray[400], paddingTop: '80px' }}>No data</div>
-                  )}
-                </div>
-              </div>
-
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>
-                  <div style={{ ...styles.chartIndicator, backgroundColor: COLORS.primary }}></div>
-                  Stage Adoption
-                </div>
-                <div style={styles.stagesGrid}>
-                  {STAGES.map(stage => (
-                    <AdoptionProgressBar key={stage.id} stage={stage} stats={adoption[stage.id]} />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.chartsRow3}>
-              <TopRankingList title="Top Clients" data={topClients} />
-              <TopRankingList title="Top Impact Areas" data={topAreas} />
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>Key Metrics</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${COLORS.gray[100]}` }}>
-                    <span style={{ fontSize: '12px', color: COLORS.gray[600] }}>Avg. Approval Days</span>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: COLORS.gray[900] }}>{(kpis.avgApprovalDays || 0).toFixed(1)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${COLORS.gray[100]}` }}>
-                    <span style={{ fontSize: '12px', color: COLORS.gray[600] }}>Effectiveness Rate</span>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: COLORS.success }}>{kpis.effectivenessRate || 0}%</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                    <span style={{ fontSize: '12px', color: COLORS.gray[600] }}>Closed</span>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: COLORS.gray[900] }}>{kpis.closed || 0}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
 
         {/* List Tab */}
         {activeTab === 'list' && (
           <div style={styles.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={styles.cardTitle}>ECR List</div>
-              <span style={{ fontSize: '12px', color: COLORS.gray[500] }}>{filteredECRs.length} of {ecrs.length} ECRs</span>
+              <div style={styles.cardTitle}>Lista de ECRs</div>
+              <span style={{ fontSize: '12px', color: COLORS.gray[500] }}>{filteredECRs.length} de {ecrs.length} ECRs</span>
             </div>
             {filteredECRs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: COLORS.gray[500] }}>
-                <p>No ECRs found</p>
-                <p style={{ fontSize: '12px', marginTop: '8px' }}>Create your first ECR by clicking "+ New ECR"</p>
+                <p>No se encontraron ECRs</p>
+                <p style={{ fontSize: '12px', marginTop: '8px' }}>Crea tu primer ECR haciendo clic en "+ New ECR"</p>
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
-                      <th style={styles.th}>ECR Number</th>
-                      <th style={styles.th}>Title</th>
-                      <th style={styles.th}>Client</th>
-                      <th style={styles.th}>Type</th>
-                      <th style={styles.th}>Priority</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={styles.th}>Created</th>
-                      {isAdmin && <th style={styles.th}>Actions</th>}
+                      <th style={styles.th}>Número ECR</th>
+                      <th style={styles.th}>Título</th>
+                      <th style={styles.th}>Cliente</th>
+                      <th style={styles.th}>Tipo</th>
+                      <th style={styles.th}>Prioridad</th>
+                      <th style={styles.th}>Estado</th>
+                      <th style={styles.th}>Creado</th>
+                      {isAdmin && <th style={styles.th}>Acciones</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -581,7 +460,7 @@ const ECRDashboard = () => {
                           <span style={{ fontFamily: 'monospace', color: COLORS.primary, fontWeight: '500' }}>{ecr.ecrNumber}</span>
                         </td>
                         <td style={{ ...styles.td, maxWidth: '200px' }}>
-                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ecr.changeTitle || 'No title'}</div>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ecr.changeTitle || 'Sin título'}</div>
                         </td>
                         <td style={styles.td}>{ecr.clientName || 'N/A'}</td>
                         <td style={styles.td}>{ecr.changeType || 'N/A'}</td>
@@ -603,7 +482,7 @@ const ECRDashboard = () => {
                               disabled={deleting === ecr.id}
                               style={{ padding: '4px 8px', fontSize: '11px', color: COLORS.danger, backgroundColor: 'transparent', border: `1px solid ${COLORS.danger}`, borderRadius: '2px', cursor: 'pointer' }}
                             >
-                              {deleting === ecr.id ? '...' : 'Delete'}
+                              {deleting === ecr.id ? '...' : 'Eliminar'}
                             </button>
                           </td>
                         )}
@@ -616,33 +495,8 @@ const ECRDashboard = () => {
           </div>
         )}
 
-        {/* Config Tab */}
-        {activeTab === 'config' && (
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>ECR Configuration</div>
-            <p style={{ fontSize: '13px', color: COLORS.gray[500], marginBottom: '20px' }}>Administrative settings for ECR module</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-              <div
-                onClick={() => navigate('/risk-matrix-config')}
-                style={{ padding: '20px', border: `1px solid ${COLORS.gray[200]}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.primary; e.currentTarget.style.backgroundColor = COLORS.gray[50]; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.gray[200]; e.currentTarget.style.backgroundColor = 'white'; }}
-              >
-                <div style={{ fontSize: '14px', fontWeight: '600', color: COLORS.gray[900], marginBottom: '4px' }}>Risk Matrix</div>
-                <div style={{ fontSize: '12px', color: COLORS.gray[500] }}>Configure risk assessment matrix (Severity x Occurrence)</div>
-              </div>
-              <div
-                onClick={() => navigate('/impact-analysis-config')}
-                style={{ padding: '20px', border: `1px solid ${COLORS.gray[200]}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.primary; e.currentTarget.style.backgroundColor = COLORS.gray[50]; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.gray[200]; e.currentTarget.style.backgroundColor = 'white'; }}
-              >
-                <div style={{ fontSize: '14px', fontWeight: '600', color: COLORS.gray[900], marginBottom: '4px' }}>Impact Areas & Teams</div>
-                <div style={{ fontSize: '12px', color: COLORS.gray[500] }}>Configure impact areas and validation teams</div>
-              </div>
-            </div>
-          </div>
-        )}
+
+
       </main>
     </div>
   );

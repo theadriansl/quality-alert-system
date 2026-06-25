@@ -1,13 +1,56 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
 const AuditPrograms = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const [programs, setPrograms] = useState([]);
+
+  const L = {
+    en: {
+      draft: 'Draft', approved: 'Approved', inProgress: 'In Progress', completed: 'Completed',
+      connectionError: 'Connection error', createError: 'Error creating program',
+      loading: 'Loading audit programs...', title: 'Audit Programs', subtitle: 'Annual ISO audit program management',
+      newProgram: '+ New Program', dashboard: 'Dashboard', home: 'Home',
+      allStatuses: 'All statuses', noPrograms: 'No audit programs',
+      createHint: 'Create a new program to start planning audits', noDescription: 'No description',
+      year: 'Year', system: 'System', auditsCompleted: 'audits completed',
+      newProgramTitle: 'New Audit Program', auditType: 'Audit Type',
+      internal: 'Internal', supplier: 'Supplier', process: 'Process', product: 'Product',
+      programName: 'Program Name', programNamePlaceholder: 'E.g.: Internal Audit Program 2026',
+      description: 'Description', descriptionPlaceholder: 'Program description...',
+      criteria: 'Criteria/Standard', internalProcedures: 'Internal Procedures',
+      frequencyBasis: 'Frequency Basis', riskBased: 'Risk Based', quarterly: 'Quarterly',
+      semiannual: 'Semiannual', annual: 'Annual',
+      scope: 'Scope', scopePlaceholder: 'Processes, departments or included areas...',
+      objectives: 'Objectives', objectivesPlaceholder: 'Audit program objectives...',
+      cancel: 'Cancel', createProgram: 'Create Program'
+    },
+    es: {
+      draft: 'Borrador', approved: 'Aprobado', inProgress: 'En Proceso', completed: 'Completado',
+      connectionError: 'Error de conexión', createError: 'Error al crear programa',
+      loading: 'Cargando programas de auditoría...', title: 'Programas de Auditoría', subtitle: 'Gestión de programas anuales de auditoría ISO',
+      newProgram: '+ Nuevo Programa', dashboard: 'Dashboard', home: 'Inicio',
+      allStatuses: 'Todos los estados', noPrograms: 'No hay programas de auditoría',
+      createHint: 'Crea un nuevo programa para comenzar a planificar auditorías', noDescription: 'Sin descripción',
+      year: 'Año', system: 'Sistema', auditsCompleted: 'auditorías completadas',
+      newProgramTitle: 'Nuevo Programa de Auditoría', auditType: 'Tipo de Auditoría',
+      internal: 'Interna', supplier: 'Proveedor', process: 'Proceso', product: 'Producto',
+      programName: 'Nombre del Programa', programNamePlaceholder: 'Ej: Programa de Auditorías Internas 2026',
+      description: 'Descripción', descriptionPlaceholder: 'Descripción del programa...',
+      criteria: 'Criterios/Norma', internalProcedures: 'Procedimientos internos',
+      frequencyBasis: 'Base de Frecuencia', riskBased: 'Basado en Riesgo', quarterly: 'Trimestral',
+      semiannual: 'Semestral', annual: 'Anual',
+      scope: 'Alcance', scopePlaceholder: 'Procesos, departamentos o áreas incluidas...',
+      objectives: 'Objetivos', objectivesPlaceholder: 'Objetivos del programa de auditoría...',
+      cancel: 'Cancelar', createProgram: 'Crear Programa'
+    }
+  }[language] || {};
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
@@ -25,10 +68,10 @@ const AuditPrograms = () => {
   });
 
   const STATUS_CONFIG = {
-    draft: { color: t.textMuted, label: 'Borrador' },
-    approved: { color: t.accent, label: 'Aprobado' },
-    in_progress: { color: t.warning, label: 'En Proceso' },
-    completed: { color: t.success, label: 'Completado' }
+    draft: { color: t.textMuted, label: L.draft },
+    approved: { color: t.accent, label: L.approved },
+    in_progress: { color: t.warning, label: L.inProgress },
+    completed: { color: t.success, label: L.completed }
   };
 
   const loadPrograms = useCallback(async () => {
@@ -50,7 +93,7 @@ const AuditPrograms = () => {
         setError(result.message);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
@@ -81,7 +124,7 @@ const AuditPrograms = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al crear programa');
+      alert(L.createError);
     }
   };
 
@@ -281,7 +324,7 @@ const AuditPrograms = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando programas de auditoría...
+          {L.loading}
         </div>
       </div>
     );
@@ -292,27 +335,30 @@ const AuditPrograms = () => {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Programas de Auditoría</h1>
-          <p style={styles.subtitle}>Gestión de programas anuales de auditoría ISO</p>
+          <h1 style={styles.title}>{L.title}</h1>
+          <p style={styles.subtitle}>{L.subtitle}</p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <button
             style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
             onClick={() => setShowCreateModal(true)}
           >
-            + Nuevo Programa
+            {L.newProgram}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-dashboard')}
           >
-             Dashboard
+             {L.dashboard}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
             onClick={() => navigate('/')}
           >
-            ← Inicio
+            ← {L.home}
           </button>
         </div>
       </div>
@@ -333,11 +379,11 @@ const AuditPrograms = () => {
           onChange={(e) => setFilterStatus(e.target.value)}
           style={styles.select}
         >
-          <option value="">Todos los estados</option>
-          <option value="draft">Borrador</option>
-          <option value="approved">Aprobado</option>
-          <option value="in_progress">En Proceso</option>
-          <option value="completed">Completado</option>
+          <option value="">{L.allStatuses}</option>
+          <option value="draft">{L.draft}</option>
+          <option value="approved">{L.approved}</option>
+          <option value="in_progress">{L.inProgress}</option>
+          <option value="completed">{L.completed}</option>
         </select>
       </div>
 
@@ -350,8 +396,8 @@ const AuditPrograms = () => {
 
       {programs.length === 0 ? (
         <div style={styles.empty}>
-          <p style={{ fontSize: '18px', marginBottom: '12px' }}>No hay programas de auditoría</p>
-          <p>Crea un nuevo programa para comenzar a planificar auditorías</p>
+          <p style={{ fontSize: '18px', marginBottom: '12px' }}>{L.noPrograms}</p>
+          <p>{L.createHint}</p>
         </div>
       ) : (
         programs.map(program => {
@@ -378,7 +424,7 @@ const AuditPrograms = () => {
                 <div>
                   <h3 style={styles.programTitle}>{program.name}</h3>
                   <p style={{ fontSize: '14px', color: t.textMuted, marginTop: '4px' }}>
-                    {program.description || 'Sin descripción'}
+                    {program.description || L.noDescription}
                   </p>
                 </div>
                 <span style={{
@@ -393,7 +439,7 @@ const AuditPrograms = () => {
               <div style={styles.meta}>
                 <div style={styles.metaItem}>
                   <span></span>
-                  <span>Año {program.year}</span>
+                  <span>{L.year} {program.year}</span>
                 </div>
                 <div style={styles.metaItem}>
                   <span></span>
@@ -405,7 +451,7 @@ const AuditPrograms = () => {
                 </div>
                 <div style={styles.metaItem}>
                   <span></span>
-                  <span>{program.createdByName || 'Sistema'}</span>
+                  <span>{program.createdByName || L.system}</span>
                 </div>
               </div>
 
@@ -414,7 +460,7 @@ const AuditPrograms = () => {
                   <div style={{ ...styles.progressFill, width: `${progress}%` }} />
                 </div>
                 <p style={styles.progressText}>
-                  {program.completedAudits || 0} de {program.totalAudits || 0} auditorías completadas ({progress}%)
+                  {program.completedAudits || 0} / {program.totalAudits || 0} {L.auditsCompleted} ({progress}%)
                 </p>
               </div>
             </div>
@@ -426,11 +472,11 @@ const AuditPrograms = () => {
       {showCreateModal && (
         <div style={styles.modal} onClick={() => setShowCreateModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Nuevo Programa de Auditoría</h2>
+            <h2 style={styles.modalTitle}>{L.newProgramTitle}</h2>
 
             <div style={styles.grid2}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Año</label>
+                <label style={styles.label}>{L.year}</label>
                 <select
                   value={newProgram.year}
                   onChange={(e) => setNewProgram({ ...newProgram, year: parseInt(e.target.value) })}
@@ -443,45 +489,45 @@ const AuditPrograms = () => {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>Tipo de Auditoría</label>
+                <label style={styles.label}>{L.auditType}</label>
                 <select
                   value={newProgram.auditType}
                   onChange={(e) => setNewProgram({ ...newProgram, auditType: e.target.value })}
                   style={styles.input}
                 >
-                  <option value="interna">Interna</option>
-                  <option value="proveedor">Proveedor</option>
-                  <option value="proceso">Proceso</option>
-                  <option value="producto">Producto</option>
-                  <option value="sistema">Sistema</option>
+                  <option value="interna">{L.internal}</option>
+                  <option value="proveedor">{L.supplier}</option>
+                  <option value="proceso">{L.process}</option>
+                  <option value="producto">{L.product}</option>
+                  <option value="sistema">{L.system}</option>
                 </select>
               </div>
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Nombre del Programa *</label>
+              <label style={styles.label}>{L.programName} *</label>
               <input
                 type="text"
                 value={newProgram.name}
                 onChange={(e) => setNewProgram({ ...newProgram, name: e.target.value })}
-                placeholder="Ej: Programa de Auditorías Internas 2026"
+                placeholder={L.programNamePlaceholder}
                 style={styles.input}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Descripción</label>
+              <label style={styles.label}>{L.description}</label>
               <textarea
                 value={newProgram.description}
                 onChange={(e) => setNewProgram({ ...newProgram, description: e.target.value })}
-                placeholder="Descripción del programa..."
+                placeholder={L.descriptionPlaceholder}
                 style={styles.textarea}
               />
             </div>
 
             <div style={styles.grid2}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Criterios/Norma</label>
+                <label style={styles.label}>{L.criteria}</label>
                 <select
                   value={newProgram.criteria}
                   onChange={(e) => setNewProgram({ ...newProgram, criteria: e.target.value })}
@@ -492,41 +538,41 @@ const AuditPrograms = () => {
                   <option value="VDA 6.3">VDA 6.3</option>
                   <option value="ISO 14001:2015">ISO 14001:2015</option>
                   <option value="ISO 45001:2018">ISO 45001:2018</option>
-                  <option value="Procedimientos internos">Procedimientos internos</option>
+                  <option value="Procedimientos internos">{L.internalProcedures}</option>
                 </select>
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>Base de Frecuencia</label>
+                <label style={styles.label}>{L.frequencyBasis}</label>
                 <select
                   value={newProgram.frequencyBasis}
                   onChange={(e) => setNewProgram({ ...newProgram, frequencyBasis: e.target.value })}
                   style={styles.input}
                 >
-                  <option value="riesgo">Basado en Riesgo</option>
-                  <option value="trimestral">Trimestral</option>
-                  <option value="semestral">Semestral</option>
-                  <option value="anual">Anual</option>
+                  <option value="riesgo">{L.riskBased}</option>
+                  <option value="trimestral">{L.quarterly}</option>
+                  <option value="semestral">{L.semiannual}</option>
+                  <option value="anual">{L.annual}</option>
                 </select>
               </div>
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Alcance</label>
+              <label style={styles.label}>{L.scope}</label>
               <textarea
                 value={newProgram.scope}
                 onChange={(e) => setNewProgram({ ...newProgram, scope: e.target.value })}
-                placeholder="Procesos, departamentos o áreas incluidas..."
+                placeholder={L.scopePlaceholder}
                 style={styles.textarea}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Objetivos</label>
+              <label style={styles.label}>{L.objectives}</label>
               <textarea
                 value={newProgram.objectives}
                 onChange={(e) => setNewProgram({ ...newProgram, objectives: e.target.value })}
-                placeholder="Objetivos del programa de auditoría..."
+                placeholder={L.objectivesPlaceholder}
                 style={styles.textarea}
               />
             </div>
@@ -536,14 +582,14 @@ const AuditPrograms = () => {
                 style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
                 onClick={() => setShowCreateModal(false)}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
                 onClick={createProgram}
                 disabled={!newProgram.name}
               >
-                Crear Programa
+                {L.createProgram}
               </button>
             </div>
           </div>

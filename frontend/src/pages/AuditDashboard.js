@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, Cell, PieChart, Pie, Legend
 } from 'recharts';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
@@ -56,16 +57,40 @@ const KPICard = ({ title, value, subtitle, color, theme }) => {
 };
 
 // Status Badge
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, language = 'en' }) => {
+  const labels = {
+    en: {
+      planned: 'Planned',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      postponed: 'Postponed',
+      open: 'Open',
+      pending_verification: 'Pending Verification',
+      closed: 'Closed'
+    },
+    es: {
+      planned: 'Planificado',
+      in_progress: 'En Progreso',
+      completed: 'Completado',
+      cancelled: 'Cancelado',
+      postponed: 'Pospuesto',
+      open: 'Abierto',
+      pending_verification: 'Verificación Pendiente',
+      closed: 'Cerrado'
+    }
+  };
+  const tr = labels[language] || labels.en;
+
   const config = {
-    planned: { color: DEFAULT_COLORS.gray[500], label: 'Planned' },
-    in_progress: { color: DEFAULT_COLORS.warning, label: 'In Progress' },
-    completed: { color: DEFAULT_COLORS.success, label: 'Completed' },
-    cancelled: { color: DEFAULT_COLORS.error, label: 'Cancelled' },
-    postponed: { color: DEFAULT_COLORS.gray[400], label: 'Postponed' },
-    open: { color: DEFAULT_COLORS.error, label: 'Open' },
-    pending_verification: { color: DEFAULT_COLORS.warning, label: 'Pending Verification' },
-    closed: { color: DEFAULT_COLORS.success, label: 'Closed' }
+    planned: { color: DEFAULT_COLORS.gray[500], label: tr.planned },
+    in_progress: { color: DEFAULT_COLORS.warning, label: tr.in_progress },
+    completed: { color: DEFAULT_COLORS.success, label: tr.completed },
+    cancelled: { color: DEFAULT_COLORS.error, label: tr.cancelled },
+    postponed: { color: DEFAULT_COLORS.gray[400], label: tr.postponed },
+    open: { color: DEFAULT_COLORS.error, label: tr.open },
+    pending_verification: { color: DEFAULT_COLORS.warning, label: tr.pending_verification },
+    closed: { color: DEFAULT_COLORS.success, label: tr.closed }
   };
   const { color, label } = config[status] || { color: DEFAULT_COLORS.gray[400], label: status };
   return (
@@ -88,6 +113,7 @@ const AuditDashboard = () => {
 
   // Global Theme
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // Dynamic colors based on theme
   const COLORS = {
@@ -211,7 +237,10 @@ const AuditDashboard = () => {
             <div style={styles.themeSelector}>
               <ThemeSelector />
             </div>
-            <button style={styles.btnSecondary} onClick={() => navigate('/')}>Modules</button>
+            <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
+            <button style={styles.btnSecondary} onClick={() => navigate('/')}>{language === 'es' ? 'Módulos' : 'Modules'}</button>
             <button style={styles.btnPrimary} onClick={() => navigate('/audit-schedule-create')}>+ Schedule Audit</button>
             <button style={styles.btnSecondary} onClick={() => navigate('/audit-programs')}>Programs</button>
             <button style={styles.btnSecondary} onClick={() => navigate('/audit-calendar')}>Calendar</button>
@@ -222,7 +251,7 @@ const AuditDashboard = () => {
 
       <main style={styles.main}>
         <div style={styles.tabs}>
-          {[{ id: 'overview', label: 'Overview' }, { id: 'audits', label: 'Recent Audits' }, { id: 'ncs', label: 'Open NCs' }, { id: 'requests', label: 'Auditorías 8D/ECR' }].map(tab => (
+          {[{ id: 'overview', label: 'Overview' }, { id: 'audits', label: 'Recent Audits' }, { id: 'ncs', label: 'Open NCs' }, { id: 'requests', label: 'Auditorías 8D' }].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : {}) }}>
               {tab.label}
             </button>
@@ -326,7 +355,7 @@ const AuditDashboard = () => {
                         <td style={styles.td}>{audit.programName || 'N/A'}</td>
                         <td style={styles.td}>{audit.area || 'N/A'}</td>
                         <td style={styles.td}>{audit.leadAuditorName || 'N/A'}</td>
-                        <td style={styles.td}><StatusBadge status={audit.status} /></td>
+                        <td style={styles.td}><StatusBadge status={audit.status} language={language} /></td>
                         <td style={styles.td}>{audit.scheduledDate ? new Date(audit.scheduledDate).toLocaleDateString() : 'N/A'}</td>
                       </tr>
                     ))}
@@ -368,7 +397,7 @@ const AuditDashboard = () => {
                           <span style={{ fontFamily: 'monospace', color: COLORS.primary, fontWeight: '500' }}>{nc.ncId || nc.id}</span>
                         </td>
                         <td style={{ ...styles.td, maxWidth: '250px' }}>
-                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nc.description || 'No description'}</div>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nc.description || (language === 'es' ? 'Sin descripción' : 'No description')}</div>
                         </td>
                         <td style={styles.td}>
                           <span style={{ ...styles.td, padding: '2px 8px', fontSize: '11px', fontWeight: '500', borderRadius: '2px', backgroundColor: `${NC_TYPE_COLORS[nc.type] || COLORS.gray[400]}20`, color: NC_TYPE_COLORS[nc.type] || COLORS.gray[400] }}>
@@ -376,7 +405,7 @@ const AuditDashboard = () => {
                           </span>
                         </td>
                         <td style={styles.td}>{nc.area || 'N/A'}</td>
-                        <td style={styles.td}><StatusBadge status={nc.status} /></td>
+                        <td style={styles.td}><StatusBadge status={nc.status} language={language} /></td>
                         <td style={styles.td}>{nc.dueDate ? new Date(nc.dueDate).toLocaleDateString() : 'N/A'}</td>
                       </tr>
                     ))}
@@ -390,9 +419,9 @@ const AuditDashboard = () => {
         {activeTab === 'requests' && (
           <div style={styles.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={styles.cardTitle}>Auditorías desde 8D / ECR</div>
+              <div style={styles.cardTitle}>Auditorías desde 8D</div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                {['all', '8D', 'ECR'].map(filter => (
+                {['all', '8D'].map(filter => (
                   <button
                     key={filter}
                     onClick={() => setRequestFilter(filter)}
@@ -492,7 +521,7 @@ const AuditDashboard = () => {
                               <span style={{ fontSize: '12px', color: COLORS.gray[600] }}>
                                 {req.assignedAuditors?.length > 0
                                   ? req.assignedAuditors.slice(0, 2).map(a => a.name?.split(' ')[0]).join(', ') + (req.assignedAuditors.length > 2 ? ` +${req.assignedAuditors.length - 2}` : '')
-                                  : 'Sin asignar'}
+                                  : (language === 'es' ? 'Sin asignar' : 'Not assigned')}
                               </span>
                             </td>
                             <td style={styles.td}>
@@ -524,7 +553,7 @@ const AuditDashboard = () => {
                                   Auditar
                                 </button>
                                 <button
-                                  onClick={() => navigate(req.sourceType === '8D' ? `/8d-workflow?reportId=${req.sourceId}` : `/ecr/${req.sourceId}`)}
+                                  onClick={() => navigate(req.sourceType === '8D' ? `/8d-workflow?reportId=${req.sourceId}` : `/ecr-workflow/${req.sourceId}`)}
                                   style={{
                                     padding: '4px 10px',
                                     fontSize: '11px',

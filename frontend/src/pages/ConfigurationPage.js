@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { isUserAdmin } from '../utils/permissions';
 import api from '../services/api';
 import userService from '../services/userService';
@@ -68,7 +69,7 @@ const LoadingSpinner = ({ message, styles }) => {
   const { theme: t } = useTheme();
   return (
     <div style={styles?.loading || { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '16px' }}>
-      <div style={styles?.spinner || { width: '32px', height: '32px', border: `3px solid ${t.border}`, borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <div style={styles?.spinner || { width: '32px', height: '32px', border: `3px solid ${t.border}`, borderTopColor: t.accent, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
       <p style={{ color: t.textDim, margin: 0 }}>{message}</p>
     </div>
   );
@@ -95,6 +96,7 @@ const ConfigurationPage = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // Get initial tab from URL hash or default to 'users'
   const getInitialTab = () => {
@@ -135,7 +137,12 @@ const ConfigurationPage = () => {
             <button onClick={() => navigate('/')} style={styles.backBtn}>
               ← Volver
             </button>
-            <ThemeSelector />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+                {language === 'es' ? 'EN' : 'ES'}
+              </button>
+              <ThemeSelector />
+            </div>
           </div>
           <h1 style={styles.sidebarTitle}>Configuración</h1>
           <p style={styles.sidebarSubtitle}>Administración del sistema</p>
@@ -200,7 +207,7 @@ const ConfigurationPage = () => {
           padding: 8px;
         }
         select option:hover {
-          background: #334155;
+          background: ${t.bgPanel};
         }
       `}</style>
     </div>
@@ -396,8 +403,8 @@ const UsersTab = ({ showSuccess, showError, styles }) => {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
                         {user.managedDepartments.map((dept, idx) => (
                           <span key={idx} style={{
-                            background: 'rgba(16, 185, 129, 0.2)',
-                            color: '#34d399',
+                            background: `${t.success}22`,
+                            color: t.success,
                             padding: '2px 6px',
                             borderRadius: '4px',
                             fontSize: '10px',
@@ -411,7 +418,7 @@ const UsersTab = ({ showSuccess, showError, styles }) => {
                   </div>
                 </td>
                 <td style={styles.td}>
-                  <span style={{ color: user.manager ? '#a5b4fc' : t.textDim, fontSize: '13px' }}>
+                  <span style={{ color: user.manager ? t.accent : t.textDim, fontSize: '13px' }}>
                     {user.manager ? user.manager.name : '—'}
                   </span>
                 </td>
@@ -421,8 +428,8 @@ const UsersTab = ({ showSuccess, showError, styles }) => {
                       user.assignedRoles.slice(0, 3).map((role, idx) => (
                         <span key={idx} style={{
                           ...styles.roleBadgeSmall,
-                          background: role.isSystem ? 'rgba(234, 179, 8, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                          color: role.isSystem ? '#fde047' : '#a5b4fc'
+                          background: role.isSystem ? `${t.warning}22` : `${t.accent}22`,
+                          color: role.isSystem ? t.warning : t.accent
                         }}>
                           {role.name}
                         </span>
@@ -438,15 +445,15 @@ const UsersTab = ({ showSuccess, showError, styles }) => {
                 <td style={styles.td}>
                   <span style={{
                     ...styles.roleBadge,
-                    background: user.systemRole === 'admin' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                    color: user.systemRole === 'admin' ? '#fca5a5' : '#a5b4fc'
+                    background: user.systemRole === 'admin' ? `${t.error}22` : `${t.accent}22`,
+                    color: user.systemRole === 'admin' ? t.error : t.accent
                   }}>
                     {user.systemRole === 'admin' ? 'Admin' : 'Usuario'}
                   </span>
                 </td>
                 <td style={styles.td}>
                   <div style={styles.actions}>
-                    <button onClick={() => openRolesModal(user)} style={{...styles.actionBtn, background: 'rgba(139, 92, 246, 0.2)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#c4b5fd'}}>
+                    <button onClick={() => openRolesModal(user)} style={{...styles.actionBtn, background: `${t.accent}22`, border: `1px solid ${t.accent}44`, color: t.accent}}>
                       Roles
                     </button>
                     <button onClick={() => openEditModal(user)} style={styles.actionBtn}>Editar</button>
@@ -589,19 +596,22 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
     { id: 'quality_alert', name: 'Quality Alert / Defectos', icon: '🚨', category: 'Calidad' },
     { id: 'qar', name: 'QAR (Quality Action Request)', icon: '📋', category: 'Calidad' },
     { id: 'mrb', name: 'MRB (Material Review Board)', icon: '🔍', category: 'Calidad' },
+    { id: 'hospital', name: 'Hospital Dashboard', icon: '🏥', category: 'Calidad' },
     { id: 'lessons_learned', name: 'Lecciones Aprendidas', icon: '📚', category: 'Calidad' },
     // Ingeniería
     { id: 'ecr', name: 'ECR/ECO (Cambios de Ingeniería)', icon: '⚙️', category: 'Ingeniería' },
     { id: 'risk_matrix', name: 'Matriz de Riesgo', icon: '⚠️', category: 'Ingeniería' },
     { id: 'work_instructions', name: 'Instrucciones de Trabajo', icon: '📄', category: 'Ingeniería' },
-    { id: 'statistical_tools', name: 'Herramientas Estadísticas', icon: '📊', category: 'Ingeniería' },
     // Auditorías
-    { id: 'audit', name: 'Auditorías ISO', icon: '✅', category: 'Auditorías' },
+    { id: 'audits', name: 'Auditorías ISO', icon: '✅', category: 'Auditorías' },
     // Operaciones
     { id: 'workload', name: 'Gestión de Carga de Trabajo', icon: '📅', category: 'Operaciones' },
     { id: 'management_review', name: 'Revisión Gerencial', icon: '🏢', category: 'Operaciones' },
+    // Recursos Humanos
+    { id: 'skills', name: 'Skills & Training', icon: '🎯', category: 'Recursos Humanos' },
     // Administración
     { id: 'clients', name: 'Clientes', icon: '🤝', category: 'Administración' },
+    { id: 'users', name: 'Usuarios', icon: '👥', category: 'Administración' },
     { id: 'configuration', name: 'Configuración del Sistema', icon: '🔑', category: 'Administración' },
     { id: 'dashboard', name: 'Dashboard / Reportes', icon: '📈', category: 'Administración' },
   ];
@@ -772,7 +782,7 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' }}>
                   {modules.filter(m => m.category === category).map(mod => {
                     const access = formData.permissions[mod.id]?.access || 'none';
-                    const accessColor = access === 'full' ? '#2E7D32' : access === 'partial' ? t.accent : access === 'view' ? '#C77700' : t.textDim;
+                    const accessColor = access === 'full' ? t.success : access === 'partial' ? t.accent : access === 'view' ? t.warning : t.textDim;
                     return (
                       <div key={mod.id} style={{
                         ...styles.permissionCard,
@@ -1222,7 +1232,7 @@ const getStyles = (t) => ({
     margin: '4px 0 0'
   },
   primaryBtn: {
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+    background: t.primary,
     border: 'none',
     color: 'white',
     padding: '12px 24px',
@@ -1230,7 +1240,7 @@ const getStyles = (t) => ({
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)'
+    boxShadow: `0 4px 15px ${t.primary}66`
   },
   // Search
   searchBar: {
@@ -1240,8 +1250,8 @@ const getStyles = (t) => ({
     width: '100%',
     maxWidth: '400px',
     padding: '12px 16px',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.2)',
+    background: t.bgCard,
+    border: `1px solid ${t.border}`,
     borderRadius: '10px',
     color: t.text,
     fontSize: '14px',
@@ -1249,9 +1259,9 @@ const getStyles = (t) => ({
   },
   // Table
   tableContainer: {
-    background: 'rgba(255,255,255,0.03)',
+    background: t.bgCard,
     borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.1)',
+    border: `1px solid ${t.border}`,
     overflow: 'hidden'
   },
   table: {
@@ -1261,19 +1271,20 @@ const getStyles = (t) => ({
   th: {
     textAlign: 'left',
     padding: '16px',
-    color: t.textDim,
+    color: t.textMuted,
     fontSize: '12px',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    borderBottom: '1px solid rgba(255,255,255,0.1)'
+    borderBottom: `1px solid ${t.border}`,
+    backgroundColor: t.bgPanel
   },
   tr: {
     transition: 'background 0.2s'
   },
   td: {
     padding: '16px',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    borderBottom: `1px solid ${t.border}`,
     color: t.text,
     fontSize: '14px'
   },
@@ -1286,7 +1297,7 @@ const getStyles = (t) => ({
     width: '36px',
     height: '36px',
     borderRadius: '8px',
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+    background: t.primary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1303,8 +1314,8 @@ const getStyles = (t) => ({
     color: t.textDim
   },
   deptBadge: {
-    background: 'rgba(99, 102, 241, 0.15)',
-    color: '#a5b4fc',
+    background: `${t.accent}22`,
+    color: t.accent,
     padding: '4px 10px',
     borderRadius: '6px',
     fontSize: '12px'
@@ -1320,8 +1331,8 @@ const getStyles = (t) => ({
     gap: '8px'
   },
   actionBtn: {
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.2)',
+    background: t.bgPanel,
+    border: `1px solid ${t.border}`,
     color: t.text,
     padding: '6px 12px',
     borderRadius: '6px',
@@ -1330,9 +1341,9 @@ const getStyles = (t) => ({
     transition: 'all 0.2s'
   },
   deleteBtn: {
-    background: 'rgba(239, 68, 68, 0.2)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
-    color: '#fca5a5'
+    background: `${t.error}22`,
+    border: `1px solid ${t.error}44`,
+    color: t.error
   },
   // Roles grid
   rolesGrid: {
@@ -1341,10 +1352,10 @@ const getStyles = (t) => ({
     gap: '16px'
   },
   roleCard: {
-    background: 'rgba(255,255,255,0.05)',
+    background: t.bgCard,
     borderRadius: '16px',
     padding: '20px',
-    border: '1px solid rgba(255,255,255,0.1)'
+    border: `1px solid ${t.border}`
   },
   roleHeader: {
     display: 'flex',
@@ -1362,8 +1373,8 @@ const getStyles = (t) => ({
     fontWeight: '600'
   },
   systemBadge: {
-    background: 'rgba(234, 179, 8, 0.2)',
-    color: '#fde047',
+    background: `${t.warning}22`,
+    color: t.warning,
     padding: '2px 8px',
     borderRadius: '4px',
     fontSize: '10px',
@@ -1380,8 +1391,8 @@ const getStyles = (t) => ({
     alignItems: 'center'
   },
   clearanceBadge: {
-    background: 'rgba(99, 102, 241, 0.2)',
-    color: '#a5b4fc',
+    background: `${t.accent}22`,
+    color: t.accent,
     padding: '4px 10px',
     borderRadius: '6px',
     fontSize: '12px'
@@ -1398,11 +1409,11 @@ const getStyles = (t) => ({
     marginBottom: '24px'
   },
   statCard: {
-    background: 'rgba(255,255,255,0.05)',
+    background: t.bgCard,
     borderRadius: '16px',
     padding: '20px',
     textAlign: 'center',
-    border: '1px solid rgba(255,255,255,0.1)'
+    border: `1px solid ${t.border}`
   },
   statIcon2: {
     fontSize: '28px',
@@ -1411,7 +1422,7 @@ const getStyles = (t) => ({
   statValue: {
     fontSize: '28px',
     fontWeight: '700',
-    color: '#818cf8'
+    color: t.accent
   },
   statLabel: {
     fontSize: '12px',
@@ -1419,17 +1430,17 @@ const getStyles = (t) => ({
     marginTop: '4px'
   },
   treeContainer: {
-    background: 'rgba(255,255,255,0.03)',
+    background: t.bgCard,
     borderRadius: '16px',
     padding: '20px',
-    border: '1px solid rgba(255,255,255,0.1)'
+    border: `1px solid ${t.border}`
   },
   deptCard: {
-    background: 'rgba(255,255,255,0.05)',
+    background: t.bgPanel,
     borderRadius: '12px',
     padding: '16px',
     marginBottom: '12px',
-    border: '1px solid rgba(255,255,255,0.1)'
+    border: `1px solid ${t.border}`
   },
   deptHeader: {
     display: 'flex',
@@ -1445,7 +1456,7 @@ const getStyles = (t) => ({
   expandBtn: {
     background: 'none',
     border: 'none',
-    color: '#818cf8',
+    color: t.accent,
     cursor: 'pointer',
     fontSize: '12px',
     padding: '4px'
@@ -1468,18 +1479,18 @@ const getStyles = (t) => ({
     gap: '8px'
   },
   statBadge: {
-    background: 'rgba(99, 102, 241, 0.2)',
+    background: `${t.accent}22`,
     padding: '4px 10px',
     borderRadius: '20px',
     fontSize: '11px',
-    color: '#a5b4fc'
+    color: t.accent
   },
   deptFooter: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: '12px',
-    borderTop: '1px solid rgba(255,255,255,0.1)'
+    borderTop: `1px solid ${t.border}`
   },
   managerInfo: {
     fontSize: '12px',
@@ -1533,7 +1544,7 @@ const getStyles = (t) => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '20px 24px',
-    borderBottom: '1px solid rgba(255,255,255,0.1)'
+    borderBottom: `1px solid ${t.border}`
   },
   modalTitle: {
     margin: 0,
@@ -1570,8 +1581,8 @@ const getStyles = (t) => ({
   input: {
     width: '100%',
     padding: '12px 16px',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.2)',
+    background: t.bgCard,
+    border: `1px solid ${t.border}`,
     borderRadius: '10px',
     color: t.text,
     fontSize: '14px',
@@ -1581,8 +1592,8 @@ const getStyles = (t) => ({
   textarea: {
     width: '100%',
     padding: '12px 16px',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.2)',
+    background: t.bgCard,
+    border: `1px solid ${t.border}`,
     borderRadius: '10px',
     color: t.text,
     fontSize: '14px',
@@ -1595,7 +1606,7 @@ const getStyles = (t) => ({
     width: '100%',
     padding: '12px 16px',
     background: t.bgCard,
-    border: '1px solid rgba(255,255,255,0.2)',
+    border: `1px solid ${t.border}`,
     borderRadius: '10px',
     color: t.text,
     fontSize: '14px',
@@ -1611,8 +1622,8 @@ const getStyles = (t) => ({
   cancelBtn: {
     flex: 1,
     padding: '12px',
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.2)',
+    background: t.bgPanel,
+    border: `1px solid ${t.border}`,
     borderRadius: '10px',
     color: t.text,
     cursor: 'pointer',
@@ -1621,7 +1632,7 @@ const getStyles = (t) => ({
   submitBtn: {
     flex: 2,
     padding: '12px',
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+    background: t.primary,
     border: 'none',
     borderRadius: '10px',
     color: 'white',
@@ -1642,10 +1653,10 @@ const getStyles = (t) => ({
     gap: '12px'
   },
   permissionCard: {
-    background: 'rgba(255,255,255,0.03)',
+    background: t.bgPanel,
     borderRadius: '10px',
     padding: '12px',
-    border: '1px solid rgba(255,255,255,0.1)'
+    border: `1px solid ${t.border}`
   },
   permissionHeader: {
     marginBottom: '8px'
@@ -1667,8 +1678,8 @@ const getStyles = (t) => ({
   spinner: {
     width: '40px',
     height: '40px',
-    border: '3px solid rgba(255,255,255,0.1)',
-    borderTop: '3px solid #818cf8',
+    border: `3px solid ${t.border}`,
+    borderTop: `3px solid ${t.accent}`,
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
     marginBottom: '16px'
@@ -1695,7 +1706,7 @@ const getStyles = (t) => ({
     color: t.textDim,
     fontSize: '11px',
     padding: '2px 6px',
-    background: 'rgba(255,255,255,0.1)',
+    background: t.bgPanel,
     borderRadius: '4px'
   },
   rolesSection: {
@@ -1707,7 +1718,7 @@ const getStyles = (t) => ({
     fontWeight: '600',
     marginBottom: '12px',
     paddingBottom: '8px',
-    borderBottom: '1px solid rgba(255,255,255,0.1)'
+    borderBottom: `1px solid ${t.border}`
   },
   noRolesText: {
     color: t.textDim,
@@ -1715,7 +1726,7 @@ const getStyles = (t) => ({
     fontStyle: 'italic',
     padding: '16px',
     textAlign: 'center',
-    background: 'rgba(255,255,255,0.03)',
+    background: t.bgPanel,
     borderRadius: '8px'
   },
   assignedRolesList: {
@@ -1728,9 +1739,9 @@ const getStyles = (t) => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 16px',
-    background: 'rgba(99, 102, 241, 0.1)',
+    background: `${t.accent}15`,
     borderRadius: '10px',
-    border: '1px solid rgba(99, 102, 241, 0.2)'
+    border: `1px solid ${t.accent}33`
   },
   assignedRoleInfo: {
     display: 'flex',
@@ -1748,17 +1759,17 @@ const getStyles = (t) => ({
   },
   systemBadgeSmall: {
     display: 'inline-block',
-    background: 'rgba(234, 179, 8, 0.2)',
-    color: '#fde047',
+    background: `${t.warning}22`,
+    color: t.warning,
     padding: '2px 6px',
     borderRadius: '4px',
     fontSize: '10px',
     marginLeft: '8px'
   },
   revokeBtn: {
-    background: 'rgba(239, 68, 68, 0.2)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
-    color: '#fca5a5',
+    background: `${t.error}22`,
+    border: `1px solid ${t.error}44`,
+    color: t.error,
     padding: '6px 12px',
     borderRadius: '6px',
     cursor: 'pointer',
@@ -1777,9 +1788,9 @@ const getStyles = (t) => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 16px',
-    background: 'rgba(255,255,255,0.03)',
+    background: t.bgPanel,
     borderRadius: '10px',
-    border: '1px solid rgba(255,255,255,0.1)'
+    border: `1px solid ${t.border}`
   },
   availableRoleInfo: {
     display: 'flex',
@@ -1796,9 +1807,9 @@ const getStyles = (t) => ({
     fontSize: '11px'
   },
   assignBtn: {
-    background: 'rgba(34, 197, 94, 0.2)',
-    border: '1px solid rgba(34, 197, 94, 0.3)',
-    color: '#86efac',
+    background: `${t.success}22`,
+    border: `1px solid ${t.success}44`,
+    color: t.success,
     padding: '6px 12px',
     borderRadius: '6px',
     cursor: 'pointer',

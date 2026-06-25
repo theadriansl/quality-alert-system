@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { canUserEdit, isReadOnly } from '../utils/permissions';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { AlertTriangle, Send, Users, FileText, Camera, X, Check, Clock, User, MapPin, Search, Plus, List, LayoutDashboard, ClipboardCheck, ArrowLeft } from 'lucide-react';
 
 const QARCreate = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const API_URL = 'http://localhost:5000';
 
   // Permission check
@@ -870,7 +872,12 @@ const QARCreate = () => {
 
       {/* ====== HEADER IMPACTANTE ====== */}
       <div style={styles.header}>
-        <div style={styles.qarNumber}>{qarNumber}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div style={styles.qarNumber}>{qarNumber}</div>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
+        </div>
         <h1 style={styles.headerTitle}>
           <AlertTriangle size={28} />
           {triggerInfo.departmentName?.toUpperCase()} RESPONSABLE - Alerta de Calidad - {triggerInfo.partName} - {triggerInfo.severityName?.toUpperCase()}

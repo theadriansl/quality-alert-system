@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
@@ -10,7 +11,45 @@ const CERTIFICATIONS = ['ISO 9001', 'IATF 16949', 'VDA 6.3', 'ISO 14001', 'ISO 4
 const AuditAuditors = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const [auditors, setAuditors] = useState([]);
+
+  const L = {
+    en: {
+      connectionError: 'Connection error', updateError: 'Error updating', loading: 'Loading auditors...',
+      title: 'Auditors', subtitle: 'Auditor competencies and certifications management',
+      list: 'List', matrix: 'Matrix', addAuditor: '+ Add Auditor', dashboard: 'Dashboard', home: 'Home',
+      totalAuditors: 'Total Auditors', noAuditors: 'No auditors registered',
+      noAuditorsDesc: 'Add users as auditors or assign the "Auditor" role in Settings',
+      byRole: 'By Role', noDepartment: 'No department', edit: 'Edit',
+      removeAuditorConfirm: 'Remove as auditor?', areas: 'Areas:', noAreas: 'No areas assigned',
+      certifications: 'Certifications:', noCertifications: 'No certifications',
+      auditor: 'Auditor', department: 'Department', role: 'Role',
+      editCompetencies: 'Edit Competencies', auditAreas: 'Audit Areas',
+      cancel: 'Cancel', saveChanges: 'Save Changes', addAuditorTitle: 'Add Auditor',
+      accessLevelNote: 'Only users with access level 2 or higher can be auditors.',
+      noEligibleUsers: 'No eligible users available', level: 'Level',
+      noAuditorRole: 'No Auditor role', add: '+ Add', close: 'Close',
+      noAuditorRoleWarning: 'does not have the "Auditor" role assigned.\n\nDo you want to add them as auditor anyway?'
+    },
+    es: {
+      connectionError: 'Error de conexión', updateError: 'Error al actualizar', loading: 'Cargando auditores...',
+      title: 'Auditores', subtitle: 'Gestión de competencias y certificaciones de auditores',
+      list: 'Lista', matrix: 'Matriz', addAuditor: '+ Agregar Auditor', dashboard: 'Dashboard', home: 'Inicio',
+      totalAuditors: 'Auditores Totales', noAuditors: 'No hay auditores registrados',
+      noAuditorsDesc: 'Agrega usuarios como auditores o asigna el rol "Auditor" en Configuración',
+      byRole: 'Por Rol', noDepartment: 'Sin departamento', edit: 'Editar',
+      removeAuditorConfirm: '¿Quitar como auditor?', areas: 'Áreas:', noAreas: 'Sin áreas asignadas',
+      certifications: 'Certificaciones:', noCertifications: 'Sin certificaciones',
+      auditor: 'Auditor', department: 'Departamento', role: 'Rol',
+      editCompetencies: 'Editar Competencias', auditAreas: 'Áreas de Auditoría',
+      cancel: 'Cancelar', saveChanges: 'Guardar Cambios', addAuditorTitle: 'Agregar Auditor',
+      accessLevelNote: 'Solo usuarios con nivel de acceso 2 o superior pueden ser auditores.',
+      noEligibleUsers: 'No hay usuarios elegibles disponibles', level: 'Nivel',
+      noAuditorRole: 'Sin rol Auditor', add: '+ Agregar', close: 'Cerrar',
+      noAuditorRoleWarning: 'no tiene el rol "Auditor" asignado.\n\n¿Desea agregarlo de todas formas como auditor?'
+    }
+  }[language] || {};
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,7 +79,7 @@ const AuditAuditors = () => {
         setAllUsers(usersData.users || []);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
@@ -70,7 +109,7 @@ const AuditAuditors = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al actualizar');
+      alert(L.updateError);
     }
   };
 
@@ -332,7 +371,7 @@ const AuditAuditors = () => {
   // Handler to add auditor with warning if no Auditor role
   const handleAddAuditor = (user) => {
     if (!hasAuditorRole(user)) {
-      if (!window.confirm(`${user.firstName} ${user.lastName} no tiene el rol "Auditor" asignado.\n\n¿Desea agregarlo de todas formas como auditor?`)) {
+      if (!window.confirm(`${user.firstName} ${user.lastName} ${L.noAuditorRoleWarning}`)) {
         return;
       }
     }
@@ -362,7 +401,7 @@ const AuditAuditors = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando auditores...
+          {L.loading}
         </div>
       </div>
     );
@@ -373,10 +412,13 @@ const AuditAuditors = () => {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Auditores</h1>
-          <p style={styles.subtitle}>Gestión de competencias y certificaciones de auditores</p>
+          <h1 style={styles.title}>{L.title}</h1>
+          <p style={styles.subtitle}>{L.subtitle}</p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <div style={styles.viewToggle}>
             <button
               style={{
@@ -385,7 +427,7 @@ const AuditAuditors = () => {
               }}
               onClick={() => setViewMode('list')}
             >
-               Lista
+               {L.list}
             </button>
             <button
               style={{
@@ -394,26 +436,26 @@ const AuditAuditors = () => {
               }}
               onClick={() => setViewMode('matrix')}
             >
-               Matriz
+               {L.matrix}
             </button>
           </div>
           <button
             style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
             onClick={() => setShowAddModal(true)}
           >
-            + Agregar Auditor
+            {L.addAuditor}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-dashboard')}
           >
-             Dashboard
+             {L.dashboard}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
             onClick={() => navigate('/')}
           >
-            ← Inicio
+            ← {L.home}
           </button>
         </div>
       </div>
@@ -422,7 +464,7 @@ const AuditAuditors = () => {
       <div style={styles.summary}>
         <div style={styles.summaryCard}>
           <div style={styles.summaryValue}>{combinedAuditors.length}</div>
-          <div style={styles.summaryLabel}>Auditores Totales</div>
+          <div style={styles.summaryLabel}>{L.totalAuditors}</div>
         </div>
         {AREAS.map(area => (
           <div key={area} style={styles.summaryCard}>
@@ -444,8 +486,8 @@ const AuditAuditors = () => {
       {viewMode === 'list' && (
         combinedAuditors.length === 0 ? (
           <div style={styles.empty}>
-            <p style={{ fontSize: '18px', marginBottom: '12px' }}>No hay auditores registrados</p>
-            <p>Agrega usuarios como auditores o asigna el rol "Auditor" en Configuración</p>
+            <p style={{ fontSize: '18px', marginBottom: '12px' }}>{L.noAuditors}</p>
+            <p>{L.noAuditorsDesc}</p>
           </div>
         ) : (
           combinedAuditors.map(auditor => (
@@ -463,12 +505,12 @@ const AuditAuditors = () => {
                         borderRadius: '4px',
                         marginLeft: '8px'
                       }}>
-                        Por Rol
+                        {L.byRole}
                       </span>
                     )}
                   </div>
                   <div style={styles.auditorDept}>
-                    {auditor.department || 'Sin departamento'} • {auditor.email}
+                    {auditor.department || L.noDepartment} • {auditor.email}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -482,12 +524,12 @@ const AuditAuditors = () => {
                       });
                     }}
                   >
-                     Editar
+                     {L.edit}
                   </button>
                   <button
                     style={{ ...styles.button, padding: '6px 12px', backgroundColor: t.error, color: 'white' }}
                     onClick={() => {
-                      if (window.confirm(`¿Quitar a ${auditor.firstName} ${auditor.lastName} como auditor?`)) {
+                      if (window.confirm(`${L.removeAuditorConfirm} ${auditor.firstName} ${auditor.lastName}`)) {
                         toggleAuditor(auditor.id, false);
                       }
                     }}
@@ -498,7 +540,7 @@ const AuditAuditors = () => {
               </div>
 
               <div style={{ marginBottom: '8px' }}>
-                <div style={{ fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>Áreas:</div>
+                <div style={{ fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>{L.areas}</div>
                 <div style={styles.tags}>
                   {(auditor.auditorAreas || []).length > 0 ? (
                     auditor.auditorAreas.map(area => (
@@ -507,13 +549,13 @@ const AuditAuditors = () => {
                       </span>
                     ))
                   ) : (
-                    <span style={{ fontSize: '13px', color: t.textDim }}>Sin áreas asignadas</span>
+                    <span style={{ fontSize: '13px', color: t.textDim }}>{L.noAreas}</span>
                   )}
                 </div>
               </div>
 
               <div>
-                <div style={{ fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>Certificaciones:</div>
+                <div style={{ fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>{L.certifications}</div>
                 <div style={styles.tags}>
                   {(auditor.auditorCertifications || []).length > 0 ? (
                     auditor.auditorCertifications.map(cert => (
@@ -522,7 +564,7 @@ const AuditAuditors = () => {
                       </span>
                     ))
                   ) : (
-                    <span style={{ fontSize: '13px', color: t.textDim }}>Sin certificaciones</span>
+                    <span style={{ fontSize: '13px', color: t.textDim }}>{L.noCertifications}</span>
                   )}
                 </div>
               </div>
@@ -538,8 +580,8 @@ const AuditAuditors = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Auditor</th>
-                  <th style={styles.th}>Departamento</th>
+                  <th style={styles.th}>{L.auditor}</th>
+                  <th style={styles.th}>{L.department}</th>
                   {AREAS.map(area => (
                     <th key={area} style={{ ...styles.th, textAlign: 'center' }}>
                       {area.charAt(0).toUpperCase() + area.slice(1)}
@@ -558,7 +600,7 @@ const AuditAuditors = () => {
                     <td style={styles.td}>
                       <div style={{ fontWeight: '500' }}>
                         {auditor.firstName} {auditor.lastName}
-                        {auditor.fromRole && <span style={{ fontSize: '10px', color: '#8b5cf6', marginLeft: '6px' }}>(Rol)</span>}
+                        {auditor.fromRole && <span style={{ fontSize: '10px', color: '#8b5cf6', marginLeft: '6px' }}>({L.role})</span>}
                       </div>
                     </td>
                     <td style={styles.td}>{auditor.department || '-'}</td>
@@ -592,11 +634,11 @@ const AuditAuditors = () => {
       {editingUser && (
         <div style={styles.modal} onClick={() => setEditingUser(null)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Editar Competencias</h2>
+            <h2 style={styles.modalTitle}>{L.editCompetencies}</h2>
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: t.text }}>
-                Áreas de Auditoría
+                {L.auditAreas}
               </label>
               <div style={styles.checkboxGroup}>
                 {AREAS.map(area => (
@@ -616,7 +658,7 @@ const AuditAuditors = () => {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: t.text }}>
-                Certificaciones
+                {L.certifications}
               </label>
               <div style={styles.checkboxGroup}>
                 {CERTIFICATIONS.map(cert => (
@@ -639,13 +681,13 @@ const AuditAuditors = () => {
                 style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
                 onClick={() => setEditingUser(null)}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
                 onClick={() => updateAuditor(editingUser, editData)}
               >
-                Guardar Cambios
+                {L.saveChanges}
               </button>
             </div>
           </div>
@@ -656,13 +698,13 @@ const AuditAuditors = () => {
       {showAddModal && (
         <div style={styles.modal} onClick={() => setShowAddModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Agregar Auditor</h2>
+            <h2 style={styles.modalTitle}>{L.addAuditorTitle}</h2>
 
             <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '12px' }}>
-              Solo usuarios con nivel de acceso 2 o superior pueden ser auditores.
+              {L.accessLevelNote}
             </p>
             {nonAuditors.length === 0 ? (
-              <p style={{ color: t.textMuted }}>No hay usuarios elegibles disponibles</p>
+              <p style={{ color: t.textMuted }}>{L.noEligibleUsers}</p>
             ) : (
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {nonAuditors.map(user => (
@@ -686,13 +728,13 @@ const AuditAuditors = () => {
                           backgroundColor: `${t.accent}15`,
                           color: t.accent
                         }}>
-                          Nivel {getMaxClearanceLevel(user)}
+                          {L.level} {getMaxClearanceLevel(user)}
                         </span>
                       </div>
                       <div style={{ fontSize: '13px', color: t.textMuted }}>
-                        {user.department || 'Sin departamento'}
+                        {user.department || L.noDepartment}
                         {!hasAuditorRole(user) && (
-                          <span style={{ color: t.warning, marginLeft: '8px' }}> Sin rol Auditor</span>
+                          <span style={{ color: t.warning, marginLeft: '8px' }}> {L.noAuditorRole}</span>
                         )}
                       </div>
                     </div>
@@ -700,7 +742,7 @@ const AuditAuditors = () => {
                       style={{ ...styles.button, padding: '6px 12px', backgroundColor: t.success, color: 'white' }}
                       onClick={() => handleAddAuditor(user)}
                     >
-                      + Agregar
+                      {L.add}
                     </button>
                   </div>
                 ))}
@@ -712,7 +754,7 @@ const AuditAuditors = () => {
                 style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
                 onClick={() => setShowAddModal(false)}
               >
-                Cerrar
+                {L.close}
               </button>
             </div>
           </div>

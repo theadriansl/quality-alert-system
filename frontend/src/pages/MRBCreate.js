@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { canUserEdit, isReadOnly } from '../utils/permissions';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   AlertTriangle, Send, Users, FileText, Camera, X, Check, Clock,
   User, MapPin, Search, Plus, List, LayoutDashboard, ClipboardCheck,
@@ -13,7 +14,34 @@ const MRBCreate = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const API_URL = 'http://localhost:5000';
+
+  // Traducciones locales
+  const L = {
+    en: {
+      noPermission: 'You do not have permissions to create MRBs',
+      titleRequired: 'Title is required', defectDescRequired: 'Defect Description is required',
+      inspCriteriaRequired: 'Inspection Criteria is required', dispInstrRequired: 'Disposition Instructions are required',
+      photoNokRequired: 'NOK Photo is required', photoOkRequired: 'OK Photo is required',
+      selectResponseRecipient: 'Select at least one Response Recipient', selectValidationRecipient: 'Select at least one Validation Recipient',
+      clientRequired: 'Client is required', projectRequired: 'Project is required',
+      selectPart: 'Select at least one Part', deptRequired: 'Responsible Department is required', problemDescRequired: 'Problem Description is required',
+      responsibleDept: 'Responsible Department', saveDraft: 'Save Draft',
+      campaignTitle: 'Campaign Title', problemDescription: 'Problem Description',
+    },
+    es: {
+      noPermission: 'No tienes permisos para crear MRBs',
+      titleRequired: 'El título es requerido', defectDescRequired: 'La Descripción del Defecto es requerida',
+      inspCriteriaRequired: 'El Criterio de Inspección es requerido', dispInstrRequired: 'Las Instrucciones de Disposición son requeridas',
+      photoNokRequired: 'La Foto NOK es requerida', photoOkRequired: 'La Foto OK es requerida',
+      selectResponseRecipient: 'Selecciona al menos un Destinatario de Respuesta', selectValidationRecipient: 'Selecciona al menos un Destinatario de Validación',
+      clientRequired: 'El Cliente es requerido', projectRequired: 'El Proyecto es requerido',
+      selectPart: 'Selecciona al menos una Parte', deptRequired: 'El Departamento Responsable es requerido', problemDescRequired: 'La Descripción del Problema es requerida',
+      responsibleDept: 'Departamento Responsable', saveDraft: 'Guardar Borrador',
+      campaignTitle: 'Título de la Campaña', problemDescription: 'Descripción del Problema',
+    }
+  }[language] || {};
 
   // Permission check
   const canEdit = canUserEdit('mrb');
@@ -22,7 +50,7 @@ const MRBCreate = () => {
   // Redirect if no edit permissions
   useEffect(() => {
     if (!canEdit) {
-      alert('No tienes permisos para crear MRBs');
+      alert(L.noPermission);
       navigate('/mrb-list');
     }
   }, [canEdit, navigate]);
@@ -131,6 +159,7 @@ const MRBCreate = () => {
   const [defectIds, setDefectIds] = useState(prefillData.defectIds || []);
 
   // ========== UI STATE ==========
+  const [eightdHasDescription, setEightdHasDescription] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -150,7 +179,7 @@ const MRBCreate = () => {
   }, []);
 
   useEffect(() => {
-    if (sourceType === '8D') loadSources();
+    if (sourceType === '8D') { loadSources(); if (departments.length === 0) loadDepartments(); }
     if (sourceType === 'INCOMING' && clients.length === 0) { loadClients(); loadDepartments(); }
   }, [sourceType, searchTerm]);
 
@@ -163,6 +192,12 @@ const MRBCreate = () => {
     if (selectedProjectId) loadProjectParts(selectedProjectId);
     else { setProjectParts([]); setSelectedPartIds([]); }
   }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (sourceType === 'INCOMING' && selectedPartIds.length > 0) {
+      setPartDescription(selectedPartIds.map(p => `${p.partNumber}${p.partName ? ' — ' + p.partName : ''}`).join('\n'));
+    }
+  }, [selectedPartIds]);
 
   const loadDepartments = async () => {
     try {
@@ -415,6 +450,7 @@ const MRBCreate = () => {
       defectDescription: source.defectDescription || '',
       createdAt: source.createdAt
     });
+    setEightdHasDescription(!!source.defectDescription);
 
     // Pre-fill quarantine from 8D source
     if (source.sourceType === '8D') {
@@ -530,14 +566,14 @@ const MRBCreate = () => {
   };
 
   const handleSubmit = async (isDraft = false, skipExistingCheck = false) => {
-    if (!title.trim()) {
-      setError('El título es requerido');
-      return;
-    }
-    if (!isDraft && responseRecipients.length === 0) {
-      setError('Selecciona al menos un destinatario de respuesta');
-      return;
-    }
+    if (!title.trim()) { setError(L.titleRequired); return; }
+    if (!description.trim()) { setError(L.defectDescRequired); return; }
+    if (!inspectionCriteria.trim()) { setError(L.inspCriteriaRequired); return; }
+    if (!dispositionInstructions.trim()) { setError(L.dispInstrRequired); return; }
+    if (!inheritedPhotoNok && !photoNokFile) { setError(L.photoNokRequired); return; }
+    if (!inheritedPhotoOk && !photoOkFile) { setError(L.photoOkRequired); return; }
+    if (responseRecipients.length === 0) { setError(L.selectResponseRecipient); return; }
+    if (validationRecipients.length === 0) { setError(L.selectValidationRecipient); return; }
 
     // Check for existing campaigns linked to the same source
     const activeSource = selectedSource || linkedSource;
@@ -674,19 +710,21 @@ const MRBCreate = () => {
       const mailtoSubject = encodeURIComponent(`${result.mrb.campaignNumber} - ${title}`);
       // Resolve client name from loaded clients array if inheritedData doesn't have it
       const emailClientName = inheritedData.clientName
-        || clients.find(c => c.id === inheritedData.clientId)?.name
+        || clients.find(c => c.id === (inheritedData.clientId || selectedClientId))?.name
         || '-';
-      // Resolve part display from partsList or partNumber
       const emailPartDisplay = (inheritedData.partsList?.length > 0
         ? inheritedData.partsList.map(p => p.partNumber).join(', ')
-        : inheritedData.partNumber) || '-';
+        : selectedPartIds.length > 0
+          ? selectedPartIds.map(p => p.partNumber).join(', ')
+          : inheritedData.partNumber) || '-';
       const mailtoBody = encodeURIComponent(
         `Se ha abierto un nuevo caso MRB que requiere tu atención.\n\n` +
         `Número: ${result.mrb.campaignNumber}\n` +
         `Título: ${title}\n` +
         `Origen: ${sourceType === 'INCOMING' ? `Incoming Inspection${linkedSource ? ` — ${linkedSource.folio}` : ''}` : (sourceType === '8D' && inheritedData.folio ? `8D - ${inheritedData.folio}` : 'Sin origen vinculado')}\n` +
         `Cliente: ${emailClientName}\n` +
-        `Parte: ${emailPartDisplay}\n\n` +
+        `Parte: ${emailPartDisplay}\n` +
+        `Lote: ${lotNumber || '-'}\n\n` +
         `Por favor ingresa al sistema para ver los detalles y dar disposición:\n` +
         `${window.location.origin}/mrb-campaign/${result.mrb.id}\n\n` +
         `---\n` +
@@ -983,6 +1021,9 @@ const MRBCreate = () => {
           Volver a Lista
         </button>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <ThemeSelector />
           <button
             onClick={() => navigate('/mrb-campaigns')}
@@ -1251,7 +1292,7 @@ const MRBCreate = () => {
 
             {/* Cliente */}
             <div style={styles.inheritedField}>
-              <div style={styles.inheritedLabel}>Cliente</div>
+              <div style={styles.inheritedLabel}>Cliente *</div>
               {sourceType === 'INCOMING' ? (
                 <select
                   style={styles.input}
@@ -1275,7 +1316,7 @@ const MRBCreate = () => {
 
             {/* Proyecto */}
             <div style={styles.inheritedField}>
-              <div style={styles.inheritedLabel}>Proyecto</div>
+              <div style={styles.inheritedLabel}>Proyecto *</div>
               {sourceType === 'INCOMING' ? (
                 <select
                   style={{ ...styles.input, opacity: selectedClientId ? 1 : 0.5 }}
@@ -1300,7 +1341,7 @@ const MRBCreate = () => {
             {/* Parte(s) */}
             <div style={{ ...styles.inheritedField, gridColumn: '1 / -1' }}>
               <div style={styles.inheritedLabel}>
-                Parte(s) {selectedPartIds.length > 0 ? `(${selectedPartIds.length} seleccionadas)` : inheritedData.partsList?.length > 1 ? `(${inheritedData.partsList.length})` : ''}
+                Parte(s) * {selectedPartIds.length > 0 ? `(${selectedPartIds.length} seleccionadas)` : inheritedData.partsList?.length > 1 ? `(${inheritedData.partsList.length})` : ''}
               </div>
               {sourceType === 'INCOMING' ? (
                 <div>
@@ -1343,7 +1384,7 @@ const MRBCreate = () => {
 
             {/* Departamento — always editable */}
             <div style={styles.inheritedField}>
-              <div style={styles.inheritedLabel}>Departamento Responsable</div>
+              <div style={styles.inheritedLabel}>{L.responsibleDept} *</div>
               <select
                 style={styles.input}
                 value={inheritedData.departmentId || ''}
@@ -1360,8 +1401,8 @@ const MRBCreate = () => {
 
             {/* Descripción del problema */}
             <div style={{ ...styles.inheritedField, gridColumn: '1 / -1' }}>
-              <div style={styles.inheritedLabel}>Descripción del Problema</div>
-              {sourceType === 'INCOMING' ? (
+              <div style={styles.inheritedLabel}>Descripción del Problema *</div>
+              {(sourceType === 'INCOMING' || !eightdHasDescription) ? (
                 <textarea
                   style={{ ...styles.textarea, minHeight: '80px' }}
                   placeholder="Describe el defecto o problema encontrado..."
@@ -1370,7 +1411,7 @@ const MRBCreate = () => {
                 />
               ) : (
                 <div style={{ ...styles.inheritedValue, minHeight: '60px', whiteSpace: 'pre-wrap' }}>
-                  {inheritedData.defectDescription || '-'}
+                  {inheritedData.defectDescription}
                 </div>
               )}
             </div>
@@ -1445,6 +1486,16 @@ const MRBCreate = () => {
                 Anterior
               </button>
               <button style={styles.buttonPrimary} onClick={async () => {
+                // Step 3 validations — aplica igual para 8D e Incoming
+                const clientOk = inheritedData.clientId || selectedClientId;
+                const projectOk = inheritedData.projectId || selectedProjectId;
+                const partsOk = (inheritedData.partsList?.length > 0) || (selectedPartIds.length > 0) || inheritedData.partId;
+                if (!clientOk) { setError(L.clientRequired); return; }
+                if (!projectOk) { setError(L.projectRequired); return; }
+                if (!partsOk) { setError(L.selectPart); return; }
+                if (!inheritedData.departmentId) { setError(L.deptRequired); return; }
+                if (!inheritedData.defectDescription?.trim()) { setError(L.problemDescRequired); return; }
+                setError(null);
                 const activeSource = selectedSource || linkedSource;
                 if (activeSource) {
                   try {
@@ -1493,7 +1544,7 @@ const MRBCreate = () => {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>Descripción</label>
+              <label style={styles.label}>Descripción *</label>
               <textarea
                 style={styles.textarea}
                 placeholder="Descripción detallada del defecto o problema..."
@@ -1534,7 +1585,7 @@ const MRBCreate = () => {
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                Criterio de Inspección — ¿Cómo se garantiza que el material esté conforme?
+                Criterio de Inspección * — ¿Cómo se garantiza que el material esté conforme?
                 {inspectionCriteria && (sourceType === '8D' || sourceType === 'INCOMING') && (
                   <span style={{ backgroundColor: '#0072CE20', color: '#0072CE', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
                     D3 del 8D
@@ -1551,7 +1602,7 @@ const MRBCreate = () => {
 
             <div>
               <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                Instrucciones de Disposición — ¿Cómo se dispondrá el material sospechoso?
+                Instrucciones de Disposición * — ¿Cómo se dispondrá el material sospechoso?
                 {dispositionInstructions && (sourceType === '8D' || sourceType === 'INCOMING') && (
                   <span style={{ backgroundColor: '#0072CE20', color: '#0072CE', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
                     D3 del 8D
@@ -1626,7 +1677,7 @@ const MRBCreate = () => {
             </div>
             {(inspectorUnitCost > 0 || supervisorUnitCost > 0) && (
               <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: t.bg, borderRadius: '6px', fontSize: '12px', color: t.textDim }}>
-                Costo estimado por turno:&nbsp;
+                Costo estimado por hora:&nbsp;
                 <strong style={{ color: t.text }}>
                   ${((inspectorCount * inspectorUnitCost) + (supervisorCount * supervisorUnitCost)).toFixed(2)}
                 </strong>
@@ -1666,7 +1717,7 @@ const MRBCreate = () => {
                   ) : (
                     <>
                       <X size={32} color="#B00020" />
-                      <p style={{ margin: '8px 0 0', color: '#B00020', fontWeight: '600', fontSize: '13px' }}>Foto NOK (Defecto)</p>
+                      <p style={{ margin: '8px 0 0', color: '#B00020', fontWeight: '600', fontSize: '13px' }}>Foto NOK (Defecto) *</p>
                     </>
                   )}
                 </label>
@@ -1693,7 +1744,7 @@ const MRBCreate = () => {
                   ) : (
                     <>
                       <Check size={32} color="#22c55e" />
-                      <p style={{ margin: '8px 0 0', color: '#22c55e', fontWeight: '600', fontSize: '13px' }}>Foto OK (Referencia)</p>
+                      <p style={{ margin: '8px 0 0', color: '#22c55e', fontWeight: '600', fontSize: '13px' }}>Foto OK (Referencia) *</p>
                     </>
                   )}
                 </label>
@@ -1785,7 +1836,7 @@ const MRBCreate = () => {
 
             <div>
               <div style={{ ...styles.label, marginBottom: '10px' }}>
-                Destinatarios de Validación ({validationRecipients.length})
+                Destinatarios de Validación ({validationRecipients.length}) *
               </div>
               <div style={styles.userGrid}>
                 {users.filter(u => u.canValidateQar || u.canValidateMrb).map(user => (
@@ -1831,7 +1882,7 @@ const MRBCreate = () => {
                 title="Guarda el MRB en estado Borrador para continuar más tarde"
               >
                 <FileText size={18} />
-                {submitting ? '...' : 'Guardar Borrador'}
+                {submitting ? '...' : L.saveDraft}
               </button>
               <button
                 style={{ ...styles.buttonSuccess, flex: 2, opacity: submitting ? 0.7 : 1 }}

@@ -1,28 +1,52 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
 const AuditNCList = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const [ncs, setNcs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
 
+  // Traducciones locales
+  const L = {
+    en: {
+      open: 'Open', inProgress: 'In Progress', pendingVerification: 'Pending Verification', closed: 'Closed',
+      major: 'Major', minor: 'Minor', overdue: 'Overdue', connectionError: 'Connection error',
+      loading: 'Loading non-conformities...', title: 'Audit Non-Conformities', subtitle: 'Management and tracking of audit findings',
+      dashboard: 'Dashboard', home: 'Home', refresh: 'Refresh',
+      allStatuses: 'All statuses', allTypes: 'All types', majors: 'Majors', minors: 'Minors',
+      noNCs: 'No non-conformities registered', noNCsDesc: 'Non-conformities are generated during audit execution',
+      audit: 'Audit', clause: 'Clause', noArea: 'No area', unassigned: 'Unassigned', dueDate: 'Due',
+    },
+    es: {
+      open: 'Abierta', inProgress: 'En Proceso', pendingVerification: 'Pend. Verificación', closed: 'Cerrada',
+      major: 'Mayor', minor: 'Menor', overdue: 'Vencida', connectionError: 'Error de conexión',
+      loading: 'Cargando no conformidades...', title: 'No Conformidades de Auditoría', subtitle: 'Gestión y seguimiento de hallazgos de auditoría',
+      dashboard: 'Dashboard', home: 'Inicio', refresh: 'Actualizar',
+      allStatuses: 'Todos los estados', allTypes: 'Todos los tipos', majors: 'Mayores', minors: 'Menores',
+      noNCs: 'No hay no conformidades registradas', noNCsDesc: 'Las no conformidades se generan durante la ejecución de auditorías',
+      audit: 'Auditoría', clause: 'Cláusula', noArea: 'Sin área', unassigned: 'Sin asignar', dueDate: 'Vence',
+    }
+  }[language] || {};
+
   const STATUS_CONFIG = {
-    open: { label: 'Abierta', color: t.error },
-    in_progress: { label: 'En Proceso', color: t.warning },
-    pending_verification: { label: 'Pend. Verificación', color: '#8b5cf6' },
-    closed: { label: 'Cerrada', color: t.success }
+    open: { label: L.open, color: t.error },
+    in_progress: { label: L.inProgress, color: t.warning },
+    pending_verification: { label: L.pendingVerification, color: '#8b5cf6' },
+    closed: { label: L.closed, color: t.success }
   };
 
   const TYPE_CONFIG = {
-    major: { label: 'Mayor', color: t.error },
-    minor: { label: 'Menor', color: t.warning }
+    major: { label: L.major, color: t.error },
+    minor: { label: L.minor, color: t.warning }
   };
 
   const loadNCs = useCallback(async () => {
@@ -44,7 +68,7 @@ const AuditNCList = () => {
         setError(result.message);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
@@ -205,7 +229,7 @@ const AuditNCList = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando no conformidades...
+          {L.loading}
         </div>
       </div>
     );
@@ -216,15 +240,18 @@ const AuditNCList = () => {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>No Conformidades de Auditoría</h1>
-          <p style={styles.subtitle}>Gestión y seguimiento de hallazgos de auditoría</p>
+          <h1 style={styles.title}>{L.title}</h1>
+          <p style={styles.subtitle}>{L.subtitle}</p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-dashboard')}
           >
-             Dashboard
+             {L.dashboard}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
@@ -239,23 +266,23 @@ const AuditNCList = () => {
       <div style={styles.summary}>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryValue, color: t.error }}>{summary.open}</div>
-          <div style={styles.summaryLabel}>Abiertas</div>
+          <div style={styles.summaryLabel}>{L.open}</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryValue, color: t.warning }}>{summary.inProgress}</div>
-          <div style={styles.summaryLabel}>En Proceso</div>
+          <div style={styles.summaryLabel}>{L.inProgress}</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryValue, color: '#8b5cf6' }}>{summary.pendingVerification}</div>
-          <div style={styles.summaryLabel}>Pend. Verificación</div>
+          <div style={styles.summaryLabel}>{L.pendingVerification}</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryValue, color: t.success }}>{summary.closed}</div>
-          <div style={styles.summaryLabel}>Cerradas</div>
+          <div style={styles.summaryLabel}>{L.closed}</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryValue, color: t.error }}>{summary.overdue}</div>
-          <div style={styles.summaryLabel}>Vencidas</div>
+          <div style={styles.summaryLabel}>{L.overdue}</div>
         </div>
       </div>
 
@@ -266,26 +293,26 @@ const AuditNCList = () => {
           onChange={(e) => setFilterStatus(e.target.value)}
           style={styles.select}
         >
-          <option value="">Todos los estados</option>
-          <option value="open">Abiertas</option>
-          <option value="in_progress">En Proceso</option>
-          <option value="pending_verification">Pend. Verificación</option>
-          <option value="closed">Cerradas</option>
+          <option value="">{L.allStatuses}</option>
+          <option value="open">{L.open}</option>
+          <option value="in_progress">{L.inProgress}</option>
+          <option value="pending_verification">{L.pendingVerification}</option>
+          <option value="closed">{L.closed}</option>
         </select>
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
           style={styles.select}
         >
-          <option value="">Todos los tipos</option>
-          <option value="major">Mayores</option>
-          <option value="minor">Menores</option>
+          <option value="">{L.allTypes}</option>
+          <option value="major">{L.majors}</option>
+          <option value="minor">{L.minors}</option>
         </select>
         <button
           style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
           onClick={loadNCs}
         >
-           Actualizar
+           {L.refresh}
         </button>
       </div>
 
@@ -298,8 +325,8 @@ const AuditNCList = () => {
       {/* NC List */}
       {ncs.length === 0 ? (
         <div style={styles.empty}>
-          <p style={{ fontSize: '18px', marginBottom: '12px' }}>No hay no conformidades registradas</p>
-          <p>Las no conformidades se generan durante la ejecución de auditorías</p>
+          <p style={{ fontSize: '18px', marginBottom: '12px' }}>{L.noNCs}</p>
+          <p>{L.noNCsDesc}</p>
         </div>
       ) : (
         ncs.map(nc => {
@@ -328,10 +355,10 @@ const AuditNCList = () => {
                 <div>
                   <h3 style={styles.cardTitle}>
                     {nc.ncNumber}
-                    {isOverdue && <span style={{ marginLeft: '8px', color: t.error, fontSize: '12px' }}> VENCIDA</span>}
+                    {isOverdue && <span style={{ marginLeft: '8px', color: t.error, fontSize: '12px' }}> {L.overdue.toUpperCase()}</span>}
                   </h3>
                   <span style={{ fontSize: '13px', color: t.textMuted }}>
-                    Auditoría: {nc.auditNumber}
+                    {L.audit}: {nc.auditNumber}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -361,22 +388,22 @@ const AuditNCList = () => {
                 {nc.clause && (
                   <div style={styles.metaItem}>
                     <span></span>
-                    <span>Cláusula: {nc.clause}</span>
+                    <span>{L.clause}: {nc.clause}</span>
                   </div>
                 )}
                 <div style={styles.metaItem}>
                   <span></span>
-                  <span>{nc.areaProcess || 'Sin área'}</span>
+                  <span>{nc.areaProcess || L.noArea}</span>
                 </div>
                 <div style={styles.metaItem}>
                   <span></span>
-                  <span>{nc.responsibleName || 'Sin asignar'}</span>
+                  <span>{nc.responsibleName || L.unassigned}</span>
                 </div>
                 {nc.dueDate && (
                   <div style={styles.metaItem}>
                     <span></span>
                     <span style={{ color: isOverdue ? t.error : 'inherit' }}>
-                      Vence: {new Date(nc.dueDate).toLocaleDateString('es-MX')}
+                      {L.dueDate}: {new Date(nc.dueDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX')}
                     </span>
                   </div>
                 )}

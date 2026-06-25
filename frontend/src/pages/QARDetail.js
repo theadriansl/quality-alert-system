@@ -7,9 +7,11 @@ import {
   Paperclip, Trash2, Download, File, Image
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const QARDetail = () => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
   const { id } = useParams();
   const API_URL = 'http://localhost:5000';
@@ -593,9 +595,29 @@ const QARDetail = () => {
 
   const statusConfig = getStatusConfig(qar.status);
   const StatusIcon = statusConfig.icon;
+  const isReadOnly = qar.status === 'CERRADO';
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            Este QAR está cerrado y es de solo lectura
+          </span>
+        </div>
+      )}
+
       {/* Navigation Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <button style={styles.backButton} onClick={() => navigate('/qar-list')}>
@@ -638,7 +660,12 @@ const QARDetail = () => {
       <div style={styles.header}>
         <div style={styles.headerTop}>
           <div>
-            <div style={styles.qarNumber}>{qar.alertNumber}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={styles.qarNumber}>{qar.alertNumber}</div>
+              <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+                {language === 'es' ? 'EN' : 'ES'}
+              </button>
+            </div>
             <h1 style={styles.headerTitle}>
               <AlertTriangle size={24} />
               {qar.title}

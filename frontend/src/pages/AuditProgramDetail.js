@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
@@ -8,6 +9,53 @@ const AuditProgramDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
+
+  const L = {
+    en: {
+      draft: 'Draft', approved: 'Approved', inProgress: 'In Progress', completed: 'Completed',
+      planned: 'Planned', cancelled: 'Cancelled', postponed: 'Postponed',
+      connectionError: 'Connection error', updateError: 'Error updating',
+      confirmApprove: 'Approve this audit program?', approveError: 'Error approving',
+      confirmDelete: 'Delete this program? This action cannot be undone.',
+      deleteError: 'Error deleting',
+      loading: 'Loading program...', notFound: 'Program not found', backToPrograms: 'Back to Programs',
+      auditProgram: 'Audit Program', year: 'Year',
+      approve: 'Approve', edit: 'Edit', save: 'Save', cancel: 'Cancel',
+      addAudit: '+ Add Audit', delete: 'Delete', back: 'Back',
+      programInfo: 'Program Information', name: 'Name', description: 'Description',
+      scope: 'Scope', type: 'Type', criteria: 'Criteria/Standard', frequency: 'Frequency',
+      objectives: 'Objectives', approvedBy: 'Approved by',
+      internal: 'Internal', supplier: 'Supplier', process: 'Process', product: 'Product', system: 'System',
+      riskBased: 'Risk-Based', quarterly: 'Quarterly', semiannual: 'Semi-annual', annual: 'Annual',
+      scheduledAudits: 'Scheduled Audits', audits: 'audits',
+      noAuditsScheduled: 'No audits scheduled for this program', addFirstAudit: '+ Add First Audit',
+      number: 'Number', areaProcess: 'Area/Process', startDate: 'Start Date', endDate: 'End Date',
+      leadAuditor: 'Lead Auditor', status: 'Status'
+    },
+    es: {
+      draft: 'Borrador', approved: 'Aprobado', inProgress: 'En Proceso', completed: 'Completado',
+      planned: 'Planeada', cancelled: 'Cancelada', postponed: 'Pospuesta',
+      connectionError: 'Error de conexión', updateError: 'Error al actualizar',
+      confirmApprove: '¿Aprobar este programa de auditoría?', approveError: 'Error al aprobar',
+      confirmDelete: '¿Eliminar este programa? Esta acción no se puede deshacer.',
+      deleteError: 'Error al eliminar',
+      loading: 'Cargando programa...', notFound: 'Programa no encontrado', backToPrograms: 'Volver a Programas',
+      auditProgram: 'Programa de Auditoría', year: 'Año',
+      approve: 'Aprobar', edit: 'Editar', save: 'Guardar', cancel: 'Cancelar',
+      addAudit: '+ Agregar Auditoría', delete: 'Eliminar', back: 'Volver',
+      programInfo: 'Información del Programa', name: 'Nombre', description: 'Descripción',
+      scope: 'Alcance', type: 'Tipo', criteria: 'Criterios/Norma', frequency: 'Frecuencia',
+      objectives: 'Objetivos', approvedBy: 'Aprobado por',
+      internal: 'Interna', supplier: 'Proveedor', process: 'Proceso', product: 'Producto', system: 'Sistema',
+      riskBased: 'Basado en Riesgo', quarterly: 'Trimestral', semiannual: 'Semestral', annual: 'Anual',
+      scheduledAudits: 'Auditorías Programadas', audits: 'auditorías',
+      noAuditsScheduled: 'No hay auditorías programadas para este programa', addFirstAudit: '+ Agregar Primera Auditoría',
+      number: 'Número', areaProcess: 'Área/Proceso', startDate: 'Fecha Inicio', endDate: 'Fecha Fin',
+      leadAuditor: 'Auditor Líder', status: 'Estado'
+    }
+  }[language] || {};
+
   const [program, setProgram] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,13 +64,13 @@ const AuditProgramDetail = () => {
   const [editData, setEditData] = useState({});
 
   const STATUS_CONFIG = {
-    draft: { color: t.textMuted, label: 'Borrador' },
-    approved: { color: t.accent, label: 'Aprobado' },
-    in_progress: { color: t.warning, label: 'En Proceso' },
-    completed: { color: t.success, label: 'Completado' },
-    planned: { color: t.accent, label: 'Planeada' },
-    cancelled: { color: t.error, label: 'Cancelada' },
-    postponed: { color: t.textMuted, label: 'Pospuesta' }
+    draft: { color: t.textMuted, label: L.draft },
+    approved: { color: t.accent, label: L.approved },
+    in_progress: { color: t.warning, label: L.inProgress },
+    completed: { color: t.success, label: L.completed },
+    planned: { color: t.accent, label: L.planned },
+    cancelled: { color: t.error, label: L.cancelled },
+    postponed: { color: t.textMuted, label: L.postponed }
   };
 
   const loadProgram = useCallback(async () => {
@@ -42,11 +90,11 @@ const AuditProgramDetail = () => {
         setError(result.message);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, L.connectionError]);
 
   useEffect(() => {
     loadProgram();
@@ -72,12 +120,12 @@ const AuditProgramDetail = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al actualizar');
+      alert(L.updateError);
     }
   };
 
   const approveProgram = async () => {
-    if (!window.confirm('¿Aprobar este programa de auditoría?')) return;
+    if (!window.confirm(L.confirmApprove)) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -98,12 +146,12 @@ const AuditProgramDetail = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al aprobar');
+      alert(L.approveError);
     }
   };
 
   const deleteProgram = async () => {
-    if (!window.confirm('¿Eliminar este programa? Esta acción no se puede deshacer.')) return;
+    if (!window.confirm(L.confirmDelete)) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -119,7 +167,7 @@ const AuditProgramDetail = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al eliminar');
+      alert(L.deleteError);
     }
   };
 
@@ -263,7 +311,7 @@ const AuditProgramDetail = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando programa...
+          {L.loading}
         </div>
       </div>
     );
@@ -273,12 +321,12 @@ const AuditProgramDetail = () => {
     return (
       <div style={styles.container}>
         <div style={{ ...styles.card, borderLeft: `4px solid ${t.error}` }}>
-          <p style={{ color: t.error }}>{error || 'Programa no encontrado'}</p>
+          <p style={{ color: t.error }}>{error || L.notFound}</p>
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-programs')}
           >
-            Volver a Programas
+            {L.backToPrograms}
           </button>
         </div>
       </div>
@@ -294,23 +342,26 @@ const AuditProgramDetail = () => {
         <div>
           <h1 style={styles.title}>{program.name}</h1>
           <p style={{ fontSize: '14px', color: t.textMuted, marginTop: '4px' }}>
-            Programa de Auditoría - Año {program.year}
+            {L.auditProgram} - {L.year} {program.year}
           </p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           {program.status === 'draft' && !isEditing && (
             <>
               <button
                 style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
                 onClick={approveProgram}
               >
-                 Aprobar
+                 {L.approve}
               </button>
               <button
                 style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
                 onClick={() => setIsEditing(true)}
               >
-                 Editar
+                 {L.edit}
               </button>
             </>
           )}
@@ -320,7 +371,7 @@ const AuditProgramDetail = () => {
                 style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
                 onClick={updateProgram}
               >
-                 Guardar
+                 {L.save}
               </button>
               <button
                 style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
@@ -329,7 +380,7 @@ const AuditProgramDetail = () => {
                   setEditData(program);
                 }}
               >
-                Cancelar
+                {L.cancel}
               </button>
             </>
           )}
@@ -337,21 +388,21 @@ const AuditProgramDetail = () => {
             style={{ ...styles.button, backgroundColor: '#8b5cf6', color: 'white' }}
             onClick={() => navigate('/audit-schedule-create', { state: { programId: program.id } })}
           >
-            + Agregar Auditoría
+            {L.addAudit}
           </button>
           {program.status === 'draft' && (
             <button
               style={{ ...styles.button, backgroundColor: t.error, color: 'white' }}
               onClick={deleteProgram}
             >
-               Eliminar
+               {L.delete}
             </button>
           )}
           <button
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
             onClick={() => navigate('/audit-programs')}
           >
-            ← Volver
+            ← {L.back}
           </button>
         </div>
       </div>
@@ -359,7 +410,7 @@ const AuditProgramDetail = () => {
       {/* Program Details */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>
-           Información del Programa
+           {L.programInfo}
           <span style={{
             ...styles.badge,
             backgroundColor: `${statusConfig.color}20`,
@@ -374,7 +425,7 @@ const AuditProgramDetail = () => {
           <div>
             {isEditing ? (
               <div style={styles.field}>
-                <label style={styles.fieldLabel}>Nombre</label>
+                <label style={styles.fieldLabel}>{L.name}</label>
                 <input
                   type="text"
                   value={editData.name || ''}
@@ -384,14 +435,14 @@ const AuditProgramDetail = () => {
               </div>
             ) : (
               <div style={styles.field}>
-                <div style={styles.fieldLabel}>Nombre</div>
+                <div style={styles.fieldLabel}>{L.name}</div>
                 <div style={styles.fieldValue}>{program.name}</div>
               </div>
             )}
 
             {isEditing ? (
               <div style={styles.field}>
-                <label style={styles.fieldLabel}>Descripción</label>
+                <label style={styles.fieldLabel}>{L.description}</label>
                 <textarea
                   value={editData.description || ''}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
@@ -400,14 +451,14 @@ const AuditProgramDetail = () => {
               </div>
             ) : (
               <div style={styles.field}>
-                <div style={styles.fieldLabel}>Descripción</div>
+                <div style={styles.fieldLabel}>{L.description}</div>
                 <div style={styles.fieldValue}>{program.description || '-'}</div>
               </div>
             )}
 
             {isEditing ? (
               <div style={styles.field}>
-                <label style={styles.fieldLabel}>Alcance</label>
+                <label style={styles.fieldLabel}>{L.scope}</label>
                 <textarea
                   value={editData.scope || ''}
                   onChange={(e) => setEditData({ ...editData, scope: e.target.value })}
@@ -416,7 +467,7 @@ const AuditProgramDetail = () => {
               </div>
             ) : (
               <div style={styles.field}>
-                <div style={styles.fieldLabel}>Alcance</div>
+                <div style={styles.fieldLabel}>{L.scope}</div>
                 <div style={styles.fieldValue}>{program.scope || '-'}</div>
               </div>
             )}
@@ -425,35 +476,35 @@ const AuditProgramDetail = () => {
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div style={styles.field}>
-                <div style={styles.fieldLabel}>Año</div>
+                <div style={styles.fieldLabel}>{L.year}</div>
                 <div style={styles.fieldValue}>{program.year}</div>
               </div>
 
               {isEditing ? (
                 <div style={styles.field}>
-                  <label style={styles.fieldLabel}>Tipo</label>
+                  <label style={styles.fieldLabel}>{L.type}</label>
                   <select
                     value={editData.auditType || ''}
                     onChange={(e) => setEditData({ ...editData, auditType: e.target.value })}
                     style={styles.select}
                   >
-                    <option value="interna">Interna</option>
-                    <option value="proveedor">Proveedor</option>
-                    <option value="proceso">Proceso</option>
-                    <option value="producto">Producto</option>
-                    <option value="sistema">Sistema</option>
+                    <option value="interna">{L.internal}</option>
+                    <option value="proveedor">{L.supplier}</option>
+                    <option value="proceso">{L.process}</option>
+                    <option value="producto">{L.product}</option>
+                    <option value="sistema">{L.system}</option>
                   </select>
                 </div>
               ) : (
                 <div style={styles.field}>
-                  <div style={styles.fieldLabel}>Tipo</div>
+                  <div style={styles.fieldLabel}>{L.type}</div>
                   <div style={styles.fieldValue}>{program.auditType || '-'}</div>
                 </div>
               )}
 
               {isEditing ? (
                 <div style={styles.field}>
-                  <label style={styles.fieldLabel}>Criterios/Norma</label>
+                  <label style={styles.fieldLabel}>{L.criteria}</label>
                   <select
                     value={editData.criteria || ''}
                     onChange={(e) => setEditData({ ...editData, criteria: e.target.value })}
@@ -468,28 +519,28 @@ const AuditProgramDetail = () => {
                 </div>
               ) : (
                 <div style={styles.field}>
-                  <div style={styles.fieldLabel}>Criterios/Norma</div>
+                  <div style={styles.fieldLabel}>{L.criteria}</div>
                   <div style={styles.fieldValue}>{program.criteria || '-'}</div>
                 </div>
               )}
 
               {isEditing ? (
                 <div style={styles.field}>
-                  <label style={styles.fieldLabel}>Frecuencia</label>
+                  <label style={styles.fieldLabel}>{L.frequency}</label>
                   <select
                     value={editData.frequencyBasis || ''}
                     onChange={(e) => setEditData({ ...editData, frequencyBasis: e.target.value })}
                     style={styles.select}
                   >
-                    <option value="riesgo">Basado en Riesgo</option>
-                    <option value="trimestral">Trimestral</option>
-                    <option value="semestral">Semestral</option>
-                    <option value="anual">Anual</option>
+                    <option value="riesgo">{L.riskBased}</option>
+                    <option value="trimestral">{L.quarterly}</option>
+                    <option value="semestral">{L.semiannual}</option>
+                    <option value="anual">{L.annual}</option>
                   </select>
                 </div>
               ) : (
                 <div style={styles.field}>
-                  <div style={styles.fieldLabel}>Frecuencia</div>
+                  <div style={styles.fieldLabel}>{L.frequency}</div>
                   <div style={styles.fieldValue}>{program.frequencyBasis || '-'}</div>
                 </div>
               )}
@@ -497,7 +548,7 @@ const AuditProgramDetail = () => {
 
             {isEditing ? (
               <div style={styles.field}>
-                <label style={styles.fieldLabel}>Objetivos</label>
+                <label style={styles.fieldLabel}>{L.objectives}</label>
                 <textarea
                   value={editData.objectives || ''}
                   onChange={(e) => setEditData({ ...editData, objectives: e.target.value })}
@@ -506,16 +557,16 @@ const AuditProgramDetail = () => {
               </div>
             ) : (
               <div style={styles.field}>
-                <div style={styles.fieldLabel}>Objetivos</div>
+                <div style={styles.fieldLabel}>{L.objectives}</div>
                 <div style={styles.fieldValue}>{program.objectives || '-'}</div>
               </div>
             )}
 
             {program.approvedBy && (
               <div style={styles.field}>
-                <div style={styles.fieldLabel}>Aprobado por</div>
+                <div style={styles.fieldLabel}>{L.approvedBy}</div>
                 <div style={styles.fieldValue}>
-                  {program.approvedByName} - {new Date(program.approvedAt).toLocaleDateString('es-MX')}
+                  {program.approvedByName} - {new Date(program.approvedAt).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX')}
                 </div>
               </div>
             )}
@@ -526,33 +577,33 @@ const AuditProgramDetail = () => {
       {/* Scheduled Audits */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>
-           Auditorías Programadas
+           {L.scheduledAudits}
           <span style={{ marginLeft: 'auto', fontSize: '14px', color: t.textMuted }}>
-            {schedules.length} auditorías
+            {schedules.length} {L.audits}
           </span>
         </h2>
 
         {schedules.length === 0 ? (
           <div style={styles.empty}>
-            <p>No hay auditorías programadas para este programa</p>
+            <p>{L.noAuditsScheduled}</p>
             <button
               style={{ ...styles.button, backgroundColor: t.accent, color: 'white', marginTop: '12px' }}
               onClick={() => navigate('/audit-schedule-create', { state: { programId: program.id } })}
             >
-              + Agregar Primera Auditoría
+              {L.addFirstAudit}
             </button>
           </div>
         ) : (
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>Número</th>
-                <th style={styles.th}>Nombre</th>
-                <th style={styles.th}>Área/Proceso</th>
-                <th style={styles.th}>Fecha Inicio</th>
-                <th style={styles.th}>Fecha Fin</th>
-                <th style={styles.th}>Auditor Líder</th>
-                <th style={styles.th}>Estado</th>
+                <th style={styles.th}>{L.number}</th>
+                <th style={styles.th}>{L.name}</th>
+                <th style={styles.th}>{L.areaProcess}</th>
+                <th style={styles.th}>{L.startDate}</th>
+                <th style={styles.th}>{L.endDate}</th>
+                <th style={styles.th}>{L.leadAuditor}</th>
+                <th style={styles.th}>{L.status}</th>
               </tr>
             </thead>
             <tbody>
@@ -568,10 +619,10 @@ const AuditProgramDetail = () => {
                     <td style={styles.td}>{schedule.auditName}</td>
                     <td style={styles.td}>{schedule.areaProcess || '-'}</td>
                     <td style={styles.td}>
-                      {new Date(schedule.plannedStartDate).toLocaleDateString('es-MX')}
+                      {new Date(schedule.plannedStartDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX')}
                     </td>
                     <td style={styles.td}>
-                      {new Date(schedule.plannedEndDate).toLocaleDateString('es-MX')}
+                      {new Date(schedule.plannedEndDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX')}
                     </td>
                     <td style={styles.td}>{schedule.leadAuditorName || '-'}</td>
                     <td style={styles.td}>

@@ -4,10 +4,119 @@ import userService from '../services/userService';
 import api from '../services/api';
 import { isUserAdmin } from '../utils/permissions';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const UserManagement = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
+
+  // Translations
+  const tr = {
+    en: {
+      userManagement: 'User Management',
+      editUser: 'Edit User',
+      newUser: 'New User',
+      users: 'users',
+      completeInfo: 'Complete the information',
+      manageRoles: 'Manage Roles',
+      searchUsers: 'Search users...',
+      allRoles: 'All roles',
+      allDepartments: 'All departments',
+      department: 'Department',
+      position: 'Position',
+      phone: 'Phone',
+      location: 'Location',
+      roles: 'Roles',
+      edit: 'Edit',
+      delete: 'Delete',
+      rolesOf: 'Roles of',
+      assignedRoles: 'Assigned Roles',
+      noRolesAssigned: 'This user has no assigned roles',
+      availableRoles: 'Available Roles',
+      allRolesAssigned: 'All roles are assigned',
+      system: 'SYSTEM',
+      revoke: 'Revoke',
+      assign: '+ Assign',
+      email: 'Email',
+      systemRole: 'System Role',
+      user: 'User',
+      administrator: 'Administrator',
+      firstName: 'First Name',
+      lastName: 'Last Name',
+      organizationalRole: 'Organizational Role',
+      availability: 'Availability',
+      available: 'Available',
+      busy: 'Busy',
+      unavailable: 'Unavailable',
+      cancel: 'Cancel',
+      update: 'Update',
+      createUser: 'Create User',
+      required: 'Required',
+      invalidEmail: 'Invalid email',
+      errorLoadingUsers: 'Error loading users',
+      roleRevokedSuccess: 'Role revoked successfully',
+      errorRevokingRole: 'Error revoking role',
+      userUpdatedSuccess: 'User updated successfully',
+      userCreatedSuccess: 'User created successfully',
+      errorSaving: 'Error saving',
+      confirmDeleteUser: 'Are you sure you want to delete this user?',
+      userDeleted: 'User deleted',
+      errorAssigningRole: 'Error assigning role'
+    },
+    es: {
+      userManagement: 'Gestión de Usuarios',
+      editUser: 'Editar Usuario',
+      newUser: 'Nuevo Usuario',
+      users: 'usuarios',
+      completeInfo: 'Complete la información',
+      manageRoles: 'Gestionar Roles',
+      searchUsers: 'Buscar usuarios...',
+      allRoles: 'Todos los roles',
+      allDepartments: 'Todos los departamentos',
+      department: 'Departamento',
+      position: 'Posición',
+      phone: 'Teléfono',
+      location: 'Ubicación',
+      roles: 'Roles',
+      edit: 'Editar',
+      delete: 'Eliminar',
+      rolesOf: 'Roles de',
+      assignedRoles: 'Roles Asignados',
+      noRolesAssigned: 'Este usuario no tiene roles asignados',
+      availableRoles: 'Roles Disponibles',
+      allRolesAssigned: 'Todos los roles están asignados',
+      system: 'SISTEMA',
+      revoke: 'Revocar',
+      assign: '+ Asignar',
+      email: 'Email',
+      systemRole: 'Rol del Sistema',
+      user: 'Usuario',
+      administrator: 'Administrador',
+      firstName: 'Nombre',
+      lastName: 'Apellido',
+      organizationalRole: 'Rol Organizacional',
+      availability: 'Disponibilidad',
+      available: 'Disponible',
+      busy: 'Ocupado',
+      unavailable: 'No Disponible',
+      cancel: 'Cancelar',
+      update: 'Actualizar',
+      createUser: 'Crear Usuario',
+      required: 'Requerido',
+      invalidEmail: 'Email inválido',
+      errorLoadingUsers: 'Error al cargar usuarios',
+      roleRevokedSuccess: 'Rol revocado exitosamente',
+      errorRevokingRole: 'Error al revocar rol',
+      userUpdatedSuccess: 'Usuario actualizado exitosamente',
+      userCreatedSuccess: 'Usuario creado exitosamente',
+      errorSaving: 'Error al guardar',
+      confirmDeleteUser: '¿Estás seguro de eliminar este usuario?',
+      userDeleted: 'Usuario eliminado',
+      errorAssigningRole: 'Error al asignar rol'
+    }
+  }[language] || {};
+
   const [currentView, setCurrentView] = useState('list'); // 'list', 'form', 'roles'
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -71,7 +180,7 @@ const UserManagement = () => {
       setUsers(normalizedUsers);
     } catch (error) {
       console.error('Error loading users:', error);
-      showNotification('Error al cargar usuarios', 'error');
+      showNotification(tr.errorLoadingUsers, 'error');
     } finally {
       setLoading(false);
     }
@@ -144,7 +253,7 @@ const UserManagement = () => {
         await loadUserRoles(selectedUserForRoles.id);
       }
     } catch (error) {
-      showNotification(error.response?.data?.message || 'Error al asignar rol', 'error');
+      showNotification(error.response?.data?.message || tr.errorAssigningRole, 'error');
     }
   };
 
@@ -152,11 +261,11 @@ const UserManagement = () => {
     try {
       const response = await api.delete(`/users/${selectedUserForRoles.id}/roles/${roleId}`);
       if (response.data.success) {
-        showNotification('Rol revocado exitosamente', 'success');
+        showNotification(tr.roleRevokedSuccess, 'success');
         await loadUserRoles(selectedUserForRoles.id);
       }
     } catch (error) {
-      showNotification(error.response?.data?.message || 'Error al revocar rol', 'error');
+      showNotification(error.response?.data?.message || tr.errorRevokingRole, 'error');
     }
   };
 
@@ -174,14 +283,14 @@ const UserManagement = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.email.trim()) newErrors.email = 'Requerido';
-    if (!formData.firstName.trim()) newErrors.firstName = 'Requerido';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Requerido';
-    if (!formData.department.trim()) newErrors.department = 'Requerido';
+    if (!formData.email.trim()) newErrors.email = tr.required;
+    if (!formData.firstName.trim()) newErrors.firstName = tr.required;
+    if (!formData.lastName.trim()) newErrors.lastName = tr.required;
+    if (!formData.department.trim()) newErrors.department = tr.required;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email && !emailRegex.test(formData.email)) {
-      newErrors.email = 'Email inválido';
+      newErrors.email = tr.invalidEmail;
     }
 
     setErrors(newErrors);
@@ -202,7 +311,7 @@ const UserManagement = () => {
         setUsers(prev => prev.map(user =>
           user.id === editingUser.id ? { ...user, ...updatedUserData } : user
         ));
-        showNotification('Usuario actualizado exitosamente');
+        showNotification(tr.userUpdatedSuccess);
       } else {
         const newUserData = {
           email: formData.email,
@@ -216,13 +325,13 @@ const UserManagement = () => {
         const result = await userService.createUser(newUserData);
         if (result.success) {
           await loadUsers();
-          showNotification('Usuario creado exitosamente');
+          showNotification(tr.userCreatedSuccess);
         }
       }
       resetForm();
       setCurrentView('list');
     } catch (error) {
-      showNotification(error.message || 'Error al guardar', 'error');
+      showNotification(error.message || tr.errorSaving, 'error');
     }
   };
 
@@ -249,9 +358,9 @@ const UserManagement = () => {
   };
 
   const handleDelete = async (userId) => {
-    if (window.confirm('¿Estás seguro de eliminar este usuario?')) {
+    if (window.confirm(tr.confirmDeleteUser)) {
       setUsers(prev => prev.filter(user => user.id !== userId));
-      showNotification('Usuario eliminado');
+      showNotification(tr.userDeleted);
     }
   };
 
@@ -293,9 +402,9 @@ const UserManagement = () => {
 
   const getAvailabilityStyle = (availability) => {
     const config = {
-      available: { bg: 'rgba(16, 185, 129, 0.2)', color: '#34d399', label: 'Disponible' },
-      busy: { bg: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', label: 'Ocupado' },
-      unavailable: { bg: 'rgba(239, 68, 68, 0.2)', color: '#f87171', label: 'No disponible' }
+      available: { bg: 'rgba(16, 185, 129, 0.2)', color: '#34d399', label: tr.available },
+      busy: { bg: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', label: tr.busy },
+      unavailable: { bg: 'rgba(239, 68, 68, 0.2)', color: '#f87171', label: tr.unavailable }
     };
     return config[availability] || config.available;
   };
@@ -821,19 +930,19 @@ const UserManagement = () => {
 
         <div style={styles.userDetails}>
           <div style={styles.detailItem}>
-            <span style={styles.detailLabel}>Departamento</span>
+            <span style={styles.detailLabel}>{tr.department}</span>
             <span style={styles.detailValue}>{user.department || '-'}</span>
           </div>
           <div style={styles.detailItem}>
-            <span style={styles.detailLabel}>Posición</span>
+            <span style={styles.detailLabel}>{tr.position}</span>
             <span style={styles.detailValue}>{user.position || '-'}</span>
           </div>
           <div style={styles.detailItem}>
-            <span style={styles.detailLabel}>Teléfono</span>
+            <span style={styles.detailLabel}>{tr.phone}</span>
             <span style={styles.detailValue}>{user.phone || '-'}</span>
           </div>
           <div style={styles.detailItem}>
-            <span style={styles.detailLabel}>Ubicación</span>
+            <span style={styles.detailLabel}>{tr.location}</span>
             <span style={styles.detailValue}>{user.location || '-'}</span>
           </div>
         </div>
@@ -844,19 +953,19 @@ const UserManagement = () => {
               onClick={() => handleOpenRolesModal(user)}
               style={{ ...styles.actionButton, ...styles.rolesBtn }}
             >
-              Roles
+              {tr.roles}
             </button>
             <button
               onClick={() => handleEdit(user)}
               style={{ ...styles.actionButton, ...styles.editBtn }}
             >
-              Editar
+              {tr.edit}
             </button>
             <button
               onClick={() => handleDelete(user.id)}
               style={{ ...styles.actionButton, ...styles.deleteBtn }}
             >
-              Eliminar
+              {tr.delete}
             </button>
           </div>
         )}
@@ -878,7 +987,7 @@ const UserManagement = () => {
           <div style={styles.modalHeader}>
             <div>
               <div style={styles.modalTitle}>
-                Roles de {selectedUserForRoles.firstName} {selectedUserForRoles.lastName}
+                {tr.rolesOf} {selectedUserForRoles.firstName} {selectedUserForRoles.lastName}
               </div>
               <div style={{ fontSize: '13px', color: t.textDim, marginTop: '4px' }}>
                 {selectedUserForRoles.email}
@@ -902,11 +1011,11 @@ const UserManagement = () => {
                 {/* Assigned Roles */}
                 <div style={styles.rolesSection}>
                   <div style={styles.sectionTitle}>
-                    Roles Asignados ({assignedRoles.length})
+                    {tr.assignedRoles} ({assignedRoles.length})
                   </div>
                   {assignedRoles.length === 0 ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: t.textDim }}>
-                      Este usuario no tiene roles asignados
+                      {tr.noRolesAssigned}
                     </div>
                   ) : (
                     assignedRoles.map(role => (
@@ -914,7 +1023,7 @@ const UserManagement = () => {
                         <div style={styles.roleItemInfo}>
                           <div style={styles.roleItemName}>
                             {role.name}
-                            {role.isSystem && <span style={styles.systemBadge}>SISTEMA</span>}
+                            {role.isSystem && <span style={styles.systemBadge}>{tr.system}</span>}
                           </div>
                           <div style={styles.roleItemDesc}>{role.description}</div>
                         </div>
@@ -922,7 +1031,7 @@ const UserManagement = () => {
                           onClick={() => handleRevokeRole(role.id)}
                           style={{ ...styles.assignButton, ...styles.revokeBtn }}
                         >
-                          Revocar
+                          {tr.revoke}
                         </button>
                       </div>
                     ))
@@ -932,11 +1041,11 @@ const UserManagement = () => {
                 {/* Available Roles */}
                 <div style={styles.rolesSection}>
                   <div style={styles.sectionTitle}>
-                    Roles Disponibles ({unassignedRoles.length})
+                    {tr.availableRoles} ({unassignedRoles.length})
                   </div>
                   {unassignedRoles.length === 0 ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: t.textDim }}>
-                      Todos los roles están asignados
+                      {tr.allRolesAssigned}
                     </div>
                   ) : (
                     unassignedRoles.map(role => (
@@ -944,7 +1053,7 @@ const UserManagement = () => {
                         <div style={styles.roleItemInfo}>
                           <div style={styles.roleItemName}>
                             {role.name}
-                            {role.isSystem && <span style={styles.systemBadge}>SISTEMA</span>}
+                            {role.isSystem && <span style={styles.systemBadge}>{tr.system}</span>}
                           </div>
                           <div style={styles.roleItemDesc}>{role.description}</div>
                         </div>
@@ -952,7 +1061,7 @@ const UserManagement = () => {
                           onClick={() => handleAssignRole(role.id)}
                           style={{ ...styles.assignButton, ...styles.assignBtn }}
                         >
-                          + Asignar
+                          {tr.assign}
                         </button>
                       </div>
                     ))
@@ -972,7 +1081,7 @@ const UserManagement = () => {
       <form onSubmit={handleSubmit}>
         <div style={styles.formGrid}>
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Email *</label>
+            <label style={styles.formLabel}>{tr.email} *</label>
             <input
               type="email"
               name="email"
@@ -988,20 +1097,20 @@ const UserManagement = () => {
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Rol del Sistema</label>
+            <label style={styles.formLabel}>{tr.systemRole}</label>
             <select
               name="systemRole"
               value={formData.systemRole}
               onChange={handleInputChange}
               style={styles.formSelect}
             >
-              <option value="user">Usuario</option>
-              <option value="admin">Administrador</option>
+              <option value="user">{tr.user}</option>
+              <option value="admin">{tr.administrator}</option>
             </select>
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Nombre *</label>
+            <label style={styles.formLabel}>{tr.firstName} *</label>
             <input
               type="text"
               name="firstName"
@@ -1016,7 +1125,7 @@ const UserManagement = () => {
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Apellido *</label>
+            <label style={styles.formLabel}>{tr.lastName} *</label>
             <input
               type="text"
               name="lastName"
@@ -1031,19 +1140,19 @@ const UserManagement = () => {
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Posición</label>
+            <label style={styles.formLabel}>{tr.position}</label>
             <input
               type="text"
               name="position"
               value={formData.position}
               onChange={handleInputChange}
               style={styles.formInput}
-              placeholder="Ej: Ingeniero de Calidad Senior"
+              placeholder=""
             />
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Rol Organizacional</label>
+            <label style={styles.formLabel}>{tr.organizationalRole}</label>
             <select
               name="role"
               value={formData.role}
@@ -1058,7 +1167,7 @@ const UserManagement = () => {
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Departamento *</label>
+            <label style={styles.formLabel}>{tr.department} *</label>
             <input
               type="text"
               name="department"
@@ -1079,7 +1188,7 @@ const UserManagement = () => {
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Teléfono</label>
+            <label style={styles.formLabel}>{tr.phone}</label>
             <input
               type="tel"
               name="phone"
@@ -1091,28 +1200,28 @@ const UserManagement = () => {
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Ubicación</label>
+            <label style={styles.formLabel}>{tr.location}</label>
             <input
               type="text"
               name="location"
               value={formData.location}
               onChange={handleInputChange}
               style={styles.formInput}
-              placeholder="Planta Norte - Oficina 201"
+              placeholder=""
             />
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Disponibilidad</label>
+            <label style={styles.formLabel}>{tr.availability}</label>
             <select
               name="availability"
               value={formData.availability}
               onChange={handleInputChange}
               style={styles.formSelect}
             >
-              <option value="available">Disponible</option>
-              <option value="busy">Ocupado</option>
-              <option value="unavailable">No Disponible</option>
+              <option value="available">{tr.available}</option>
+              <option value="busy">{tr.busy}</option>
+              <option value="unavailable">{tr.unavailable}</option>
             </select>
           </div>
         </div>
@@ -1123,10 +1232,10 @@ const UserManagement = () => {
             onClick={() => { resetForm(); setCurrentView('list'); }}
             style={styles.secondaryButton}
           >
-            Cancelar
+            {tr.cancel}
           </button>
           <button type="submit" style={styles.primaryButton}>
-            {editingUser ? 'Actualizar' : 'Crear Usuario'}
+            {editingUser ? tr.update : tr.createUser}
           </button>
         </div>
       </form>
@@ -1157,30 +1266,35 @@ const UserManagement = () => {
             </button>
             <div>
               <h1 style={styles.title}>
-                {currentView === 'list' ? 'Gestión de Usuarios' : editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+                {currentView === 'list' ? tr.userManagement : editingUser ? tr.editUser : tr.newUser}
               </h1>
               <p style={styles.subtitle}>
-                {currentView === 'list' ? `${filteredUsers.length} usuarios` : 'Complete la información'}
+                {currentView === 'list' ? `${filteredUsers.length} ${tr.users}` : tr.completeInfo}
               </p>
             </div>
           </div>
 
-          {currentView === 'list' && isCurrentUserAdmin && (
-            <div style={styles.headerActions}>
-              <button
-                onClick={() => navigate('/roles-management')}
-                style={styles.secondaryButton}
-              >
-                Gestionar Roles
-              </button>
-              <button
-                onClick={() => { resetForm(); setCurrentView('form'); }}
-                style={styles.primaryButton}
-              >
-                + Nuevo Usuario
-              </button>
-            </div>
-          )}
+          <div style={styles.headerActions}>
+            <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
+            {currentView === 'list' && isCurrentUserAdmin && (
+              <>
+                <button
+                  onClick={() => navigate('/roles-management')}
+                  style={styles.secondaryButton}
+                >
+                  {tr.manageRoles}
+                </button>
+                <button
+                  onClick={() => { resetForm(); setCurrentView('form'); }}
+                  style={styles.primaryButton}
+                >
+                  + {tr.newUser}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1192,7 +1306,7 @@ const UserManagement = () => {
             <div style={styles.filtersBar}>
               <input
                 type="text"
-                placeholder="Buscar usuarios..."
+                placeholder={tr.searchUsers}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={styles.searchInput}
@@ -1202,7 +1316,7 @@ const UserManagement = () => {
                 onChange={(e) => setRoleFilter(e.target.value)}
                 style={styles.filterSelect}
               >
-                <option value="all">Todos los roles</option>
+                <option value="all">{tr.allRoles}</option>
                 <option value="champion">Champion</option>
                 <option value="manager">Manager</option>
                 <option value="engineer">Engineer</option>
@@ -1213,7 +1327,7 @@ const UserManagement = () => {
                 onChange={(e) => setDepartmentFilter(e.target.value)}
                 style={styles.filterSelect}
               >
-                <option value="all">Todos los departamentos</option>
+                <option value="all">{tr.allDepartments}</option>
                 {getUniqueDepartments().map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}

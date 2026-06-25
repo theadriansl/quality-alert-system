@@ -7,6 +7,7 @@ import ToastContainer from '../components/ToastContainer';
 import BomFieldConfigPanel from '../components/BomFieldConfigPanel';
 import { getCurrentUser, isUserAdmin, canUserEdit, isReadOnly } from '../utils/permissions';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // Global BOM Column Order Constants
 const GLOBAL_BOM_VERSION = 'v2';
@@ -19,7 +20,192 @@ const DEFAULT_GLOBAL_BOM_COLUMNS = [
 
 const ClientsList = () => {
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
+
+  // Local translations
+  const L = {
+    en: {
+      // Header
+      title: 'Clients / Suppliers',
+      subtitle: 'Client and supplier management',
+      apps: 'Apps',
+      globalBom: 'Global BOM',
+      loading: 'Loading...',
+      configBom: 'BOM Config',
+      excelTemplate: 'Excel Template',
+      importExcel: 'Import Excel',
+      importing: 'Importing...',
+      addClient: 'Add Client',
+      // Read-only banner
+      readOnlyMode: 'Read-Only Mode - You do not have permission to modify clients',
+      // Stats
+      totalClients: 'Total Clients / Suppliers',
+      active: 'Active',
+      clientsWithVendor: 'Clients (with Vendor Number)',
+      // Table
+      clientListing: 'CLIENT LISTING',
+      search: 'Search',
+      loadingClients: 'Loading clients...',
+      noClientsSearch: 'No clients found matching your search',
+      noClientsAvailable: 'No clients available',
+      name: 'NAME',
+      alias: 'ALIAS',
+      vendorNumber: 'VENDOR NUMBER (Clients only)',
+      status: 'STATUS',
+      activeStatus: 'Active',
+      inactiveStatus: 'Inactive',
+      showing: 'Showing',
+      of: 'of',
+      clients: 'clients',
+      // Global BOM Modal
+      globalBomTitle: 'Global BOM - All Parts',
+      partsTotal: 'parts in total',
+      activeParts: 'active',
+      inactiveParts: 'inactive',
+      dragColumns: 'Drag headers to reorder columns',
+      exportExcel: 'Export Excel',
+      restore: 'Restore',
+      noPartsRegistered: 'No parts registered',
+      addPartsToSee: 'Add parts to clients to see them here',
+      customFieldsFound: 'custom field(s) found',
+      close: 'Close',
+      actions: 'Actions',
+      edit: 'Edit',
+      // BOM columns
+      client: 'Client',
+      project: 'Project',
+      partNumber: 'Part Number',
+      partName: 'Name',
+      description: 'Description',
+      revision: 'Revision',
+      bomLevel: 'BOM LVL',
+      unitCost: 'Unit Cost',
+      clientPartNum: 'Client Part #',
+      weight: 'Weight (kg)',
+      snpQty: 'SNP Qty',
+      snpVol: 'SNP Vol (m³)',
+      supplier: 'Supplier',
+      statusCol: 'Status',
+      activeLabel: 'Active',
+      inactiveLabel: 'Inactive',
+      noProject: 'No Project',
+      // Edit Part Modal
+      editPart: 'Edit Part',
+      partNumberReq: 'Part Number *',
+      clientPartNumber: 'Client Part Number',
+      partNameReq: 'Part Name *',
+      currency: 'Currency',
+      customFields: 'Custom Fields',
+      fieldName: 'Field Name',
+      value: 'Value',
+      add: '+ Add',
+      cancel: 'Cancel',
+      saveChanges: 'Save Changes',
+      // Messages
+      noPartsExport: 'No parts to export',
+      partUpdated: 'Part updated successfully',
+      errorUpdatingPart: 'Error updating part',
+      enterFieldName: 'Enter field name',
+      errorLoadingClients: 'Error loading clients',
+      errorLoadingBom: 'Error loading global BOM',
+      importComplete: 'Import completed',
+      clientsImported: 'clients imported successfully',
+      clientsWithErrors: 'clients with errors',
+      errors: 'Errors',
+      errorImporting: 'Error importing file'
+    },
+    es: {
+      // Header
+      title: 'Clientes / Proveedores',
+      subtitle: 'Gestión de clientes y proveedores',
+      apps: 'Apps',
+      globalBom: 'BOM Global',
+      loading: 'Cargando...',
+      configBom: 'Config BOM',
+      excelTemplate: 'Plantilla Excel',
+      importExcel: 'Importar Excel',
+      importing: 'Importando...',
+      addClient: 'Agregar Cliente',
+      // Read-only banner
+      readOnlyMode: 'Modo Solo Lectura - No tienes permisos para modificar clientes',
+      // Stats
+      totalClients: 'Total Clientes / Proveedores',
+      active: 'Activos',
+      clientsWithVendor: 'Clientes (con Número Proveedor)',
+      // Table
+      clientListing: 'LISTADO DE CLIENTES',
+      search: 'Buscar',
+      loadingClients: 'Cargando clientes...',
+      noClientsSearch: 'No se encontraron clientes que coincidan con tu búsqueda',
+      noClientsAvailable: 'No hay clientes disponibles',
+      name: 'NOMBRE',
+      alias: 'ALIAS',
+      vendorNumber: 'NÚMERO PROVEEDOR (Solo clientes)',
+      status: 'ESTADO',
+      activeStatus: 'Activo',
+      inactiveStatus: 'Inactivo',
+      showing: 'Mostrando',
+      of: 'de',
+      clients: 'clientes',
+      // Global BOM Modal
+      globalBomTitle: 'BOM Global - Todas las Partes',
+      partsTotal: 'partes en total',
+      activeParts: 'activas',
+      inactiveParts: 'inactivas',
+      dragColumns: 'Arrastra los encabezados para reordenar columnas',
+      exportExcel: 'Exportar Excel',
+      restore: 'Restaurar',
+      noPartsRegistered: 'No hay partes registradas',
+      addPartsToSee: 'Agregue partes a los clientes para verlas aquí',
+      customFieldsFound: 'campo(s) personalizado(s) encontrado(s)',
+      close: 'Cerrar',
+      actions: 'Acciones',
+      edit: 'Editar',
+      // BOM columns
+      client: 'Cliente',
+      project: 'Proyecto',
+      partNumber: 'Número de Parte',
+      partName: 'Nombre',
+      description: 'Descripción',
+      revision: 'Revisión',
+      bomLevel: 'BOM LVL',
+      unitCost: 'Costo Unitario',
+      clientPartNum: 'Part # Cliente',
+      weight: 'Peso (kg)',
+      snpQty: 'Cant. SNP',
+      snpVol: 'Vol. SNP (m³)',
+      supplier: 'Proveedor',
+      statusCol: 'Estado',
+      activeLabel: 'Activo',
+      inactiveLabel: 'Inactivo',
+      noProject: 'Sin Proyecto',
+      // Edit Part Modal
+      editPart: 'Editar Parte',
+      partNumberReq: 'Número de Parte *',
+      clientPartNumber: 'Número de Parte del Cliente',
+      partNameReq: 'Nombre de Parte *',
+      currency: 'Moneda',
+      customFields: 'Campos Personalizados',
+      fieldName: 'Nombre del Campo',
+      value: 'Valor',
+      add: '+ Agregar',
+      cancel: 'Cancelar',
+      saveChanges: 'Guardar Cambios',
+      // Messages
+      noPartsExport: 'No hay partes para exportar',
+      partUpdated: 'Parte actualizada exitosamente',
+      errorUpdatingPart: 'Error al actualizar la parte',
+      enterFieldName: 'Ingrese el nombre del campo',
+      errorLoadingClients: 'Error al cargar clientes',
+      errorLoadingBom: 'Error al cargar BOM global',
+      importComplete: 'Importación completada',
+      clientsImported: 'clientes importados exitosamente',
+      clientsWithErrors: 'clientes con errores',
+      errors: 'Errores',
+      errorImporting: 'Error al importar archivo'
+    }
+  }[language] || {};
   const fileInputRef = useRef(null);
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
@@ -100,7 +286,7 @@ const ClientsList = () => {
   // Export Global BOM to Excel
   const handleExportGlobalBOM = () => {
     if (globalBOMData.parts.length === 0) {
-      alert('No hay partes para exportar');
+      alert(L.noPartsExport);
       return;
     }
 
@@ -187,7 +373,7 @@ const ClientsList = () => {
       setFilteredClients(data.clients);
       setStats(data.stats);
     } catch (err) {
-      setError('Error al cargar clientes: ' + err.message);
+      setError(L.errorLoadingClients + ': ' + err.message);
       console.error('Error loading clients:', err);
     } finally {
       setLoading(false);
@@ -228,7 +414,7 @@ const ClientsList = () => {
       setShowGlobalBOM(true);
     } catch (err) {
       console.error('Error loading global BOM:', err);
-      alert('Error al cargar BOM global: ' + err.message);
+      alert(L.errorLoadingBom + ': ' + err.message);
     } finally {
       setLoadingBOM(false);
     }
@@ -286,17 +472,17 @@ const ClientsList = () => {
         parts: prev.parts.map(p => p.id === editingPart.id ? updatedPartData : p)
       }));
 
-      showToast('Parte actualizada exitosamente', 'success');
+      showToast(L.partUpdated, 'success');
       handleCancelEditPart();
     } catch (error) {
       console.error('Error updating part:', error);
-      showToast('Error al actualizar la parte', 'error');
+      showToast(L.errorUpdatingPart, 'error');
     }
   };
 
   const handleAddCustomField = () => {
     if (!newCustomFieldKey.trim()) {
-      showToast('Ingrese el nombre del campo', 'error');
+      showToast(L.enterFieldName, 'error');
       return;
     }
 
@@ -444,11 +630,11 @@ const ClientsList = () => {
       }
 
       // Show results
-      let message = `Importación completada:\n- ${successCount} clientes importados exitosamente`;
+      let message = `${L.importComplete}:\n- ${successCount} ${L.clientsImported}`;
       if (errorCount > 0) {
-        message += `\n- ${errorCount} clientes con errores`;
+        message += `\n- ${errorCount} ${L.clientsWithErrors}`;
         if (errors.length <= 5) {
-          message += `\n\nErrores:\n${errors.join('\n')}`;
+          message += `\n\n${L.errors}:\n${errors.join('\n')}`;
         }
       }
       alert(message);
@@ -456,7 +642,7 @@ const ClientsList = () => {
       // Reload clients
       loadClients();
     } catch (err) {
-      alert('Error al importar archivo: ' + err.message);
+      alert(L.errorImporting + ': ' + err.message);
     } finally {
       setImporting(false);
       // Reset file input
@@ -480,7 +666,7 @@ const ClientsList = () => {
         }}>
           <span style={{ fontSize: '18px' }}></span>
           <span style={{ color: '#92400e', fontWeight: '600', fontSize: '14px' }}>
-            Modo Solo Lectura - No tienes permisos para modificar clientes
+            {L.readOnlyMode}
           </span>
         </div>
       )}
@@ -508,17 +694,20 @@ const ClientsList = () => {
               gap: '12px'
             }}>
               <Building2 size={32} color="#0072CE" />
-              Clientes / Proveedores
+              {L.title}
             </h1>
             <p style={{
               fontSize: '14px',
               color: t.textMuted,
               margin: 0
             }}>
-              Gestión de clientes y proveedores
+              {L.subtitle}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
             <ThemeSelector />
             <button
               onClick={() => navigate('/')}
@@ -539,7 +728,7 @@ const ClientsList = () => {
               onMouseEnter={(e) => e.target.style.backgroundColor = t.bg}
               onMouseLeave={(e) => e.target.style.backgroundColor = t.bgCard}
             >
-               Apps
+               {L.apps}
             </button>
             <button
               onClick={loadGlobalBOM}
@@ -563,7 +752,7 @@ const ClientsList = () => {
               onMouseLeave={(e) => !loadingBOM && (e.target.style.backgroundColor = '#8b5cf6')}
             >
               <Package size={16} />
-              {loadingBOM ? 'Cargando...' : 'BOM Global'}
+              {loadingBOM ? L.loading : L.globalBom}
             </button>
             {isAdmin && (
               <button
@@ -586,7 +775,7 @@ const ClientsList = () => {
                 onMouseLeave={(e) => e.target.style.backgroundColor = '#C77700'}
               >
                 <Settings size={16} />
-                Config BOM
+                {L.configBom}
               </button>
             )}
             <button
@@ -609,7 +798,7 @@ const ClientsList = () => {
               onMouseLeave={(e) => e.target.style.backgroundColor = '#2E7D32'}
             >
               <Download size={16} />
-              Plantilla Excel
+              {L.excelTemplate}
             </button>
             {canEdit && (
               <button
@@ -633,7 +822,7 @@ const ClientsList = () => {
                 onMouseLeave={(e) => !importing && (e.target.style.backgroundColor = '#8b5cf6')}
               >
                 <Upload size={16} />
-                {importing ? 'Importando...' : 'Importar Excel'}
+                {importing ? L.importing : L.importExcel}
               </button>
             )}
             <input
@@ -664,7 +853,7 @@ const ClientsList = () => {
                 onMouseLeave={(e) => e.target.style.backgroundColor = t.accent}
               >
                 <Plus size={20} />
-                Add Client
+                {L.addClient}
               </button>
             )}
           </div>
@@ -691,7 +880,7 @@ const ClientsList = () => {
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
           }}>
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '8px' }}>
-              Total Clients / Suppliers
+              {L.totalClients}
             </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: t.text }}>
               {stats.total}
@@ -704,7 +893,7 @@ const ClientsList = () => {
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
           }}>
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '8px' }}>
-              Active
+              {L.active}
             </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: '#2E7D32' }}>
               {stats.active}
@@ -717,7 +906,7 @@ const ClientsList = () => {
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
           }}>
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '8px' }}>
-              Clients (with Vendor Number)
+              {L.clientsWithVendor}
             </div>
             <div style={{ fontSize: '32px', fontWeight: '600', color: t.accent }}>
               {stats.withVendorNumber}
@@ -746,7 +935,7 @@ const ClientsList = () => {
               color: t.text,
               margin: 0
             }}>
-              CLIENT LISTING
+              {L.clientListing}
             </h2>
             <div style={{ position: 'relative', width: '300px' }}>
               <Search
@@ -761,7 +950,7 @@ const ClientsList = () => {
               />
               <input
                 type="text"
-                placeholder="Search"
+                placeholder={L.search}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -783,7 +972,7 @@ const ClientsList = () => {
               textAlign: 'center',
               color: t.textMuted
             }}>
-              Loading clients...
+              {L.loadingClients}
             </div>
           ) : error ? (
             <div style={{
@@ -799,7 +988,7 @@ const ClientsList = () => {
               textAlign: 'center',
               color: t.textMuted
             }}>
-              {searchTerm ? 'No clients found matching your search' : 'No clients available'}
+              {searchTerm ? L.noClientsSearch : L.noClientsAvailable}
             </div>
           ) : (
             <>
@@ -821,7 +1010,7 @@ const ClientsList = () => {
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
-                      NAME
+                      {L.name}
                     </th>
                     <th style={{
                       padding: '12px 24px',
@@ -832,7 +1021,7 @@ const ClientsList = () => {
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
-                      ALIAS
+                      {L.alias}
                     </th>
                     <th style={{
                       padding: '12px 24px',
@@ -843,7 +1032,7 @@ const ClientsList = () => {
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
-                      VENDOR NUMBER (Clients only)
+                      {L.vendorNumber}
                     </th>
                     <th style={{
                       padding: '12px 24px',
@@ -854,7 +1043,7 @@ const ClientsList = () => {
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
-                      STATUS
+                      {L.status}
                     </th>
                   </tr>
                 </thead>
@@ -911,7 +1100,7 @@ const ClientsList = () => {
                             fontWeight: '500'
                           }}>
                             <CheckCircle2 size={14} />
-                            Active
+                            {L.activeStatus}
                           </div>
                         ) : (
                           <div style={{
@@ -926,7 +1115,7 @@ const ClientsList = () => {
                             fontWeight: '500'
                           }}>
                             <XCircle size={14} />
-                            Inactive
+                            {L.inactiveStatus}
                           </div>
                         )}
                       </td>
@@ -943,7 +1132,7 @@ const ClientsList = () => {
                 color: t.textMuted,
                 textAlign: 'center'
               }}>
-                Showing {filteredClients.length} of {clients.length} clients
+                {L.showing} {filteredClients.length} {L.of} {clients.length} {L.clients}
               </div>
             </>
           )}
@@ -987,10 +1176,10 @@ const ClientsList = () => {
               <div>
                 <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Package size={28} color="#8b5cf6" />
-                  BOM Global - Todas las Partes
+                  {L.globalBomTitle}
                 </h2>
                 <p style={{ margin: 0, fontSize: '14px', color: t.textMuted }}>
-                  {globalBOMData.total} partes en total ({globalBOMData.activeCount} activas, {globalBOMData.inactiveCount} inactivas)
+                  {globalBOMData.total} {L.partsTotal} ({globalBOMData.activeCount} {L.activeParts}, {globalBOMData.inactiveCount} {L.inactiveParts})
                 </p>
               </div>
               <button
@@ -1016,7 +1205,7 @@ const ClientsList = () => {
               {/* Header with Export and Reset Buttons */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <p style={{ margin: 0, fontSize: '13px', color: t.textDim, fontStyle: 'italic' }}>
-                   Arrastra los encabezados para reordenar columnas
+                   {L.dragColumns}
                 </p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -1033,10 +1222,10 @@ const ClientsList = () => {
                       alignItems: 'center',
                       gap: '4px'
                     }}
-                    title="Exportar BOM Global a Excel"
+                    title={L.exportExcel}
                   >
                     <Download size={12} />
-                    Exportar Excel
+                    {L.exportExcel}
                   </button>
                   <button
                     onClick={resetGlobalColumnOrder}
@@ -1052,10 +1241,10 @@ const ClientsList = () => {
                       alignItems: 'center',
                       gap: '4px'
                     }}
-                    title="Restaurar orden por defecto"
+                    title={L.restore}
                   >
                     <RotateCcw size={12} />
-                    Restaurar
+                    {L.restore}
                   </button>
                 </div>
               </div>
@@ -1073,20 +1262,20 @@ const ClientsList = () => {
                           {globalBomColumnOrder.map((columnId) => {
                             // Base column configuration - All 14 fixed columns
                             const baseColumns = {
-                              clientName: { label: 'Cliente', align: 'left', width: 'auto', isCustom: false },
-                              projectNumber: { label: 'Proyecto', align: 'left', width: 'auto', isCustom: false },
-                              partNumber: { label: 'Número de Parte', align: 'left', width: 'auto', isCustom: false },
-                              partName: { label: 'Nombre', align: 'left', width: 'auto', isCustom: false },
-                              description: { label: 'Descripción', align: 'left', width: '200px', isCustom: false },
-                              revision: { label: 'Revisión', align: 'left', width: 'auto', isCustom: false },
-                              bomLevel: { label: 'BOM LVL', align: 'center', width: 'auto', isCustom: false },
-                              unitCost: { label: 'Costo Unitario', align: 'right', width: 'auto', isCustom: false },
-                              clientPartNumber: { label: 'Part # Cliente', align: 'left', width: 'auto', isCustom: false },
-                              weight: { label: 'Peso (kg)', align: 'right', width: 'auto', isCustom: false },
-                              snpQuantity: { label: 'Cant. SNP', align: 'right', width: 'auto', isCustom: false },
-                              snpVolume: { label: 'Vol. SNP (m³)', align: 'right', width: 'auto', isCustom: false },
-                              supplier: { label: 'Proveedor', align: 'left', width: 'auto', isCustom: false },
-                              status: { label: 'Estado', align: 'left', width: 'auto', isCustom: false }
+                              clientName: { label: L.client, align: 'left', width: 'auto', isCustom: false },
+                              projectNumber: { label: L.project, align: 'left', width: 'auto', isCustom: false },
+                              partNumber: { label: L.partNumber, align: 'left', width: 'auto', isCustom: false },
+                              partName: { label: L.partName, align: 'left', width: 'auto', isCustom: false },
+                              description: { label: L.description, align: 'left', width: '200px', isCustom: false },
+                              revision: { label: L.revision, align: 'left', width: 'auto', isCustom: false },
+                              bomLevel: { label: L.bomLevel, align: 'center', width: 'auto', isCustom: false },
+                              unitCost: { label: L.unitCost, align: 'right', width: 'auto', isCustom: false },
+                              clientPartNumber: { label: L.clientPartNum, align: 'left', width: 'auto', isCustom: false },
+                              weight: { label: L.weight, align: 'right', width: 'auto', isCustom: false },
+                              snpQuantity: { label: L.snpQty, align: 'right', width: 'auto', isCustom: false },
+                              snpVolume: { label: L.snpVol, align: 'right', width: 'auto', isCustom: false },
+                              supplier: { label: L.supplier, align: 'left', width: 'auto', isCustom: false },
+                              status: { label: L.statusCol, align: 'left', width: 'auto', isCustom: false }
                             };
 
                             // Check if it's a base column or custom field
@@ -1125,7 +1314,7 @@ const ClientsList = () => {
                               </th>
                             );
                           })}
-                          {canEdit && <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: t.text, whiteSpace: 'nowrap' }}>Acciones</th>}
+                          {canEdit && <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: t.text, whiteSpace: 'nowrap' }}>{L.actions}</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -1148,7 +1337,7 @@ const ClientsList = () => {
                                         backgroundColor: part.active ? '#d1fae5' : '#fee2e2',
                                         color: part.active ? '#065f46' : '#991b1b'
                                       }}>
-                                        {part.active ? ' Activo' : ' Inactivo'}
+                                        {part.active ? ` ${L.activeLabel}` : ` ${L.inactiveLabel}`}
                                       </span>
                                     </td>
                                   );
@@ -1191,7 +1380,7 @@ const ClientsList = () => {
                                 case 'projectNumber':
                                   return (
                                     <td key={columnId} style={{ padding: '12px', color: t.textMuted }}>
-                                      {part.projectNumber || 'Sin Proyecto'}
+                                      {part.projectNumber || L.noProject}
                                     </td>
                                   );
                                 case 'bomLevel':
@@ -1261,7 +1450,7 @@ const ClientsList = () => {
                                   }}
                                 >
                                   <Edit2 size={12} />
-                                  Editar
+                                  {L.edit}
                                 </button>
                               </td>
                             )}
@@ -1274,8 +1463,8 @@ const ClientsList = () => {
               ) : (
                 <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
                   <Package size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                  <p style={{ fontSize: '16px', fontWeight: '500' }}>No hay partes registradas</p>
-                  <p style={{ fontSize: '14px' }}>Agregue partes a los clientes para verlas aquí</p>
+                  <p style={{ fontSize: '16px', fontWeight: '500' }}>{L.noPartsRegistered}</p>
+                  <p style={{ fontSize: '14px' }}>{L.addPartsToSee}</p>
                 </div>
               )}
             </div>
@@ -1291,7 +1480,7 @@ const ClientsList = () => {
             }}>
               <div style={{ fontSize: '14px', color: t.textMuted }}>
                 {globalBOMData.allCustomFieldNames.length > 0 && (
-                  <span> {globalBOMData.allCustomFieldNames.length} campo(s) personalizado(s) encontrado(s)</span>
+                  <span> {globalBOMData.allCustomFieldNames.length} {L.customFieldsFound}</span>
                 )}
               </div>
               <button
@@ -1307,7 +1496,7 @@ const ClientsList = () => {
                   cursor: 'pointer'
                 }}
               >
-                Cerrar
+                {L.close}
               </button>
             </div>
           </div>
@@ -1338,7 +1527,7 @@ const ClientsList = () => {
             overflow: 'auto'
           }}>
             <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600' }}>
-              Editar Parte
+              {L.editPart}
             </h2>
 
             {/* Standard Fields */}
@@ -1357,7 +1546,7 @@ const ClientsList = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Número de Parte *
+                  {L.partNumberReq}
                 </label>
                 <input
                   type="text"
@@ -1382,7 +1571,7 @@ const ClientsList = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Número de Parte del Cliente
+                  {L.clientPartNumber}
                 </label>
                 <input
                   type="text"
@@ -1407,7 +1596,7 @@ const ClientsList = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Nombre de Parte *
+                  {L.partNameReq}
                 </label>
                 <input
                   type="text"
@@ -1432,7 +1621,7 @@ const ClientsList = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Revisión
+                  {L.revision}
                 </label>
                 <input
                   type="text"
@@ -1457,7 +1646,7 @@ const ClientsList = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Costo Unitario
+                  {L.unitCost}
                 </label>
                 <input
                   type="number"
@@ -1483,7 +1672,7 @@ const ClientsList = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Moneda
+                  {L.currency}
                 </label>
                 <select
                   value={editingPart.currency || 'USD'}
@@ -1512,7 +1701,7 @@ const ClientsList = () => {
                 color: t.text,
                 marginBottom: '6px'
               }}>
-                Descripción
+                {L.description}
               </label>
               <textarea
                 value={editingPart.description || ''}
@@ -1546,7 +1735,7 @@ const ClientsList = () => {
                 alignItems: 'center',
                 gap: '6px'
               }}>
-                Campos Personalizados
+                {L.customFields}
               </h3>
 
               {/* Existing Custom Fields */}
@@ -1562,7 +1751,7 @@ const ClientsList = () => {
                     }}>
                       <input
                         type="text"
-                        placeholder="Nombre del campo"
+                        placeholder={L.fieldName}
                         value={field.key}
                         onChange={(e) => handleUpdateCustomField(field.id, 'key', e.target.value)}
                         style={{
@@ -1574,7 +1763,7 @@ const ClientsList = () => {
                       />
                       <input
                         type="text"
-                        placeholder="Valor"
+                        placeholder={L.value}
                         value={field.value}
                         onChange={(e) => handleUpdateCustomField(field.id, 'value', e.target.value)}
                         style={{
@@ -1619,7 +1808,7 @@ const ClientsList = () => {
                     color: t.text,
                     marginBottom: '4px'
                   }}>
-                    Nombre del Campo
+                    {L.fieldName}
                   </label>
                   <input
                     type="text"
@@ -1644,7 +1833,7 @@ const ClientsList = () => {
                     color: t.text,
                     marginBottom: '4px'
                   }}>
-                    Valor
+                    {L.value}
                   </label>
                   <input
                     type="text"
@@ -1676,7 +1865,7 @@ const ClientsList = () => {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  + Agregar
+                  {L.add}
                 </button>
               </div>
             </div>
@@ -1700,7 +1889,7 @@ const ClientsList = () => {
                   cursor: 'pointer'
                 }}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 onClick={handleUpdatePart}
@@ -1716,7 +1905,7 @@ const ClientsList = () => {
                   cursor: !editingPart.partNumber || !editingPart.partName ? 'not-allowed' : 'pointer'
                 }}
               >
-                Guardar Cambios
+                {L.saveChanges}
               </button>
             </div>
           </div>

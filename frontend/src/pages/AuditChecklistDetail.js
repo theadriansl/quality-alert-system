@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
@@ -8,6 +9,49 @@ const AuditChecklistDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
+
+  const L = {
+    en: {
+      connectionError: 'Connection error', questionRequired: 'Question is required',
+      addError: 'Error adding question', updateError: 'Error updating question',
+      confirmDelete: 'Delete this question?', deleteError: 'Error deleting question',
+      loading: 'Loading checklist...', notFound: 'Checklist not found',
+      backToChecklists: 'Back to Checklists', noDescription: 'No description',
+      addQuestion: '+ Add Question', back: 'Back', questions: 'questions', critical: 'critical',
+      newQuestion: 'New Question', clause: 'Clause', clausePlaceholder: 'E.g.: 8.5.1',
+      category: 'Category', categoryPlaceholder: 'E.g.: Operation, Leadership...',
+      questionLabel: 'Question *', questionPlaceholder: 'Audit question?',
+      auditorGuidance: 'Auditor Guidance', guidancePlaceholder: 'Guidance on what to verify...',
+      evidenceRequired: 'Evidence Required', evidencePlaceholder: 'E.g.: Records, documents, observation...',
+      isCritical: 'Critical question (failure = automatic Major NC)',
+      cancel: 'Cancel', addBtn: 'Add Question',
+      noQuestions: 'No questions in this checklist', addToComplete: 'Add questions to complete the checklist',
+      guidance: 'Guidance', evidence: 'Evidence',
+      moveUp: 'Move up', moveDown: 'Move down', edit: 'Edit', delete: 'Delete',
+      save: 'Save', criticalBadge: 'CRITICAL'
+    },
+    es: {
+      connectionError: 'Error de conexión', questionRequired: 'La pregunta es requerida',
+      addError: 'Error al agregar pregunta', updateError: 'Error al actualizar pregunta',
+      confirmDelete: '¿Eliminar esta pregunta?', deleteError: 'Error al eliminar pregunta',
+      loading: 'Cargando checklist...', notFound: 'Checklist no encontrado',
+      backToChecklists: 'Volver a Checklists', noDescription: 'Sin descripción',
+      addQuestion: '+ Agregar Pregunta', back: 'Volver', questions: 'preguntas', critical: 'críticas',
+      newQuestion: 'Nueva Pregunta', clause: 'Cláusula', clausePlaceholder: 'Ej: 8.5.1',
+      category: 'Categoría', categoryPlaceholder: 'Ej: Operación, Liderazgo...',
+      questionLabel: 'Pregunta *', questionPlaceholder: '¿Pregunta de auditoría?',
+      auditorGuidance: 'Guía para el Auditor', guidancePlaceholder: 'Orientación sobre qué verificar...',
+      evidenceRequired: 'Evidencia Requerida', evidencePlaceholder: 'Ej: Registros, documentos, observación...',
+      isCritical: 'Pregunta crítica (falla = NC Mayor automática)',
+      cancel: 'Cancelar', addBtn: 'Agregar Pregunta',
+      noQuestions: 'No hay preguntas en este checklist', addToComplete: 'Agrega preguntas para completar el checklist',
+      guidance: 'Guía', evidence: 'Evidencia',
+      moveUp: 'Mover arriba', moveDown: 'Mover abajo', edit: 'Editar', delete: 'Eliminar',
+      save: 'Guardar', criticalBadge: 'CRÍTICO'
+    }
+  }[language] || {};
+
   const [checklist, setChecklist] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +83,7 @@ const AuditChecklistDetail = () => {
         setError(result.message);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
@@ -51,7 +95,7 @@ const AuditChecklistDetail = () => {
 
   const addItem = async () => {
     if (!newItem.question) {
-      alert('La pregunta es requerida');
+      alert(L.questionRequired);
       return;
     }
 
@@ -75,7 +119,7 @@ const AuditChecklistDetail = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al agregar pregunta');
+      alert(L.addError);
     }
   };
 
@@ -99,12 +143,12 @@ const AuditChecklistDetail = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al actualizar pregunta');
+      alert(L.updateError);
     }
   };
 
   const deleteItem = async (itemId) => {
-    if (!window.confirm('¿Eliminar esta pregunta?')) return;
+    if (!window.confirm(L.confirmDelete)) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -120,7 +164,7 @@ const AuditChecklistDetail = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al eliminar pregunta');
+      alert(L.deleteError);
     }
   };
 
@@ -340,7 +384,7 @@ const AuditChecklistDetail = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando checklist...
+          {L.loading}
         </div>
       </div>
     );
@@ -350,12 +394,12 @@ const AuditChecklistDetail = () => {
     return (
       <div style={styles.container}>
         <div style={{ ...styles.card, borderLeft: `4px solid ${t.error}` }}>
-          <p style={{ color: t.error }}>{error || 'Checklist no encontrado'}</p>
+          <p style={{ color: t.error }}>{error || L.notFound}</p>
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-checklists')}
           >
-            Volver a Checklists
+            {L.backToChecklists}
           </button>
         </div>
       </div>
@@ -376,20 +420,23 @@ const AuditChecklistDetail = () => {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>{checklist.name}</h1>
-          <p style={styles.subtitle}>{checklist.description || 'Sin descripción'}</p>
+          <p style={styles.subtitle}>{checklist.description || L.noDescription}</p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <button
             style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
             onClick={() => setShowAddItem(true)}
           >
-            + Agregar Pregunta
+            {L.addQuestion}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
             onClick={() => navigate('/audit-checklists')}
           >
-            ← Volver
+            ← {L.back}
           </button>
         </div>
       </div>
@@ -400,66 +447,66 @@ const AuditChecklistDetail = () => {
           <span> {checklist.standard}</span>
           <span> v{checklist.version}</span>
           {checklist.process && <span> {checklist.process}</span>}
-          <span> {items.length} preguntas</span>
-          <span> {items.filter(i => i.isCritical).length} críticas</span>
+          <span> {items.length} {L.questions}</span>
+          <span> {items.filter(i => i.isCritical).length} {L.critical}</span>
         </div>
       </div>
 
       {/* Add Item Form */}
       {showAddItem && (
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}> Nueva Pregunta</h2>
+          <h2 style={styles.cardTitle}> {L.newQuestion}</h2>
 
           <div style={styles.grid2}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Cláusula</label>
+              <label style={styles.label}>{L.clause}</label>
               <input
                 type="text"
                 value={newItem.clause}
                 onChange={(e) => setNewItem({ ...newItem, clause: e.target.value })}
-                placeholder="Ej: 8.5.1"
+                placeholder={L.clausePlaceholder}
                 style={styles.input}
               />
             </div>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Categoría</label>
+              <label style={styles.label}>{L.category}</label>
               <input
                 type="text"
                 value={newItem.category}
                 onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-                placeholder="Ej: Operación, Liderazgo..."
+                placeholder={L.categoryPlaceholder}
                 style={styles.input}
               />
             </div>
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.label}>Pregunta *</label>
+            <label style={styles.label}>{L.questionLabel}</label>
             <textarea
               value={newItem.question}
               onChange={(e) => setNewItem({ ...newItem, question: e.target.value })}
-              placeholder="¿Pregunta de auditoría?"
+              placeholder={L.questionPlaceholder}
               style={styles.textarea}
             />
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.label}>Guía para el Auditor</label>
+            <label style={styles.label}>{L.auditorGuidance}</label>
             <textarea
               value={newItem.guidance}
               onChange={(e) => setNewItem({ ...newItem, guidance: e.target.value })}
-              placeholder="Orientación sobre qué verificar..."
+              placeholder={L.guidancePlaceholder}
               style={styles.textarea}
             />
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.label}>Evidencia Requerida</label>
+            <label style={styles.label}>{L.evidenceRequired}</label>
             <input
               type="text"
               value={newItem.evidenceRequired}
               onChange={(e) => setNewItem({ ...newItem, evidenceRequired: e.target.value })}
-              placeholder="Ej: Registros, documentos, observación..."
+              placeholder={L.evidencePlaceholder}
               style={styles.input}
             />
           </div>
@@ -470,7 +517,7 @@ const AuditChecklistDetail = () => {
               checked={newItem.isCritical}
               onChange={(e) => setNewItem({ ...newItem, isCritical: e.target.checked })}
             />
-            <span>Pregunta crítica (falla = NC Mayor automática)</span>
+            <span>{L.isCritical}</span>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
@@ -478,13 +525,13 @@ const AuditChecklistDetail = () => {
               style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
               onClick={() => setShowAddItem(false)}
             >
-              Cancelar
+              {L.cancel}
             </button>
             <button
               style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
               onClick={addItem}
             >
-              Agregar Pregunta
+              {L.addBtn}
             </button>
           </div>
         </div>
@@ -494,8 +541,8 @@ const AuditChecklistDetail = () => {
       {items.length === 0 ? (
         <div style={styles.card}>
           <div style={styles.empty}>
-            <p style={{ fontSize: '18px', marginBottom: '12px' }}>No hay preguntas en este checklist</p>
-            <p>Agrega preguntas para completar el checklist</p>
+            <p style={{ fontSize: '18px', marginBottom: '12px' }}>{L.noQuestions}</p>
+            <p>{L.addToComplete}</p>
           </div>
         </div>
       ) : (
@@ -504,7 +551,7 @@ const AuditChecklistDetail = () => {
             <h2 style={styles.cardTitle}>
               <span style={styles.category}>{category}</span>
               <span style={{ marginLeft: 'auto', fontSize: '13px', color: t.textMuted }}>
-                {categoryItems.length} preguntas
+                {categoryItems.length} {L.questions}
               </span>
             </h2>
 
@@ -515,7 +562,7 @@ const AuditChecklistDetail = () => {
                   <div>
                     <div style={styles.grid2}>
                       <div style={styles.formGroup}>
-                        <label style={styles.label}>Cláusula</label>
+                        <label style={styles.label}>{L.clause}</label>
                         <input
                           type="text"
                           defaultValue={item.clause}
@@ -524,7 +571,7 @@ const AuditChecklistDetail = () => {
                         />
                       </div>
                       <div style={styles.formGroup}>
-                        <label style={styles.label}>Categoría</label>
+                        <label style={styles.label}>{L.category}</label>
                         <input
                           type="text"
                           defaultValue={item.category}
@@ -534,7 +581,7 @@ const AuditChecklistDetail = () => {
                       </div>
                     </div>
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>Pregunta</label>
+                      <label style={styles.label}>{L.questionLabel}</label>
                       <textarea
                         defaultValue={item.question}
                         id={`question-${item.id}`}
@@ -542,7 +589,7 @@ const AuditChecklistDetail = () => {
                       />
                     </div>
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>Guía</label>
+                      <label style={styles.label}>{L.guidance}</label>
                       <textarea
                         defaultValue={item.guidance}
                         id={`guidance-${item.id}`}
@@ -554,7 +601,7 @@ const AuditChecklistDetail = () => {
                         style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
                         onClick={() => setEditingItem(null)}
                       >
-                        Cancelar
+                        {L.cancel}
                       </button>
                       <button
                         style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
@@ -567,7 +614,7 @@ const AuditChecklistDetail = () => {
                           });
                         }}
                       >
-                        Guardar
+                        {L.save}
                       </button>
                     </div>
                   </div>
@@ -578,14 +625,14 @@ const AuditChecklistDetail = () => {
                       <div style={{ flex: 1 }}>
                         {item.clause && <span style={styles.itemClause}>{item.clause}</span>}
                         <span style={styles.itemQuestion}>{item.question}</span>
-                        {item.isCritical && <span style={styles.critical}>CRÍTICO</span>}
+                        {item.isCritical && <span style={styles.critical}>{L.criticalBadge}</span>}
                       </div>
                       <div style={styles.itemActions}>
                         <button
                           style={styles.iconButton}
                           onClick={() => moveItem(item.id, 'up')}
                           disabled={index === 0}
-                          title="Mover arriba"
+                          title={L.moveUp}
                         >
                           ↑
                         </button>
@@ -593,21 +640,21 @@ const AuditChecklistDetail = () => {
                           style={styles.iconButton}
                           onClick={() => moveItem(item.id, 'down')}
                           disabled={index === categoryItems.length - 1}
-                          title="Mover abajo"
+                          title={L.moveDown}
                         >
                           ↓
                         </button>
                         <button
                           style={{ ...styles.iconButton, backgroundColor: `${t.accent}20` }}
                           onClick={() => setEditingItem(item.id)}
-                          title="Editar"
+                          title={L.edit}
                         >
 
                         </button>
                         <button
                           style={{ ...styles.iconButton, backgroundColor: `${t.error}20` }}
                           onClick={() => deleteItem(item.id)}
-                          title="Eliminar"
+                          title={L.delete}
                         >
 
                         </button>
@@ -615,8 +662,8 @@ const AuditChecklistDetail = () => {
                     </div>
                     {(item.guidance || item.evidenceRequired) && (
                       <div style={styles.itemDetails}>
-                        {item.guidance && <div><strong>Guía:</strong> {item.guidance}</div>}
-                        {item.evidenceRequired && <div><strong>Evidencia:</strong> {item.evidenceRequired}</div>}
+                        {item.guidance && <div><strong>{L.guidance}:</strong> {item.guidance}</div>}
+                        {item.evidenceRequired && <div><strong>{L.evidence}:</strong> {item.evidenceRequired}</div>}
                       </div>
                     )}
                   </>

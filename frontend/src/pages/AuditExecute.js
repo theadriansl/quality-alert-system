@@ -1,23 +1,68 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
-
-// Quick-tap result options with keyboard shortcuts
-const RESULT_OPTIONS = [
-  { value: 'conformity', label: 'C', fullLabel: 'Conformidad', colorKey: 'success', icon: '', key: '1' },
-  { value: 'nc_major', label: 'M', fullLabel: 'NC Mayor', colorKey: 'error', icon: '', key: '2', needsModal: true },
-  { value: 'nc_minor', label: 'm', fullLabel: 'NC Menor', colorKey: 'warning', icon: '!', key: '3', needsModal: true },
-  { value: 'observation', label: 'O', fullLabel: 'Observacion', colorKey: 'info', icon: '?', key: '4', needsModal: true },
-  { value: 'opportunity', label: '+', fullLabel: 'Oportunidad', colorKey: 'primary', icon: '+', key: '5' },
-  { value: 'na', label: 'N/A', fullLabel: 'No Aplica', colorKey: 'textMuted', icon: '-', key: '0' }
-];
 
 const AuditExecute = () => {
   const navigate = useNavigate();
   const { scheduleId } = useParams();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
+
+  const L = {
+    en: {
+      conformity: 'Conformity', ncMajor: 'Major NC', ncMinor: 'Minor NC', observation: 'Observation',
+      opportunity: 'Opportunity', notApplicable: 'Not Applicable',
+      loadError: 'Error loading data', startAuditFirst: 'You must start the audit first',
+      startError: 'Error starting audit', saveFindingError: 'Error saving finding',
+      confirmClose: 'Close the audit? This will finalize the execution.',
+      closeError: 'Error closing audit', loading: 'Loading audit...',
+      notFound: 'Audit not found', backToCalendar: 'Back to Calendar',
+      recurrenceDetected: 'Recurrent Finding Detected', occurrences: 'previous occurrence(s) detected',
+      riskLevel: 'Risk level', systemic: 'SYSTEMIC',
+      start: 'Start', close: 'Close', criteria: 'Criteria',
+      noChecklist: 'This audit has no checklist assigned', startAuditPrompt: 'Start audit',
+      all: 'All', pending: 'Pending', completed: 'Completed',
+      findingDesc: 'Finding Description *', descPlaceholder: 'Describe the finding in detail...',
+      objectiveEvidence: 'Objective Evidence', evidencePlaceholder: 'Records, documents, observations...',
+      evidenceFiles: 'Evidence Files', photoFile: 'Photo / File',
+      auditorNotes: 'Auditor Notes', notesPlaceholder: 'Additional notes...',
+      cancel: 'Cancel', saving: 'Saving...', update: 'Update', register: 'Register',
+      descRequired: 'Description is required'
+    },
+    es: {
+      conformity: 'Conformidad', ncMajor: 'NC Mayor', ncMinor: 'NC Menor', observation: 'Observación',
+      opportunity: 'Oportunidad', notApplicable: 'No Aplica',
+      loadError: 'Error al cargar datos', startAuditFirst: 'Primero debe iniciar la auditoría',
+      startError: 'Error al iniciar auditoría', saveFindingError: 'Error al guardar hallazgo',
+      confirmClose: '¿Cerrar la auditoría? Esto finalizará la ejecución.',
+      closeError: 'Error al cerrar auditoría', loading: 'Cargando auditoría...',
+      notFound: 'Auditoría no encontrada', backToCalendar: 'Volver al Calendario',
+      recurrenceDetected: 'Hallazgo Recurrente Detectado', occurrences: 'ocurrencia(s) anterior(es) detectada(s)',
+      riskLevel: 'Nivel de riesgo', systemic: 'SISTÉMICO',
+      start: 'Iniciar', close: 'Cerrar', criteria: 'Criterios',
+      noChecklist: 'Esta auditoría no tiene checklist asignado', startAuditPrompt: 'Inicie auditoría',
+      all: 'Todos', pending: 'Pendientes', completed: 'Completados',
+      findingDesc: 'Descripción del Hallazgo *', descPlaceholder: 'Describa detalladamente el hallazgo...',
+      objectiveEvidence: 'Evidencia Objetiva', evidencePlaceholder: 'Registros, documentos, observaciones...',
+      evidenceFiles: 'Archivos de Evidencia', photoFile: 'Foto / Archivo',
+      auditorNotes: 'Notas del Auditor', notesPlaceholder: 'Notas adicionales...',
+      cancel: 'Cancelar', saving: 'Guardando...', update: 'Actualizar', register: 'Registrar',
+      descRequired: 'La descripción es requerida'
+    }
+  }[language] || {};
+
+  // Quick-tap result options with keyboard shortcuts
+  const RESULT_OPTIONS = [
+    { value: 'conformity', label: 'C', fullLabel: L.conformity, colorKey: 'success', icon: '', key: '1' },
+    { value: 'nc_major', label: 'M', fullLabel: L.ncMajor, colorKey: 'error', icon: '', key: '2', needsModal: true },
+    { value: 'nc_minor', label: 'm', fullLabel: L.ncMinor, colorKey: 'warning', icon: '!', key: '3', needsModal: true },
+    { value: 'observation', label: 'O', fullLabel: L.observation, colorKey: 'info', icon: '?', key: '4', needsModal: true },
+    { value: 'opportunity', label: '+', fullLabel: L.opportunity, colorKey: 'primary', icon: '+', key: '5' },
+    { value: 'na', label: 'N/A', fullLabel: L.notApplicable, colorKey: 'textMuted', icon: '-', key: '0' }
+  ];
   const [loading, setLoading] = useState(true);
   const [schedule, setSchedule] = useState(null);
   const [checklist, setChecklist] = useState(null);
@@ -94,7 +139,7 @@ const AuditExecute = () => {
       }
     } catch (err) {
       console.error('Error loading data:', err);
-      alert('Error al cargar datos');
+      alert(L.loadError);
     } finally {
       setLoading(false);
     }
@@ -127,7 +172,7 @@ const AuditExecute = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al iniciar auditoria');
+      alert(L.startError);
     } finally {
       setSaving(false);
     }
@@ -159,7 +204,7 @@ const AuditExecute = () => {
 
   const saveFinding = async (itemId, findingData) => {
     if (!audit) {
-      alert('Primero debe iniciar la auditoria');
+      alert(L.startAuditFirst);
       return;
     }
 
@@ -218,14 +263,14 @@ const AuditExecute = () => {
       }
     } catch (err) {
       console.error('Error saving finding:', err);
-      alert('Error al guardar hallazgo');
+      alert(L.saveFindingError);
     } finally {
       setSavingItemId(null);
     }
   };
 
   const closeAudit = async () => {
-    if (!window.confirm('Cerrar la auditoria? Esto finalizara la ejecucion.')) return;
+    if (!window.confirm(L.confirmClose)) return;
 
     try {
       setSaving(true);
@@ -243,7 +288,7 @@ const AuditExecute = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al cerrar auditoria');
+      alert(L.closeError);
     } finally {
       setSaving(false);
     }
@@ -786,7 +831,7 @@ const AuditExecute = () => {
       <div style={styles.container}>
         <div style={styles.loadingCenter}>
           <div style={styles.spinner} />
-          Cargando auditoria...
+          {L.loading}
         </div>
       </div>
     );
@@ -796,12 +841,12 @@ const AuditExecute = () => {
     return (
       <div style={styles.container}>
         <div style={{ ...styles.card, borderLeft: `4px solid ${t.error}` }}>
-          <p style={{ color: t.error }}>Auditoria no encontrada</p>
+          <p style={{ color: t.error }}>{L.notFound}</p>
           <button
             style={{ ...styles.button, backgroundColor: t.primary, color: 'white' }}
             onClick={() => navigate('/audit-calendar')}
           >
-            Volver al Calendario
+            {L.backToCalendar}
           </button>
         </div>
       </div>
@@ -815,14 +860,14 @@ const AuditExecute = () => {
         <div style={styles.recurrenceToast}>
           <div style={styles.recurrenceIcon}></div>
           <div>
-            <strong>Hallazgo Recurrente Detectado</strong>
+            <strong>{L.recurrenceDetected}</strong>
             <p style={{ margin: '4px 0 0', fontSize: '13px' }}>
-              {recurrenceWarning.ncNumber}: Se ha detectado {recurrenceWarning.repeatCount} ocurrencia(s)
-              anterior(es). Nivel de riesgo: <strong style={{ color:
+              {recurrenceWarning.ncNumber}: {recurrenceWarning.repeatCount} {L.occurrences}.
+              {L.riskLevel}: <strong style={{ color:
                 recurrenceWarning.riskLevel === 'high' ? t.error :
                 recurrenceWarning.riskLevel === 'medium' ? t.warning : t.success
               }}>{recurrenceWarning.riskLevel?.toUpperCase()}</strong>
-              {recurrenceWarning.isSystemic && <span style={styles.systemicBadge}>SISTEMICO</span>}
+              {recurrenceWarning.isSystemic && <span style={styles.systemicBadge}>{L.systemic}</span>}
             </p>
           </div>
         </div>
@@ -844,13 +889,16 @@ const AuditExecute = () => {
         </div>
         <div style={styles.headerRight}>
           <ThemeSelector />
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           {!audit && (
             <button
               style={{ ...styles.actionButton, backgroundColor: t.success }}
               onClick={startAudit}
               disabled={saving}
             >
-               Iniciar
+               {L.start}
             </button>
           )}
           {audit && audit.status === 'in_progress' && (
@@ -859,7 +907,7 @@ const AuditExecute = () => {
               onClick={closeAudit}
               disabled={saving}
             >
-               Cerrar
+               {L.close}
             </button>
           )}
         </div>
@@ -888,9 +936,9 @@ const AuditExecute = () => {
       {/* Filter Tabs */}
       <div style={styles.filterTabs}>
         {[
-          { key: 'all', label: 'Todos', count: totalItems },
-          { key: 'pending', label: 'Pendientes', count: totalItems - completedItems },
-          { key: 'completed', label: 'Completados', count: completedItems }
+          { key: 'all', label: L.all, count: totalItems },
+          { key: 'pending', label: L.pending, count: totalItems - completedItems },
+          { key: 'completed', label: L.completed, count: completedItems }
         ].map(tab => (
           <button
             key={tab.key}
@@ -917,7 +965,7 @@ const AuditExecute = () => {
         alignItems: 'center',
         fontSize: '12px'
       }}>
-        <span style={{ color: t.textMuted, fontWeight: '600', marginRight: '4px' }}>Criterios:</span>
+        <span style={{ color: t.textMuted, fontWeight: '600', marginRight: '4px' }}>{L.criteria}:</span>
         {RESULT_OPTIONS.map(option => (
           <div key={option.value} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{
@@ -942,7 +990,7 @@ const AuditExecute = () => {
       {/* Checklist Items - List View */}
       {!checklist ? (
         <div style={styles.noChecklist}>
-          <p>Esta auditoria no tiene checklist asignado</p>
+          <p>{L.noChecklist}</p>
         </div>
       ) : (
         <div style={styles.itemsList}>
@@ -1021,7 +1069,7 @@ const AuditExecute = () => {
                       )}
                     </div>
                   ) : (
-                    <span style={styles.pendingText}>Inicie auditoria</span>
+                    <span style={styles.pendingText}>{L.startAuditPrompt}</span>
                   )}
                 </div>
               </div>
@@ -1043,6 +1091,7 @@ const AuditExecute = () => {
           theme={t}
           modalStyles={modalStyles}
           getResultColor={getResultColor}
+          L={L}
         />
       )}
     </div>
@@ -1050,7 +1099,7 @@ const AuditExecute = () => {
 };
 
 // NC/Observation Modal Component
-const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResultColor }) => {
+const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResultColor, L }) => {
   const [formData, setFormData] = useState({
     result: data.result,
     findingDescription: data.findingDescription || '',
@@ -1062,9 +1111,9 @@ const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResu
   const [uploading, setUploading] = useState(false);
 
   const RESULT_OPTIONS_MODAL = [
-    { value: 'nc_major', fullLabel: 'NC Mayor', colorKey: 'error', icon: '', needsModal: true },
-    { value: 'nc_minor', fullLabel: 'NC Menor', colorKey: 'warning', icon: '!', needsModal: true },
-    { value: 'observation', fullLabel: 'Observacion', colorKey: 'info', icon: '?', needsModal: true }
+    { value: 'nc_major', fullLabel: L.ncMajor, colorKey: 'error', icon: '', needsModal: true },
+    { value: 'nc_minor', fullLabel: L.ncMinor, colorKey: 'warning', icon: '!', needsModal: true },
+    { value: 'observation', fullLabel: L.observation, colorKey: 'info', icon: '?', needsModal: true }
   ];
 
   const resultOption = RESULT_OPTIONS_MODAL.find(r => r.value === formData.result);
@@ -1103,7 +1152,7 @@ const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResu
 
   const handleSubmit = () => {
     if (!formData.findingDescription.trim()) {
-      alert('La descripcion es requerida');
+      alert(L.descRequired);
       return;
     }
     onSave({
@@ -1154,24 +1203,24 @@ const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResu
 
           {/* Description */}
           <div style={modalStyles.field}>
-            <label style={modalStyles.label}>Descripcion del Hallazgo *</label>
+            <label style={modalStyles.label}>{L.findingDesc}</label>
             <textarea
               style={modalStyles.textarea}
               value={formData.findingDescription}
               onChange={e => setFormData({ ...formData, findingDescription: e.target.value })}
-              placeholder="Describa detalladamente el hallazgo..."
+              placeholder={L.descPlaceholder}
               rows={4}
             />
           </div>
 
           {/* Evidence */}
           <div style={modalStyles.field}>
-            <label style={modalStyles.label}>Evidencia Objetiva</label>
+            <label style={modalStyles.label}>{L.objectiveEvidence}</label>
             <textarea
               style={{ ...modalStyles.textarea, minHeight: '60px' }}
               value={formData.objectiveEvidence}
               onChange={e => setFormData({ ...formData, objectiveEvidence: e.target.value })}
-              placeholder="Registros, documentos, observaciones..."
+              placeholder={L.evidencePlaceholder}
               rows={2}
             />
           </div>
@@ -1179,13 +1228,13 @@ const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResu
           {/* File Upload */}
           <div style={modalStyles.field}>
             <label style={modalStyles.label}>
-              Archivos de Evidencia
+              {L.evidenceFiles}
               <button
                 style={modalStyles.uploadButton}
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
               >
-                 Foto /  Archivo
+                 {L.photoFile}
               </button>
             </label>
             <input
@@ -1226,12 +1275,12 @@ const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResu
 
           {/* Notes */}
           <div style={modalStyles.field}>
-            <label style={modalStyles.label}>Notas del Auditor</label>
+            <label style={modalStyles.label}>{L.auditorNotes}</label>
             <textarea
               style={{ ...modalStyles.textarea, minHeight: '50px' }}
               value={formData.auditorNotes}
               onChange={e => setFormData({ ...formData, auditorNotes: e.target.value })}
-              placeholder="Notas adicionales..."
+              placeholder={L.notesPlaceholder}
               rows={2}
             />
           </div>
@@ -1240,7 +1289,7 @@ const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResu
         {/* Modal Footer */}
         <div style={modalStyles.footer}>
           <button style={modalStyles.cancelButton} onClick={onClose}>
-            Cancelar
+            {L.cancel}
           </button>
           <button
             style={{
@@ -1251,7 +1300,7 @@ const NCModal = ({ data, onClose, onSave, saving, theme: t, modalStyles, getResu
             onClick={handleSubmit}
             disabled={saving || !formData.findingDescription.trim()}
           >
-            {saving ? 'Guardando...' : data.isEdit ? 'Actualizar' : 'Registrar'}
+            {saving ? L.saving : data.isEdit ? L.update : L.register}
           </button>
         </div>
       </div>

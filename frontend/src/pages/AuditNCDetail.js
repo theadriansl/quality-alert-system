@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
@@ -8,6 +9,67 @@ const AuditNCDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
+
+  const L = {
+    en: {
+      open: 'Open', inProgress: 'In Progress', pendingVerification: 'Pend. Verification', closed: 'Closed',
+      connectionError: 'Connection error', updateError: 'Error updating', verifyError: 'Error verifying',
+      ncClosed: 'NC closed successfully', ncReopened: 'NC reopened for new actions',
+      loading: 'Loading non-conformity...', notFound: 'NC not found', backToNCs: 'Back to NCs',
+      overdue: 'OVERDUE', ncMajor: 'Major', ncMinor: 'Minor', auditNC: 'Non-Conformity', audit: 'Audit',
+      edit: 'Edit', verify: 'Verify', saving: 'Saving...', save: 'Save', cancel: 'Cancel', back: 'Back',
+      ncInfo: 'Non-Conformity Information', type: 'Type', clause: 'Clause', areaProcess: 'Area/Process',
+      auditDate: 'Audit Date', responsible: 'Responsible', selectResponsible: 'Select responsible...',
+      noDept: 'No dept', dueDate: 'Due Date', notDefined: 'Not defined', unassigned: 'Unassigned',
+      status: 'Status', findingDesc: 'Finding Description', description: 'Description',
+      objectiveEvidence: 'Objective Evidence',
+      actions: 'Actions', immediateAction: 'Immediate Action / Containment',
+      immediateActionPlaceholder: 'Immediate actions taken to contain the problem...',
+      rootCauseAnalysis: 'Root Cause Analysis', rootCausePlaceholder: '5 Whys, Ishikawa, etc...',
+      correctiveAction: 'Corrective Action', correctivePlaceholder: 'Actions to eliminate root cause...',
+      preventiveAction: 'Preventive Action', preventivePlaceholder: 'Actions to prevent recurrence...',
+      pending: 'Pending',
+      verification: 'Verification', verificationDate: 'Verification Date', result: 'Result',
+      effective: 'Effective', notEffective: 'Not Effective', verifiedBy: 'Verified by',
+      verificationEvidence: 'Verification Evidence',
+      link8D: '8D Linkage', view8D: 'View 8D', ncNotLinked: 'This NC is not linked to an 8D report',
+      create8DFromNC: '+ Create 8D from this NC',
+      verifyEffectiveness: 'Verify Effectiveness', verificationResult: 'Verification Result',
+      effectiveCloseNC: 'Effective - Close NC', notEffectiveReopen: 'Not Effective - Reopen',
+      evidencePlaceholder: 'Evidence supporting the verification...',
+      confirmVerification: 'Confirm Verification'
+    },
+    es: {
+      open: 'Abierta', inProgress: 'En Proceso', pendingVerification: 'Pend. Verificación', closed: 'Cerrada',
+      connectionError: 'Error de conexión', updateError: 'Error al actualizar', verifyError: 'Error al verificar',
+      ncClosed: 'NC cerrada exitosamente', ncReopened: 'NC reabierta para nuevas acciones',
+      loading: 'Cargando no conformidad...', notFound: 'NC no encontrada', backToNCs: 'Volver a NCs',
+      overdue: 'VENCIDA', ncMajor: 'Mayor', ncMinor: 'Menor', auditNC: 'No Conformidad', audit: 'Auditoría',
+      edit: 'Editar', verify: 'Verificar', saving: 'Guardando...', save: 'Guardar', cancel: 'Cancelar', back: 'Volver',
+      ncInfo: 'Información de la No Conformidad', type: 'Tipo', clause: 'Cláusula', areaProcess: 'Área/Proceso',
+      auditDate: 'Fecha de Auditoría', responsible: 'Responsable', selectResponsible: 'Seleccionar responsable...',
+      noDept: 'Sin depto', dueDate: 'Fecha Límite', notDefined: 'No definida', unassigned: 'Sin asignar',
+      status: 'Estado', findingDesc: 'Descripción del Hallazgo', description: 'Descripción',
+      objectiveEvidence: 'Evidencia Objetiva',
+      actions: 'Acciones', immediateAction: 'Acción Inmediata / Contención',
+      immediateActionPlaceholder: 'Acciones inmediatas tomadas para contener el problema...',
+      rootCauseAnalysis: 'Análisis de Causa Raíz', rootCausePlaceholder: '5 Por qué, Ishikawa, etc...',
+      correctiveAction: 'Acción Correctiva', correctivePlaceholder: 'Acciones para eliminar la causa raíz...',
+      preventiveAction: 'Acción Preventiva', preventivePlaceholder: 'Acciones para prevenir recurrencia...',
+      pending: 'Pendiente',
+      verification: 'Verificación', verificationDate: 'Fecha de Verificación', result: 'Resultado',
+      effective: 'Efectiva', notEffective: 'No Efectiva', verifiedBy: 'Verificado por',
+      verificationEvidence: 'Evidencia de Verificación',
+      link8D: 'Vinculación a 8D', view8D: 'Ver 8D', ncNotLinked: 'Esta NC no está vinculada a un reporte 8D',
+      create8DFromNC: '+ Crear 8D desde esta NC',
+      verifyEffectiveness: 'Verificar Efectividad', verificationResult: 'Resultado de Verificación',
+      effectiveCloseNC: 'Efectiva - Cerrar NC', notEffectiveReopen: 'No Efectiva - Reabrir',
+      evidencePlaceholder: 'Evidencia que sustenta la verificación...',
+      confirmVerification: 'Confirmar Verificación'
+    }
+  }[language] || {};
+
   const [nc, setNc] = useState(null);
   const [linked8D, setLinked8D] = useState(null);
   const [users, setUsers] = useState([]);
@@ -23,10 +85,10 @@ const AuditNCDetail = () => {
   });
 
   const STATUS_CONFIG = {
-    open: { label: 'Abierta', color: t.error },
-    in_progress: { label: 'En Proceso', color: t.warning },
-    pending_verification: { label: 'Pend. Verificación', color: '#8b5cf6' },
-    closed: { label: 'Cerrada', color: t.success }
+    open: { label: L.open, color: t.error },
+    in_progress: { label: L.inProgress, color: t.warning },
+    pending_verification: { label: L.pendingVerification, color: '#8b5cf6' },
+    closed: { label: L.closed, color: t.success }
   };
 
   const loadNC = useCallback(async () => {
@@ -54,11 +116,11 @@ const AuditNCDetail = () => {
         setUsers(Array.isArray(usersData) ? usersData : []);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, L.connectionError]);
 
   useEffect(() => {
     loadNC();
@@ -85,7 +147,7 @@ const AuditNCDetail = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al actualizar');
+      alert(L.updateError);
     } finally {
       setSaving(false);
     }
@@ -108,12 +170,12 @@ const AuditNCDetail = () => {
       if (result.success) {
         setNc(result.nonConformity);
         setShowVerifyModal(false);
-        alert(verifyData.verificationResult === 'effective' ? 'NC cerrada exitosamente' : 'NC reabierta para nuevas acciones');
+        alert(verifyData.verificationResult === 'effective' ? L.ncClosed : L.ncReopened);
       } else {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al verificar');
+      alert(L.verifyError);
     } finally {
       setSaving(false);
     }
@@ -303,7 +365,7 @@ const AuditNCDetail = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando no conformidad...
+          {L.loading}
         </div>
       </div>
     );
@@ -313,12 +375,12 @@ const AuditNCDetail = () => {
     return (
       <div style={styles.container}>
         <div style={{ ...styles.card, borderLeft: `4px solid ${t.error}` }}>
-          <p style={{ color: t.error }}>{error || 'NC no encontrada'}</p>
+          <p style={{ color: t.error }}>{error || L.notFound}</p>
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-ncs')}
           >
-            Volver a NCs
+            {L.backToNCs}
           </button>
         </div>
       </div>
@@ -335,27 +397,30 @@ const AuditNCDetail = () => {
         <div>
           <h1 style={styles.title}>
             {nc.ncNumber}
-            {isOverdue && <span style={{ marginLeft: '12px', color: t.error, fontSize: '16px' }}> VENCIDA</span>}
+            {isOverdue && <span style={{ marginLeft: '12px', color: t.error, fontSize: '16px' }}> {L.overdue}</span>}
           </h1>
           <p style={styles.subtitle}>
-            No Conformidad {nc.ncType === 'major' ? 'Mayor' : 'Menor'} - Auditoría {nc.auditNumber}
+            {L.auditNC} {nc.ncType === 'major' ? L.ncMajor : L.ncMinor} - {L.audit} {nc.auditNumber}
           </p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           {nc.status !== 'closed' && !isEditing && (
             <>
               <button
                 style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
                 onClick={() => setIsEditing(true)}
               >
-                 Editar
+                 {L.edit}
               </button>
               {nc.status === 'pending_verification' && (
                 <button
                   style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
                   onClick={() => setShowVerifyModal(true)}
                 >
-                   Verificar
+                   {L.verify}
                 </button>
               )}
             </>
@@ -367,7 +432,7 @@ const AuditNCDetail = () => {
                 onClick={updateNC}
                 disabled={saving}
               >
-                {saving ? 'Guardando...' : ' Guardar'}
+                {saving ? L.saving : ` ${L.save}`}
               </button>
               <button
                 style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
@@ -376,7 +441,7 @@ const AuditNCDetail = () => {
                   setEditData(nc);
                 }}
               >
-                Cancelar
+                {L.cancel}
               </button>
             </>
           )}
@@ -384,7 +449,7 @@ const AuditNCDetail = () => {
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
             onClick={() => navigate('/audit-ncs')}
           >
-            ← Volver
+            ← {L.back}
           </button>
         </div>
       </div>
@@ -392,7 +457,7 @@ const AuditNCDetail = () => {
       {/* NC Info */}
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>
-           Información de la No Conformidad
+           {L.ncInfo}
           <span style={{
             ...styles.badge,
             marginLeft: 'auto',
@@ -406,32 +471,32 @@ const AuditNCDetail = () => {
         <div style={styles.grid2}>
           <div>
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Tipo</div>
+              <div style={styles.fieldLabel}>{L.type}</div>
               <div style={styles.fieldValue}>
                 <span style={{
                   ...styles.badge,
                   backgroundColor: nc.ncType === 'major' ? `${t.error}20` : `${t.warning}20`,
                   color: nc.ncType === 'major' ? t.error : t.warning
                 }}>
-                  {nc.ncType === 'major' ? 'Mayor' : 'Menor'}
+                  {nc.ncType === 'major' ? L.ncMajor : L.ncMinor}
                 </span>
               </div>
             </div>
 
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Cláusula</div>
+              <div style={styles.fieldLabel}>{L.clause}</div>
               <div style={styles.fieldValue}>{nc.clause || '-'}</div>
             </div>
 
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Área/Proceso</div>
+              <div style={styles.fieldLabel}>{L.areaProcess}</div>
               <div style={styles.fieldValue}>{nc.areaProcess || '-'}</div>
             </div>
 
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Fecha de Auditoría</div>
+              <div style={styles.fieldLabel}>{L.auditDate}</div>
               <div style={styles.fieldValue}>
-                {nc.auditDate ? new Date(nc.auditDate).toLocaleDateString('es-MX') : '-'}
+                {nc.auditDate ? new Date(nc.auditDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX') : '-'}
               </div>
             </div>
           </div>
@@ -440,23 +505,23 @@ const AuditNCDetail = () => {
             {isEditing ? (
               <>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Responsable</label>
+                  <label style={styles.label}>{L.responsible}</label>
                   <select
                     value={editData.responsibleId || ''}
                     onChange={(e) => setEditData({ ...editData, responsibleId: e.target.value })}
                     style={styles.select}
                   >
-                    <option value="">Seleccionar responsable...</option>
+                    <option value="">{L.selectResponsible}</option>
                     {users.map(u => (
                       <option key={u.id} value={u.id}>
-                        {u.firstName} {u.lastName} - {u.department || 'Sin depto'}
+                        {u.firstName} {u.lastName} - {u.department || L.noDept}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Fecha Límite</label>
+                  <label style={styles.label}>{L.dueDate}</label>
                   <input
                     type="date"
                     value={editData.dueDate?.split('T')[0] || ''}
@@ -466,32 +531,32 @@ const AuditNCDetail = () => {
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Estado</label>
+                  <label style={styles.label}>{L.status}</label>
                   <select
                     value={editData.status || ''}
                     onChange={(e) => setEditData({ ...editData, status: e.target.value })}
                     style={styles.select}
                   >
-                    <option value="open">Abierta</option>
-                    <option value="in_progress">En Proceso</option>
-                    <option value="pending_verification">Pendiente Verificación</option>
+                    <option value="open">{L.open}</option>
+                    <option value="in_progress">{L.inProgress}</option>
+                    <option value="pending_verification">{L.pendingVerification}</option>
                   </select>
                 </div>
               </>
             ) : (
               <>
                 <div style={styles.field}>
-                  <div style={styles.fieldLabel}>Responsable</div>
-                  <div style={styles.fieldValue}>{nc.responsibleName || 'Sin asignar'}</div>
+                  <div style={styles.fieldLabel}>{L.responsible}</div>
+                  <div style={styles.fieldValue}>{nc.responsibleName || L.unassigned}</div>
                 </div>
 
                 <div style={styles.field}>
-                  <div style={styles.fieldLabel}>Fecha Límite</div>
+                  <div style={styles.fieldLabel}>{L.dueDate}</div>
                   <div style={{
                     ...styles.fieldValue,
                     color: isOverdue ? t.error : 'inherit'
                   }}>
-                    {nc.dueDate ? new Date(nc.dueDate).toLocaleDateString('es-MX') : 'No definida'}
+                    {nc.dueDate ? new Date(nc.dueDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX') : L.notDefined}
                   </div>
                 </div>
               </>
@@ -502,16 +567,16 @@ const AuditNCDetail = () => {
 
       {/* Description */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}> Descripción del Hallazgo</h2>
+        <h2 style={styles.cardTitle}> {L.findingDesc}</h2>
 
         <div style={styles.field}>
-          <div style={styles.fieldLabel}>Descripción</div>
+          <div style={styles.fieldLabel}>{L.description}</div>
           <div style={styles.fieldValue}>{nc.description}</div>
         </div>
 
         {nc.objectiveEvidence && (
           <div style={styles.field}>
-            <div style={styles.fieldLabel}>Evidencia Objetiva</div>
+            <div style={styles.fieldLabel}>{L.objectiveEvidence}</div>
             <div style={styles.fieldValue}>{nc.objectiveEvidence}</div>
           </div>
         )}
@@ -519,46 +584,46 @@ const AuditNCDetail = () => {
 
       {/* Actions */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}> Acciones</h2>
+        <h2 style={styles.cardTitle}> {L.actions}</h2>
 
         {isEditing ? (
           <>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Acción Inmediata / Contención</label>
+              <label style={styles.label}>{L.immediateAction}</label>
               <textarea
                 value={editData.immediateAction || ''}
                 onChange={(e) => setEditData({ ...editData, immediateAction: e.target.value })}
-                placeholder="Acciones inmediatas tomadas para contener el problema..."
+                placeholder={L.immediateActionPlaceholder}
                 style={styles.textarea}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Análisis de Causa Raíz</label>
+              <label style={styles.label}>{L.rootCauseAnalysis}</label>
               <textarea
                 value={editData.rootCauseAnalysis || ''}
                 onChange={(e) => setEditData({ ...editData, rootCauseAnalysis: e.target.value })}
-                placeholder="5 Por qué, Ishikawa, etc..."
+                placeholder={L.rootCausePlaceholder}
                 style={styles.textarea}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Acción Correctiva</label>
+              <label style={styles.label}>{L.correctiveAction}</label>
               <textarea
                 value={editData.correctiveAction || ''}
                 onChange={(e) => setEditData({ ...editData, correctiveAction: e.target.value })}
-                placeholder="Acciones para eliminar la causa raíz..."
+                placeholder={L.correctivePlaceholder}
                 style={styles.textarea}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Acción Preventiva</label>
+              <label style={styles.label}>{L.preventiveAction}</label>
               <textarea
                 value={editData.preventiveAction || ''}
                 onChange={(e) => setEditData({ ...editData, preventiveAction: e.target.value })}
-                placeholder="Acciones para prevenir recurrencia..."
+                placeholder={L.preventivePlaceholder}
                 style={styles.textarea}
               />
             </div>
@@ -567,26 +632,26 @@ const AuditNCDetail = () => {
           <div style={styles.timeline}>
             <div style={styles.timelineItem}>
               <div style={{ ...styles.timelineDot, backgroundColor: nc.immediateAction ? t.success : t.border }} />
-              <div style={styles.fieldLabel}>Acción Inmediata</div>
-              <div style={styles.fieldValue}>{nc.immediateAction || 'Pendiente'}</div>
+              <div style={styles.fieldLabel}>{L.immediateAction}</div>
+              <div style={styles.fieldValue}>{nc.immediateAction || L.pending}</div>
             </div>
 
             <div style={styles.timelineItem}>
               <div style={{ ...styles.timelineDot, backgroundColor: nc.rootCauseAnalysis ? t.success : t.border }} />
-              <div style={styles.fieldLabel}>Análisis de Causa Raíz</div>
-              <div style={styles.fieldValue}>{nc.rootCauseAnalysis || 'Pendiente'}</div>
+              <div style={styles.fieldLabel}>{L.rootCauseAnalysis}</div>
+              <div style={styles.fieldValue}>{nc.rootCauseAnalysis || L.pending}</div>
             </div>
 
             <div style={styles.timelineItem}>
               <div style={{ ...styles.timelineDot, backgroundColor: nc.correctiveAction ? t.success : t.border }} />
-              <div style={styles.fieldLabel}>Acción Correctiva</div>
-              <div style={styles.fieldValue}>{nc.correctiveAction || 'Pendiente'}</div>
+              <div style={styles.fieldLabel}>{L.correctiveAction}</div>
+              <div style={styles.fieldValue}>{nc.correctiveAction || L.pending}</div>
             </div>
 
             <div style={styles.timelineItem}>
               <div style={{ ...styles.timelineDot, backgroundColor: nc.preventiveAction ? t.success : t.border }} />
-              <div style={styles.fieldLabel}>Acción Preventiva</div>
-              <div style={styles.fieldValue}>{nc.preventiveAction || 'Pendiente'}</div>
+              <div style={styles.fieldLabel}>{L.preventiveAction}</div>
+              <div style={styles.fieldValue}>{nc.preventiveAction || L.pending}</div>
             </div>
           </div>
         )}
@@ -595,36 +660,36 @@ const AuditNCDetail = () => {
       {/* Verification */}
       {(nc.verificationDate || nc.status === 'closed') && (
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}> Verificación</h2>
+          <h2 style={styles.cardTitle}> {L.verification}</h2>
 
           <div style={styles.grid2}>
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Fecha de Verificación</div>
+              <div style={styles.fieldLabel}>{L.verificationDate}</div>
               <div style={styles.fieldValue}>
-                {nc.verificationDate ? new Date(nc.verificationDate).toLocaleDateString('es-MX') : '-'}
+                {nc.verificationDate ? new Date(nc.verificationDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX') : '-'}
               </div>
             </div>
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Resultado</div>
+              <div style={styles.fieldLabel}>{L.result}</div>
               <div style={styles.fieldValue}>
                 <span style={{
                   ...styles.badge,
                   backgroundColor: nc.verificationResult === 'effective' ? `${t.success}20` : `${t.error}20`,
                   color: nc.verificationResult === 'effective' ? t.success : t.error
                 }}>
-                  {nc.verificationResult === 'effective' ? 'Efectiva' : 'No Efectiva'}
+                  {nc.verificationResult === 'effective' ? L.effective : L.notEffective}
                 </span>
               </div>
             </div>
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Verificado por</div>
+              <div style={styles.fieldLabel}>{L.verifiedBy}</div>
               <div style={styles.fieldValue}>{nc.verifiedByName || '-'}</div>
             </div>
           </div>
 
           {nc.verificationEvidence && (
             <div style={styles.field}>
-              <div style={styles.fieldLabel}>Evidencia de Verificación</div>
+              <div style={styles.fieldLabel}>{L.verificationEvidence}</div>
               <div style={styles.fieldValue}>{nc.verificationEvidence}</div>
             </div>
           )}
@@ -633,31 +698,31 @@ const AuditNCDetail = () => {
 
       {/* Linked 8D */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}> Vinculación a 8D</h2>
+        <h2 style={styles.cardTitle}> {L.link8D}</h2>
 
         {linked8D ? (
           <div style={styles.linked8D}>
             <div style={{ fontWeight: '600', marginBottom: '8px', color: t.text }}>{linked8D.reportId}</div>
             <div style={{ fontSize: '14px', color: t.text, marginBottom: '8px' }}>{linked8D.title}</div>
-            <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '12px' }}>Estado: {linked8D.status}</div>
+            <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '12px' }}>{L.status}: {linked8D.status}</div>
             <button
               style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
               onClick={() => navigate(`/8d-workflow/${linked8D.id}`)}
             >
-              Ver 8D
+              {L.view8D}
             </button>
           </div>
         ) : (
           <div>
             <p style={{ color: t.textMuted, marginBottom: '16px' }}>
-              Esta NC no está vinculada a un reporte 8D
+              {L.ncNotLinked}
             </p>
             {nc.status !== 'closed' && (
               <button
                 style={{ ...styles.button, backgroundColor: '#8b5cf6', color: 'white' }}
                 onClick={create8D}
               >
-                + Crear 8D desde esta NC
+                {L.create8DFromNC}
               </button>
             )}
           </div>
@@ -668,26 +733,26 @@ const AuditNCDetail = () => {
       {showVerifyModal && (
         <div style={styles.modal} onClick={() => setShowVerifyModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Verificar Efectividad</h2>
+            <h2 style={styles.modalTitle}>{L.verifyEffectiveness}</h2>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Resultado de Verificación</label>
+              <label style={styles.label}>{L.verificationResult}</label>
               <select
                 value={verifyData.verificationResult}
                 onChange={(e) => setVerifyData({ ...verifyData, verificationResult: e.target.value })}
                 style={styles.select}
               >
-                <option value="effective">Efectiva - Cerrar NC</option>
-                <option value="not_effective">No Efectiva - Reabrir</option>
+                <option value="effective">{L.effectiveCloseNC}</option>
+                <option value="not_effective">{L.notEffectiveReopen}</option>
               </select>
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Evidencia de Verificación</label>
+              <label style={styles.label}>{L.verificationEvidence}</label>
               <textarea
                 value={verifyData.verificationEvidence}
                 onChange={(e) => setVerifyData({ ...verifyData, verificationEvidence: e.target.value })}
-                placeholder="Evidencia que sustenta la verificación..."
+                placeholder={L.evidencePlaceholder}
                 style={styles.textarea}
               />
             </div>
@@ -697,14 +762,14 @@ const AuditNCDetail = () => {
                 style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
                 onClick={() => setShowVerifyModal(false)}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
                 onClick={verifyNC}
                 disabled={saving}
               >
-                {saving ? 'Guardando...' : 'Confirmar Verificación'}
+                {saving ? L.saving : L.confirmVerification}
               </button>
             </div>
           </div>

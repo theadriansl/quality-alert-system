@@ -1,13 +1,44 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
 const AuditChecklists = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const [checklists, setChecklists] = useState([]);
+
+  const L = {
+    en: {
+      connectionError: 'Connection error', createError: 'Error creating checklist', cloneError: 'Error cloning checklist',
+      loading: 'Loading checklists...', title: 'Audit Checklists', subtitle: 'Verification templates for ISO audits',
+      newChecklist: '+ New Checklist', dashboard: 'Dashboard', home: 'Home',
+      allStandards: 'All standards', noChecklists: 'No checklists available', createHint: 'Create a new checklist to start',
+      noDescription: 'No description', questions: 'questions', edit: 'Edit', clone: 'Clone',
+      newChecklistTitle: 'New Checklist', name: 'Name', namePlaceholder: 'E.g.: ISO 9001 Production Audit',
+      description: 'Description', descriptionPlaceholder: 'Checklist description...',
+      standard: 'Standard', internalProcedures: 'Internal Procedures', version: 'Version',
+      process: 'Process', processPlaceholder: 'E.g.: Production, Warehouse, Purchasing...',
+      cancel: 'Cancel', createChecklist: 'Create Checklist',
+      clonePrompt: 'Name for the new checklist:'
+    },
+    es: {
+      connectionError: 'Error de conexión', createError: 'Error al crear checklist', cloneError: 'Error al clonar checklist',
+      loading: 'Cargando checklists...', title: 'Checklists de Auditoría', subtitle: 'Plantillas de verificación para auditorías ISO',
+      newChecklist: '+ Nuevo Checklist', dashboard: 'Dashboard', home: 'Inicio',
+      allStandards: 'Todas las normas', noChecklists: 'No hay checklists disponibles', createHint: 'Crea un nuevo checklist para comenzar',
+      noDescription: 'Sin descripción', questions: 'preguntas', edit: 'Editar', clone: 'Clonar',
+      newChecklistTitle: 'Nuevo Checklist', name: 'Nombre', namePlaceholder: 'Ej: Auditoría de Producción ISO 9001',
+      description: 'Descripción', descriptionPlaceholder: 'Descripción del checklist...',
+      standard: 'Norma/Estándar', internalProcedures: 'Procedimientos internos', version: 'Versión',
+      process: 'Proceso', processPlaceholder: 'Ej: Producción, Almacén, Compras...',
+      cancel: 'Cancelar', createChecklist: 'Crear Checklist',
+      clonePrompt: 'Nombre del nuevo checklist:'
+    }
+  }[language] || {};
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterStandard, setFilterStandard] = useState('');
@@ -38,7 +69,7 @@ const AuditChecklists = () => {
         setError(result.message);
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
@@ -69,12 +100,12 @@ const AuditChecklists = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al crear checklist');
+      alert(L.createError);
     }
   };
 
   const cloneChecklist = async (id, name) => {
-    const newName = prompt('Nombre del nuevo checklist:', `${name} (Copia)`);
+    const newName = prompt(L.clonePrompt, `${name} (Copy)`);
     if (!newName) return;
 
     try {
@@ -95,7 +126,7 @@ const AuditChecklists = () => {
         alert(result.message);
       }
     } catch (err) {
-      alert('Error al clonar checklist');
+      alert(L.cloneError);
     }
   };
 
@@ -284,7 +315,7 @@ const AuditChecklists = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando checklists...
+          {L.loading}
         </div>
       </div>
     );
@@ -295,27 +326,30 @@ const AuditChecklists = () => {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Checklists de Auditoría</h1>
-          <p style={styles.subtitle}>Plantillas de verificación para auditorías ISO</p>
+          <h1 style={styles.title}>{L.title}</h1>
+          <p style={styles.subtitle}>{L.subtitle}</p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <button
             style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
             onClick={() => setShowCreateModal(true)}
           >
-            + Nuevo Checklist
+            {L.newChecklist}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-dashboard')}
           >
-             Dashboard
+             {L.dashboard}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
             onClick={() => navigate('/')}
           >
-            ← Inicio
+            ← {L.home}
           </button>
         </div>
       </div>
@@ -327,7 +361,7 @@ const AuditChecklists = () => {
           onChange={(e) => setFilterStandard(e.target.value)}
           style={styles.select}
         >
-          <option value="">Todas las normas</option>
+          <option value="">{L.allStandards}</option>
           <option value="ISO 9001">ISO 9001</option>
           <option value="IATF 16949">IATF 16949</option>
           <option value="VDA 6.3">VDA 6.3</option>
@@ -345,8 +379,8 @@ const AuditChecklists = () => {
       {/* Checklists Grid */}
       {checklists.length === 0 ? (
         <div style={styles.empty}>
-          <p style={{ fontSize: '18px', marginBottom: '12px' }}>No hay checklists disponibles</p>
-          <p>Crea un nuevo checklist para comenzar</p>
+          <p style={{ fontSize: '18px', marginBottom: '12px' }}>{L.noChecklists}</p>
+          <p>{L.createHint}</p>
         </div>
       ) : (
         <div style={styles.grid}>
@@ -370,11 +404,11 @@ const AuditChecklists = () => {
               </div>
 
               <p style={styles.cardDescription}>
-                {checklist.description || 'Sin descripción'}
+                {checklist.description || L.noDescription}
               </p>
 
               <div style={styles.cardMeta}>
-                <span> {checklist.itemCount || 0} preguntas</span>
+                <span> {checklist.itemCount || 0} {L.questions}</span>
                 <span> v{checklist.version || '1.0'}</span>
                 {checklist.process && <span> {checklist.process}</span>}
               </div>
@@ -384,13 +418,13 @@ const AuditChecklists = () => {
                   style={{ ...styles.button, backgroundColor: t.accent, color: 'white', flex: 1 }}
                   onClick={() => navigate(`/audit-checklist/${checklist.id}`)}
                 >
-                  Editar
+                  {L.edit}
                 </button>
                 <button
                   style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text, flex: 1 }}
                   onClick={() => cloneChecklist(checklist.id, checklist.name)}
                 >
-                  Clonar
+                  {L.clone}
                 </button>
               </div>
             </div>
@@ -402,32 +436,32 @@ const AuditChecklists = () => {
       {showCreateModal && (
         <div style={styles.modal} onClick={() => setShowCreateModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Nuevo Checklist</h2>
+            <h2 style={styles.modalTitle}>{L.newChecklistTitle}</h2>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Nombre *</label>
+              <label style={styles.label}>{L.name} *</label>
               <input
                 type="text"
                 value={newChecklist.name}
                 onChange={(e) => setNewChecklist({ ...newChecklist, name: e.target.value })}
-                placeholder="Ej: Auditoría de Producción ISO 9001"
+                placeholder={L.namePlaceholder}
                 style={styles.input}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Descripción</label>
+              <label style={styles.label}>{L.description}</label>
               <textarea
                 value={newChecklist.description}
                 onChange={(e) => setNewChecklist({ ...newChecklist, description: e.target.value })}
-                placeholder="Descripción del checklist..."
+                placeholder={L.descriptionPlaceholder}
                 style={styles.textarea}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Norma/Estándar</label>
+                <label style={styles.label}>{L.standard}</label>
                 <select
                   value={newChecklist.standard}
                   onChange={(e) => setNewChecklist({ ...newChecklist, standard: e.target.value })}
@@ -438,12 +472,12 @@ const AuditChecklists = () => {
                   <option value="VDA 6.3">VDA 6.3</option>
                   <option value="ISO 14001:2015">ISO 14001:2015</option>
                   <option value="ISO 45001:2018">ISO 45001:2018</option>
-                  <option value="Procedimientos internos">Procedimientos internos</option>
+                  <option value="Procedimientos internos">{L.internalProcedures}</option>
                 </select>
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>Versión</label>
+                <label style={styles.label}>{L.version}</label>
                 <input
                   type="text"
                   value={newChecklist.version}
@@ -455,12 +489,12 @@ const AuditChecklists = () => {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Proceso</label>
+              <label style={styles.label}>{L.process}</label>
               <input
                 type="text"
                 value={newChecklist.process}
                 onChange={(e) => setNewChecklist({ ...newChecklist, process: e.target.value })}
-                placeholder="Ej: Producción, Almacén, Compras..."
+                placeholder={L.processPlaceholder}
                 style={styles.input}
               />
             </div>
@@ -470,14 +504,14 @@ const AuditChecklists = () => {
                 style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
                 onClick={() => setShowCreateModal(false)}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
                 onClick={createChecklist}
                 disabled={!newChecklist.name}
               >
-                Crear Checklist
+                {L.createChecklist}
               </button>
             </div>
           </div>

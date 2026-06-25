@@ -1,272 +1,106 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { eightDService } from '../services/eightDService';
 import { isUserAdmin } from '../utils/permissions';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+
+// Helpers
+const TODAY = new Date().toISOString().split('T')[0];
+
+const formatCurrency = (v) => {
+  if (!v || isNaN(v)) return '$0';
+  if (v >= 1000000) return `$${(v / 1000000).toFixed(2)}M`;
+  if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`;
+  return `$${parseFloat(v).toFixed(0)}`;
+};
+
+const STEP_COLORS = {
+  D1: '#9ca3af', D2: '#6b7280', D3: '#4b5563', 'D3-MFG': '#374151',
+  D4: '#1565C0', D5: '#0072CE', D6: '#8b5cf6', D7: '#C77700', D8: '#2E7D32'
+};
+
+const sevColor = (s) => s === 'High' ? '#ef4444' : s === 'Medium' ? '#C77700' : '#2E7D32';
+const statusColor = (s, t) => {
+  const l = (s || '').toLowerCase();
+  if (l === 'closed') return '#2E7D32';
+  if (l === 'in progress' || l === 'in_progress') return t?.accent || '#0072CE';
+  return t?.textDim || '#6b7280';
+};
 
 const EightDConsultation = () => {
   const navigate = useNavigate();
-  const { theme: themeColors } = useTheme();
-  const [language, setLanguage] = useState('es');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('recent');
-  const [eightDReports, setEightDReports] = useState([]);
+  const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Verificar si el usuario es admin
+  // Filters
+  const [search, setSearch] = useState('');
+  const [fSev, setFSev] = useState('all');
+  const [fStatus, setFStatus] = useState('all');
+  const [fStep, setFStep] = useState('all');
+  const [fDept, setFDept] = useState('all');
+  const [fSupplier, setFSupplier] = useState('all');
+
+  // Admin check
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdmin = isUserAdmin(currentUser);
 
-  // Cargar reportes 8D desde la API
+  // Load reports directly from dashboard-data endpoint (same source as dashboard)
   useEffect(() => {
     const loadReports = async () => {
       try {
         setLoading(true);
         setError(null);
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/8d/dashboard-data', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-        // Intentar obtener datos de la API primero
-        const openReports = await eightDService.getOpenReports();
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-        if (openReports && openReports.length > 0) {
-          // Convertir los datos de la API al formato esperado por la UI
-          const formattedReports = openReports.map(report => ({
-            id: report.report_id || report.id,
-            title: report.title,
-            supplierName: report.customer || 'N/A', // customer se mapea a supplier
-            partNumber: report.part_number || 'N/A',
-            partName: report.part_name || 'N/A',
-            status: mapBackendStatusToFrontend(report.status),
-            currentStep: mapStatusToStep(report.status),
-            severity: report.severity || 'Minor',
-            createdAt: report.created_at || new Date().toISOString(),
-            lastModified: report.updated_at || new Date().toISOString(),
-            assignedTeam: [
-              report.issue_assignee,
-              report.countermeasure_assignee,
-              report.confirmation_assignee
-            ].filter(assignee => assignee && assignee !== '-')
-          }));
-
-          setEightDReports(formattedReports);
+        const result = await response.json();
+        if (result.success && result.data && result.data.recent8Ds) {
+          // Use recent8Ds directly - same data format as dashboard
+          setReports(result.data.recent8Ds);
         } else {
-          // Fallback a datos de muestra si no hay datos de la API
-          setEightDReports([]);
+          setReports([]);
         }
       } catch (err) {
         console.error('Error loading 8D reports:', err);
         setError('Error al cargar los reportes 8D');
-        setEightDReports([]); // Usar array vacío en caso de error
+        setReports([]);
       } finally {
         setLoading(false);
       }
     };
-
     loadReports();
   }, []);
 
-  // Función para mapear el estado del backend al frontend
-  const mapBackendStatusToFrontend = (backendStatus) => {
-    if (!backendStatus) return 'pending';
+  // Derived data for filters
+  const departments = useMemo(() => [...new Set(reports.map(r => r.createdByDepartment).filter(Boolean))].sort(), [reports]);
+  const suppliers = useMemo(() => [...new Set(reports.map(r => r.supplierName).filter(Boolean))].sort(), [reports]);
 
-    if (backendStatus.includes('D8') || backendStatus.includes('Closed')) {
-      return 'completed';
-    } else if (backendStatus.includes('D1') || backendStatus.includes('Team Formation')) {
-      return 'pending';
-    } else {
-      return 'in_progress';
-    }
-  };
-
-  // Función para mapear estado a paso actual
-  const mapStatusToStep = (status) => {
-    if (!status) return 'escalation';
-
-    if (status.includes('D1')) return 'team_formation';
-    if (status.includes('D2')) return 'problem_definition';
-    if (status.includes('D3')) return 'containment';
-    if (status.includes('D4')) return 'analysis';
-    if (status.includes('D5')) return 'corrective_actions';
-    if (status.includes('D6')) return 'implementation';
-    if (status.includes('D7')) return 'preventive_actions';
-    if (status.includes('D8')) return 'closed';
-
-    return 'analysis';
-  };
-
-  const translations = {
-    en: {
-      title: '8D Reports Consultation',
-      search: 'Search reports...',
-      status: 'Status',
-      sortBy: 'Sort by',
-      all: 'All',
-      inProgress: 'In Progress',
-      completed: 'Completed',
-      pending: 'Pending',
-      recent: 'Most Recent',
-      oldest: 'Oldest',
-      alphabetical: 'Alphabetical',
-      loading: 'Loading reports...',
-      error: 'Error loading reports',
-      noResults: 'No reports found',
-      reportId: 'Report ID',
-      supplier: 'Supplier',
-      part: 'Part',
-      severity: 'Severity',
-      created: 'Created',
-      modified: 'Last Modified',
-      team: 'Assigned Team',
-      actions: 'Actions',
-      view: 'View',
-      edit: 'Edit',
-      backToDashboard: 'Back to Dashboard',
-      step: 'Step',
-      critical: 'Critical',
-      major: 'Major',
-      minor: 'Minor'
-    },
-    es: {
-      title: 'Consulta de Reportes 8D',
-      search: 'Buscar reportes...',
-      status: 'Estado',
-      sortBy: 'Ordenar por',
-      all: 'Todos',
-      inProgress: 'En Progreso',
-      completed: 'Completado',
-      pending: 'Pendiente',
-      recent: 'Más Reciente',
-      oldest: 'Más Antiguo',
-      alphabetical: 'Alfabético',
-      loading: 'Cargando reportes...',
-      error: 'Error al cargar reportes',
-      noResults: 'No se encontraron reportes',
-      reportId: 'ID Reporte',
-      supplier: 'Proveedor',
-      part: 'Parte',
-      severity: 'Severidad',
-      created: 'Creado',
-      modified: 'Última Modificación',
-      team: 'Equipo Asignado',
-      actions: 'Acciones',
-      view: 'Ver',
-      edit: 'Editar',
-      backToDashboard: 'Volver al Dashboard',
-      step: 'Paso',
-      critical: 'Crítico',
-      major: 'Mayor',
-      minor: 'Menor'
-    }
-  };
-
-  const t = (key) => translations[language][key] || key;
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      'in_progress': { color: themeColors.accent, bg: '#dbeafe', label: t('inProgress') },
-      'completed': { color: '#22c55e', bg: '#dcfce7', label: t('completed') },
-      'pending': { color: '#C77700', bg: '#fef3c7', label: t('pending') }
-    };
-    
-    const config = statusConfig[status] || statusConfig['pending'];
-    
+  // Filtered reports
+  const filtered = useMemo(() => reports.filter(r => {
+    const s = search.toLowerCase();
     return (
-      <span style={{
-        backgroundColor: config.bg,
-        color: config.color,
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: 'bold'
-      }}>
-        {config.label}
-      </span>
+      (!s || r.title?.toLowerCase().includes(s) || r.reportId?.toLowerCase().includes(s) || r.supplierName?.toLowerCase().includes(s)) &&
+      (fSev === 'all' || r.severity === fSev) &&
+      (fStatus === 'all' || r.status === fStatus) &&
+      (fStep === 'all' || r.currentStep === fStep) &&
+      (fDept === 'all' || r.createdByDepartment === fDept) &&
+      (fSupplier === 'all' || r.supplierName === fSupplier)
     );
-  };
+  }), [reports, search, fSev, fStatus, fStep, fDept, fSupplier]);
 
-  const getSeverityBadge = (severity) => {
-    const severityConfig = {
-      'Critical': { color: '#B00020', bg: '#fee2e2' },
-      'Major': { color: '#C77700', bg: '#fef3c7' },
-      'Minor': { color: '#2E7D32', bg: '#d1fae5' }
-    };
-    
-    const config = severityConfig[severity] || severityConfig['Minor'];
-    
-    return (
-      <span style={{
-        backgroundColor: config.bg,
-        color: config.color,
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: 'bold'
-      }}>
-        {t(severity.toLowerCase())}
-      </span>
-    );
-  };
-
-  const filteredAndSortedReports = () => {
-    let filtered = eightDReports;
-
-    // Filtrar por término de búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(report =>
-        report.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.partNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.partName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtrar por estado
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(report => report.status === statusFilter);
-    }
-
-    // Ordenar
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'oldest':
-          return new Date(a.createdAt) - new Date(b.createdAt);
-        case 'alphabetical':
-          return a.title.localeCompare(b.title);
-        case 'recent':
-        default:
-          return new Date(b.lastModified) - new Date(a.lastModified);
-      }
-    });
-
-    return filtered;
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const handleViewReport = (reportId) => {
-    // Navegar al workflow con el reporte seleccionado
-    navigate(`/8d-workflow?reportId=${reportId}`);
-  };
-
-  const handleEditReport = (reportId) => {
-    // Navegar al workflow en modo edición
-    navigate(`/8d-workflow?reportId=${reportId}&mode=edit`);
-  };
-
-  const handleDeleteReport = async (reportId) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el reporte ${reportId}? Esta acción no se puede deshacer.`)) {
-      return;
-    }
+  const handleDelete = async (reportId, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`¿Eliminar el reporte ${reportId}? Esta acción no se puede deshacer.`)) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -276,326 +110,237 @@ const EightDConsultation = () => {
       });
 
       if (response.ok) {
-        setEightDReports(prev => prev.filter(r => r.id !== reportId));
-        alert(' Reporte eliminado exitosamente');
+        setReports(prev => prev.filter(r => r.id !== reportId));
       } else {
         const data = await response.json();
-        alert(` Error: ${data.message || 'No se pudo eliminar'}`);
+        alert(`Error: ${data.message || 'No se pudo eliminar'}`);
       }
     } catch (error) {
       console.error('Error deleting report:', error);
-      alert(' Error al eliminar el reporte');
+      alert('Error al eliminar el reporte');
     }
   };
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      backgroundColor: themeColors.bg,
-      fontFamily: 'Arial, sans-serif'
-    },
-    header: {
-      backgroundColor: themeColors.primary,
-      color: 'white',
-      padding: '20px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-    },
-    headerContent: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    },
-    title: {
-      fontSize: '24px',
-      fontWeight: 'bold',
-      margin: 0
-    },
-    headerControls: {
-      display: 'flex',
-      gap: '12px',
-      alignItems: 'center'
-    },
-    backButton: {
-      padding: '8px 16px',
-      backgroundColor: themeColors.bgPanel,
-      color: themeColors.text,
-      border: `1px solid ${themeColors.border}`,
-      borderRadius: '6px',
-      fontSize: '14px',
-      fontWeight: 'bold',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease'
-    },
-    languageSelector: {
-      padding: '8px 12px',
-      fontSize: '14px',
-      backgroundColor: themeColors.bgPanel,
-      color: themeColors.text,
-      border: `1px solid ${themeColors.border}`,
-      borderRadius: '4px',
-      cursor: 'pointer'
-    },
-    filtersSection: {
-      backgroundColor: themeColors.bgCard,
-      padding: '20px',
-      borderBottom: `1px solid ${themeColors.border}`
-    },
-    filtersContent: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      display: 'grid',
-      gridTemplateColumns: '1fr auto auto auto',
-      gap: '16px',
-      alignItems: 'center'
-    },
-    searchInput: {
-      padding: '12px 16px',
-      fontSize: '14px',
-      border: `1px solid ${themeColors.border}`,
-      borderRadius: '8px',
-      outline: 'none',
-      transition: 'border-color 0.2s ease',
-      backgroundColor: themeColors.bgCard,
-      color: themeColors.text
-    },
-    filterSelect: {
-      padding: '12px 16px',
-      fontSize: '14px',
-      border: `1px solid ${themeColors.border}`,
-      borderRadius: '8px',
-      backgroundColor: themeColors.bgCard,
-      color: themeColors.text,
-      cursor: 'pointer',
-      outline: 'none'
-    },
-    contentContainer: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '20px'
-    },
-    tableContainer: {
-      backgroundColor: themeColors.bgCard,
-      borderRadius: '8px',
-      overflow: 'hidden',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse'
-    },
-    tableHeader: {
-      backgroundColor: themeColors.bgPanel,
-      borderBottom: `1px solid ${themeColors.border}`
-    },
-    th: {
-      padding: '16px',
-      textAlign: 'left',
-      fontSize: '14px',
-      fontWeight: 'bold',
-      color: themeColors.text
-    },
-    tr: {
-      borderBottom: `1px solid ${themeColors.border}`,
-      transition: 'background-color 0.2s ease'
-    },
-    td: {
-      padding: '16px',
-      fontSize: '14px',
-      color: themeColors.text
-    },
-    actionButton: {
-      padding: '6px 12px',
-      margin: '0 4px',
-      fontSize: '12px',
-      fontWeight: 'bold',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease'
-    },
-    viewButton: {
-      backgroundColor: themeColors.accent,
-      color: 'white'
-    },
-    editButton: {
-      backgroundColor: themeColors.success,
-      color: 'white'
-    },
-    noResults: {
-      textAlign: 'center',
-      padding: '40px',
-      color: themeColors.textMuted,
-      fontSize: '16px'
-    },
-    teamList: {
-      fontSize: '12px',
-      color: themeColors.textMuted
-    }
+  const handleEdit = (id, e) => {
+    e.stopPropagation();
+    navigate(`/8d-workflow?reportId=${id}&mode=edit`);
   };
+
+  const inputStyle = { padding: '8px 12px', fontSize: '13px', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgCard, color: t.text };
+  const hasFilters = search || fSev !== 'all' || fStatus !== 'all' || fStep !== 'all' || fDept !== 'all' || fSupplier !== 'all';
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg }}>
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerContent}>
-          <h1 style={styles.title}>{t('title')}</h1>
-          
-          <div style={styles.headerControls}>
-            <button 
-              onClick={() => navigate('/dashboard')}
-              style={styles.backButton}
-            >
-              ← {t('backToDashboard')}
+      <div style={{ backgroundColor: t.primary, color: 'white', padding: '16px 24px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>📋 Consulta de Reportes 8D</h1>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+              {language === 'es' ? 'EN' : 'ES'}
             </button>
-            
-            <select 
-              value={language} 
-              onChange={(e) => setLanguage(e.target.value)}
-              style={styles.languageSelector}
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{ padding: '10px 20px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
             >
-              <option value="es"> Español</option>
-              <option value="en"> English</option>
-            </select>
+              ← Volver al Dashboard
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div style={styles.filtersSection}>
-        <div style={styles.filtersContent}>
-          <input
-            type="text"
-            placeholder={t('search')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.searchInput}
-          />
-          
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={styles.filterSelect}
-          >
-            <option value="all">{t('status')}: {t('all')}</option>
-            <option value="pending">{t('pending')}</option>
-            <option value="in_progress">{t('inProgress')}</option>
-            <option value="completed">{t('completed')}</option>
-          </select>
-          
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={styles.filterSelect}
-          >
-            <option value="recent">{t('sortBy')}: {t('recent')}</option>
-            <option value="oldest">{t('oldest')}</option>
-            <option value="alphabetical">{t('alphabetical')}</option>
-          </select>
-        </div>
-      </div>
-
       {/* Content */}
-      <div style={styles.contentContainer}>
-        <div style={styles.tableContainer}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
+        <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+          {/* Filters Header */}
+          <div style={{ padding: '20px 24px', borderBottom: `1px solid ${t.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>📋 Listado de Reportes 8D</span>
+                <span style={{ fontSize: '14px', color: t.textMuted, marginLeft: '12px' }}>{filtered.length} de {reports.length} reportes</span>
+              </div>
+              {hasFilters && (
+                <button onClick={() => { setSearch(''); setFSev('all'); setFStatus('all'); setFStep('all'); setFDept('all'); setFSupplier('all'); }}
+                  style={{ fontSize: '13px', color: '#ef4444', backgroundColor: 'transparent', border: '1px solid #ef4444', borderRadius: '6px', padding: '6px 16px', cursor: 'pointer', fontWeight: '600' }}>
+                  ✕ Limpiar filtros
+                </button>
+              )}
+            </div>
+
+            {/* Filtros expandidos */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr repeat(5, 1fr)', gap: '12px', alignItems: 'center' }}>
+              <input
+                placeholder="🔍 Buscar por ID, título, proveedor..."
+                value={search}
+                onChange={e=>setSearch(e.target.value)}
+                style={{ ...inputStyle, padding: '10px 14px' }}
+              />
+              <select value={fSev} onChange={e=>setFSev(e.target.value)} style={inputStyle}>
+                <option value="all">🎯 Severidad: Todas</option>
+                <option value="High">🔴 Alta</option>
+                <option value="Medium">🟡 Media</option>
+                <option value="Low">🟢 Baja</option>
+              </select>
+              <select value={fStatus} onChange={e=>setFStatus(e.target.value)} style={inputStyle}>
+                <option value="all">📊 Estado: Todos</option>
+                <option value="Open">Abierto</option>
+                <option value="In Progress">En Progreso</option>
+                <option value="in_progress">En Progreso</option>
+                <option value="Closed">Cerrado</option>
+              </select>
+              <select value={fStep} onChange={e=>setFStep(e.target.value)} style={inputStyle}>
+                <option value="all">📍 Fase: Todas</option>
+                {['D1','D2','D3','D3-MFG','D4','D5','D6','D7','D8'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select value={fDept} onChange={e=>setFDept(e.target.value)} style={inputStyle}>
+                <option value="all">🏢 Departamento: Todos</option>
+                {departments.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select value={fSupplier} onChange={e=>setFSupplier(e.target.value)} style={inputStyle}>
+                <option value="all">🏭 Proveedor: Todos</option>
+                {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Table */}
           {loading ? (
-            <div style={styles.noResults}>
-              {t('loading')}
+            <div style={{ padding: '60px', textAlign: 'center', color: t.textMuted, fontSize: '16px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
+              Cargando reportes...
             </div>
           ) : error ? (
-            <div style={{...styles.noResults, color: themeColors.error}}>
-              {t('error')}: {error}
-            </div>
-          ) : filteredAndSortedReports().length === 0 ? (
-            <div style={styles.noResults}>
-              {t('noResults')}
+            <div style={{ padding: '60px', textAlign: 'center', color: '#ef4444', fontSize: '16px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚠️</div>
+              {error}
             </div>
           ) : (
-            <table style={styles.table}>
-              <thead style={styles.tableHeader}>
-                <tr>
-                  <th style={styles.th}>{t('reportId')}</th>
-                  <th style={styles.th}>{t('supplier')}</th>
-                  <th style={styles.th}>{t('part')}</th>
-                  <th style={styles.th}>{t('severity')}</th>
-                  <th style={styles.th}>{t('status')}</th>
-                  <th style={styles.th}>{t('modified')}</th>
-                  <th style={styles.th}>{t('team')}</th>
-                  <th style={styles.th}>{t('actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAndSortedReports().map((report) => (
-                  <tr key={report.id} style={styles.tr}>
-                    <td style={styles.td}>
-                      <div>
-                        <strong>{report.id}</strong>
-                        <div style={{ fontSize: '12px', color: themeColors.textMuted, marginTop: '2px' }}>
-                          {report.title}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <div>
-                        <strong>{report.supplierName}</strong>
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <div>
-                        <strong>{report.partNumber}</strong>
-                        <div style={{ fontSize: '12px', color: themeColors.textMuted }}>
-                          {report.partName}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      {getSeverityBadge(report.severity)}
-                    </td>
-                    <td style={styles.td}>
-                      {getStatusBadge(report.status)}
-                    </td>
-                    <td style={styles.td}>
-                      <div style={{ fontSize: '12px' }}>
-                        {formatDate(report.lastModified)}
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <div style={styles.teamList}>
-                        {report.assignedTeam.slice(0, 2).join(', ')}
-                        {report.assignedTeam.length > 2 && ` +${report.assignedTeam.length - 2}`}
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <button
-                        onClick={() => handleViewReport(report.id)}
-                        style={{...styles.actionButton, ...styles.viewButton}}
-                      >
-                        {t('view')}
-                      </button>
-                      <button
-                        onClick={() => handleEditReport(report.id)}
-                        style={{...styles.actionButton, ...styles.editButton}}
-                      >
-                        {t('edit')}
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => handleDeleteReport(report.id)}
-                          style={{...styles.actionButton, backgroundColor: '#B00020', color: 'white'}}
-                        >
-                          
-                        </button>
-                      )}
-                    </td>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: t.bgPanel }}>
+                    {['ID', 'Título', 'Proveedor', 'Severidad', 'Estado', 'Fase', 'Días', 'Avance', 'Vence', 'Costo', 'Acciones'].map(h => (
+                      <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontWeight: '700', fontSize: '12px', color: t.textMuted, borderBottom: `2px solid ${t.border}`, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan="11" style={{ padding: '60px', textAlign: 'center', color: t.textMuted, fontSize: '16px' }}>
+                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
+                        No se encontraron reportes con los filtros seleccionados
+                      </td>
+                    </tr>
+                  ) : filtered.map((r, i) => {
+                    const isOverdue = r.targetClosureDate && r.targetClosureDate < TODAY && (r.status || '').toLowerCase() !== 'closed';
+                    return (
+                      <tr key={r.id || i}
+                        onClick={() => navigate(`/8d-workflow?reportId=${r.id}`)}
+                        style={{
+                          cursor: 'pointer',
+                          backgroundColor: isOverdue ? '#fee2e215' : i % 2 === 0 ? 'transparent' : t.bgPanel + '50',
+                          borderBottom: `1px solid ${t.border}`,
+                          transition: 'background-color 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = t.accent + '15'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = isOverdue ? '#fee2e215' : i % 2 === 0 ? 'transparent' : t.bgPanel + '50'}
+                      >
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ fontFamily: 'monospace', color: t.accent, fontWeight: '700', fontSize: '12px' }}>{r.reportId}</span>
+                        </td>
+                        <td style={{ padding: '14px 16px', maxWidth: '220px' }}>
+                          <span style={{ color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontWeight: '500' }} title={r.title}>{r.title || '—'}</span>
+                        </td>
+                        <td style={{ padding: '14px 16px', color: t.textMuted, whiteSpace: 'nowrap' }}>{r.supplierName || '—'}</td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700',
+                            backgroundColor: r.severity === 'High' ? '#fee2e2' : r.severity === 'Medium' ? '#fef3c7' : '#dcfce7',
+                            color: sevColor(r.severity) }}>
+                            {r.severity === 'High' ? 'Alta' : r.severity === 'Medium' ? 'Media' : r.severity === 'Low' ? 'Baja' : r.severity || '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ color: statusColor(r.status, t), fontWeight: '600', fontSize: '12px' }}>{r.status || '—'}</span>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: STEP_COLORS[r.currentStep] || '#6b7280', color: 'white', fontSize: '11px', fontWeight: '700' }}>
+                            {r.currentStep || '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ color: (r.daysOpen || 0) > 90 ? '#ef4444' : (r.daysOpen || 0) > 60 ? '#C77700' : (r.daysOpen || 0) > 30 ? t.accent : '#2E7D32', fontWeight: '700', fontSize: '13px' }}>
+                            {r.daysOpen != null ? `${r.daysOpen}d` : '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '60px', height: '8px', backgroundColor: t.bgPanel, borderRadius: '4px', overflow: 'hidden' }}>
+                              <div style={{
+                                height: '100%',
+                                width: `${r.progressPercentage || 0}%`,
+                                backgroundColor: (r.progressPercentage||0) >= 75 ? '#2E7D32' : (r.progressPercentage||0) >= 50 ? t.accent : (r.progressPercentage||0) >= 25 ? '#C77700' : '#ef4444',
+                                borderRadius: '4px',
+                                transition: 'width 0.3s ease'
+                              }} />
+                            </div>
+                            <span style={{ fontSize: '12px', color: t.text, fontWeight: '600', minWidth: '32px' }}>{r.progressPercentage || 0}%</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                          {r.targetClosureDate ? (
+                            <span style={{ color: isOverdue ? '#ef4444' : t.textMuted, fontWeight: isOverdue ? '700' : '500', fontSize: '12px' }}>
+                              {isOverdue ? '⚠️ ' : ''}{new Date(r.targetClosureDate).toLocaleDateString('es-MX')}
+                            </span>
+                          ) : <span style={{ color: t.textMuted }}>—</span>}
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ color: (parseFloat(r.estimatedCost) || 0) > 100000 ? '#ef4444' : '#2E7D32', fontWeight: '700', fontSize: '12px' }}>
+                            {formatCurrency(parseFloat(r.estimatedCost) || 0)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                          <button
+                            onClick={(e) => handleEdit(r.id, e)}
+                            style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', marginRight: '8px', transition: 'opacity 0.15s' }}
+                            onMouseEnter={e => e.target.style.opacity = '0.85'}
+                            onMouseLeave={e => e.target.style.opacity = '1'}
+                          >
+                            ✏️ Editar
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => handleDelete(r.id, e)}
+                              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'opacity 0.15s' }}
+                              onMouseEnter={e => e.target.style.opacity = '0.85'}
+                              onMouseLeave={e => e.target.style.opacity = '1'}
+                            >
+                              🗑️ Borrar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
+
+          {/* Footer */}
+          <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.border}`, backgroundColor: t.bgPanel, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '14px', color: t.textMuted }}>
+              Mostrando <strong style={{ color: t.text }}>{filtered.length}</strong> de <strong style={{ color: t.text }}>{reports.length}</strong> reportes
+            </span>
+            <div style={{ display: 'flex', gap: '24px', fontSize: '14px' }}>
+              <span style={{ color: t.textMuted }}>
+                Costo total filtrado: <strong style={{ color: '#2E7D32', fontSize: '15px' }}>{formatCurrency(filtered.reduce((s,r) => s + (parseFloat(r.estimatedCost) || 0), 0))}</strong>
+              </span>
+              <span style={{ color: t.textMuted }}>
+                Promedio días: <strong style={{ color: t.accent }}>{filtered.length > 0 ? Math.round(filtered.reduce((s,r) => s + (r.daysOpen || 0), 0) / filtered.length) : 0}d</strong>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

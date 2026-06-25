@@ -2,12 +2,190 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import managementReviewService from '../services/managementReviewService';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const ManagementReview = () => {
   const navigate = useNavigate();
   const { id } = useParams(); // For editing existing acta
   const { theme: themeColors } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState('kpis');
+
+  // Local translations
+  const L = {
+    en: {
+      loading: 'Loading...',
+      backToWorkload: '← Back to Workload',
+      managementReview: 'Management Review',
+      saveDraft: 'Save Draft',
+      sendToSignatures: 'Send to Signatures',
+      reviewDate: 'Review Date',
+      periodStart: 'Period Start',
+      periodEnd: 'Period End',
+      loadKPIs: 'Load KPIs',
+      location: 'Location',
+      locationPlaceholder: 'Meeting room...',
+      // Tabs
+      tabKPIs: 'Period KPIs',
+      tabPreviousActions: 'Previous Actions',
+      tabChecklist: 'Checklist 9.3',
+      tabDecisions: 'Decisions',
+      tabAttendees: 'Attendees',
+      // KPIs
+      kpiPeriod: 'Period KPIs',
+      open: 'Open',
+      closed: 'Closed',
+      avgDays: 'Avg Days',
+      onTime: 'On Time',
+      savings: 'Savings',
+      qarDefects: 'QAR Defects',
+      totalQars: 'Total QARs',
+      critical: 'Critical',
+      major: 'Major',
+      campaigns: 'Campaigns',
+      active: 'Active',
+      scrapCost: 'Scrap Cost',
+      inspectionHrs: 'Inspection Hrs',
+      ecrChanges: 'ECR Changes',
+      totalChanges: 'Total Changes',
+      approved: 'Approved',
+      highRisk: 'High Risk',
+      cycleDays: 'Cycle Days',
+      audits: 'Audits',
+      completed: 'Completed',
+      pending: 'Pending',
+      nonConformities: 'Non-Conformities',
+      ncClosureRate: '% NC Closure',
+      workload: 'Workload',
+      activities: 'Activities',
+      completionRate: '% Completed',
+      avgProgress: 'Avg Progress',
+      // Previous Actions
+      previousActionsTitle: 'Previous Actions Follow-up (9.3.2.a)',
+      noPreviousActions: 'No pending actions from previous reviews',
+      acta: 'Minutes',
+      action: 'Action',
+      responsible: 'Responsible',
+      dueDate: 'Due Date',
+      status: 'Status',
+      // Checklist
+      checklistTitle: 'Checklist ISO/IATF 9.3',
+      inputs: 'Inputs (9.3.2)',
+      outputs: 'Outputs (9.3.3)',
+      select: 'Select',
+      partial: 'Partial',
+      na: 'N/A',
+      comments: 'Comments...',
+      // Decisions
+      decisionsTitle: 'Decisions and Executive Summary',
+      executiveSummary: 'Executive Summary',
+      executiveSummaryPlaceholder: 'Summary of key points discussed and main conclusions...',
+      nextReview: 'Next Review',
+      generatedActions: 'Generated Actions',
+      actionsExplanation: 'Actions are created from the checklist by marking items as NOK or Partial. Each action automatically generates an activity in Workload.',
+      // Attendees
+      attendeesTitle: 'Attendees and Signatures',
+      addAttendee: 'Add Attendee',
+      selectUser: 'Select user...',
+      name: 'Name',
+      position: 'Position',
+      present: 'Present',
+      signature: 'Signature',
+      actions: 'Actions',
+      signed: 'Signed',
+      remove: 'Remove',
+      // Messages
+      actaUpdated: 'Minutes updated',
+      actaCreated: 'Minutes created',
+      errorSaving: 'Error saving'
+    },
+    es: {
+      loading: 'Cargando...',
+      backToWorkload: '← Volver a Workload',
+      managementReview: 'Revisión por la Dirección',
+      saveDraft: 'Guardar Borrador',
+      sendToSignatures: 'Enviar a Firmas',
+      reviewDate: 'Fecha Revisión',
+      periodStart: 'Periodo Inicio',
+      periodEnd: 'Periodo Fin',
+      loadKPIs: 'Cargar KPIs',
+      location: 'Ubicación',
+      locationPlaceholder: 'Sala de juntas...',
+      // Tabs
+      tabKPIs: 'KPIs del Periodo',
+      tabPreviousActions: 'Acciones Previas',
+      tabChecklist: 'Checklist 9.3',
+      tabDecisions: 'Decisiones',
+      tabAttendees: 'Asistentes',
+      // KPIs
+      kpiPeriod: 'KPIs del Periodo',
+      open: 'Abiertos',
+      closed: 'Cerrados',
+      avgDays: 'Días Promedio',
+      onTime: 'A Tiempo',
+      savings: 'Ahorros',
+      qarDefects: 'QAR Defectos',
+      totalQars: 'Total QARs',
+      critical: 'Críticos',
+      major: 'Mayores',
+      campaigns: 'Campañas',
+      active: 'Activas',
+      scrapCost: 'Costo Scrap',
+      inspectionHrs: 'Hrs Inspección',
+      ecrChanges: 'ECR Cambios',
+      totalChanges: 'Total Cambios',
+      approved: 'Aprobados',
+      highRisk: 'Alto Riesgo',
+      cycleDays: 'Días Ciclo',
+      audits: 'Auditorías',
+      completed: 'Completadas',
+      pending: 'Pendientes',
+      nonConformities: 'No Conformidades',
+      ncClosureRate: '% Cierre NC',
+      workload: 'Workload',
+      activities: 'Actividades',
+      completionRate: '% Completado',
+      avgProgress: 'Progreso Prom',
+      // Previous Actions
+      previousActionsTitle: 'Seguimiento de Acciones Previas (9.3.2.a)',
+      noPreviousActions: 'No hay acciones pendientes de revisiones anteriores',
+      acta: 'Acta',
+      action: 'Acción',
+      responsible: 'Responsable',
+      dueDate: 'Fecha Límite',
+      status: 'Estado',
+      // Checklist
+      checklistTitle: 'Checklist ISO/IATF 9.3',
+      inputs: 'Entradas (9.3.2)',
+      outputs: 'Salidas (9.3.3)',
+      select: 'Seleccionar',
+      partial: 'Parcial',
+      na: 'N/A',
+      comments: 'Comentarios...',
+      // Decisions
+      decisionsTitle: 'Decisiones y Resumen Ejecutivo',
+      executiveSummary: 'Resumen Ejecutivo',
+      executiveSummaryPlaceholder: 'Resumen de los puntos clave discutidos y conclusiones principales...',
+      nextReview: 'Próxima Revisión',
+      generatedActions: 'Acciones Generadas',
+      actionsExplanation: 'Las acciones se crean desde el checklist marcando items como NOK o Parcial. Cada acción genera automáticamente una actividad en Workload.',
+      // Attendees
+      attendeesTitle: 'Asistentes y Firmas',
+      addAttendee: 'Agregar Asistente',
+      selectUser: 'Seleccionar usuario...',
+      name: 'Nombre',
+      position: 'Puesto',
+      present: 'Presente',
+      signature: 'Firma',
+      actions: 'Acciones',
+      signed: 'Firmado',
+      remove: 'Eliminar',
+      // Messages
+      actaUpdated: 'Acta actualizada',
+      actaCreated: 'Acta creada',
+      errorSaving: 'Error al guardar'
+    }
+  }[language] || {};
   const [loading, setLoading] = useState(true);
 
   // Data
@@ -59,7 +237,7 @@ const ManagementReview = () => {
       setPreviousActions(actionsRes.actions || []);
 
       // Load users for attendees
-      const usersRes = await fetch('http://localhost:5000/users', {
+      const usersRes = await fetch('http://localhost:5000/users/list', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const usersData = await usersRes.json();
@@ -132,13 +310,13 @@ const ManagementReview = () => {
 
       if (result.success) {
         setActa(result.acta);
-        alert(acta?.id ? 'Acta actualizada' : 'Acta creada');
+        alert(acta?.id ? L.actaUpdated : L.actaCreated);
         if (!acta?.id) {
           navigate(`/management-review/${result.acta.id}`);
         }
       }
     } catch (error) {
-      alert('Error al guardar: ' + error.message);
+      alert(L.errorSaving + ': ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -172,17 +350,17 @@ const ManagementReview = () => {
   if (loading) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', backgroundColor: themeColors.bg, minHeight: '100vh', color: themeColors.text }}>
-        Cargando...
+        {L.loading}
       </div>
     );
   }
 
   const tabs = [
-    { id: 'kpis', label: 'KPIs del Periodo', icon: '' },
-    { id: 'previous', label: 'Acciones Previas', icon: '', count: previousActions.length },
-    { id: 'checklist', label: 'Checklist 9.3', icon: '', count: checklist.inputs?.length + checklist.outputs?.length },
-    { id: 'decisions', label: 'Decisiones', icon: '' },
-    { id: 'attendees', label: 'Asistentes', icon: '', count: formData.attendees.length }
+    { id: 'kpis', label: L.tabKPIs, icon: '' },
+    { id: 'previous', label: L.tabPreviousActions, icon: '', count: previousActions.length },
+    { id: 'checklist', label: L.tabChecklist, icon: '', count: checklist.inputs?.length + checklist.outputs?.length },
+    { id: 'decisions', label: L.tabDecisions, icon: '' },
+    { id: 'attendees', label: L.tabAttendees, icon: '', count: formData.attendees.length }
   ];
 
   return (
@@ -193,13 +371,13 @@ const ManagementReview = () => {
           onClick={() => navigate('/workload')}
           style={{ background: 'none', border: 'none', color: themeColors.primary, cursor: 'pointer', marginBottom: '10px' }}
         >
-          ← Volver a Workload
+          {L.backToWorkload}
         </button>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h2 style={{ margin: 0, color: themeColors.primary }}>
-              Revisión por la Dirección
+              {L.managementReview}
               {acta?.actaNumber && <span style={{ color: themeColors.textMuted, fontSize: '18px' }}> - {acta.actaNumber}</span>}
             </h2>
             <p style={{ margin: '5px 0 0', color: themeColors.textMuted }}>
@@ -207,19 +385,22 @@ const ManagementReview = () => {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: themeColors.bgPanel, color: themeColors.text, border: `1px solid ${themeColors.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
             <button
               onClick={() => handleSave('draft')}
               disabled={saving}
               style={{ padding: '10px 20px', borderRadius: '6px', border: `1px solid ${themeColors.border}`, background: themeColors.bgCard, color: themeColors.text, cursor: 'pointer' }}
             >
-              Guardar Borrador
+              {L.saveDraft}
             </button>
             <button
               onClick={() => handleSave('pending_signatures')}
               disabled={saving}
               style={{ padding: '10px 20px', borderRadius: '6px', border: 'none', background: themeColors.primary, color: 'white', cursor: 'pointer' }}
             >
-              Enviar a Firmas
+              {L.sendToSignatures}
             </button>
           </div>
         </div>
@@ -228,7 +409,7 @@ const ManagementReview = () => {
       {/* Period Selection */}
       <div style={{ backgroundColor: themeColors.bgPanel, padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '20px', alignItems: 'flex-end' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>Fecha Revisión</label>
+          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>{L.reviewDate}</label>
           <input
             type="date"
             value={formData.reviewDate}
@@ -237,7 +418,7 @@ const ManagementReview = () => {
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>Periodo Inicio</label>
+          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>{L.periodStart}</label>
           <input
             type="date"
             value={formData.periodStart}
@@ -246,7 +427,7 @@ const ManagementReview = () => {
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>Periodo Fin</label>
+          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>{L.periodEnd}</label>
           <input
             type="date"
             value={formData.periodEnd}
@@ -258,15 +439,15 @@ const ManagementReview = () => {
           onClick={loadKPIs}
           style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: themeColors.accent, color: 'white', cursor: 'pointer' }}
         >
-          Cargar KPIs
+          {L.loadKPIs}
         </button>
         <div>
-          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>Ubicación</label>
+          <label style={{ display: 'block', fontSize: '12px', color: themeColors.textMuted, marginBottom: '4px' }}>{L.location}</label>
           <input
             type="text"
             value={formData.location}
             onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-            placeholder="Sala de juntas..."
+            placeholder={L.locationPlaceholder}
             style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${themeColors.border}`, width: '200px', backgroundColor: themeColors.bgCard, color: themeColors.text }}
           />
         </div>
@@ -313,7 +494,7 @@ const ManagementReview = () => {
         {/* KPIs TAB */}
         {activeTab === 'kpis' && (
           <div>
-            <h3 style={{ margin: '0 0 20px', color: themeColors.primary }}>KPIs del Periodo</h3>
+            <h3 style={{ margin: '0 0 20px', color: themeColors.primary }}>{L.kpiPeriod}</h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
 
@@ -321,26 +502,26 @@ const ManagementReview = () => {
               <div style={{ backgroundColor: '#fef3c7', padding: '20px', borderRadius: '8px' }}>
                 <h4 style={{ margin: '0 0 15px', color: '#92400e' }}>8D Reports</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><strong>{kpis['8D']?.openCount || 0}</strong><br /><small>Abiertos</small></div>
-                  <div><strong>{kpis['8D']?.closedCount || 0}</strong><br /><small>Cerrados</small></div>
-                  <div><strong>{kpis['8D']?.avgDaysToClose || 0}</strong><br /><small>Días Promedio</small></div>
-                  <div><strong>{kpis['8D']?.onTimeRate || 0}%</strong><br /><small>A Tiempo</small></div>
+                  <div><strong>{kpis['8D']?.openCount || 0}</strong><br /><small>{L.open}</small></div>
+                  <div><strong>{kpis['8D']?.closedCount || 0}</strong><br /><small>{L.closed}</small></div>
+                  <div><strong>{kpis['8D']?.avgDaysToClose || 0}</strong><br /><small>{L.avgDays}</small></div>
+                  <div><strong>{kpis['8D']?.onTimeRate || 0}%</strong><br /><small>{L.onTime}</small></div>
                 </div>
                 {kpis['8D']?.totalSavings > 0 && (
                   <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fbbf24', borderRadius: '4px' }}>
-                    <strong>${(kpis['8D']?.totalSavings || 0).toLocaleString()}</strong> Ahorros
+                    <strong>${(kpis['8D']?.totalSavings || 0).toLocaleString()}</strong> {L.savings}
                   </div>
                 )}
               </div>
 
               {/* QAR */}
               <div style={{ backgroundColor: '#fee2e2', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#991b1b' }}>QAR Defectos</h4>
+                <h4 style={{ margin: '0 0 15px', color: '#991b1b' }}>{L.qarDefects}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><strong>{kpis['QAR']?.totalQars || 0}</strong><br /><small>Total QARs</small></div>
-                  <div><strong>{kpis['QAR']?.openCount || 0}</strong><br /><small>Abiertos</small></div>
-                  <div><strong>{kpis['QAR']?.criticalCount || 0}</strong><br /><small>Críticos</small></div>
-                  <div><strong>{kpis['QAR']?.majorCount || 0}</strong><br /><small>Mayores</small></div>
+                  <div><strong>{kpis['QAR']?.totalQars || 0}</strong><br /><small>{L.totalQars}</small></div>
+                  <div><strong>{kpis['QAR']?.openCount || 0}</strong><br /><small>{L.open}</small></div>
+                  <div><strong>{kpis['QAR']?.criticalCount || 0}</strong><br /><small>{L.critical}</small></div>
+                  <div><strong>{kpis['QAR']?.majorCount || 0}</strong><br /><small>{L.major}</small></div>
                 </div>
               </div>
 
@@ -348,43 +529,43 @@ const ManagementReview = () => {
               <div style={{ backgroundColor: '#dbeafe', padding: '20px', borderRadius: '8px' }}>
                 <h4 style={{ margin: '0 0 15px', color: '#0F3B5F' }}>MRB</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><strong>{kpis['MRB']?.totalCampaigns || 0}</strong><br /><small>Campañas</small></div>
-                  <div><strong>{kpis['MRB']?.activeCampaigns || 0}</strong><br /><small>Activas</small></div>
-                  <div><strong>${(kpis['MRB']?.totalScrapCost || 0).toLocaleString()}</strong><br /><small>Costo Scrap</small></div>
-                  <div><strong>{kpis['MRB']?.totalInspectionHours || 0}</strong><br /><small>Hrs Inspección</small></div>
+                  <div><strong>{kpis['MRB']?.totalCampaigns || 0}</strong><br /><small>{L.campaigns}</small></div>
+                  <div><strong>{kpis['MRB']?.activeCampaigns || 0}</strong><br /><small>{L.active}</small></div>
+                  <div><strong>${(kpis['MRB']?.totalScrapCost || 0).toLocaleString()}</strong><br /><small>{L.scrapCost}</small></div>
+                  <div><strong>{kpis['MRB']?.totalInspectionHours || 0}</strong><br /><small>{L.inspectionHrs}</small></div>
                 </div>
               </div>
 
               {/* ECR */}
               <div style={{ backgroundColor: '#f3e8ff', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#6b21a8' }}>ECR Cambios</h4>
+                <h4 style={{ margin: '0 0 15px', color: '#6b21a8' }}>{L.ecrChanges}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><strong>{kpis['ECR']?.totalChanges || 0}</strong><br /><small>Total Cambios</small></div>
-                  <div><strong>{kpis['ECR']?.approvedCount || 0}</strong><br /><small>Aprobados</small></div>
-                  <div><strong>{kpis['ECR']?.highRiskCount || 0}</strong><br /><small>Alto Riesgo</small></div>
-                  <div><strong>{kpis['ECR']?.avgCycleDays || 0}</strong><br /><small>Días Ciclo</small></div>
+                  <div><strong>{kpis['ECR']?.totalChanges || 0}</strong><br /><small>{L.totalChanges}</small></div>
+                  <div><strong>{kpis['ECR']?.approvedCount || 0}</strong><br /><small>{L.approved}</small></div>
+                  <div><strong>{kpis['ECR']?.highRiskCount || 0}</strong><br /><small>{L.highRisk}</small></div>
+                  <div><strong>{kpis['ECR']?.avgCycleDays || 0}</strong><br /><small>{L.cycleDays}</small></div>
                 </div>
               </div>
 
               {/* AUDIT */}
               <div style={{ backgroundColor: '#d1fae5', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#065f46' }}>Auditorias</h4>
+                <h4 style={{ margin: '0 0 15px', color: '#065f46' }}>{L.audits}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><strong>{kpis['AUDIT']?.completedAudits || 0}</strong><br /><small>Completadas</small></div>
-                  <div><strong>{kpis['AUDIT']?.pendingAudits || 0}</strong><br /><small>Pendientes</small></div>
-                  <div><strong>{kpis['AUDIT']?.totalNCs || 0}</strong><br /><small>No Conformidades</small></div>
-                  <div><strong>{kpis['AUDIT']?.ncClosureRate || 0}%</strong><br /><small>% Cierre NC</small></div>
+                  <div><strong>{kpis['AUDIT']?.completedAudits || 0}</strong><br /><small>{L.completed}</small></div>
+                  <div><strong>{kpis['AUDIT']?.pendingAudits || 0}</strong><br /><small>{L.pending}</small></div>
+                  <div><strong>{kpis['AUDIT']?.totalNCs || 0}</strong><br /><small>{L.nonConformities}</small></div>
+                  <div><strong>{kpis['AUDIT']?.ncClosureRate || 0}%</strong><br /><small>{L.ncClosureRate}</small></div>
                 </div>
               </div>
 
               {/* WORKLOAD */}
               <div style={{ backgroundColor: '#e0e7ff', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#3730a3' }}>Workload</h4>
+                <h4 style={{ margin: '0 0 15px', color: '#3730a3' }}>{L.workload}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><strong>{kpis['WORKLOAD']?.totalActivities || 0}</strong><br /><small>Actividades</small></div>
-                  <div><strong>{kpis['WORKLOAD']?.completedCount || 0}</strong><br /><small>Completadas</small></div>
-                  <div><strong>{kpis['WORKLOAD']?.completionRate || 0}%</strong><br /><small>% Completado</small></div>
-                  <div><strong>{kpis['WORKLOAD']?.avgProgress || 0}%</strong><br /><small>Progreso Prom</small></div>
+                  <div><strong>{kpis['WORKLOAD']?.totalActivities || 0}</strong><br /><small>{L.activities}</small></div>
+                  <div><strong>{kpis['WORKLOAD']?.completedCount || 0}</strong><br /><small>{L.completed}</small></div>
+                  <div><strong>{kpis['WORKLOAD']?.completionRate || 0}%</strong><br /><small>{L.completionRate}</small></div>
+                  <div><strong>{kpis['WORKLOAD']?.avgProgress || 0}%</strong><br /><small>{L.avgProgress}</small></div>
                 </div>
               </div>
 
@@ -395,21 +576,21 @@ const ManagementReview = () => {
         {/* PREVIOUS ACTIONS TAB */}
         {activeTab === 'previous' && (
           <div>
-            <h3 style={{ margin: '0 0 20px', color: themeColors.primary }}>Seguimiento de Acciones Previas (9.3.2.a)</h3>
+            <h3 style={{ margin: '0 0 20px', color: themeColors.primary }}>{L.previousActionsTitle}</h3>
 
             {previousActions.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: themeColors.textMuted }}>
-                No hay acciones pendientes de revisiones anteriores
+                {L.noPreviousActions}
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: themeColors.bgPanel }}>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Acta</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Acción</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Responsable</th>
-                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Fecha Límite</th>
-                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Estado</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.acta}</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.action}</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.responsible}</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.dueDate}</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.status}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -435,10 +616,10 @@ const ManagementReview = () => {
         {/* CHECKLIST TAB */}
         {activeTab === 'checklist' && (
           <div>
-            <h3 style={{ margin: '0 0 20px', color: themeColors.primary }}>Checklist ISO/IATF 9.3</h3>
+            <h3 style={{ margin: '0 0 20px', color: themeColors.primary }}>{L.checklistTitle}</h3>
 
             {/* Inputs */}
-            <h4 style={{ color: themeColors.success, marginBottom: '10px' }}>Entradas (9.3.2)</h4>
+            <h4 style={{ color: themeColors.success, marginBottom: '10px' }}>{L.inputs}</h4>
             <div style={{ marginBottom: '30px' }}>
               {checklist.inputs?.map(item => (
                 <div key={item.id} style={{ padding: '15px', borderBottom: `1px solid ${themeColors.border}`, display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
@@ -453,9 +634,9 @@ const ManagementReview = () => {
                     onChange={(e) => updateChecklistItem(item.id, 'status', e.target.value)}
                     style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${themeColors.border}`, width: '100px', backgroundColor: themeColors.bgCard, color: themeColors.text }}
                   >
-                    <option value="">Seleccionar</option>
+                    <option value="">{L.select}</option>
                     <option value="ok">OK</option>
-                    <option value="partial">Parcial</option>
+                    <option value="partial">{L.partial}</option>
                     <option value="nok">NOK</option>
                     <option value="na">N/A</option>
                   </select>
@@ -463,7 +644,7 @@ const ManagementReview = () => {
                     type="text"
                     value={checklistResponses[item.id]?.comments || ''}
                     onChange={(e) => updateChecklistItem(item.id, 'comments', e.target.value)}
-                    placeholder="Comentarios..."
+                    placeholder={L.comments}
                     style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${themeColors.border}`, width: '250px', backgroundColor: themeColors.bgCard, color: themeColors.text }}
                   />
                 </div>
@@ -471,7 +652,7 @@ const ManagementReview = () => {
             </div>
 
             {/* Outputs */}
-            <h4 style={{ color: themeColors.primary, marginBottom: '10px' }}>Salidas (9.3.3)</h4>
+            <h4 style={{ color: themeColors.primary, marginBottom: '10px' }}>{L.outputs}</h4>
             <div>
               {checklist.outputs?.map(item => (
                 <div key={item.id} style={{ padding: '15px', borderBottom: `1px solid ${themeColors.border}`, display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
@@ -486,9 +667,9 @@ const ManagementReview = () => {
                     onChange={(e) => updateChecklistItem(item.id, 'status', e.target.value)}
                     style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${themeColors.border}`, width: '100px', backgroundColor: themeColors.bgCard, color: themeColors.text }}
                   >
-                    <option value="">Seleccionar</option>
+                    <option value="">{L.select}</option>
                     <option value="ok">OK</option>
-                    <option value="partial">Parcial</option>
+                    <option value="partial">{L.partial}</option>
                     <option value="nok">NOK</option>
                     <option value="na">N/A</option>
                   </select>
@@ -496,7 +677,7 @@ const ManagementReview = () => {
                     type="text"
                     value={checklistResponses[item.id]?.comments || ''}
                     onChange={(e) => updateChecklistItem(item.id, 'comments', e.target.value)}
-                    placeholder="Comentarios..."
+                    placeholder={L.comments}
                     style={{ padding: '8px', borderRadius: '4px', border: `1px solid ${themeColors.border}`, width: '250px', backgroundColor: themeColors.bgCard, color: themeColors.text }}
                   />
                 </div>
@@ -508,21 +689,21 @@ const ManagementReview = () => {
         {/* DECISIONS TAB */}
         {activeTab === 'decisions' && (
           <div>
-            <h3 style={{ margin: '0 0 20px', color: themeColors.text }}>Decisiones y Resumen Ejecutivo</h3>
+            <h3 style={{ margin: '0 0 20px', color: themeColors.text }}>{L.decisionsTitle}</h3>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>Resumen Ejecutivo</label>
+              <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>{L.executiveSummary}</label>
               <textarea
                 value={formData.executiveSummary}
                 onChange={(e) => setFormData(prev => ({ ...prev, executiveSummary: e.target.value }))}
                 rows={6}
-                placeholder="Resumen de los puntos clave discutidos y conclusiones principales..."
+                placeholder={L.executiveSummaryPlaceholder}
                 style={{ width: '100%', padding: '12px', borderRadius: '6px', border: `1px solid ${themeColors.border}`, resize: 'vertical', backgroundColor: themeColors.bgCard, color: themeColors.text }}
               />
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>Próxima Revisión</label>
+              <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>{L.nextReview}</label>
               <input
                 type="date"
                 value={formData.nextReviewDate}
@@ -532,10 +713,9 @@ const ManagementReview = () => {
             </div>
 
             <div style={{ backgroundColor: themeColors.bgPanel, padding: '20px', borderRadius: '8px' }}>
-              <h4 style={{ margin: '0 0 15px', color: themeColors.text }}>Acciones Generadas</h4>
+              <h4 style={{ margin: '0 0 15px', color: themeColors.text }}>{L.generatedActions}</h4>
               <p style={{ color: themeColors.textMuted, fontSize: '14px' }}>
-                Las acciones se crean desde el checklist marcando items como NOK o Parcial.
-                Cada acción genera automáticamente una actividad en Workload.
+                {L.actionsExplanation}
               </p>
             </div>
           </div>
@@ -544,10 +724,10 @@ const ManagementReview = () => {
         {/* ATTENDEES TAB */}
         {activeTab === 'attendees' && (
           <div>
-            <h3 style={{ margin: '0 0 20px', color: themeColors.text }}>Asistentes y Firmas</h3>
+            <h3 style={{ margin: '0 0 20px', color: themeColors.text }}>{L.attendeesTitle}</h3>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>Agregar Asistente</label>
+              <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>{L.addAttendee}</label>
               <select
                 onChange={(e) => {
                   const userId = parseInt(e.target.value);
@@ -569,7 +749,7 @@ const ManagementReview = () => {
                 }}
                 style={{ padding: '10px', borderRadius: '6px', border: `1px solid ${themeColors.border}`, width: '300px', backgroundColor: themeColors.bgCard, color: themeColors.text }}
               >
-                <option value="">Seleccionar usuario...</option>
+                <option value="">{L.selectUser}</option>
                 {users.filter(u => !formData.attendees.find(a => a.userId === u.id)).map(u => (
                   <option key={u.id} value={u.id}>{u.firstName} {u.lastName} - {u.position}</option>
                 ))}
@@ -579,11 +759,11 @@ const ManagementReview = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: themeColors.bgPanel }}>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Nombre</th>
-                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Puesto</th>
-                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Presente</th>
-                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Firma</th>
-                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>Acciones</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.name}</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.position}</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.present}</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.signature}</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${themeColors.border}`, color: themeColors.text }}>{L.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -604,9 +784,9 @@ const ManagementReview = () => {
                     </td>
                     <td style={{ padding: '12px', borderBottom: `1px solid ${themeColors.border}`, textAlign: 'center' }}>
                       {attendee.signature ? (
-                        <span style={{ color: '#2E7D32' }}> Firmado</span>
+                        <span style={{ color: '#2E7D32' }}> {L.signed}</span>
                       ) : (
-                        <span style={{ color: themeColors.textDim }}>Pendiente</span>
+                        <span style={{ color: themeColors.textDim }}>{L.pending}</span>
                       )}
                     </td>
                     <td style={{ padding: '12px', borderBottom: `1px solid ${themeColors.border}`, textAlign: 'center' }}>
@@ -619,7 +799,7 @@ const ManagementReview = () => {
                         }}
                         style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
                       >
-                        Eliminar
+                        {L.remove}
                       </button>
                     </td>
                   </tr>

@@ -7,6 +7,7 @@ import {
 import { Home, BarChart3, ClipboardList, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const COLORS = ['#0072CE', '#2E7D32', '#C77700', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 0]; // 0 = All
@@ -23,6 +24,7 @@ const DEPARTMENTS = [
 const DefectQuery = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const API_URL = 'http://localhost:5000';
 
   // Catalog data
@@ -603,6 +605,9 @@ const DefectQuery = () => {
       <div style={styles.header}>
         <h1 style={styles.title}>Consulta de Defectos</h1>
         <div style={styles.headerButtons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <button
             style={{ ...styles.btn, backgroundColor: '#0072CE', color: 'white' }}
             onClick={() => navigate('/defect-capture')}

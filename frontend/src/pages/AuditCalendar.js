@@ -3,13 +3,46 @@ import { useNavigate } from 'react-router-dom';
 import GanttChart from '../components/8D/GanttChart';
 import { canUserEdit, isReadOnly } from '../utils/permissions';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
 const AuditCalendar = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const [schedules, setSchedules] = useState([]);
+
+  const L = {
+    en: {
+      planned: 'Planned', inProgress: 'In Progress', completed: 'Completed', cancelled: 'Cancelled', postponed: 'Postponed',
+      connectionError: 'Connection error', loading: 'Loading audit calendar...',
+      title: 'Audit Calendar', subtitle: 'Scheduled audits visualization - Year',
+      scheduleAudit: '+ Schedule Audit', readOnly: 'Read only', dashboard: 'Dashboard', home: 'Home',
+      allPrograms: 'All programs', allStatuses: 'All statuses', gantt: 'Gantt', list: 'List', refresh: 'Refresh',
+      noAudits: 'No scheduled audits',
+      createAuditHint: 'Create a new audit to see it in the calendar',
+      noPermissionHint: 'You do not have permission to create audits',
+      scheduleFirst: '+ Schedule First Audit',
+      number: 'Number', audit: 'Audit', areaProcess: 'Area/Process', startDate: 'Start Date', endDate: 'End Date',
+      leadAuditor: 'Lead Auditor', coAuditors: 'Co-Auditors', status: 'Status', actions: 'Actions',
+      edit: 'Edit', view: 'View', execute: 'Execute'
+    },
+    es: {
+      planned: 'Planeada', inProgress: 'En Proceso', completed: 'Completada', cancelled: 'Cancelada', postponed: 'Pospuesta',
+      connectionError: 'Error de conexión', loading: 'Cargando calendario de auditorías...',
+      title: 'Calendario de Auditorías', subtitle: 'Visualización de auditorías programadas - Año',
+      scheduleAudit: '+ Programar Auditoría', readOnly: 'Solo lectura', dashboard: 'Dashboard', home: 'Inicio',
+      allPrograms: 'Todos los programas', allStatuses: 'Todos los estados', gantt: 'Gantt', list: 'Lista', refresh: 'Actualizar',
+      noAudits: 'No hay auditorías programadas',
+      createAuditHint: 'Crea una nueva auditoría para verla en el calendario',
+      noPermissionHint: 'No tienes permisos para crear auditorías',
+      scheduleFirst: '+ Programar Primera Auditoría',
+      number: 'Número', audit: 'Auditoría', areaProcess: 'Área/Proceso', startDate: 'Fecha Inicio', endDate: 'Fecha Fin',
+      leadAuditor: 'Auditor Líder', coAuditors: 'Co-Auditores', status: 'Estado', actions: 'Acciones',
+      edit: 'Editar', view: 'Ver', execute: 'Ejecutar'
+    }
+  }[language] || {};
   const [auditors, setAuditors] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,14 +56,22 @@ const AuditCalendar = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedProgram, setSelectedProgram] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [viewMode, setViewMode] = useState('gantt'); // 'gantt' or 'list'
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('audit_calendar_view') || 'gantt';
+  });
+
+  // Persistir vista seleccionada
+  const handleViewChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('audit_calendar_view', mode);
+  };
 
   const STATUS_CONFIG = {
-    planned: { color: t.accent, label: 'Planeada' },
-    in_progress: { color: t.warning, label: 'En Proceso' },
-    completed: { color: t.success, label: 'Completada' },
-    cancelled: { color: t.error, label: 'Cancelada' },
-    postponed: { color: t.textMuted, label: 'Pospuesta' }
+    planned: { color: t.accent, label: L.planned },
+    in_progress: { color: t.warning, label: L.inProgress },
+    completed: { color: t.success, label: L.completed },
+    cancelled: { color: t.error, label: L.cancelled },
+    postponed: { color: t.textMuted, label: L.postponed }
   };
 
   const loadData = useCallback(async () => {
@@ -70,7 +111,7 @@ const AuditCalendar = () => {
       }
     } catch (err) {
       console.error('Error loading data:', err);
-      setError('Error de conexión');
+      setError(L.connectionError);
     } finally {
       setLoading(false);
     }
@@ -91,7 +132,7 @@ const AuditCalendar = () => {
     endDate: s.endDate,
     status: s.status,
     actualProgress: calculateProgress(s),
-    dailyProgress: [],
+    dailyProgress: s.dailyProgress || [],
     priority: 'media',
     isRecurring: s.isRecurring,
     frequency: s.frequency,
@@ -99,6 +140,19 @@ const AuditCalendar = () => {
   }));
 
   function calculateProgress(schedule) {
+    // Primero: usar dailyProgress acumulado si existe
+    if (schedule.dailyProgress && schedule.dailyProgress.length > 0) {
+      // Ordenar por fecha y tomar el último accumulated
+      const sorted = [...schedule.dailyProgress].sort((a, b) =>
+        new Date(a.date) - new Date(b.date)
+      );
+      const lastEntry = sorted[sorted.length - 1];
+      if (lastEntry.accumulated !== undefined) {
+        return Math.min(100, Math.round(lastEntry.accumulated));
+      }
+    }
+
+    // Fallback: usar status si no hay dailyProgress
     if (schedule.auditStatus === 'completed') return 100;
     if (schedule.auditStatus === 'in_progress') return 50;
     if (schedule.auditStatus === 'cancelled') return 0;
@@ -122,7 +176,8 @@ const AuditCalendar = () => {
         },
         body: JSON.stringify({
           plannedStartDate: updates.startDate,
-          plannedEndDate: updates.endDate
+          plannedEndDate: updates.endDate,
+          dailyProgress: updates.dailyProgress
         })
       });
       const result = await res.json();
@@ -138,6 +193,8 @@ const AuditCalendar = () => {
   // Users for Gantt
   const ganttUsers = auditors.map(a => ({
     id: a.id,
+    firstName: a.firstName,
+    lastName: a.lastName,
     name: `${a.firstName} ${a.lastName}`,
     department: a.department
   }));
@@ -284,7 +341,7 @@ const AuditCalendar = () => {
     return (
       <div style={styles.container}>
         <div style={{ textAlign: 'center', padding: '48px', color: t.textMuted }}>
-          Cargando calendario de auditorías...
+          {L.loading}
         </div>
       </div>
     );
@@ -295,18 +352,21 @@ const AuditCalendar = () => {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Calendario de Auditorías</h1>
+          <h1 style={styles.title}>{L.title}</h1>
           <p style={styles.subtitle}>
-            Visualización de auditorías programadas - Año {selectedYear}
+            {L.subtitle} {selectedYear}
           </p>
         </div>
         <div style={styles.buttons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           {canEdit && (
             <button
               style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
               onClick={() => navigate('/audit-schedule-create')}
             >
-              + Programar Auditoría
+              {L.scheduleAudit}
             </button>
           )}
           {readOnly && (
@@ -318,20 +378,20 @@ const AuditCalendar = () => {
               fontSize: '13px',
               fontWeight: '500'
             }}>
-               Solo lectura
+               {L.readOnly}
             </span>
           )}
           <button
             style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-dashboard')}
           >
-             Dashboard
+             {L.dashboard}
           </button>
           <button
             style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
             onClick={() => navigate('/')}
           >
-            ← Inicio
+            ← {L.home}
           </button>
         </div>
       </div>
@@ -353,7 +413,7 @@ const AuditCalendar = () => {
           onChange={(e) => setSelectedProgram(e.target.value)}
           style={styles.select}
         >
-          <option value="">Todos los programas</option>
+          <option value="">{L.allPrograms}</option>
           {programs.map(p => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
@@ -364,12 +424,12 @@ const AuditCalendar = () => {
           onChange={(e) => setSelectedStatus(e.target.value)}
           style={styles.select}
         >
-          <option value="">Todos los estados</option>
-          <option value="planned">Planeadas</option>
-          <option value="in_progress">En Proceso</option>
-          <option value="completed">Completadas</option>
-          <option value="postponed">Pospuestas</option>
-          <option value="cancelled">Canceladas</option>
+          <option value="">{L.allStatuses}</option>
+          <option value="planned">{L.planned}</option>
+          <option value="in_progress">{L.inProgress}</option>
+          <option value="completed">{L.completed}</option>
+          <option value="postponed">{L.postponed}</option>
+          <option value="cancelled">{L.cancelled}</option>
         </select>
 
         <div style={{ marginLeft: 'auto' }}>
@@ -379,18 +439,18 @@ const AuditCalendar = () => {
                 ...styles.viewButton,
                 ...(viewMode === 'gantt' ? styles.viewButtonActive : {})
               }}
-              onClick={() => setViewMode('gantt')}
+              onClick={() => handleViewChange('gantt')}
             >
-               Gantt
+               {L.gantt}
             </button>
             <button
               style={{
                 ...styles.viewButton,
                 ...(viewMode === 'list' ? styles.viewButtonActive : {})
               }}
-              onClick={() => setViewMode('list')}
+              onClick={() => handleViewChange('list')}
             >
-               Lista
+               {L.list}
             </button>
           </div>
         </div>
@@ -399,7 +459,7 @@ const AuditCalendar = () => {
           style={{ ...styles.button, backgroundColor: t.bgPanel, color: t.text }}
           onClick={loadData}
         >
-           Actualizar
+           {L.refresh}
         </button>
       </div>
 
@@ -413,14 +473,14 @@ const AuditCalendar = () => {
       <div style={styles.card}>
         {schedules.length === 0 ? (
           <div style={styles.empty}>
-            <p style={{ fontSize: '18px', marginBottom: '12px' }}>No hay auditorías programadas</p>
-            <p>{canEdit ? 'Crea una nueva auditoría para verla en el calendario' : 'No tienes permisos para crear auditorías'}</p>
+            <p style={{ fontSize: '18px', marginBottom: '12px' }}>{L.noAudits}</p>
+            <p>{canEdit ? L.createAuditHint : L.noPermissionHint}</p>
             {canEdit && (
               <button
                 style={{ ...styles.button, backgroundColor: t.accent, color: 'white', marginTop: '16px' }}
                 onClick={() => navigate('/audit-schedule-create')}
               >
-                + Programar Primera Auditoría
+                {L.scheduleFirst}
               </button>
             )}
           </div>
@@ -448,14 +508,15 @@ const AuditCalendar = () => {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>Número</th>
-                <th style={styles.th}>Auditoría</th>
-                <th style={styles.th}>Área/Proceso</th>
-                <th style={styles.th}>Fecha Inicio</th>
-                <th style={styles.th}>Fecha Fin</th>
-                <th style={styles.th}>Auditor Líder</th>
-                <th style={styles.th}>Estado</th>
-                <th style={styles.th}>Acciones</th>
+                <th style={styles.th}>{L.number}</th>
+                <th style={styles.th}>{L.audit}</th>
+                <th style={styles.th}>{L.areaProcess}</th>
+                <th style={styles.th}>{L.startDate}</th>
+                <th style={styles.th}>{L.endDate}</th>
+                <th style={styles.th}>{L.leadAuditor}</th>
+                <th style={styles.th}>{L.coAuditors}</th>
+                <th style={styles.th}>{L.status}</th>
+                <th style={styles.th}>{L.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -467,12 +528,13 @@ const AuditCalendar = () => {
                     <td style={styles.td}>{schedule.action}</td>
                     <td style={styles.td}>{schedule.result || '-'}</td>
                     <td style={styles.td}>
-                      {new Date(schedule.startDate).toLocaleDateString('es-MX')}
+                      {new Date(schedule.startDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX')}
                     </td>
                     <td style={styles.td}>
-                      {new Date(schedule.endDate).toLocaleDateString('es-MX')}
+                      {new Date(schedule.endDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-MX')}
                     </td>
                     <td style={styles.td}>{schedule.responsibleName || '-'}</td>
+                    <td style={styles.td}>{schedule.coAuditorNames || '-'}</td>
                     <td style={styles.td}>
                       <span style={{
                         ...styles.badge,
@@ -482,7 +544,20 @@ const AuditCalendar = () => {
                         {statusConfig.label}
                       </span>
                     </td>
-                    <td style={styles.td}>
+                    <td style={{ ...styles.td, display: 'flex', gap: '6px' }}>
+                      {canEdit && (
+                        <button
+                          style={{
+                            ...styles.button,
+                            padding: '6px 12px',
+                            backgroundColor: t.warning,
+                            color: 'white'
+                          }}
+                          onClick={() => navigate(`/audit-schedule-edit/${schedule.scheduleId || schedule.id}`)}
+                        >
+                          {L.edit}
+                        </button>
+                      )}
                       <button
                         style={{
                           ...styles.button,
@@ -498,7 +573,7 @@ const AuditCalendar = () => {
                           }
                         }}
                       >
-                        {schedule.auditStatus === 'completed' ? 'Ver' : 'Ejecutar'}
+                        {schedule.auditStatus === 'completed' ? L.view : L.execute}
                       </button>
                     </td>
                   </tr>

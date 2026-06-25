@@ -2,12 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
 
 const ImpactAnalysisConfig = () => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // Dynamic styles based on theme
   const styles = useMemo(() => ({
@@ -406,7 +408,7 @@ const ImpactAnalysisConfig = () => {
       }
     } catch (error) {
       console.error('Error loading impact areas:', error);
-      showError('Error al cargar áreas de impacto');
+      showError('Error al cargar TFT de impacto');
     } finally {
       setLoading(false);
     }
@@ -463,7 +465,7 @@ const ImpactAnalysisConfig = () => {
           editingArea,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        showSuccess('Área actualizada exitosamente');
+        showSuccess('TFT actualizada exitosamente');
       } else {
         // Create new
         await axios.post(
@@ -471,7 +473,7 @@ const ImpactAnalysisConfig = () => {
           editingArea,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        showSuccess('Área creada exitosamente');
+        showSuccess('TFT creada exitosamente');
       }
 
       setIsModalOpen(false);
@@ -479,23 +481,23 @@ const ImpactAnalysisConfig = () => {
       loadAreas();
     } catch (error) {
       console.error('Error saving area:', error);
-      showError(error.response?.data?.message || 'Error al guardar área');
+      showError(error.response?.data?.message || 'Error al guardar TFT');
     }
   };
 
   const handleDeleteArea = async (areaId) => {
-    if (!window.confirm('¿Está seguro de desactivar esta área?')) return;
+    if (!window.confirm('¿Está seguro de desactivar esta TFT?')) return;
 
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`http://localhost:5000/impact-areas/${areaId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      showSuccess('Área desactivada exitosamente');
+      showSuccess('TFT desactivada exitosamente');
       loadAreas();
     } catch (error) {
       console.error('Error deleting area:', error);
-      showError('Error al desactivar área');
+      showError('Error al desactivar TFT');
     }
   };
 
@@ -546,12 +548,17 @@ const ImpactAnalysisConfig = () => {
           <button onClick={() => navigate('/ecr-dashboard')} style={styles.backButton}>
             ← Volver a ECR Dashboard
           </button>
-          <h1 style={styles.title}>Áreas y Equipos de Validación</h1>
-          <p style={styles.subtitle}>Configuración de áreas de impacto y equipos por defecto para ECR</p>
+          <h1 style={styles.title}>TFT y Equipos de Validación</h1>
+          <p style={styles.subtitle}>Configuración de TFT de impacto y equipos por defecto para ECR</p>
         </div>
-        <button onClick={handleAddArea} style={styles.addButton}>
-          + Agregar Área
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
+          <button onClick={handleAddArea} style={styles.addButton}>
+            + Agregar TFT
+          </button>
+        </div>
       </div>
 
       {/* Disclaimer */}
@@ -559,7 +566,7 @@ const ImpactAnalysisConfig = () => {
         <strong> RESPONSABILIDAD DEL USUARIO:</strong>
         <p>
           Esta configuración es responsabilidad del usuario final. Los administradores deben
-          ajustar las áreas de impacto y sus subsecciones según los requisitos específicos de
+          ajustar las TFT de impacto y sus subsecciones según los requisitos específicos de
           su organización, procesos, y normativas aplicables (IATF 16949, AIAG-VDA FMEA, etc.).
         </p>
         <p style={{ margin: '8px 0 0 0', fontSize: '13px' }}>
@@ -568,13 +575,13 @@ const ImpactAnalysisConfig = () => {
         </p>
       </div>
 
-      {/* Areas List */}
+      {/* TFT List */}
       <div style={styles.areasList}>
         {areas.length === 0 ? (
           <div style={styles.emptyState}>
-            <p>No hay áreas configuradas</p>
+            <p>No hay TFT configuradas</p>
             <button onClick={handleAddArea} style={styles.addButton}>
-              + Agregar Primera Área
+              + Agregar Primera TFT
             </button>
           </div>
         ) : (
@@ -585,9 +592,6 @@ const ImpactAnalysisConfig = () => {
             }}>
               <div style={styles.areaHeader}>
                 <div style={styles.areaInfo}>
-                  <span style={{ fontSize: '24px', marginRight: '12px' }}>
-                    {area.icon}
-                  </span>
                   <div>
                     <h3 style={styles.areaName}>
                       {area.areaName}
@@ -663,7 +667,7 @@ const ImpactAnalysisConfig = () => {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>
-                {editingArea.id ? 'Editar Área' : 'Nueva Área'}
+                {editingArea.id ? 'Editar TFT' : 'Nueva TFT'}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -674,7 +678,7 @@ const ImpactAnalysisConfig = () => {
             </div>
 
             <div style={styles.modalBody}>
-              {/* Area Key */}
+              {/* TFT Key */}
               <div style={styles.field}>
                 <label style={styles.label}>
                   Key (identificador único) *
@@ -692,9 +696,9 @@ const ImpactAnalysisConfig = () => {
                 />
               </div>
 
-              {/* Area Name */}
+              {/* TFT Name */}
               <div style={styles.field}>
-                <label style={styles.label}>Nombre del Área *</label>
+                <label style={styles.label}>Nombre del TFT *</label>
                 <input
                   type="text"
                   style={styles.input}
@@ -707,34 +711,18 @@ const ImpactAnalysisConfig = () => {
                 />
               </div>
 
-              {/* Icon and Color */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={styles.field}>
-                  <label style={styles.label}>Ícono</label>
-                  <input
-                    type="text"
-                    style={styles.input}
-                    value={editingArea.icon}
-                    onChange={(e) => setEditingArea({
-                      ...editingArea,
-                      icon: e.target.value
-                    })}
-                    placeholder=""
-                  />
-                </div>
-
-                <div style={styles.field}>
-                  <label style={styles.label}>Color</label>
-                  <input
-                    type="color"
-                    style={styles.colorInput}
-                    value={editingArea.color}
-                    onChange={(e) => setEditingArea({
-                      ...editingArea,
-                      color: e.target.value
-                    })}
-                  />
-                </div>
+              {/* Color */}
+              <div style={styles.field}>
+                <label style={styles.label}>Color</label>
+                <input
+                  type="color"
+                  style={styles.colorInput}
+                  value={editingArea.color}
+                  onChange={(e) => setEditingArea({
+                    ...editingArea,
+                    color: e.target.value
+                  })}
+                />
               </div>
 
               {/* Description */}
@@ -747,7 +735,7 @@ const ImpactAnalysisConfig = () => {
                     ...editingArea,
                     description: e.target.value
                   })}
-                  placeholder="Descripción breve del área de impacto..."
+                  placeholder="Descripción breve del TFT de impacto..."
                   rows={3}
                 />
               </div>
@@ -802,7 +790,7 @@ const ImpactAnalysisConfig = () => {
                   )}
                 </label>
                 <p style={{ fontSize: '13px', color: t.textMuted, margin: '0 0 12px 0' }}>
-                  Miembros del equipo responsables de validar esta área
+                  Miembros del equipo responsables de validar esta TFT
                 </p>
                 <div style={{
                   display: 'grid',
@@ -864,7 +852,7 @@ const ImpactAnalysisConfig = () => {
                       isActive: e.target.checked
                     })}
                   />
-                  <span style={{ marginLeft: '8px' }}>Área activa</span>
+                  <span style={{ marginLeft: '8px' }}>TFT activa</span>
                 </label>
               </div>
             </div>

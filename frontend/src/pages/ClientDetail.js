@@ -36,6 +36,7 @@ import projectService from '../services/projectService';
 import bomFieldService from '../services/bomFieldService';
 import ToastContainer from '../components/ToastContainer';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // BOM Column Order Constants - outside component to avoid re-creation
 const BOM_COLUMN_VERSION = 'v3';
@@ -48,8 +49,489 @@ const DEFAULT_BOM_COLUMNS = [
 
 const ClientDetail = () => {
   const { theme } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const { clientId } = useParams();
   const navigate = useNavigate();
+
+  // Local translations
+  const L = {
+    en: {
+      // Header
+      loading: 'Loading...',
+      errorLoading: 'Error loading client',
+      backToClients: '← Back to Clients',
+      editClient: 'Edit Client',
+      readOnlyMode: 'Read-Only Mode - You do not have permission to modify this client',
+      // Tabs
+      tabProfile: 'Profile',
+      tabProjects: 'Projects',
+      tabContacts: 'Contacts',
+      tabBom: 'BOM',
+      tabDocuments: 'Documents',
+      // Profile
+      basicInfo: 'Basic Information',
+      clientName: 'Client Name',
+      alias: 'Alias',
+      vendorNumber: 'Vendor Number',
+      address: 'Address',
+      street: 'Street',
+      city: 'City',
+      state: 'State',
+      country: 'Country',
+      postalCode: 'Postal Code',
+      status: 'Status',
+      active: 'Active',
+      inactive: 'Inactive',
+      // Projects
+      addProject: 'Add Project',
+      projectNumber: 'Project Number',
+      projectName: 'Project Name',
+      description: 'Description',
+      startDate: 'Start Date',
+      targetEndDate: 'Target End Date',
+      noProjects: 'No projects registered',
+      newProject: 'New Project',
+      editProject: 'Edit Project',
+      deleteProject: 'Delete Project',
+      confirmDeleteProject: 'Are you sure you want to delete this project?',
+      // Contacts
+      addContact: 'Add Contact',
+      contactName: 'Name',
+      position: 'Position',
+      titlePosition: 'Title/Position',
+      email: 'Email',
+      phone: 'Phone',
+      noContacts: 'No contacts registered',
+      importContacts: 'Import Contacts',
+      downloadTemplate: 'Download Template',
+      // BOM
+      addPart: 'Add Part',
+      partNumber: 'Part Number',
+      partName: 'Part Name',
+      revision: 'Revision',
+      unitCost: 'Unit Cost',
+      weight: 'Weight',
+      weightKg: 'Weight (kg)',
+      supplier: 'Supplier',
+      currency: 'Currency',
+      snpQuantity: 'SNP Quantity',
+      snpVolume: 'SNP Volume (m³)',
+      clientPartNumberLabel: 'Client Part Number',
+      specifications: 'Specifications',
+      customFields: 'Custom Fields',
+      configuredFields: 'configured',
+      parentPart: 'Parent Part (Subcomponent of)',
+      noParent: '-- None (Main Part) --',
+      isSubcomponent: 'This part is a subcomponent of another main part',
+      noParts: 'No parts registered',
+      importParts: 'Import Parts',
+      exportParts: 'Export Parts',
+      dragColumns: 'Drag headers to reorder columns',
+      restore: 'Restore',
+      // Documents
+      uploadDocument: 'Upload Document',
+      documentTitle: 'Title',
+      noDocuments: 'No documents uploaded',
+      download: 'Download',
+      delete: 'Delete',
+      // Common
+      save: 'Save',
+      cancel: 'Cancel',
+      edit: 'Edit',
+      actions: 'Actions',
+      search: 'Search',
+      yes: 'Yes',
+      no: 'No',
+      importing: 'Importing...',
+      saving: 'Saving...',
+      created: 'Created',
+      updated: 'Updated',
+      // Messages
+      projectCreated: 'Project created successfully',
+      projectUpdated: 'Project updated successfully',
+      projectDeleted: 'Project deleted successfully',
+      partCreated: 'Part created successfully',
+      partUpdated: 'Part updated successfully',
+      contactCreated: 'Contact created successfully',
+      documentUploaded: 'Document uploaded successfully',
+      errorSaving: 'Error saving',
+      errorDeleting: 'Error deleting',
+      // BOM columns
+      client: 'Client',
+      project: 'Project',
+      bomLevel: 'BOM LVL',
+      clientPartNum: 'Client Part #',
+      snpQty: 'SNP Qty',
+      snpVol: 'SNP Vol (m³)',
+      noProject: 'No Project',
+      weightLabel: 'Weight',
+      snpQtyLabel: 'SNP Qty',
+      snpVolLabel: 'SNP Vol',
+      costLabel: 'Cost',
+      uploadedLabel: 'Uploaded',
+      byLabel: 'By',
+      allCategories: 'All',
+      categoryClient: 'Client',
+      categoryPart: 'Parts',
+      allTypes: 'All',
+      typeCreated: 'Created',
+      typeUpdated: 'Updated',
+      typeDeleted: 'Deleted',
+      sortNewest: 'Newest first',
+      sortOldest: 'Oldest first',
+      eventType: 'Event Type',
+      sortBy: 'Sort by',
+      // Additional
+      errorLoadingParts: 'Error loading parts',
+      errorLoadingDocs: 'Error loading documents',
+      errorLoadingTimeline: 'Error loading timeline',
+      errorUpdatingPart: 'Error updating part',
+      errorUpdatingProject: 'Error updating project',
+      errorCreatingProject: 'Error creating project',
+      errorDeletingClient: 'Error deleting client',
+      errorGeneratingTemplate: 'Error generating template',
+      errorImportingFile: 'Error importing file',
+      errorStatusChange: 'Error changing status',
+      errorDeletingPart: 'Error deleting',
+      deletedSuccess: 'Deleted successfully',
+      nameEmailRequired: 'Name and email are required',
+      contactAdded: 'Contact added successfully',
+      contactUpdated: 'Contact updated successfully',
+      contactDeleted: 'Contact deleted successfully',
+      errorAddingContact: 'Error adding contact',
+      errorUpdatingContact: 'Error updating contact',
+      errorDeletingContact: 'Error deleting contact',
+      projectsAndParts: 'Projects and Parts',
+      required: '*',
+      cancelEdit: 'Cancel Edit',
+      editProjectInfo: 'Edit Project Information',
+      editProjectParts: 'Edit Project Parts',
+      addNewPart: 'Add New Part',
+      saveChanges: 'Save Changes',
+      clientContacts: 'Client Contacts',
+      addNewContact: 'Add New Contact',
+      editContact: 'Edit Contact',
+      uploadingDoc: 'Uploading...',
+      clientDocuments: 'Client Documents',
+      uploading: 'Uploading...',
+      applyFilters: 'Apply Filters',
+      loadingEvents: 'Loading events...',
+      categoryProject: 'Project',
+      categoryContact: 'Contact',
+      categoryDocument: 'Document',
+      documentTitleLabel: 'Document Title',
+      selectOption: '-- Select --',
+      addAdditionalField: 'Add additional field (not configured)',
+      fieldName: 'Field Name',
+      fieldValue: 'Field Value',
+      addField: '+ Add',
+      loadingProjects: 'Loading projects...',
+      supplierPlaceholder: 'Supplier name',
+      confirmDeletePart: 'Delete part',
+      editPartTitle: 'Edit part',
+      deletePartTitle: 'Delete part',
+      // Excel
+      excelPartNumber: 'Part Number',
+      excelPartName: 'Part Name',
+      excelDescription: 'Description',
+      excelRevision: 'Revision',
+      excelBomLevel: 'BOM LVL',
+      excelClientPartNum: 'Client Part Number',
+      excelUnitCost: 'Unit Cost',
+      excelWeight: 'Weight (kg)',
+      excelSnpQty: 'SNP Qty',
+      excelSnpVol: 'SNP Vol (m³)',
+      excelSupplier: 'Supplier',
+      excelStatus: 'Status',
+      excelProjectNum: 'Project Number',
+      excelInstructions: 'INSTRUCTIONS',
+      excelSamplePart: 'Sample Part',
+      excelSampleSupplier: 'Supplier Name',
+      excelContactName: 'Name',
+      excelPosition: 'Position/Title',
+      excelEmail: 'Email',
+      excelPhone: 'Phone',
+      excelContactsSheet: 'Contacts',
+      excelContactsFile: 'Contacts_Template.xlsx',
+      excelExportedContacts: 'Exported_Contacts',
+      excelExportedParts: 'Exported_Parts',
+      // Timeline
+      timelineCategory: 'Category',
+      timelineAll: 'All',
+      timelineProjects: 'Projects',
+      timelineContacts: 'Contacts',
+      timelineDocuments: 'Documents',
+      // Validation
+      partNumberNameRequired: 'Part number and name are required',
+      unitCostRequired: 'Unit Cost is required',
+      unitCostInvalid: 'Unit Cost must be a number greater than or equal to 0',
+      enterFieldName: 'Enter field name',
+      invalidEmail: 'Invalid email',
+      contactExists: 'A contact with this email already exists',
+      contactIdNotFound: 'Error: Contact ID not found',
+      noContactsToExport: 'No contacts to export',
+      noContactsImported: 'No contacts could be imported due to validation errors',
+      noValidContactsFound: 'No valid contacts found in file',
+      partDeleted: 'Part deleted',
+      editPart: 'Edit Part',
+      documentTitleRequired: 'Please enter a title for the document',
+      weightInvalid: 'Weight must be a number greater than or equal to 0',
+      weightMax: 'Weight exceeds maximum allowed (10000 kg)',
+      snpQtyInvalid: 'SNP Quantity must be an integer greater than or equal to 0',
+      snpQtyMax: 'SNP Quantity exceeds maximum allowed (1,000,000)',
+      snpVolInvalid: 'SNP Volume must be a number greater than or equal to 0',
+      snpVolMax: 'SNP Volume exceeds maximum allowed (1000 m³)',
+      partSaved: 'Part saved successfully',
+      noPartsToExport: 'No parts to export',
+      noPartsImported: 'No parts could be imported due to validation errors',
+      noValidPartsFound: 'No valid parts found in file',
+      specsLabel: 'Specs',
+      addContactsHint: 'Add contacts manually or import from Excel',
+      addProjectsHint: 'Projects are added when creating or editing the client',
+      savingPart: 'Error saving part',
+      errorSavingPart: 'Error saving part',
+      noTimelineEvents: 'No events in the timeline',
+      timelineEventsHint: 'Events will appear here when changes are made'
+    },
+    es: {
+      // Header
+      loading: 'Cargando...',
+      errorLoading: 'Error al cargar cliente',
+      backToClients: '← Volver a Clientes',
+      editClient: 'Editar Cliente',
+      readOnlyMode: 'Modo Solo Lectura - No tienes permisos para modificar este cliente',
+      // Tabs
+      tabProfile: 'Perfil',
+      tabProjects: 'Proyectos',
+      tabContacts: 'Contactos',
+      tabBom: 'BOM',
+      tabDocuments: 'Documentos',
+      // Profile
+      basicInfo: 'Información Básica',
+      clientName: 'Nombre del Cliente',
+      alias: 'Alias',
+      vendorNumber: 'Número de Proveedor',
+      address: 'Dirección',
+      street: 'Calle',
+      city: 'Ciudad',
+      state: 'Estado',
+      country: 'País',
+      postalCode: 'Código Postal',
+      status: 'Estado',
+      active: 'Activo',
+      inactive: 'Inactivo',
+      // Projects
+      addProject: 'Agregar Proyecto',
+      projectNumber: 'Número de Proyecto',
+      projectName: 'Nombre del Proyecto',
+      description: 'Descripción',
+      startDate: 'Fecha de Inicio',
+      targetEndDate: 'Fecha Objetivo de Fin',
+      noProjects: 'No hay proyectos registrados',
+      newProject: 'Nuevo Proyecto',
+      editProject: 'Editar Proyecto',
+      deleteProject: 'Eliminar Proyecto',
+      confirmDeleteProject: '¿Estás seguro de que deseas eliminar este proyecto?',
+      // Contacts
+      addContact: 'Agregar Contacto',
+      contactName: 'Nombre',
+      position: 'Puesto',
+      titlePosition: 'Título/Cargo',
+      email: 'Email',
+      phone: 'Teléfono',
+      noContacts: 'No hay contactos registrados',
+      importContacts: 'Importar Contactos',
+      downloadTemplate: 'Descargar Plantilla',
+      // BOM
+      addPart: 'Agregar Parte',
+      partNumber: 'Número de Parte',
+      partName: 'Nombre de Parte',
+      revision: 'Revisión',
+      unitCost: 'Costo Unitario',
+      weight: 'Peso',
+      weightKg: 'Peso (kg)',
+      supplier: 'Proveedor',
+      currency: 'Moneda',
+      snpQuantity: 'Cantidad SNP',
+      snpVolume: 'Volumen SNP (m³)',
+      clientPartNumberLabel: 'Part Number Cliente',
+      specifications: 'Especificaciones',
+      customFields: 'Campos Personalizados',
+      configuredFields: 'configurados',
+      parentPart: 'Parte Padre (Subcomponente de)',
+      noParent: '-- Ninguna (Parte Principal) --',
+      isSubcomponent: 'Esta parte es un subcomponente de otra parte principal',
+      noParts: 'No hay partes registradas',
+      importParts: 'Importar Partes',
+      exportParts: 'Exportar Partes',
+      dragColumns: 'Arrastra los encabezados para reordenar columnas',
+      restore: 'Restaurar',
+      // Documents
+      uploadDocument: 'Subir Documento',
+      documentTitle: 'Título',
+      noDocuments: 'No hay documentos subidos',
+      download: 'Descargar',
+      delete: 'Eliminar',
+      // Common
+      save: 'Guardar',
+      cancel: 'Cancelar',
+      edit: 'Editar',
+      actions: 'Acciones',
+      search: 'Buscar',
+      yes: 'Sí',
+      no: 'No',
+      importing: 'Importando...',
+      saving: 'Guardando...',
+      created: 'Creado',
+      updated: 'Actualizado',
+      // Messages
+      projectCreated: 'Proyecto creado exitosamente',
+      projectUpdated: 'Proyecto actualizado exitosamente',
+      projectDeleted: 'Proyecto eliminado exitosamente',
+      partCreated: 'Parte creada exitosamente',
+      partUpdated: 'Parte actualizada exitosamente',
+      contactCreated: 'Contacto creado exitosamente',
+      documentUploaded: 'Documento subido exitosamente',
+      errorSaving: 'Error al guardar',
+      errorDeleting: 'Error al eliminar',
+      // BOM columns
+      client: 'Cliente',
+      project: 'Proyecto',
+      bomLevel: 'BOM LVL',
+      clientPartNum: 'Part # Cliente',
+      snpQty: 'Cant. SNP',
+      snpVol: 'Vol. SNP (m³)',
+      noProject: 'Sin Proyecto',
+      weightLabel: 'Peso',
+      snpQtyLabel: 'Cant. SNP',
+      snpVolLabel: 'Vol. SNP',
+      costLabel: 'Costo',
+      uploadedLabel: 'Subido',
+      byLabel: 'Por',
+      allCategories: 'Todas',
+      categoryClient: 'Cliente',
+      categoryPart: 'Partes',
+      allTypes: 'Todos',
+      typeCreated: 'Creado',
+      typeUpdated: 'Actualizado',
+      typeDeleted: 'Eliminado',
+      sortNewest: 'Más reciente',
+      sortOldest: 'Más antiguo',
+      eventType: 'Tipo de Evento',
+      sortBy: 'Ordenar por',
+      // Additional
+      errorLoadingParts: 'Error al cargar partes',
+      errorLoadingDocs: 'Error al cargar documentos',
+      errorLoadingTimeline: 'Error al cargar timeline',
+      errorUpdatingPart: 'Error al actualizar la parte',
+      errorUpdatingProject: 'Error al actualizar proyecto',
+      errorCreatingProject: 'Error al crear proyecto',
+      errorDeletingClient: 'Error al eliminar cliente',
+      errorGeneratingTemplate: 'Error al generar plantilla',
+      errorImportingFile: 'Error al importar archivo',
+      errorStatusChange: 'Error al cambiar estado',
+      errorDeletingPart: 'Error al eliminar',
+      deletedSuccess: 'Eliminado exitosamente',
+      nameEmailRequired: 'Nombre y email son obligatorios',
+      contactAdded: 'Contacto agregado exitosamente',
+      contactUpdated: 'Contacto actualizado exitosamente',
+      contactDeleted: 'Contacto eliminado exitosamente',
+      errorAddingContact: 'Error al agregar contacto',
+      errorUpdatingContact: 'Error al actualizar contacto',
+      errorDeletingContact: 'Error al eliminar contacto',
+      projectsAndParts: 'Proyectos y Partes',
+      required: '*',
+      cancelEdit: 'Cancelar Edición',
+      editProjectInfo: 'Editar Información del Proyecto',
+      editProjectParts: 'Editar Partes del Proyecto',
+      addNewPart: 'Agregar Nueva Parte',
+      saveChanges: 'Guardar Cambios',
+      clientContacts: 'Contactos del Cliente',
+      addNewContact: 'Agregar Nuevo Contacto',
+      editContact: 'Editar Contacto',
+      uploadingDoc: 'Subiendo...',
+      clientDocuments: 'Documentos del Cliente',
+      uploading: 'Subiendo...',
+      applyFilters: 'Aplicar Filtros',
+      loadingEvents: 'Cargando eventos...',
+      categoryProject: 'Proyecto',
+      categoryContact: 'Contacto',
+      categoryDocument: 'Documento',
+      documentTitleLabel: 'Título del Documento',
+      selectOption: '-- Seleccionar --',
+      addAdditionalField: 'Agregar campo adicional (no configurado)',
+      fieldName: 'Nombre del campo',
+      fieldValue: 'Valor',
+      addField: '+ Agregar',
+      loadingProjects: 'Cargando proyectos...',
+      supplierPlaceholder: 'Nombre del proveedor',
+      confirmDeletePart: 'Eliminar parte',
+      editPartTitle: 'Editar parte',
+      deletePartTitle: 'Eliminar parte',
+      // Excel
+      excelPartNumber: 'Número de Parte',
+      excelPartName: 'Nombre de Parte',
+      excelDescription: 'Descripción',
+      excelRevision: 'Revisión',
+      excelBomLevel: 'BOM LVL',
+      excelClientPartNum: 'Part Number Cliente',
+      excelUnitCost: 'Costo Unitario',
+      excelWeight: 'Peso (kg)',
+      excelSnpQty: 'Cant. SNP',
+      excelSnpVol: 'Vol. SNP (m³)',
+      excelSupplier: 'Proveedor',
+      excelStatus: 'Estado',
+      excelProjectNum: 'Número Proyecto',
+      excelInstructions: 'INSTRUCCIONES',
+      excelSamplePart: 'Ejemplo de Parte',
+      excelSampleSupplier: 'Nombre del Proveedor',
+      excelContactName: 'Nombre',
+      excelPosition: 'Cargo/Puesto',
+      excelEmail: 'Email',
+      excelPhone: 'Teléfono',
+      excelContactsSheet: 'Contactos',
+      excelContactsFile: 'Plantilla_Contactos.xlsx',
+      excelExportedContacts: 'Contactos_Exportados',
+      excelExportedParts: 'Partes_Exportadas',
+      // Timeline
+      timelineCategory: 'Categoría',
+      timelineAll: 'Todas',
+      timelineProjects: 'Proyectos',
+      timelineContacts: 'Contactos',
+      timelineDocuments: 'Documentos',
+      // Validation
+      partNumberNameRequired: 'Número de parte y nombre son obligatorios',
+      unitCostRequired: 'Costo Unitario es obligatorio',
+      unitCostInvalid: 'Costo Unitario debe ser un número mayor o igual a 0',
+      enterFieldName: 'Ingrese el nombre del campo',
+      invalidEmail: 'Email inválido',
+      contactExists: 'Ya existe un contacto con este email',
+      contactIdNotFound: 'Error: No se encontró el ID del contacto',
+      noContactsToExport: 'No hay contactos para exportar',
+      noContactsImported: 'No se pudo importar ningún contacto debido a errores de validación',
+      noValidContactsFound: 'No se encontraron contactos válidos en el archivo',
+      partDeleted: 'Parte eliminada',
+      editPart: 'Editar Parte',
+      documentTitleRequired: 'Por favor ingrese un título para el documento',
+      weightInvalid: 'Peso debe ser un número mayor o igual a 0',
+      weightMax: 'Peso excede el máximo permitido (10000 kg)',
+      snpQtyInvalid: 'Cantidad SNP debe ser un número entero mayor o igual a 0',
+      snpQtyMax: 'Cantidad SNP excede el máximo permitido (1,000,000)',
+      snpVolInvalid: 'Volumen SNP debe ser un número mayor o igual a 0',
+      snpVolMax: 'Volumen SNP excede el máximo permitido (1000 m³)',
+      partSaved: 'Parte guardada exitosamente',
+      noPartsToExport: 'No hay partes para exportar',
+      noPartsImported: 'No se pudo importar ninguna parte debido a errores de validación',
+      noValidPartsFound: 'No se encontraron partes válidas en el archivo',
+      specsLabel: 'Specs',
+      addContactsHint: 'Agregue contactos manualmente o importe desde Excel',
+      addProjectsHint: 'Los proyectos se agregan al crear o editar el cliente',
+      savingPart: 'Error al guardar la parte',
+      errorSavingPart: 'Error al guardar la parte',
+      noTimelineEvents: 'No hay eventos en el timeline',
+      timelineEventsHint: 'Los eventos aparecerán aquí cuando se realicen cambios'
+    }
+  }[language] || {};
   const partsFileInputRef = useRef(null);
   const contactsFileInputRef = useRef(null);
   const documentsFileInputRef = useRef(null);
@@ -167,7 +649,7 @@ const ClientDetail = () => {
       setClient(data);
       setClientContacts(data.contacts || []);
     } catch (err) {
-      setError('Error al cargar cliente: ' + err.message);
+      setError(`${L.errorLoading}: ${err.message}`);
       console.error('Error loading client:', err);
     } finally {
       setLoading(false);
@@ -207,7 +689,7 @@ const ClientDetail = () => {
       }
     } catch (err) {
       console.error('Error loading client parts:', err);
-      showToast('Error al cargar partes: ' + err.message, 'error');
+      showToast(`${L.errorLoadingParts}: ${err.message}`, 'error');
     }
   }, [clientId]);
 
@@ -263,7 +745,7 @@ const ClientDetail = () => {
       setDocuments(docs);
     } catch (err) {
       console.error('Error loading documents:', err);
-      alert('Error al cargar documentos: ' + err.message);
+      alert(`${L.errorLoadingDocs}: ${err.message}`);
     }
   };
 
@@ -276,7 +758,7 @@ const ClientDetail = () => {
       setTimeline(events);
     } catch (err) {
       console.error('Error loading timeline:', err);
-      alert('Error al cargar timeline: ' + err.message);
+      alert(`${L.errorLoadingTimeline}: ${err.message}`);
     } finally {
       setLoadingTimeline(false);
     }
@@ -334,7 +816,7 @@ const ClientDetail = () => {
     if (!documentToUpload.file) return;
 
     if (!documentToUpload.title.trim()) {
-      alert('Por favor ingrese un título para el documento');
+      alert(L.documentTitleRequired);
       return;
     }
 
@@ -348,7 +830,7 @@ const ClientDetail = () => {
         currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'System'
       );
 
-      alert('Documento subido exitosamente: ' + uploadedDoc.fileName);
+      alert(`${L.documentUploaded}: ${uploadedDoc.fileName}`);
       setShowUploadModal(false);
       setDocumentToUpload({
         file: null,
@@ -358,7 +840,7 @@ const ClientDetail = () => {
       await loadDocuments();
     } catch (err) {
       console.error('Error uploading document:', err);
-      alert('Error al subir documento: ' + err.message);
+      alert(`${L.errorSaving}: ${err.message}`);
     } finally {
       setUploadingDocument(false);
     }
@@ -371,11 +853,11 @@ const ClientDetail = () => {
 
     try {
       await clientService.deleteDocument(clientId, documentId);
-      alert('Documento eliminado exitosamente');
+      alert(L.deletedSuccess);
       await loadDocuments();
     } catch (err) {
       console.error('Error deleting document:', err);
-      alert('Error al eliminar documento: ' + err.message);
+      alert(`${L.errorDeleting}: ${err.message}`);
     }
   };
 
@@ -387,19 +869,19 @@ const ClientDetail = () => {
 
   const handleAddPart = async () => {
     if (!newPart.partNumber || !newPart.partName) {
-      alert('Número de parte y nombre son obligatorios');
+      alert(L.partNumberNameRequired);
       return;
     }
 
     // Validate unitCost is required
     if (!newPart.unitCost || newPart.unitCost === '') {
-      alert('Costo Unitario es obligatorio');
+      alert(L.unitCostRequired);
       return;
     }
 
     const unitCost = parseFloat(newPart.unitCost);
     if (isNaN(unitCost) || unitCost < 0) {
-      alert('Costo Unitario debe ser un número mayor o igual a 0');
+      alert(L.unitCostInvalid);
       return;
     }
 
@@ -407,11 +889,11 @@ const ClientDetail = () => {
     if (newPart.weight !== '' && newPart.weight !== null) {
       const weight = parseFloat(newPart.weight);
       if (isNaN(weight) || weight < 0) {
-        alert('Peso debe ser un número mayor o igual a 0');
+        alert(L.weightInvalid);
         return;
       }
       if (weight > 10000) {
-        alert('Peso excede el máximo permitido (10000 kg)');
+        alert(L.weightMax);
         return;
       }
     }
@@ -419,11 +901,11 @@ const ClientDetail = () => {
     if (newPart.snpQuantity !== '' && newPart.snpQuantity !== null) {
       const quantity = parseInt(newPart.snpQuantity);
       if (isNaN(quantity) || quantity < 0) {
-        alert('Cantidad SNP debe ser un número entero mayor o igual a 0');
+        alert(L.snpQtyInvalid);
         return;
       }
       if (quantity > 1000000) {
-        alert('Cantidad SNP excede el máximo permitido (1,000,000)');
+        alert(L.snpQtyMax);
         return;
       }
     }
@@ -431,11 +913,11 @@ const ClientDetail = () => {
     if (newPart.snpVolume !== '' && newPart.snpVolume !== null) {
       const volume = parseFloat(newPart.snpVolume);
       if (isNaN(volume) || volume < 0) {
-        alert('Volumen SNP debe ser un número mayor o igual a 0');
+        alert(L.snpVolInvalid);
         return;
       }
       if (volume > 1000) {
-        alert('Volumen SNP excede el máximo permitido (1000 m³)');
+        alert(L.snpVolMax);
         return;
       }
     }
@@ -512,7 +994,7 @@ const ClientDetail = () => {
       // Close modal and show success
       setShowAddPartModal(false);
       setAddPartForProjectId(null); // Reset project context
-      alert('Parte guardada exitosamente');
+      alert(L.partSaved);
 
       // Reload parts to get fresh data from server
       const partsData = await clientService.getParts(clientId, false);
@@ -584,19 +1066,19 @@ const ClientDetail = () => {
 
     // Validate required fields
     if (!editingPart.partNumber || !editingPart.partName) {
-      showToast('Número de parte y nombre son obligatorios', 'error');
+      showToast(L.partNumberNameRequired, 'error');
       return;
     }
 
     // Validate unitCost is required
     if (!editingPart.unitCost || editingPart.unitCost === '') {
-      showToast('Costo Unitario es obligatorio', 'error');
+      showToast(L.unitCostRequired, 'error');
       return;
     }
 
     const unitCost = parseFloat(editingPart.unitCost);
     if (isNaN(unitCost) || unitCost < 0) {
-      showToast('Costo Unitario debe ser un número mayor o igual a 0', 'error');
+      showToast(L.unitCostInvalid, 'error');
       return;
     }
 
@@ -627,17 +1109,17 @@ const ClientDetail = () => {
         p.id === editingPart.id ? updatedPartData : p
       ));
 
-      showToast('Parte actualizada exitosamente', 'success');
+      showToast(L.partUpdated, 'success');
       handleCancelEditPart();
     } catch (error) {
       console.error('Error updating part:', error);
-      showToast('Error al actualizar la parte', 'error');
+      showToast(L.errorUpdatingPart, 'error');
     }
   };
 
   const handleAddCustomField = () => {
     if (!newCustomFieldKey.trim()) {
-      showToast('Ingrese el nombre del campo', 'error');
+      showToast(L.enterFieldName, 'error');
       return;
     }
 
@@ -724,9 +1206,9 @@ const ClientDetail = () => {
 
       // Reload projects list
       loadProjects();
-      alert('Proyecto actualizado exitosamente');
+      alert(L.projectUpdated);
     } catch (err) {
-      alert('Error al actualizar proyecto: ' + err.message);
+      alert(`${L.errorUpdatingProject}: ${err.message}`);
       console.error('Error updating project:', err);
     }
   };
@@ -758,7 +1240,7 @@ const ClientDetail = () => {
       // Reload projects list
       loadProjects();
     } catch (err) {
-      alert('Error al crear proyecto: ' + err.message);
+      alert(`${L.errorCreatingProject}: ${err.message}`);
       console.error('Error creating project:', err);
     }
   };
@@ -781,7 +1263,7 @@ const ClientDetail = () => {
         await clientService.deleteClient(clientId);
         navigate('/clients');
       } catch (err) {
-        alert('Error al eliminar cliente: ' + err.message);
+        alert(`${L.errorDeletingClient}: ${err.message}`);
       }
     }
   };
@@ -890,13 +1372,13 @@ const ClientDetail = () => {
       XLSX.writeFile(wb, 'Plantilla_Partes.xlsx');
     } catch (error) {
       console.error('Error generating template:', error);
-      showToast('Error al generar plantilla', 'error');
+      showToast(L.errorGeneratingTemplate, 'error');
     }
   };
 
   const handleExportPartsExcel = () => {
     if (projectParts.length === 0) {
-      alert('No hay partes para exportar');
+      alert(L.noPartsToExport);
       return;
     }
 
@@ -1101,12 +1583,12 @@ const ClientDetail = () => {
         setProjectParts([...projectParts, ...importedParts]);
         alert(`Se importaron ${successCount} partes exitosamente${errors.length > 0 ? ` (${errors.length} filas con errores fueron omitidas)` : ''}`);
       } else if (errors.length > 0) {
-        alert('No se pudo importar ninguna parte debido a errores de validación');
+        alert(L.noPartsImported);
       } else {
-        alert('No se encontraron partes válidas en el archivo');
+        alert(L.noValidPartsFound);
       }
     } catch (err) {
-      alert('Error al importar archivo: ' + err.message);
+      alert(`${L.errorImportingFile}: ${err.message}`);
     } finally {
       setImportingParts(false);
       // Reset file input
@@ -1120,14 +1602,14 @@ const ClientDetail = () => {
 
   const handleAddContact = async () => {
     if (!newContact.name || !newContact.email) {
-      showToast('Nombre y email son obligatorios', 'error');
+      showToast(L.nameEmailRequired, 'error');
       return;
     }
 
     // Validación de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newContact.email)) {
-      showToast('Email inválido', 'error');
+      showToast(L.invalidEmail, 'error');
       return;
     }
 
@@ -1136,7 +1618,7 @@ const ClientDetail = () => {
       contact => contact.email.toLowerCase() === newContact.email.toLowerCase()
     );
     if (duplicateEmail) {
-      showToast('Ya existe un contacto con este email', 'warning');
+      showToast(L.contactExists, 'warning');
       return;
     }
 
@@ -1157,10 +1639,10 @@ const ClientDetail = () => {
         phone: ''
       });
 
-      showToast('Contacto agregado exitosamente', 'success');
+      showToast(L.contactAdded, 'success');
       loadClient(); // Reload to get fresh data
     } catch (err) {
-      showToast('Error al agregar contacto: ' + err.message, 'error');
+      showToast(`${L.errorAddingContact}: ${err.message}`, 'error');
     }
   };
 
@@ -1172,17 +1654,17 @@ const ClientDetail = () => {
       const contactToDelete = clientContacts[contactIndex];
 
       if (!contactToDelete || !contactToDelete.id) {
-        showToast('Error: No se encontró el ID del contacto', 'error');
+        showToast(L.contactIdNotFound, 'error');
         return;
       }
 
       // Delete contact using dedicated endpoint
       await clientService.deleteContact(clientId, contactToDelete.id);
 
-      showToast('Contacto eliminado exitosamente', 'success');
+      showToast(L.contactDeleted, 'success');
       loadClient(); // Reload to get fresh data
     } catch (err) {
-      showToast('Error al eliminar contacto: ' + err.message, 'error');
+      showToast(`${L.errorDeletingContact}: ${err.message}`, 'error');
     }
   };
 
@@ -1199,14 +1681,14 @@ const ClientDetail = () => {
 
   const handleUpdateContact = async () => {
     if (!editingContact.name || !editingContact.email) {
-      showToast('Nombre y email son obligatorios', 'error');
+      showToast(L.nameEmailRequired, 'error');
       return;
     }
 
     // Validación de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(editingContact.email)) {
-      showToast('Email inválido', 'error');
+      showToast(L.invalidEmail, 'error');
       return;
     }
 
@@ -1217,7 +1699,7 @@ const ClientDetail = () => {
         contact.email.toLowerCase() === editingContact.email.toLowerCase()
     );
     if (duplicateEmail) {
-      showToast('Ya existe un contacto con este email', 'warning');
+      showToast(L.contactExists, 'warning');
       return;
     }
 
@@ -1225,7 +1707,7 @@ const ClientDetail = () => {
       const contactToUpdate = clientContacts[editingContactIndex];
 
       if (!contactToUpdate || !contactToUpdate.id) {
-        showToast('Error: No se encontró el ID del contacto', 'error');
+        showToast(L.contactIdNotFound, 'error');
         return;
       }
 
@@ -1241,10 +1723,10 @@ const ClientDetail = () => {
       setEditingContactIndex(null);
       setEditingContact(null);
 
-      showToast('Contacto actualizado exitosamente', 'success');
+      showToast(L.contactUpdated, 'success');
       loadClient(); // Reload to get fresh data
     } catch (err) {
-      showToast('Error al actualizar contacto: ' + err.message, 'error');
+      showToast(`${L.errorUpdatingContact}: ${err.message}`, 'error');
     }
   };
 
@@ -1334,7 +1816,7 @@ const ClientDetail = () => {
 
   const handleExportContactsExcel = () => {
     if (clientContacts.length === 0) {
-      showToast('No hay contactos para exportar', 'warning');
+      showToast(L.noContactsToExport, 'warning');
       return;
     }
 
@@ -1450,12 +1932,12 @@ const ClientDetail = () => {
         showToast(`Se importaron ${successCount} contactos exitosamente${errors.length > 0 ? ` (${errors.length} filas con errores fueron omitidas)` : ''}`, 'success');
         loadClient(); // Reload to get fresh data
       } else if (errors.length > 0) {
-        showToast('No se pudo importar ningún contacto debido a errores de validación', 'error');
+        showToast(L.noContactsImported, 'error');
       } else {
-        showToast('No se encontraron contactos válidos en el archivo', 'warning');
+        showToast(L.noValidContactsFound, 'warning');
       }
     } catch (err) {
-      showToast('Error al importar archivo: ' + err.message, 'error');
+      showToast(`${L.errorImportingFile}: ${err.message}`, 'error');
     } finally {
       setImportingContacts(false);
       // Reset file input
@@ -1534,7 +2016,7 @@ const ClientDetail = () => {
     );
 
     if (flatParts.length === 0) {
-      alert('No hay partes para exportar');
+      alert(L.noPartsToExport);
       return;
     }
 
@@ -1869,7 +2351,7 @@ const ClientDetail = () => {
                 color: theme.text,
                 margin: 0
               }}>
-                Proyectos y Partes
+                {L.projectsAndParts}
               </h3>
               <button
                 onClick={() => setShowProjectForm(!showProjectForm)}
@@ -1891,7 +2373,7 @@ const ClientDetail = () => {
                 onMouseLeave={(e) => e.target.style.backgroundColor = theme.accent}
               >
                 <Plus size={16} />
-                {showProjectForm ? 'Cancelar' : 'Agregar Proyecto'}
+                {showProjectForm ? L.cancel : L.addProject}
               </button>
             </div>
 
@@ -1910,7 +2392,7 @@ const ClientDetail = () => {
                   color: theme.text,
                   marginBottom: '20px'
                 }}>
-                  Nuevo Proyecto
+                  {L.newProject}
                 </h4>
                 <form onSubmit={handleCreateProject}>
                   <div style={{
@@ -2198,7 +2680,7 @@ const ClientDetail = () => {
                         }}
                       >
                         <Plus size={18} />
-                        Agregar Parte
+                        {L.addPart}
                       </button>
                     </div>
 
@@ -2275,22 +2757,22 @@ const ClientDetail = () => {
                               }}>
                                 {part.weight && (
                                   <span>
-                                    <strong>Peso:</strong> {part.weight} kg
+                                    <strong>{L.weightLabel}:</strong> {part.weight} kg
                                   </span>
                                 )}
                                 {part.snpQuantity && (
                                   <span>
-                                    <strong>Cant. SNP:</strong> {part.snpQuantity}
+                                    <strong>{L.snpQtyLabel}:</strong> {part.snpQuantity}
                                   </span>
                                 )}
                                 {part.snpVolume && (
                                   <span>
-                                    <strong>Vol. SNP:</strong> {part.snpVolume} m³
+                                    <strong>{L.snpVolLabel}:</strong> {part.snpVolume} m³
                                   </span>
                                 )}
                                 {part.unitCost && (
                                   <span style={{ color: '#2E7D32', fontWeight: '600' }}>
-                                    <strong>Costo:</strong> ${parseFloat(part.unitCost).toFixed(2)} {part.currency || 'USD'}
+                                    <strong>{L.costLabel}:</strong> ${parseFloat(part.unitCost).toFixed(2)} {part.currency || 'USD'}
                                   </span>
                                 )}
                               </div>
@@ -2309,7 +2791,7 @@ const ClientDetail = () => {
                                   color: theme.accent,
                                   marginTop: '2px'
                                 }}>
-                                  Specs: {part.specifications}
+                                  {L.specsLabel}: {part.specifications}
                                 </div>
                               )}
                             </div>
@@ -2355,7 +2837,7 @@ const ClientDetail = () => {
                         cursor: 'pointer'
                       }}
                     >
-                      Cancelar
+                      {L.cancel}
                     </button>
                     <button
                       type="submit"
@@ -2370,7 +2852,7 @@ const ClientDetail = () => {
                         cursor: 'pointer'
                       }}
                     >
-                      Crear Proyecto
+                      {L.save}
                     </button>
                   </div>
                 </form>
@@ -2383,7 +2865,7 @@ const ClientDetail = () => {
                 textAlign: 'center',
                 color: theme.textMuted
               }}>
-                Cargando proyectos...
+                {L.loadingProjects}
               </div>
             ) : projects.length === 0 ? (
               <div style={{
@@ -2392,9 +2874,9 @@ const ClientDetail = () => {
                 color: theme.textMuted
               }}>
                 <Briefcase size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                <p>No hay proyectos para este cliente</p>
+                <p>{L.noProjects}</p>
                 <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                  Los proyectos se agregan al crear o editar el cliente
+                  {L.addProjectsHint}
                 </p>
               </div>
             ) : (
@@ -2509,7 +2991,7 @@ const ClientDetail = () => {
                         onMouseLeave={(e) => e.target.style.backgroundColor = editingProject?.id === project.id ? '#ef4444' : theme.accent}
                       >
                         <Edit size={14} />
-                        {editingProject?.id === project.id ? 'Cancelar Edición' : 'Editar'}
+                        {editingProject?.id === project.id ? L.cancelEdit : L.edit}
                       </button>
                     </div>
 
@@ -2619,7 +3101,7 @@ const ClientDetail = () => {
                                         backgroundColor: theme.bg,
                                         borderRadius: '4px'
                                       }}>
-                                        <strong>Specs:</strong> {part.specifications}
+                                        <strong>{L.specsLabel}:</strong> {part.specifications}
                                       </div>
                                     )}
                                   </div>
@@ -2656,7 +3138,7 @@ const ClientDetail = () => {
                             color: '#92400e',
                             marginBottom: '16px'
                           }}>
-                            Editar Información del Proyecto
+                            {L.editProjectInfo}
                           </h5>
                           <div style={{
                             display: 'grid',
@@ -2818,7 +3300,7 @@ const ClientDetail = () => {
                               color: '#92400e',
                               margin: 0
                             }}>
-                              Editar Partes del Proyecto ({projectParts.length})
+                              {L.editProjectParts} ({projectParts.length})
                             </h5>
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button
@@ -3017,7 +3499,7 @@ const ClientDetail = () => {
                             }}
                           >
                             <Plus size={16} />
-                            Agregar Nueva Parte
+                            {L.addNewPart}
                           </button>
                         </div>
 
@@ -3056,7 +3538,7 @@ const ClientDetail = () => {
                               cursor: 'pointer'
                             }}
                           >
-                            Guardar Cambios
+                            {L.saveChanges}
                           </button>
                         </div>
                       </form>
@@ -3083,7 +3565,7 @@ const ClientDetail = () => {
                 color: theme.text,
                 margin: 0
               }}>
-                Contactos del Cliente ({clientContacts.length})
+                {L.clientContacts} ({clientContacts.length})
               </h3>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -3170,7 +3652,7 @@ const ClientDetail = () => {
                 marginBottom: '16px',
                 margin: 0
               }}>
-                 Agregar Nuevo Contacto
+                 {L.addNewContact}
               </h4>
               <div style={{
                 display: 'grid',
@@ -3186,7 +3668,7 @@ const ClientDetail = () => {
                     color: theme.text,
                     marginBottom: '4px'
                   }}>
-                    Nombre *
+                    {L.contactName} *
                   </label>
                   <input
                     type="text"
@@ -3200,7 +3682,7 @@ const ClientDetail = () => {
                       fontSize: '13px',
                       outline: 'none'
                     }}
-                    placeholder="Ej: Juan Pérez"
+                    placeholder="John Doe"
                   />
                 </div>
                 <div>
@@ -3211,7 +3693,7 @@ const ClientDetail = () => {
                     color: theme.text,
                     marginBottom: '4px'
                   }}>
-                    Título/Cargo
+                    {L.titlePosition}
                   </label>
                   <input
                     type="text"
@@ -3225,7 +3707,7 @@ const ClientDetail = () => {
                       fontSize: '13px',
                       outline: 'none'
                     }}
-                    placeholder="Ej: Quality Manager"
+                    placeholder="Quality Manager"
                   />
                 </div>
                 <div>
@@ -3236,7 +3718,7 @@ const ClientDetail = () => {
                     color: theme.text,
                     marginBottom: '4px'
                   }}>
-                    Email *
+                    {L.email} *
                   </label>
                   <input
                     type="email"
@@ -3250,7 +3732,7 @@ const ClientDetail = () => {
                       fontSize: '13px',
                       outline: 'none'
                     }}
-                    placeholder="Ej: juan.perez@example.com"
+                    placeholder="john.doe@example.com"
                   />
                 </div>
                 <div>
@@ -3261,7 +3743,7 @@ const ClientDetail = () => {
                     color: theme.text,
                     marginBottom: '4px'
                   }}>
-                    Teléfono
+                    {L.phone}
                   </label>
                   <input
                     type="text"
@@ -3275,7 +3757,7 @@ const ClientDetail = () => {
                       fontSize: '13px',
                       outline: 'none'
                     }}
-                    placeholder="Ej: +52 442 123 4567"
+                    placeholder="+1 555 123 4567"
                   />
                 </div>
               </div>
@@ -3298,7 +3780,7 @@ const ClientDetail = () => {
                 }}
               >
                 <Plus size={16} />
-                Agregar Contacto
+                {L.addContact}
               </button>
             </div>
 
@@ -3321,7 +3803,7 @@ const ClientDetail = () => {
                         marginBottom: '16px',
                         margin: 0
                       }}>
-                         Editar Contacto
+                         {L.editContact}
                       </h4>
                       <div style={{
                         display: 'grid',
@@ -3337,7 +3819,7 @@ const ClientDetail = () => {
                             color: theme.text,
                             marginBottom: '4px'
                           }}>
-                            Nombre *
+                            {L.contactName} *
                           </label>
                           <input
                             type="text"
@@ -3361,7 +3843,7 @@ const ClientDetail = () => {
                             color: theme.text,
                             marginBottom: '4px'
                           }}>
-                            Título/Cargo
+                            {L.titlePosition}
                           </label>
                           <input
                             type="text"
@@ -3385,7 +3867,7 @@ const ClientDetail = () => {
                             color: theme.text,
                             marginBottom: '4px'
                           }}>
-                            Email *
+                            {L.email} *
                           </label>
                           <input
                             type="email"
@@ -3409,7 +3891,7 @@ const ClientDetail = () => {
                             color: theme.text,
                             marginBottom: '4px'
                           }}>
-                            Teléfono
+                            {L.phone}
                           </label>
                           <input
                             type="text"
@@ -3446,7 +3928,7 @@ const ClientDetail = () => {
                           }}
                         >
                           <Save size={16} />
-                          Guardar
+                          {L.save}
                         </button>
                         <button
                           onClick={handleCancelEditContact}
@@ -3467,7 +3949,7 @@ const ClientDetail = () => {
                           }}
                         >
                           <X size={16} />
-                          Cancelar
+                          {L.cancel}
                         </button>
                       </div>
                     </div>
@@ -3552,7 +4034,7 @@ const ClientDetail = () => {
                           }}
                         >
                           <Edit2 size={14} />
-                          Editar
+                          {L.edit}
                         </button>
                         <button
                           onClick={() => handleRemoveContact(index)}
@@ -3571,7 +4053,7 @@ const ClientDetail = () => {
                           }}
                         >
                           <Trash2 size={14} />
-                          Eliminar
+                          {L.delete}
                         </button>
                       </div>
                     </div>
@@ -3581,9 +4063,9 @@ const ClientDetail = () => {
             ) : (
               <div style={{ textAlign: 'center', color: theme.textMuted, padding: '48px' }}>
                 <Users size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                <p>No hay contactos disponibles</p>
+                <p>{L.noContacts}</p>
                 <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                  Agregue contactos manualmente o importe desde Excel
+                  {L.addContactsHint}
                 </p>
               </div>
             )}
@@ -3659,7 +4141,7 @@ const ClientDetail = () => {
                       })));
                       showToast(`Parte ${updatedPart.active ? 'activada' : 'desactivada'}`, 'success');
                     } catch (err) {
-                      showToast('Error al cambiar estado: ' + err.message, 'error');
+                      showToast(`${L.errorStatusChange}: ${err.message}`, 'error');
                     }
                   }}
                   style={{
@@ -3815,13 +4297,13 @@ const ClientDetail = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-                    Bill of Materials - BOM ({totalParts} partes)
+                    Bill of Materials - BOM ({totalParts} {language === 'en' ? 'parts' : 'partes'})
                   </h3>
                   <p style={{ margin: 0, fontSize: '14px', color: theme.textMuted }}>
-                    {activeParts} activas, {inactiveParts} inactivas
+                    {activeParts} {L.active}, {inactiveParts} {L.inactive}
                   </p>
                   <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: theme.textDim, fontStyle: 'italic' }}>
-                     Listado plano •  Arrastra los encabezados para reordenar columnas
+                     {language === 'en' ? 'Flat list' : 'Listado plano'} • {L.dragColumns}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -3839,10 +4321,10 @@ const ClientDetail = () => {
                       alignItems: 'center',
                       gap: '6px'
                     }}
-                    title="Exportar BOM Global a Excel"
+                    title={L.exportParts}
                   >
                     <Download size={14} />
-                    Exportar Excel
+                    {L.exportParts}
                   </button>
                   <button
                     onClick={resetColumnOrder}
@@ -3858,10 +4340,10 @@ const ClientDetail = () => {
                       alignItems: 'center',
                       gap: '6px'
                     }}
-                    title="Restaurar orden por defecto"
+                    title={L.restore}
                   >
                     <RotateCcw size={14} />
-                    Restaurar Orden
+                    {L.restore}
                   </button>
                 </div>
               </div>
@@ -4003,9 +4485,9 @@ const ClientDetail = () => {
                                         ...pg,
                                         parts: (pg?.parts || []).filter(p => p.id !== part.id)
                                       })).filter(pg => (pg?.parts || []).length > 0));
-                                      showToast('Parte eliminada', 'success');
+                                      showToast(L.partDeleted, 'success');
                                     } catch (err) {
-                                      showToast('Error al eliminar: ' + err.message, 'error');
+                                      showToast(`${L.errorDeletingPart}: ${err.message}`, 'error');
                                     }
                                   }
                                 }}
@@ -4033,7 +4515,7 @@ const ClientDetail = () => {
               <div style={{ textAlign: 'center', color: theme.textMuted, padding: '48px', backgroundColor: theme.bgCard, borderRadius: '8px', border: `1px solid ${theme.border}` }}>
                 <Package size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
                 <p style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>
-                  No hay partes registradas
+                  {L.noParts}
                 </p>
                 <p style={{ fontSize: '14px', color: theme.textDim }}>
                   Agregue partes a los proyectos para construir el Bill of Materials de este cliente
@@ -4056,7 +4538,7 @@ const ClientDetail = () => {
               marginBottom: '24px'
             }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
-                Documentos del Cliente ({documents.length})
+                {L.clientDocuments} ({documents.length})
               </h3>
               <div>
                 <button
@@ -4088,7 +4570,7 @@ const ClientDetail = () => {
                   }}
                 >
                   <Upload size={16} />
-                  {uploadingDocument ? 'Subiendo...' : 'Subir Documento'}
+                  {uploadingDocument ? L.uploading : L.uploadDocument}
                 </button>
                 <input
                   ref={documentsFileInputRef}
@@ -4111,7 +4593,7 @@ const ClientDetail = () => {
               }}>
                 <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.3, color: theme.textDim }} />
                 <p style={{ color: theme.textMuted, margin: 0, marginBottom: '4px' }}>
-                  No hay documentos disponibles
+                  {L.noDocuments}
                 </p>
                 <p style={{ fontSize: '12px', color: theme.textDim, margin: 0 }}>
                   Suba documentos relacionados al cliente usando el botón de arriba
@@ -4198,11 +4680,11 @@ const ClientDetail = () => {
                       color: theme.textMuted
                     }}>
                       <div style={{ marginBottom: '4px' }}>
-                        <strong>Subido:</strong> {new Date(doc.uploadedAt).toLocaleString('es-MX')}
+                        <strong>{L.uploadedLabel}:</strong> {new Date(doc.uploadedAt).toLocaleString(language === 'en' ? 'en-US' : 'es-MX')}
                       </div>
                       {doc.uploadedBy && (
                         <div>
-                          <strong>Por:</strong> {doc.uploadedBy}
+                          <strong>{L.byLabel}:</strong> {doc.uploadedBy}
                         </div>
                       )}
                     </div>
@@ -4402,7 +4884,7 @@ const ClientDetail = () => {
                     color: theme.textMuted,
                     marginBottom: '4px'
                   }}>
-                    Categoría
+                    {L.timelineCategory}
                   </label>
                   <select
                     value={timelineFilters.eventCategory}
@@ -4416,12 +4898,12 @@ const ClientDetail = () => {
                       backgroundColor: theme.bgCard
                     }}
                   >
-                    <option value="all">Todas</option>
-                    <option value="client">Cliente</option>
-                    <option value="project">Proyectos</option>
-                    <option value="contact">Contactos</option>
-                    <option value="document">Documentos</option>
-                    <option value="part">Partes</option>
+                    <option value="all">{L.allCategories}</option>
+                    <option value="client">{L.categoryClient}</option>
+                    <option value="project">{L.timelineProjects}</option>
+                    <option value="contact">{L.timelineContacts}</option>
+                    <option value="document">{L.timelineDocuments}</option>
+                    <option value="part">{L.categoryPart}</option>
                   </select>
                 </div>
 
@@ -4434,7 +4916,7 @@ const ClientDetail = () => {
                     color: theme.textMuted,
                     marginBottom: '4px'
                   }}>
-                    Tipo de Evento
+                    {L.eventType}
                   </label>
                   <select
                     value={timelineFilters.eventType}
@@ -4448,10 +4930,10 @@ const ClientDetail = () => {
                       backgroundColor: theme.bgCard
                     }}
                   >
-                    <option value="all">Todos</option>
-                    <option value="created">Creado</option>
-                    <option value="updated">Actualizado</option>
-                    <option value="deleted">Eliminado</option>
+                    <option value="all">{L.allTypes}</option>
+                    <option value="created">{L.typeCreated}</option>
+                    <option value="updated">{L.typeUpdated}</option>
+                    <option value="deleted">{L.typeDeleted}</option>
                   </select>
                 </div>
 
@@ -4464,7 +4946,7 @@ const ClientDetail = () => {
                     color: theme.textMuted,
                     marginBottom: '4px'
                   }}>
-                    Ordenar por
+                    {L.sortBy}
                   </label>
                   <select
                     value={timelineFilters.sortOrder}
@@ -4478,8 +4960,8 @@ const ClientDetail = () => {
                       backgroundColor: theme.bgCard
                     }}
                   >
-                    <option value="newest">Más reciente</option>
-                    <option value="oldest">Más antiguo</option>
+                    <option value="newest">{L.sortNewest}</option>
+                    <option value="oldest">{L.sortOldest}</option>
                   </select>
                 </div>
               </div>
@@ -4504,7 +4986,7 @@ const ClientDetail = () => {
                   }}
                 >
                   <RefreshCw size={16} />
-                  {loadingTimeline ? 'Cargando...' : 'Aplicar Filtros'}
+                  {loadingTimeline ? L.loading : L.applyFilters}
                 </button>
                 <button
                   onClick={clearTimelineFilters}
@@ -4537,7 +5019,7 @@ const ClientDetail = () => {
                 color: theme.textMuted
               }}>
                 <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
-                <p>Cargando eventos...</p>
+                <p>{L.loadingEvents}</p>
               </div>
             ) : timeline.length === 0 ? (
               <div style={{
@@ -4549,10 +5031,10 @@ const ClientDetail = () => {
               }}>
                 <Clock size={48} style={{ margin: '0 auto 16px', opacity: 0.3, color: theme.textDim }} />
                 <p style={{ color: theme.textMuted, margin: 0, marginBottom: '4px' }}>
-                  No hay eventos en el timeline
+                  {L.noTimelineEvents}
                 </p>
                 <p style={{ fontSize: '12px', color: theme.textDim, margin: 0 }}>
-                  Los eventos aparecerán aquí cuando se realicen cambios
+                  {L.timelineEventsHint}
                 </p>
               </div>
             ) : (
@@ -4638,8 +5120,8 @@ const ClientDetail = () => {
                                   color: eventColor,
                                   textTransform: 'capitalize'
                                 }}>
-                                  {event.eventType === 'created' ? 'Creado' :
-                                   event.eventType === 'updated' ? 'Actualizado' : 'Eliminado'}
+                                  {event.eventType === 'created' ? L.typeCreated :
+                                   event.eventType === 'updated' ? L.typeUpdated : L.typeDeleted}
                                 </span>
                                 <span style={{
                                   fontSize: '11px',
@@ -4648,11 +5130,11 @@ const ClientDetail = () => {
                                   backgroundColor: theme.bg,
                                   borderRadius: '12px'
                                 }}>
-                                  {event.eventCategory === 'client' ? 'Cliente' :
-                                   event.eventCategory === 'project' ? 'Proyecto' :
-                                   event.eventCategory === 'contact' ? 'Contacto' :
-                                   event.eventCategory === 'document' ? 'Documento' :
-                                   event.eventCategory === 'part' ? 'Parte' : event.eventCategory}
+                                  {event.eventCategory === 'client' ? L.categoryClient :
+                                   event.eventCategory === 'project' ? L.categoryProject :
+                                   event.eventCategory === 'contact' ? L.categoryContact :
+                                   event.eventCategory === 'document' ? L.categoryDocument :
+                                   event.eventCategory === 'part' ? L.categoryPart : event.eventCategory}
                                 </span>
                               </div>
                               <p style={{
@@ -4759,18 +5241,18 @@ const ClientDetail = () => {
             cursor: 'pointer'
           }}
         >
-          Volver a Clientes
+          {L.backToClients}
         </button>
       </div>
     );
   }
 
   const tabs = [
-    { id: 'profile', label: 'Perfil', icon: User },
-    { id: 'projects', label: 'Proyectos', icon: Briefcase },
-    { id: 'parts', label: 'BOM', icon: Package },
-    { id: 'contacts', label: 'Contactos', icon: Users },
-    { id: 'documents', label: 'Documentos', icon: FileText },
+    { id: 'profile', label: L.tabProfile, icon: User },
+    { id: 'projects', label: L.tabProjects, icon: Briefcase },
+    { id: 'parts', label: L.tabBom, icon: Package },
+    { id: 'contacts', label: L.tabContacts, icon: Users },
+    { id: 'documents', label: L.tabDocuments, icon: FileText },
     { id: 'timeline', label: 'Timeline', icon: Clock }
   ];
 
@@ -4828,6 +5310,9 @@ const ClientDetail = () => {
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: theme.bgPanel, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+                {language === 'es' ? 'EN' : 'ES'}
+              </button>
               <button
                 onClick={handleBackToDashboard}
                 style={{
@@ -4981,7 +5466,7 @@ const ClientDetail = () => {
             overflow: 'auto'
           }}>
             <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600' }}>
-              Subir Documento
+              {L.uploadDocument}
             </h2>
 
             {/* File Info */}
@@ -5016,13 +5501,13 @@ const ClientDetail = () => {
                 color: theme.text,
                 marginBottom: '6px'
               }}>
-                Título del Documento *
+                {L.documentTitleLabel} *
               </label>
               <input
                 type="text"
                 value={documentToUpload.title}
                 onChange={(e) => setDocumentToUpload({ ...documentToUpload, title: e.target.value })}
-                placeholder="Ej: Especificaciones técnicas del producto"
+                placeholder="Product technical specifications"
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -5090,7 +5575,7 @@ const ClientDetail = () => {
                   opacity: uploadingDocument ? 0.5 : 1
                 }}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 onClick={handleConfirmUpload}
@@ -5106,7 +5591,7 @@ const ClientDetail = () => {
                   cursor: uploadingDocument || !documentToUpload.title.trim() ? 'not-allowed' : 'pointer'
                 }}
               >
-                {uploadingDocument ? 'Subiendo...' : 'Subir Documento'}
+                {uploadingDocument ? L.uploading : L.uploadDocument}
               </button>
             </div>
           </div>
@@ -5137,7 +5622,7 @@ const ClientDetail = () => {
             overflow: 'auto'
           }}>
             <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600' }}>
-              Agregar Nueva Parte
+              {L.addNewPart}
             </h2>
 
             <div style={{
@@ -5148,14 +5633,14 @@ const ClientDetail = () => {
             }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Número de Parte *
+                  {L.partNumber} *
                 </label>
                 <input
                   type="text"
                   value={newPart.partNumber}
                   onChange={(e) => setNewPart({ ...newPart, partNumber: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px' }}
-                  placeholder="Ej: FAU-IP-2024-001"
+                  placeholder="FAU-IP-2024-001"
                 />
               </div>
               <div>
@@ -5174,55 +5659,55 @@ const ClientDetail = () => {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Proveedor
+                  {L.supplier}
                 </label>
                 <input
                   type="text"
                   value={newPart.supplier || ''}
                   onChange={(e) => setNewPart({ ...newPart, supplier: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px' }}
-                  placeholder="Nombre del proveedor"
+                  placeholder={L.supplierPlaceholder}
                 />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Part Number Cliente
+                  {L.clientPartNumberLabel}
                 </label>
                 <input
                   type="text"
                   value={newPart.clientPartNumber}
                   onChange={(e) => setNewPart({ ...newPart, clientPartNumber: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px' }}
-                  placeholder="Ej: CLI-FAU-001"
+                  placeholder="CLI-FAU-001"
                 />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Nombre de Parte *
+                  {L.partName} *
                 </label>
                 <input
                   type="text"
                   value={newPart.partName}
                   onChange={(e) => setNewPart({ ...newPart, partName: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px' }}
-                  placeholder="Ej: Panel Assembly"
+                  placeholder="Panel Assembly"
                 />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Revisión
+                  {L.revision}
                 </label>
                 <input
                   type="text"
                   value={newPart.revision}
                   onChange={(e) => setNewPart({ ...newPart, revision: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px' }}
-                  placeholder="Ej: Rev C"
+                  placeholder="Rev C"
                 />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Costo Unitario *
+                  {L.unitCost} *
                 </label>
                 <input
                   type="number"
@@ -5230,12 +5715,12 @@ const ClientDetail = () => {
                   value={newPart.unitCost}
                   onChange={(e) => setNewPart({ ...newPart, unitCost: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px' }}
-                  placeholder="Ej: 25.50"
+                  placeholder="25.50"
                 />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Moneda
+                  {L.currency}
                 </label>
                 <select
                   value={newPart.currency}
@@ -5250,7 +5735,7 @@ const ClientDetail = () => {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Peso (kg)
+                  {L.weightKg}
                 </label>
                 <input
                   type="number"
@@ -5263,7 +5748,7 @@ const ClientDetail = () => {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Cantidad SNP
+                  {L.snpQuantity}
                 </label>
                 <input
                   type="number"
@@ -5275,7 +5760,7 @@ const ClientDetail = () => {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                  Volumen SNP (m³)
+                  {L.snpVolume}
                 </label>
                 <input
                   type="number"
@@ -5290,27 +5775,27 @@ const ClientDetail = () => {
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                Descripción
+                {L.description}
               </label>
               <textarea
                 value={newPart.description}
                 onChange={(e) => setNewPart({ ...newPart, description: e.target.value })}
                 rows={2}
                 style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px', resize: 'vertical' }}
-                placeholder="Descripción de la parte..."
+                placeholder=""
               />
             </div>
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
-                Especificaciones
+                {L.specifications}
               </label>
               <textarea
                 value={newPart.specifications}
                 onChange={(e) => setNewPart({ ...newPart, specifications: e.target.value })}
                 rows={2}
                 style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px', resize: 'vertical' }}
-                placeholder="Especificaciones técnicas..."
+                placeholder=""
               />
             </div>
 
@@ -5331,7 +5816,7 @@ const ClientDetail = () => {
                 alignItems: 'center',
                 gap: '6px'
               }}>
-                Campos Personalizados ({newPartCustomFields.length} configurados)
+                {L.customFields} ({newPartCustomFields.length} {L.configuredFields})
               </h3>
 
               {/* Configured Custom Fields */}
@@ -5372,7 +5857,7 @@ const ClientDetail = () => {
                             backgroundColor: theme.bgCard
                           }}
                         >
-                          <option value="">-- Seleccionar --</option>
+                          <option value="">{L.selectOption}</option>
                           {field.options.map((opt, idx) => (
                             <option key={idx} value={opt}>{opt}</option>
                           ))}
@@ -5394,9 +5879,9 @@ const ClientDetail = () => {
                             backgroundColor: theme.bgCard
                           }}
                         >
-                          <option value="">-- Seleccionar --</option>
-                          <option value="true">Si</option>
-                          <option value="false">No</option>
+                          <option value="">{L.selectOption}</option>
+                          <option value="true">{L.yes}</option>
+                          <option value="false">{L.no}</option>
                         </select>
                       ) : field.fieldType === 'date' ? (
                         <input
@@ -5479,13 +5964,13 @@ const ClientDetail = () => {
                 border: '1px dashed #86efac'
               }}>
                 <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '500', color: '#166534' }}>
-                  Agregar campo adicional (no configurado)
+                  {L.addAdditionalField}
                 </p>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                   <div style={{ flex: 1 }}>
                     <input
                       type="text"
-                      placeholder="Nombre del campo"
+                      placeholder={L.fieldName}
                       value={newCustomFieldKey}
                       onChange={(e) => setNewCustomFieldKey(e.target.value)}
                       style={{
@@ -5500,7 +5985,7 @@ const ClientDetail = () => {
                   <div style={{ flex: 1 }}>
                     <input
                       type="text"
-                      placeholder="Valor"
+                      placeholder={L.fieldValue}
                       value={newCustomFieldValue}
                       onChange={(e) => setNewCustomFieldValue(e.target.value)}
                       style={{
@@ -5539,7 +6024,7 @@ const ClientDetail = () => {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    + Agregar
+                    {L.addField}
                   </button>
                 </div>
               </div>
@@ -5568,7 +6053,7 @@ const ClientDetail = () => {
                   cursor: 'pointer'
                 }}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 type="button"
@@ -5587,7 +6072,7 @@ const ClientDetail = () => {
                   cursor: 'pointer'
                 }}
               >
-                Agregar Parte
+                {L.addPart}
               </button>
             </div>
           </div>
@@ -5618,7 +6103,7 @@ const ClientDetail = () => {
             overflow: 'auto'
           }}>
             <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '600' }}>
-              Editar Parte
+              {L.editPart}
             </h2>
 
             {/* Standard Fields */}
@@ -5637,7 +6122,7 @@ const ClientDetail = () => {
                   color: theme.text,
                   marginBottom: '6px'
                 }}>
-                  Número de Parte *
+                  {L.partNumber} *
                 </label>
                 <input
                   type="text"
@@ -5662,7 +6147,7 @@ const ClientDetail = () => {
                   color: theme.text,
                   marginBottom: '6px'
                 }}>
-                  Número de Parte del Cliente
+                  {L.clientPartNumberLabel}
                 </label>
                 <input
                   type="text"
@@ -5687,7 +6172,7 @@ const ClientDetail = () => {
                   color: theme.text,
                   marginBottom: '6px'
                 }}>
-                  Nombre de Parte *
+                  {L.partName} *
                 </label>
                 <input
                   type="text"
@@ -5712,7 +6197,7 @@ const ClientDetail = () => {
                   color: theme.text,
                   marginBottom: '6px'
                 }}>
-                  Revisión
+                  {L.revision}
                 </label>
                 <input
                   type="text"
@@ -5737,7 +6222,7 @@ const ClientDetail = () => {
                   color: theme.text,
                   marginBottom: '6px'
                 }}>
-                  Costo Unitario *
+                  {L.unitCost} *
                 </label>
                 <input
                   type="number"
@@ -5763,7 +6248,7 @@ const ClientDetail = () => {
                   color: theme.text,
                   marginBottom: '6px'
                 }}>
-                  Moneda
+                  {L.currency}
                 </label>
                 <select
                   value={editingPart.currency || 'USD'}
@@ -5792,7 +6277,7 @@ const ClientDetail = () => {
                 color: theme.text,
                 marginBottom: '6px'
               }}>
-                Descripción
+                {L.description}
               </label>
               <textarea
                 value={editingPart.description || ''}
@@ -5818,7 +6303,7 @@ const ClientDetail = () => {
                 color: theme.text,
                 marginBottom: '6px'
               }}>
-                Parte Padre (Subcomponente de)
+                {L.parentPart}
               </label>
               <select
                 value={editingPart.parentPartId || ''}
@@ -5832,7 +6317,7 @@ const ClientDetail = () => {
                   backgroundColor: theme.bgCard
                 }}
               >
-                <option value="">-- Ninguna (Parte Principal) --</option>
+                <option value="">{L.noParent}</option>
                 {clientParts.flatMap(group => group.parts || [])
                   .filter(p =>
                     p.active !== false &&
@@ -5854,7 +6339,7 @@ const ClientDetail = () => {
               </select>
               {editingPart.parentPartId && (
                 <p style={{ fontSize: '12px', color: theme.textMuted, marginTop: '4px' }}>
-                  Esta parte es un subcomponente de otra parte principal
+                  {L.isSubcomponent}
                 </p>
               )}
             </div>
@@ -5876,7 +6361,7 @@ const ClientDetail = () => {
                 alignItems: 'center',
                 gap: '6px'
               }}>
-                Campos Personalizados
+                {L.customFields}
               </h3>
 
               {/* Existing Custom Fields */}
@@ -5892,7 +6377,7 @@ const ClientDetail = () => {
                     }}>
                       <input
                         type="text"
-                        placeholder="Nombre del campo"
+                        placeholder={L.fieldName}
                         value={field.key}
                         onChange={(e) => handleUpdateCustomField(field.id, 'key', e.target.value)}
                         style={{
@@ -5904,7 +6389,7 @@ const ClientDetail = () => {
                       />
                       <input
                         type="text"
-                        placeholder="Valor"
+                        placeholder={L.fieldValue}
                         value={field.value}
                         onChange={(e) => handleUpdateCustomField(field.id, 'value', e.target.value)}
                         style={{
@@ -5949,7 +6434,7 @@ const ClientDetail = () => {
                     color: theme.text,
                     marginBottom: '4px'
                   }}>
-                    Nombre del Campo
+                    {L.fieldName}
                   </label>
                   <input
                     type="text"
@@ -5974,11 +6459,11 @@ const ClientDetail = () => {
                     color: theme.text,
                     marginBottom: '4px'
                   }}>
-                    Valor
+                    {L.fieldValue}
                   </label>
                   <input
                     type="text"
-                    placeholder="Ej: ECR-2024-001"
+                    placeholder="ECR-2024-001"
                     value={newCustomFieldValue}
                     onChange={(e) => setNewCustomFieldValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddCustomField()}
@@ -6006,7 +6491,7 @@ const ClientDetail = () => {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  + Agregar
+                  {L.addField}
                 </button>
               </div>
             </div>
@@ -6030,7 +6515,7 @@ const ClientDetail = () => {
                   cursor: 'pointer'
                 }}
               >
-                Cancelar
+                {L.cancel}
               </button>
               <button
                 onClick={handleUpdatePart}
@@ -6046,7 +6531,7 @@ const ClientDetail = () => {
                   cursor: !editingPart.partNumber || !editingPart.partName ? 'not-allowed' : 'pointer'
                 }}
               >
-                Guardar Cambios
+                {L.saveChanges}
               </button>
             </div>
           </div>

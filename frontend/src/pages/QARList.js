@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const QARList = () => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
   const API_URL = 'http://localhost:5000';
 
@@ -216,8 +218,11 @@ const QARList = () => {
           Quality Alert Reports (QAR)
         </h1>
         <div style={styles.headerButtons}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <button style={{ ...styles.homeButton, backgroundColor: t.success }} onClick={() => navigate('/qar-create')}>
-            + Nuevo QAR
+            {language === 'es' ? '+ Nuevo QAR' : '+ New QAR'}
           </button>
           <button style={styles.homeButton} onClick={() => navigate('/defect-capture')}>
             Inspección

@@ -4,6 +4,7 @@ import { canUserEdit, isReadOnly } from '../utils/permissions';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import GanttChart from '../components/8D/GanttChart';
 import UserFormModal from '../components/UserFormModal';
 import WorkloadDashboard from '../components/WorkloadDashboard';
@@ -2596,6 +2597,7 @@ const WorkloadManager = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // Helper to update URL params without losing other params
   const updateUrlParam = useCallback((key, value) => {
@@ -3966,6 +3968,9 @@ const WorkloadManager = () => {
               </option>
             ))}
           </select>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <ThemeSelector />
           <span style={{ fontSize: '14px', color: t.textMuted }}>
             {user?.firstName} {user?.lastName}
