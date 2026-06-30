@@ -3988,6 +3988,7 @@ const DefectHospital = () => {
 
             // Cascada de fallbacks para determinar última persona
             const scrappedBy = clean(defect.scrappedByName || defect.scrapped_by_name);
+            const quarantinedBy = clean(defect.quarantinedByName || defect.quarantined_by_name);
             const releasedBy = clean(defect.releasedByName || defect.released_by_name);
             const repairedBy = clean(defect.repairedByName || defect.repaired_by_name || defect.repairingByName || defect.repairing_by_name);
             const capturedBy = clean(defect.capturedByName || defect.captured_by_name);
@@ -3996,7 +3997,7 @@ const DefectHospital = () => {
               return scrappedBy || releasedBy || repairedBy || capturedBy || '-';
             }
             if (status === 'QUARANTINE') {
-              return scrappedBy || releasedBy || repairedBy || capturedBy || '-';
+              return quarantinedBy || repairedBy || capturedBy || '-';
             }
             if (status === 'RELEASED' || status === 'CLOSED') {
               return releasedBy || repairedBy || capturedBy || '-';

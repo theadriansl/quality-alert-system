@@ -1949,10 +1949,12 @@ router.post('/entries/:id/quarantine', authenticateToken, async (req, res) => {
     const result = await query(`
       UPDATE defect_entries_v2 SET
         repair_status = 'QUARANTINE',
+        quarantined_by = $2,
+        quarantined_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
-    `, [id]);
+    `, [id, req.user.id]);
 
     // Log event
     await query(`
@@ -2548,9 +2550,11 @@ router.post('/handoff', authenticateToken, async (req, res) => {
           SET repair_status = $1,
               current_location_id = $2,
               mrb_campaign_id = $3,
+              quarantined_at = CURRENT_TIMESTAMP,
+              quarantined_by = $5,
               updated_at = CURRENT_TIMESTAMP
           WHERE id = $4
-        `, [newStatus, mrbLocationId || null, mrbCampaignId || null, defectId]);
+        `, [newStatus, mrbLocationId || null, mrbCampaignId || null, defectId, userId]);
       } else {
         // QA destination
         await query(`
@@ -3030,20 +3034,23 @@ router.get('/quarantine', authenticateToken, async (req, res) => {
         CONCAT(ur.first_name, ' ', ur.last_name) AS repaired_by_name,
         d.released_by,
         CONCAT(urel.first_name, ' ', urel.last_name) AS released_by_name,
+        d.quarantined_by, d.quarantined_at,
+        CONCAT(uq.first_name, ' ', uq.last_name) AS quarantined_by_name,
         d.current_location_id, lc.code AS location_code, lc.description AS location_description,
         (SELECT COUNT(*) FROM defect_attachments da WHERE da.defect_id = d.id) AS attachment_count,
-        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - d.updated_at)) / 3600 AS hours_in_quarantine
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - COALESCE(d.quarantined_at, d.updated_at))) / 3600 AS hours_in_quarantine
       FROM defect_entries_v2 d
       LEFT JOIN users uc ON d.captured_by_user_id = uc.id
       LEFT JOIN users ur ON d.repaired_by = ur.id
       LEFT JOIN users urel ON d.released_by = urel.id
+      LEFT JOIN users uq ON d.quarantined_by = uq.id
       LEFT JOIN departments dep ON d.department_id = dep.id
       LEFT JOIN client_parts cp ON d.part_id = cp.id
       LEFT JOIN clients c ON d.client_id = c.id
       LEFT JOIN defect_types dt ON d.defect_type_id = dt.id
       LEFT JOIN location_codes lc ON d.current_location_id = lc.id
       WHERE d.repair_status = 'QUARANTINE'
-      ORDER BY d.updated_at DESC
+      ORDER BY d.quarantined_at DESC NULLS LAST, d.updated_at DESC
     `;
     const result = await query(sql);
     res.json({ success: true, defects: transformToCamelCase(result.rows) });
