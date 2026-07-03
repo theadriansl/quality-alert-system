@@ -1350,7 +1350,15 @@ const ClientsList = () => {
                                 case 'partNumber':
                                   return (
                                     <td key={columnId} style={{ padding: '12px', fontWeight: '500', color: t.accent }}>
-                                      {part.partNumber}
+                                      <span style={{ paddingLeft: `${(part._depth || 0) * 20}px`, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        {part._depth > 0 && <span style={{ color: t.textMuted }}>└─</span>}
+                                        {part.partNumber}
+                                        {part.childrenCount > 0 && (
+                                          <span style={{ fontSize: '10px', color: t.accent, fontWeight: '400' }}>
+                                            ({part.childrenCount} sub)
+                                          </span>
+                                        )}
+                                      </span>
                                     </td>
                                   );
                                 case 'partName':
@@ -1386,7 +1394,7 @@ const ClientsList = () => {
                                 case 'bomLevel':
                                   return (
                                     <td key={columnId} style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: t.accent }}>
-                                      {part.bomLevel || 1}
+                                      {(part._depth || 0) + 1}
                                     </td>
                                   );
                                 case 'clientPartNumber':

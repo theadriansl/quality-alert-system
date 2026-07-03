@@ -4073,16 +4073,33 @@ const ClientDetail = () => {
         );
 
       case 'parts':
-        // Flatten all parts from all project groups into a single array
+        // Flatten all parts from all project groups into a single array (including children recursively)
         const safeClientParts = clientParts || [];
+
+        // Recursive function to flatten parts with children
+        const flattenPartsWithChildren = (parts, projectInfo, depth = 0) => {
+          const result = [];
+          (parts || []).forEach(part => {
+            result.push({
+              ...part,
+              ...projectInfo,
+              _depth: depth, // For indentation
+            });
+            // Recursively add children
+            if (part.children && part.children.length > 0) {
+              result.push(...flattenPartsWithChildren(part.children, projectInfo, depth + 1));
+            }
+          });
+          return result;
+        };
+
         const flatParts = safeClientParts.flatMap(group =>
-          (group?.parts || []).map(part => ({
-            ...part,
+          flattenPartsWithChildren(group?.parts || [], {
             projectId: group.projectId,
             projectNumber: group.projectNumber || 'Sin Asignar',
             projectName: group.projectName || 'Sin proyecto asignado',
             clientName: client?.name || 'Cliente',
-          }))
+          })
         );
 
         const totalParts = flatParts.length;
@@ -4172,7 +4189,7 @@ const ClientDetail = () => {
             align: 'center',
             render: (part) => (
               <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: theme.accent, textAlign: 'center' }}>
-                {part.bomLevel || 1}
+                {(part._depth || 0) + 1}
               </td>
             )
           },
@@ -4183,7 +4200,15 @@ const ClientDetail = () => {
             align: 'left',
             render: (part) => (
               <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: theme.text }}>
-                {part.partNumber}
+                <span style={{ paddingLeft: `${(part._depth || 0) * 20}px`, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  {part._depth > 0 && <span style={{ color: theme.textMuted }}>└─</span>}
+                  {part.partNumber}
+                  {part.children?.length > 0 && (
+                    <span style={{ fontSize: '10px', color: theme.accent, fontWeight: '400' }}>
+                      ({part.children.length} sub)
+                    </span>
+                  )}
+                </span>
               </td>
             )
           },
@@ -5645,17 +5670,53 @@ const ClientDetail = () => {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
+                  {L.parentPart}
+                </label>
+                <select
+                  value={newPart.parentPartId || ''}
+                  onChange={(e) => {
+                    const parentId = e.target.value ? parseInt(e.target.value) : null;
+                    const parentPart = parentId ? clientParts.flatMap(g => g.parts || []).find(p => p.id === parentId) : null;
+                    const newBomLevel = parentPart ? (parentPart._depth || 0) + 2 : 1;
+                    setNewPart({ ...newPart, parentPartId: parentId, bomLevel: newBomLevel });
+                  }}
+                  style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px', backgroundColor: theme.bgCard }}
+                >
+                  <option value="">{L.noParent}</option>
+                  {clientParts.flatMap(group => group.parts || [])
+                    .filter(p => p.active !== false && p.id !== newPart.id)
+                    .map(part => (
+                      <option key={part.id} value={part.id}>
+                        {'─'.repeat(part._depth || 0)} {part.partNumber} - {part.partName}
+                      </option>
+                    ))
+                  }
+                </select>
+                {newPart.parentPartId && (
+                  <p style={{ fontSize: '12px', color: theme.textMuted, marginTop: '4px' }}>
+                    {L.isSubcomponent}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
                   BOM LVL
                 </label>
                 <select
                   value={newPart.bomLevel}
                   onChange={(e) => setNewPart({ ...newPart, bomLevel: parseInt(e.target.value) })}
                   style={{ width: '100%', padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: '4px', fontSize: '13px', backgroundColor: theme.bgCard }}
+                  disabled={!!newPart.parentPartId}
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                     <option key={level} value={level}>{level}</option>
                   ))}
                 </select>
+                {newPart.parentPartId && (
+                  <p style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>
+                    Nivel automático basado en el padre
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>

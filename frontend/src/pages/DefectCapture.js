@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { canUserEdit, isReadOnly } from '../utils/permissions';
-import { CheckCircle, XCircle, Plus, Settings, Home, List, Palette, BarChart3, Search, AlertTriangle } from 'lucide-react';
+import { canUserEdit, canUserCaptureDefects, isReadOnly, isUserAdmin } from '../utils/permissions';
+import { CheckCircle, XCircle, Plus, Home, Palette, BarChart3, Search, AlertTriangle, Paperclip, X, FileText, Image } from 'lucide-react';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import DefectConsultTab, { DefectCounter } from '../components/DefectConsultTab';
+import { checkMyHospitalPermissions } from '../services/hospitalRolesService';
 
 /**
  * DefectCapture - Tablet-optimized interface for sequential inspection
@@ -33,6 +36,7 @@ const DefectCapture = () => {
 
   // Global Theme
   const { theme: currentTheme } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // ============================================================================
   // STATE - Data Lists
@@ -63,6 +67,14 @@ const DefectCapture = () => {
   const [partDefects, setPartDefects] = useState([]);
   const [defectsByCategory, setDefectsByCategory] = useState([]);
   const [defectFilter, setDefectFilter] = useState('');
+
+  // Specs for selected station+part
+  const [stationSpecs, setStationSpecs] = useState([]);
+  const [stationDefects, setStationDefects] = useState([]);
+  const [hasStationConfig, setHasStationConfig] = useState(false);
+  const [specResults, setSpecResults] = useState({}); // { specId: 'OK' | 'NOK' | null }
+  const [specSaving, setSpecSaving] = useState({}); // { specId: true/false } - loading state
+  const [specSaved, setSpecSaved] = useState({}); // { specId: true/false } - saved confirmation
 
   // ============================================================================
   // STATE - Selected Values (HEADER - persist across captures)
@@ -98,6 +110,12 @@ const DefectCapture = () => {
   const [hasRegisteredDefect, setHasRegisteredDefect] = useState(false); // Track if defect was just registered
 
   // ============================================================================
+  // STATE - Attachments (Evidence Files)
+  // ============================================================================
+  const [pendingAttachments, setPendingAttachments] = useState([]); // Files to upload with defect
+  const fileInputRef = useRef(null);
+
+  // ============================================================================
   // STATE - Selected Defect
   // ============================================================================
   const [selectedDefect, setSelectedDefect] = useState(null);
@@ -109,13 +127,99 @@ const DefectCapture = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [defectConsultOpen, setDefectConsultOpen] = useState(false);
+  const [serialScrapped, setSerialScrapped] = useState(false); // Track if serial is scrapped
+  const [scrapModalOpen, setScrapModalOpen] = useState(false); // Modal for scrapped serial
+  const [scrapInfo, setScrapInfo] = useState(null); // Info about scrapped serial
+
+  // ============================================================================
+  // STATE - Access Control
+  // ============================================================================
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
+
+  // ============================================================================
+  // ACCESS CONTROL - Two-layer security check
+  // ============================================================================
+  useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        // Refresh permissions from server before checking (in case admin updated them)
+        const token = localStorage.getItem('token');
+        const meResponse = await fetch(`${API_URL}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (meResponse.ok) {
+          const meData = await meResponse.json();
+          if (meData.success && meData.user) {
+            // Update user in localStorage with fresh permissions
+            localStorage.setItem('user', JSON.stringify(meData.user));
+            console.log('🔄 Permissions refreshed from server');
+          }
+        }
+      } catch (err) {
+        console.warn('Could not refresh permissions, using cached:', err.message);
+      }
+
+      // Layer 1: System permission check (includes sections.capture for partial access)
+      const hasSystemPermission = canUserCaptureDefects() || isUserAdmin();
+
+      if (!hasSystemPermission) {
+        console.log('⛔ Access denied: No capture permission for defects (sections.capture=false or access=view/none)');
+        setAccessChecked(true);
+        setHasAccess(false);
+        navigate('/hospital-dashboard?accessDenied=system');
+        return;
+      }
+
+      // Layer 2: Hospital role check
+      try {
+        const result = await checkMyHospitalPermissions();
+        const hospitalRoles = result?.data?.hospitalRoles || [];
+        const isSystemAdmin = result?.data?.isSystemAdmin || false;
+
+        // Can capture if has inspector, admin role, or is system admin
+        const canCapture = isSystemAdmin ||
+                          hospitalRoles.includes('inspector') ||
+                          hospitalRoles.includes('admin');
+
+        if (!canCapture) {
+          console.log('⛔ Access denied: No hospital role for defect capture');
+          setAccessChecked(true);
+          setHasAccess(false);
+          navigate('/hospital-dashboard?accessDenied=hospital');
+          return;
+        }
+
+        // Access granted
+        setHasAccess(true);
+        setAccessChecked(true);
+      } catch (err) {
+        console.error('Error checking hospital permissions:', err);
+        // On error, deny access for security
+        setAccessChecked(true);
+        setHasAccess(false);
+        navigate('/defect-hospital', {
+          state: {
+            accessDenied: true,
+            reason: 'Error al verificar permisos. Intenta de nuevo.'
+          }
+        });
+      }
+    };
+
+    checkAccess();
+  }, [navigate]);
 
   // ============================================================================
   // LOAD DATA
   // ============================================================================
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    if (hasAccess) {
+      loadInitialData();
+    }
+  }, [hasAccess]);
 
   const loadInitialData = async () => {
     try {
@@ -178,7 +282,7 @@ const DefectCapture = () => {
       const currentShift = detectCurrentShift(shiftsData.items || []);
       if (currentShift) setSelectedShift(currentShift);
 
-      // Restore saved context (client/project/part)
+      // Restore saved context (client/project/part/station)
       const savedContext = localStorage.getItem('defectCaptureContext');
       if (savedContext) {
         try {
@@ -186,6 +290,13 @@ const DefectCapture = () => {
           const savedClient = (clientsData.clients || []).find(c => c.id === ctx.clientId);
           if (savedClient) {
             setSelectedClient(savedClient);
+          }
+          // Restore station
+          if (ctx.stationId) {
+            const savedStation = (stationsData.items || []).find(s => s.id === ctx.stationId);
+            if (savedStation) {
+              setSelectedStation(savedStation);
+            }
           }
         } catch (e) {
           console.error('Error restoring context:', e);
@@ -248,11 +359,20 @@ const DefectCapture = () => {
     }
   }, [selectedProject]);
 
-  // Load defects when part changes
+  // Load defects when part changes - RESET ALL fields
   useEffect(() => {
     if (selectedPart) {
       loadPartDefects(selectedPart.id);
-      setDefectFilter(''); // Clear filter when part changes
+      setDefectFilter('');
+      // Reset ALL form fields when part changes
+      setSelectedDefect(null);
+      setSelectedStage(null);
+      setSelectedDisposition(null);
+      setSelectedDepartment(null);
+      setSelectedSeverity(null);
+      setComment('');
+      setHasDowntime(false);
+      setDowntimeMinutes('');
     } else {
       setPartDefects([]);
       setDefectsByCategory([]);
@@ -260,16 +380,164 @@ const DefectCapture = () => {
     }
   }, [selectedPart]);
 
+  // Reset specific fields when defect changes (same part)
+  useEffect(() => {
+    if (selectedDefect) {
+      // Reset fields likely to change per defect
+      setComment('');
+      setSelectedDepartment(null);
+      setSelectedSeverity(null);
+      // Mantener: selectedStage, selectedDisposition (genéricos)
+    }
+  }, [selectedDefect]);
+
   // Save context to localStorage when it changes
   useEffect(() => {
     if (selectedClient && selectedProject && selectedPart) {
       localStorage.setItem('defectCaptureContext', JSON.stringify({
         clientId: selectedClient.id,
         projectId: selectedProject.id,
-        partId: selectedPart.id
+        partId: selectedPart.id,
+        stationId: selectedStation?.id || null
       }));
     }
-  }, [selectedClient, selectedProject, selectedPart]);
+  }, [selectedClient, selectedProject, selectedPart, selectedStation]);
+
+  // Sync project when projects load and part is selected without project
+  useEffect(() => {
+    if (selectedPart && !selectedProject && projects.length > 0) {
+      const project = projects.find(p => p.id === selectedPart.projectId);
+      if (project) {
+        setSelectedProject(project);
+      }
+    }
+  }, [projects, selectedPart, selectedProject]);
+
+  // Reset ALL form fields when station changes
+  useEffect(() => {
+    if (selectedStation) {
+      setSelectedDefect(null);
+      setSelectedStage(null);
+      setSelectedDisposition(null);
+      setSelectedDepartment(null);
+      setSelectedSeverity(null);
+      setComment('');
+      setHasDowntime(false);
+      setDowntimeMinutes('');
+      setDefectFilter('');
+    }
+  }, [selectedStation]);
+
+  // Load station config (specs/defects) when station or part changes
+  useEffect(() => {
+    // Reset spec states when config changes
+    setSpecResults({});
+    setSpecSaving({});
+    setSpecSaved({});
+
+    if (selectedStation && selectedPart) {
+      loadStationConfig(selectedStation.id, selectedPart.id);
+    } else {
+      setStationSpecs([]);
+      setStationDefects([]);
+      setHasStationConfig(false);
+    }
+  }, [selectedStation, selectedPart]);
+
+  const loadStationConfig = async (stationId, partId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/station-config/capture-config/${stationId}/${partId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setHasStationConfig(data.hasStationConfig);
+        setStationDefects(data.defects || []);
+        setStationSpecs(data.specs || []);
+        setSpecResults({}); // Reset spec results when config changes
+      }
+    } catch (err) {
+      console.error('Error loading station config:', err);
+    }
+  };
+
+  const handleSpecResult = async (specId, result) => {
+    // Toggle logic: if same result clicked, clear it
+    const newResult = specResults[specId] === result ? null : result;
+
+    // Update local state immediately for responsive UI
+    setSpecResults(prev => ({
+      ...prev,
+      [specId]: newResult
+    }));
+
+    // If clearing (null), don't save to DB
+    if (!newResult) {
+      setSpecSaved(prev => ({ ...prev, [specId]: false }));
+      return;
+    }
+
+    // Validate required fields
+    if (!selectedClient || !selectedPart || !selectedStation || !selectedShift || !lotNumber.trim()) {
+      console.warn('Missing required fields for spec inspection save');
+      return;
+    }
+
+    // Save to DB
+    setSpecSaving(prev => ({ ...prev, [specId]: true }));
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/spec-inspection/entries`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          clientId: selectedClient.id,
+          projectId: selectedProject?.id || null,
+          partId: selectedPart.id,
+          specId: specId,
+          stationId: selectedStation.id,
+          shiftId: selectedShift.id,
+          stageId: selectedStage?.id || null,
+          departmentId: selectedDepartment?.id || null,
+          serialNumber: lotNumber.trim(),
+          lotNumber: lotNumber.trim(),
+          result: newResult,
+          notes: null
+        })
+      });
+
+      if (res.ok) {
+        setSpecSaved(prev => ({ ...prev, [specId]: true }));
+        // Clear saved indicator after 2 seconds
+        setTimeout(() => {
+          setSpecSaved(prev => ({ ...prev, [specId]: false }));
+        }, 2000);
+      } else {
+        const errData = await res.json();
+        console.error('Error saving spec result:', errData.message);
+        // Revert local state on error
+        setSpecResults(prev => ({
+          ...prev,
+          [specId]: prev[specId] === newResult ? null : prev[specId]
+        }));
+      }
+    } catch (err) {
+      console.error('Error saving spec result:', err);
+    } finally {
+      setSpecSaving(prev => ({ ...prev, [specId]: false }));
+    }
+  };
+
+  // Count spec results
+  const specOkCount = Object.values(specResults).filter(r => r === 'OK').length;
+  const specNokCount = Object.values(specResults).filter(r => r === 'NOK').length;
+  const specPendingCount = stationSpecs.length - specOkCount - specNokCount;
 
   const loadProjects = async (clientId) => {
     try {
@@ -404,16 +672,183 @@ const DefectCapture = () => {
     }
   };
 
+  // Buscar serial existente y auto-rellenar campos
+  const lookupSerialInfo = useCallback(async (serial) => {
+    if (!serial.trim()) return;
+
+    // Reset spec results for new serial inspection
+    setSpecResults({});
+    setSpecSaving({});
+    setSpecSaved({});
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/defects-v2/serial-lookup/${encodeURIComponent(serial.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.unit) {
+          // Check if serial is scrapped - show modal and block
+          if (data.isScrapped) {
+            setSerialScrapped(true);
+            setScrapInfo({
+              serial: serial,
+              partNumber: data.unit.partNumber,
+              partName: data.unit.partName,
+              clientName: data.unit.clientName,
+              scrappedBy: data.scrapInfo?.scrappedBy,
+              scrappedAt: data.scrapInfo?.scrappedAt,
+              scrapNotes: data.scrapInfo?.scrapNotes,
+              message: data.scrappedMessage
+            });
+            setScrapModalOpen(true);
+            return; // Don't auto-fill anything for scrapped serials
+          } else {
+            setSerialScrapped(false);
+            setScrapInfo(null);
+          }
+
+          // Auto-rellenar Cliente, Proyecto y Parte
+          const { clientId, projectId, partId, projectNumber, projectName } = data.unit;
+
+          // Buscar cliente
+          const client = clients.find(c => c.id === clientId);
+          if (client && (!selectedClient || selectedClient.id !== clientId)) {
+            setSelectedClient(client);
+          }
+
+          // Buscar parte en allParts
+          const part = allParts.find(p => p.id === partId);
+          if (part) {
+            setSelectedPart(part);
+          }
+
+          // Establecer proyecto - usar datos del backend directamente para evitar race condition
+          const projId = projectId || part?.projectId;
+          if (projId) {
+            // Buscar en lista local primero
+            let project = projects.find(p => p.id === projId);
+
+            // Si no está en lista local, crear objeto mínimo con datos del backend
+            if (!project && projectNumber) {
+              project = {
+                id: projId,
+                projectNumber: projectNumber,
+                projectName: projectName || projectNumber
+              };
+            }
+
+            if (project) {
+              setSelectedProject(project);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error looking up serial:', err);
+    }
+  }, [clients, allParts, projects, selectedClient]);
+
   // Reset hasRegisteredDefect when user enters lot number
   const handleLotChange = (value) => {
     setLotNumber(value);
     if (value.trim()) {
       setHasRegisteredDefect(false);
+      setSerialScrapped(false); // Reset scrapped state when serial changes
+      setError(null);
     }
+  };
+
+  // Close scrap modal and clear serial
+  const handleCloseScrapModal = () => {
+    setScrapModalOpen(false);
+    setLotNumber('');
+    setSerialScrapped(false);
+    setScrapInfo(null);
+  };
+
+  // Buscar info del serial cuando termina de escribir (onBlur o Enter)
+  const handleLotBlur = () => {
+    if (lotNumber.trim() && !selectedPart) {
+      lookupSerialInfo(lotNumber);
+    }
+  };
+
+  const handleLotKeyDown = (e) => {
+    if (e.key === 'Enter' && lotNumber.trim()) {
+      e.preventDefault();
+      lookupSerialInfo(lotNumber);
+    }
+  };
+
+  // ============================================================================
+  // ATTACHMENT HANDLERS
+  // ============================================================================
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // Create preview URLs for images
+    const newAttachments = files.map(file => ({
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      isImage: file.type.startsWith('image/'),
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    }));
+
+    setPendingAttachments(prev => [...prev, ...newAttachments]);
+    // Reset input to allow selecting same file again
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (index) => {
+    setPendingAttachments(prev => {
+      const updated = [...prev];
+      // Revoke object URL if it's an image preview
+      if (updated[index].preview) {
+        URL.revokeObjectURL(updated[index].preview);
+      }
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
+  const uploadAttachments = async (defectId, token) => {
+    const results = [];
+    for (const attachment of pendingAttachments) {
+      try {
+        const formData = new FormData();
+        formData.append('file', attachment.file);
+
+        const res = await fetch(`${API_URL}/defects-v2/entries/${defectId}/attachments`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          results.push({ success: true, name: attachment.name, data: data.attachment });
+        } else {
+          results.push({ success: false, name: attachment.name, error: 'Upload failed' });
+        }
+      } catch (err) {
+        results.push({ success: false, name: attachment.name, error: err.message });
+      }
+    }
+    return results;
   };
 
   const handleSubmitDefect = async () => {
     // Validation
+    if (serialScrapped) {
+      setError('Este serial ya fue enviado a SCRAP. No se pueden capturar más defectos.');
+      return;
+    }
     if (!selectedStation || !selectedInspector || !selectedShift) {
       setError('Completa: Estación, Inspector y Turno');
       return;
@@ -430,12 +865,63 @@ const DefectCapture = () => {
       setError('Selecciona un defecto');
       return;
     }
+    if (!lotNumber.trim()) {
+      setError('Ingresa Lote/Serie');
+      return;
+    }
 
     try {
       setSubmitting(true);
       setError(null);
 
+      // CRITICAL: Validate serial-part association BEFORE saving
+      // This prevents registering a serial with the wrong part
       const token = localStorage.getItem('token');
+      try {
+        const lookupRes = await fetch(`${API_URL}/defects-v2/serial-lookup/${encodeURIComponent(lotNumber.trim())}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (lookupRes.ok) {
+          const lookupData = await lookupRes.json();
+
+          // If serial exists and is associated with a DIFFERENT part, block save
+          if (lookupData.success && lookupData.unit) {
+            const existingPartId = lookupData.unit.partId;
+            const existingPartNumber = lookupData.unit.partNumber || '';
+
+            if (existingPartId && existingPartId !== selectedPart.id) {
+              setSubmitting(false);
+              setError(
+                `Este serial (${lotNumber}) ya está registrado con otra parte: ${existingPartNumber}. ` +
+                `No se puede asociar al part number ${selectedPart.partNumber || selectedPart.captureDisplayName}.`
+              );
+              return;
+            }
+
+            // Also check if scrapped (double-check in case state is stale)
+            if (lookupData.isScrapped) {
+              setSubmitting(false);
+              setSerialScrapped(true);
+              setScrapInfo({
+                serial: lotNumber,
+                partNumber: lookupData.unit.partNumber,
+                partName: lookupData.unit.partName,
+                clientName: lookupData.unit.clientName,
+                scrappedBy: lookupData.scrapInfo?.scrappedBy,
+                scrappedAt: lookupData.scrapInfo?.scrappedAt,
+                scrapNotes: lookupData.scrapInfo?.scrapNotes
+              });
+              setScrapModalOpen(true);
+              return;
+            }
+          }
+        }
+      } catch (lookupErr) {
+        console.warn('Could not validate serial-part association:', lookupErr.message);
+        // Continue with save - backend should also validate
+      }
+
       const defectData = {
         partId: selectedPart.id,
         defectTypeId: selectedDefect.id,
@@ -467,9 +953,28 @@ const DefectCapture = () => {
         throw new Error(result.message || 'Error al guardar');
       }
 
+      const defectId = result.entry?.id;
+      const entryNumber = result.entry?.entryNumber || '';
+
+      // Upload attachments if any
+      if (pendingAttachments.length > 0 && defectId) {
+        const uploadResults = await uploadAttachments(defectId, token);
+        const failedUploads = uploadResults.filter(r => !r.success);
+        if (failedUploads.length > 0) {
+          console.warn('Some attachments failed to upload:', failedUploads);
+        }
+        // Clear attachments and revoke object URLs
+        pendingAttachments.forEach(att => {
+          if (att.preview) URL.revokeObjectURL(att.preview);
+        });
+        setPendingAttachments([]);
+      }
+
       // Success
       setNgCount(prev => prev + 1);
-      showSuccessMessage(`Defecto ${result.entry?.entryNumber || ''} registrado`);
+      const attachmentMsg = pendingAttachments.length > 0 ? ` + ${pendingAttachments.length} archivo(s)` : '';
+      const routingMsg = result.routing?.message ? ` - ${result.routing.message}` : '';
+      showSuccessMessage(`Defecto ${entryNumber} registrado${attachmentMsg}${routingMsg}`);
 
       // Clear only lot (keep everything else for rapid capture)
       setLotNumber('');
@@ -564,7 +1069,7 @@ const DefectCapture = () => {
   // ============================================================================
   const isFormValid = selectedStation && selectedInspector && selectedShift &&
     selectedClient && selectedProject && selectedPart &&
-    selectedDepartment && selectedDefect;
+    selectedDepartment && selectedDefect && lotNumber.trim() && !serialScrapped;
 
   const defectPreview = selectedPart && selectedDefect ?
     `${selectedPart.captureDisplayName || selectedPart.partNumber} | ${selectedDefect.name} | ${selectedSeverity?.name || 'Sin severidad'}` :
@@ -789,7 +1294,7 @@ const DefectCapture = () => {
       minWidth: '100px'
     },
     defectButtonSelected: {
-      borderColor: t.accent,
+      border: `2px solid ${t.accent}`,
       backgroundColor: t.accent,
       color: 'white',
       transform: 'scale(1.02)'
@@ -871,6 +1376,114 @@ const DefectCapture = () => {
       color: t.textMuted,
       cursor: 'pointer'
     },
+    // Specs section
+    specsSection: {
+      backgroundColor: t.bgPanel,
+      borderRadius: '12px',
+      padding: '16px',
+      marginBottom: '16px',
+      border: `2px solid ${t.accent}`
+    },
+    specsTitle: {
+      color: t.accent,
+      fontSize: '12px',
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      marginBottom: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    },
+    specsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gap: '12px'
+    },
+    specCard: {
+      backgroundColor: t.bgInput,
+      border: `1px solid ${t.border}`,
+      borderRadius: '8px',
+      padding: '12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px'
+    },
+    specCardCritical: {
+      border: '2px solid #ef4444'
+    },
+    specHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start'
+    },
+    specName: {
+      fontWeight: '600',
+      fontSize: '14px',
+      color: t.text
+    },
+    specCode: {
+      fontSize: '11px',
+      color: t.textMuted,
+      backgroundColor: t.bgPanel,
+      padding: '2px 6px',
+      borderRadius: '4px'
+    },
+    specLimits: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '13px',
+      color: t.textMuted
+    },
+    specLimitValue: {
+      backgroundColor: t.bgPanel,
+      padding: '4px 8px',
+      borderRadius: '4px',
+      fontFamily: 'monospace'
+    },
+    specNominal: {
+      backgroundColor: t.accent,
+      color: 'white',
+      fontWeight: '600'
+    },
+    specActions: {
+      display: 'flex',
+      gap: '8px',
+      marginTop: '8px'
+    },
+    specButton: {
+      flex: 1,
+      padding: '8px 12px',
+      border: 'none',
+      borderRadius: '6px',
+      cursor: 'pointer',
+      fontWeight: '600',
+      fontSize: '13px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '4px'
+    },
+    specButtonOk: {
+      backgroundColor: '#d1fae5',
+      color: '#065f46'
+    },
+    specButtonNok: {
+      backgroundColor: '#fee2e2',
+      color: '#991b1b'
+    },
+    specButtonSelected: {
+      transform: 'scale(1.02)',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+    },
+    criticalBadge: {
+      backgroundColor: '#fecaca',
+      color: '#991b1b',
+      padding: '2px 6px',
+      borderRadius: '4px',
+      fontSize: '10px',
+      fontWeight: '700'
+    },
     // Theme selector
     themeSelector: {
       display: 'flex',
@@ -894,6 +1507,21 @@ const DefectCapture = () => {
   // ============================================================================
   // RENDER
   // ============================================================================
+
+  // Show loading while checking access
+  if (!accessChecked) {
+    return (
+      <div style={{ ...styles.container, justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ color: 'white', fontSize: '18px' }}>Verificando permisos...</div>
+      </div>
+    );
+  }
+
+  // If no access, don't render (redirect happens in useEffect)
+  if (!hasAccess) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div style={{ ...styles.container, justifyContent: 'center', alignItems: 'center' }}>
@@ -928,12 +1556,12 @@ const DefectCapture = () => {
       {error && (
         <div style={{ ...styles.alert, ...styles.alertError }}>
           <XCircle size={18} />
-          {error}
+          <span style={{ flex: 1 }}>{error}</span>
           <button
             onClick={() => setError(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: '8px' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: '8px', fontSize: '18px', color: 'inherit' }}
           >
-            
+            ×
           </button>
         </div>
       )}
@@ -1014,6 +1642,23 @@ const DefectCapture = () => {
           <ThemeSelector />
         </div>
 
+        {/* Language Selector */}
+        <button
+          onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
+          style={{
+            padding: '6px 10px',
+            fontSize: '12px',
+            fontWeight: '600',
+            backgroundColor: t.bgPanel,
+            color: t.text,
+            border: `1px solid ${t.border}`,
+            borderRadius: '6px',
+            cursor: 'pointer'
+          }}
+        >
+          {language === 'es' ? 'EN' : 'ES'}
+        </button>
+
         {/* Navigation Buttons */}
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
@@ -1029,20 +1674,6 @@ const DefectCapture = () => {
             title="Dashboard"
           >
             <BarChart3 size={20} />
-          </button>
-          <button
-            style={styles.settingsButton}
-            onClick={() => navigate('/defect-admin')}
-            title="Admin Defectos por Parte"
-          >
-            <List size={20} />
-          </button>
-          <button
-            style={styles.settingsButton}
-            onClick={() => navigate('/defect-config')}
-            title="Catálogos de Inspección"
-          >
-            <Settings size={20} />
           </button>
           <button
             style={{...styles.settingsButton, backgroundColor: t.accent, color: 'white', border: 'none'}}
@@ -1098,14 +1729,13 @@ const DefectCapture = () => {
           ))}
         </select>
 
-        {/* Direct Part Search (searches all parts, auto-fills client/project) */}
+        {/* Direct Part Search (filters by client/project if selected) */}
         <select
           style={{
             ...styles.contextSelect,
             flex: 2,
             fontWeight: selectedPart ? '600' : '400',
-            borderColor: selectedPart ? t.accent : t.border,
-            borderWidth: selectedPart ? '2px' : '1px'
+            border: selectedPart ? `2px solid ${t.accent}` : `1px solid ${t.border}`
           }}
           value={selectedPart?.id || ''}
           onChange={(e) => {
@@ -1118,10 +1748,22 @@ const DefectCapture = () => {
             }
           }}
         >
-          <option value=""> Buscar Parte directamente...</option>
-          {allParts.map(p => (
+          <option value="">
+            {selectedClient && selectedProject
+              ? `Partes de ${selectedProject.projectNumber}...`
+              : selectedClient
+                ? `Partes de ${selectedClient.name}...`
+                : 'Buscar Parte...'}
+          </option>
+          {allParts
+            .filter(p => {
+              if (selectedClient && p.clientId !== selectedClient.id) return false;
+              if (selectedProject && p.projectId !== selectedProject.id) return false;
+              return true;
+            })
+            .map(p => (
             <option key={p.id} value={p.id}>
-              {p.captureDisplayName || p.partNumber} - {p.partName} [{p.clientName}]
+              {p.captureDisplayName || p.partNumber} - {p.partName} {!selectedClient ? `[${p.clientName}]` : ''}
             </option>
           ))}
         </select>
@@ -1131,6 +1773,42 @@ const DefectCapture = () => {
       <div style={styles.mainContent}>
         {/* ====== LEFT PANEL (25%) ====== */}
         <div style={styles.leftPanel}>
+          {/* Lot/Serial - PRIMER CAMPO (obligatorio) */}
+          <div style={styles.fieldGroup}>
+            <label style={styles.fieldLabel}>
+              Lote / Serie <span style={styles.fieldLabelRequired}>*</span>
+            </label>
+            <input
+              type="text"
+              autoFocus
+              style={{
+                ...styles.fieldInput,
+                border: `1px solid ${!lotNumber.trim() ? '#f87171' : t.border}`,
+                fontSize: '16px',
+                padding: '12px'
+              }}
+              placeholder="Escanear o ingresar serial..."
+              value={lotNumber}
+              onChange={(e) => handleLotChange(e.target.value)}
+              onBlur={handleLotBlur}
+              onKeyDown={handleLotKeyDown}
+            />
+            <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
+              Presiona Enter para buscar
+            </div>
+            {/* Contador de defectos clickeable */}
+            {lotNumber && selectedClient && (
+              <div style={{ marginTop: '8px' }}>
+                <DefectCounter
+                  serial={lotNumber}
+                  clientId={selectedClient?.id}
+                  onClick={() => setDefectConsultOpen(true)}
+                  theme={currentTheme}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Etapa */}
           <div style={styles.fieldGroup}>
             <label style={styles.fieldLabel}>Etapa de Afectación</label>
@@ -1191,7 +1869,7 @@ const DefectCapture = () => {
             <select
               style={{
                 ...styles.fieldSelect,
-                borderColor: !selectedDepartment ? '#f87171' : currentTheme.textMuted
+                border: `1px solid ${!selectedDepartment ? '#f87171' : t.border}`
               }}
               value={selectedDepartment?.id || ''}
               onChange={(e) => setSelectedDepartment(departments.find(d => d.id === parseInt(e.target.value)) || null)}
@@ -1201,18 +1879,6 @@ const DefectCapture = () => {
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
-          </div>
-
-          {/* Lot/Serial */}
-          <div style={styles.fieldGroup}>
-            <label style={styles.fieldLabel}>Lote / Serie</label>
-            <input
-              type="text"
-              style={styles.fieldInput}
-              placeholder="Escanear o ingresar..."
-              value={lotNumber}
-              onChange={(e) => handleLotChange(e.target.value)}
-            />
           </div>
 
           {/* Severity */}
@@ -1227,7 +1893,7 @@ const DefectCapture = () => {
                     ...styles.severityButton,
                     ...(selectedSeverity?.id === sev.id ? {
                       ...styles.severityButtonSelected,
-                      borderColor: sev.color || '#0072CE',
+                      border: `2px solid ${sev.color || '#0072CE'}`,
                       backgroundColor: sev.color || '#0072CE'
                     } : {})
                   }}
@@ -1253,6 +1919,88 @@ const DefectCapture = () => {
 
         {/* ====== RIGHT PANEL (75%) ====== */}
         <div style={styles.rightPanel}>
+          {/* Specs Section (only if station has specs configured) */}
+          {stationSpecs.length > 0 && (
+            <div style={styles.specsSection}>
+              <div style={styles.specsTitle}>
+                <AlertTriangle size={16} />
+                Especificaciones a Verificar ({stationSpecs.length})
+                <span style={{ marginLeft: 'auto', display: 'flex', gap: '12px', fontSize: '13px' }}>
+                  <span style={{ color: '#065f46' }}>OK: {specOkCount}</span>
+                  <span style={{ color: '#991b1b' }}>NOK: {specNokCount}</span>
+                  <span style={{ color: t.textMuted }}>Pendiente: {specPendingCount}</span>
+                </span>
+              </div>
+              <div style={styles.specsGrid}>
+                {stationSpecs.map(spec => (
+                  <div
+                    key={spec.id}
+                    style={{
+                      ...styles.specCard,
+                      ...(spec.isCritical ? styles.specCardCritical : {})
+                    }}
+                  >
+                    <div style={styles.specHeader}>
+                      <div>
+                        <div style={styles.specName}>{spec.specName}</div>
+                        <code style={styles.specCode}>{spec.specNumber}</code>
+                      </div>
+                      {spec.isCritical && <span style={styles.criticalBadge}>CTQ</span>}
+                    </div>
+
+                    {/* Show limits for dimensional specs */}
+                    {spec.specType === 'DIMENSIONAL' && (
+                      <div style={styles.specLimits}>
+                        <span style={styles.specLimitValue}>{spec.lowerLimit ?? '-'}</span>
+                        <span>≤</span>
+                        <span style={{ ...styles.specLimitValue, ...styles.specNominal }}>
+                          {spec.nominalValue ?? '-'} {spec.unitSymbol || ''}
+                        </span>
+                        <span>≤</span>
+                        <span style={styles.specLimitValue}>{spec.upperLimit ?? '-'}</span>
+                      </div>
+                    )}
+
+                    {/* OK / NOK Buttons */}
+                    <div style={styles.specActions}>
+                      <button
+                        style={{
+                          ...styles.specButton,
+                          ...styles.specButtonOk,
+                          ...(specResults[spec.id] === 'OK' ? styles.specButtonSelected : { opacity: specResults[spec.id] ? 0.5 : 1 }),
+                          ...(specSaving[spec.id] ? { opacity: 0.6, cursor: 'wait' } : {})
+                        }}
+                        onClick={() => handleSpecResult(spec.id, 'OK')}
+                        disabled={specSaving[spec.id] || !lotNumber.trim()}
+                      >
+                        <CheckCircle size={16} /> OK
+                      </button>
+                      <button
+                        style={{
+                          ...styles.specButton,
+                          ...styles.specButtonNok,
+                          ...(specResults[spec.id] === 'NOK' ? styles.specButtonSelected : { opacity: specResults[spec.id] ? 0.5 : 1 }),
+                          ...(specSaving[spec.id] ? { opacity: 0.6, cursor: 'wait' } : {})
+                        }}
+                        onClick={() => handleSpecResult(spec.id, 'NOK')}
+                        disabled={specSaving[spec.id] || !lotNumber.trim()}
+                      >
+                        <XCircle size={16} /> NOK
+                      </button>
+                      {/* Saved indicator */}
+                      {specSaved[spec.id] && (
+                        <span style={{ color: '#10b981', fontSize: '11px', marginLeft: '4px' }}>Guardado</span>
+                      )}
+                      {specSaving[spec.id] && (
+                        <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>...</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Defects Grid (75% of right) */}
           <div style={styles.defectsGrid}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -1286,20 +2034,6 @@ const DefectCapture = () => {
               <div style={styles.noDefectsMessage}>
                 No hay defectos configurados para esta parte.
                 <br />
-                <button
-                  style={{
-                    marginTop: '12px',
-                    padding: '8px 16px',
-                    backgroundColor: currentTheme.accent,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => navigate('/defect-admin')}
-                >
-                  Configurar Defectos
-                </button>
               </div>
             ) : (
               <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -1351,7 +2085,7 @@ const DefectCapture = () => {
                             style={{
                               ...styles.defectButton,
                               ...(selectedDefect?.id === defect.id ? styles.defectButtonSelected : {}),
-                              ...(defect.color ? { borderColor: defect.color } : {})
+                              ...(defect.color ? { border: `2px solid ${defect.color}` } : {})
                             }}
                             onClick={() => setSelectedDefect(selectedDefect?.id === defect.id ? null : defect)}
                           >
@@ -1372,26 +2106,290 @@ const DefectCapture = () => {
               {defectPreview}
             </div>
 
+            {/* Attachments Section */}
+            <div style={{ marginBottom: '12px' }}>
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar"
+                style={{ display: 'none' }}
+              />
+
+              {/* Add attachment button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: t.bgInput,
+                  border: `1px dashed ${t.border}`,
+                  borderRadius: '8px',
+                  color: t.textMuted,
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  marginBottom: pendingAttachments.length > 0 ? '8px' : '0'
+                }}
+              >
+                <Paperclip size={16} />
+                {language === 'es' ? 'Adjuntar Evidencia' : 'Attach Evidence'}
+              </button>
+
+              {/* Preview of selected files */}
+              {pendingAttachments.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  padding: '8px',
+                  backgroundColor: t.bgInput,
+                  borderRadius: '8px',
+                  maxHeight: '120px',
+                  overflowY: 'auto'
+                }}>
+                  {pendingAttachments.map((att, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        position: 'relative',
+                        width: att.isImage ? '60px' : 'auto',
+                        minWidth: att.isImage ? '60px' : '80px',
+                        height: att.isImage ? '60px' : 'auto',
+                        backgroundColor: t.bgCard,
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        border: `1px solid ${t.border}`
+                      }}
+                    >
+                      {att.isImage ? (
+                        <img
+                          src={att.preview}
+                          alt={att.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '6px 8px',
+                          fontSize: '11px',
+                          color: t.text
+                        }}>
+                          <FileText size={14} />
+                          <span style={{ maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {att.name.length > 10 ? att.name.slice(0, 8) + '...' : att.name}
+                          </span>
+                        </div>
+                      )}
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(idx)}
+                        style={{
+                          position: 'absolute',
+                          top: '2px',
+                          right: '2px',
+                          width: '18px',
+                          height: '18px',
+                          padding: 0,
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          border: 'none',
+                          borderRadius: '50%',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <X size={12} color="white" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
               style={{
                 ...styles.submitButton,
-                ...((!isFormValid || submitting) ? styles.submitButtonDisabled : {}),
-                ...(hasRegisteredDefect && !lotNumber.trim() ? { backgroundColor: '#C77700' } : {})
+                ...((!isFormValid || submitting) ? styles.submitButtonDisabled : {})
               }}
               onClick={handleSubmitDefect}
               disabled={!isFormValid || submitting}
             >
               <Plus size={20} />
-              {submitting
-                ? 'GUARDANDO...'
-                : (hasRegisteredDefect && !lotNumber.trim())
-                  ? '¿AGREGAR DEFECTO SIN LOTE/SERIE NUEVAMENTE?'
-                  : 'AGREGAR DEFECTO'
-              }
+              {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO'}
+              {pendingAttachments.length > 0 && (
+                <span style={{
+                  marginLeft: '8px',
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  fontSize: '12px'
+                }}>
+                  +{pendingAttachments.length}
+                </span>
+              )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal de Consulta de Defectos */}
+      <DefectConsultTab
+        isOpen={defectConsultOpen}
+        onClose={() => setDefectConsultOpen(false)}
+        serial={lotNumber}
+        clientId={selectedClient?.id}
+        theme={currentTheme}
+      />
+
+      {/* Modal de Serial en SCRAP */}
+      {scrapModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: currentTheme.bgCard,
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+            border: `2px solid #ef4444`
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fef2f2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <XCircle size={28} color="#ef4444" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, color: '#ef4444', fontSize: '18px', fontWeight: '700' }}>
+                  SERIAL EN SCRAP
+                </h3>
+                <p style={{ margin: '4px 0 0 0', color: currentTheme.textMuted, fontSize: '13px' }}>
+                  No se pueden capturar defectos
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: currentTheme.bg,
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Serial:</span>
+                <div style={{ color: currentTheme.text, fontWeight: '600', fontSize: '16px' }}>
+                  {scrapInfo?.serial}
+                </div>
+              </div>
+              {scrapInfo?.partNumber && (
+                <div style={{ marginBottom: '12px' }}>
+                  <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Parte:</span>
+                  <div style={{ color: currentTheme.text, fontWeight: '500' }}>
+                    {scrapInfo.partNumber} - {scrapInfo.partName}
+                  </div>
+                </div>
+              )}
+              {scrapInfo?.clientName && (
+                <div style={{ marginBottom: '12px' }}>
+                  <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Cliente:</span>
+                  <div style={{ color: currentTheme.text, fontWeight: '500' }}>
+                    {scrapInfo.clientName}
+                  </div>
+                </div>
+              )}
+              {scrapInfo?.scrappedBy && (
+                <div style={{ marginBottom: '12px' }}>
+                  <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Enviado a Scrap por:</span>
+                  <div style={{ color: currentTheme.text, fontWeight: '500' }}>
+                    {scrapInfo.scrappedBy}
+                    {scrapInfo.scrappedAt && (
+                      <span style={{ color: currentTheme.textMuted, fontWeight: '400', marginLeft: '8px' }}>
+                        ({new Date(scrapInfo.scrappedAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+              {scrapInfo?.scrapNotes && (
+                <div>
+                  <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Motivo:</span>
+                  <div style={{
+                    color: currentTheme.text,
+                    fontWeight: '400',
+                    backgroundColor: currentTheme.bgCard,
+                    padding: '8px',
+                    borderRadius: '4px',
+                    marginTop: '4px',
+                    fontSize: '13px',
+                    fontStyle: 'italic'
+                  }}>
+                    "{scrapInfo.scrapNotes}"
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <p style={{
+              color: currentTheme.text,
+              fontSize: '14px',
+              lineHeight: '1.5',
+              margin: '0 0 20px 0'
+            }}>
+              Este serial ya fue enviado a <strong style={{ color: '#ef4444' }}>SCRAP</strong> y no puede recibir nuevos defectos.
+            </p>
+
+            <button
+              onClick={handleCloseScrapModal}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              ENTENDIDO
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

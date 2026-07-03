@@ -212,6 +212,14 @@ async function createClientPart(req, res) {
       });
     }
 
+    // Project is required for new parts
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Project is required. Please select a project before adding parts.'
+      });
+    }
+
     // If parentPartId provided, verify it exists and belongs to same client
     if (parentPartId) {
       const parentCheck = await query(
@@ -654,10 +662,13 @@ async function getAllClientsParts(req, res) {
         c.vendor_number as client_vendor_number,
         p.id as project_id,
         p.project_number,
-        p.project_name
+        p.project_name,
+        parent.part_number as parent_part_number,
+        (SELECT COUNT(*) FROM client_parts children WHERE children.parent_part_id = cp.id) as children_count
       FROM client_parts cp
       INNER JOIN clients c ON cp.client_id = c.id
       LEFT JOIN projects p ON cp.project_id = p.id
+      LEFT JOIN client_parts parent ON cp.parent_part_id = parent.id
     `;
 
     if (activeOnly === 'true') {
@@ -670,7 +681,10 @@ async function getAllClientsParts(req, res) {
 
     // Transform to camelCase and collect all unique custom field names
     const allCustomFieldNames = new Set();
-    const parts = result.rows.map(part => {
+    const partsMap = new Map();
+
+    // First pass: create all parts
+    result.rows.forEach(part => {
       // Collect custom field names
       if (part.custom_fields && typeof part.custom_fields === 'object') {
         Object.keys(part.custom_fields).forEach(fieldName => {
@@ -678,7 +692,7 @@ async function getAllClientsParts(req, res) {
         });
       }
 
-      return {
+      const transformedPart = {
         id: part.id,
         clientId: part.client_id,
         clientName: part.client_name,
@@ -701,17 +715,48 @@ async function getAllClientsParts(req, res) {
         currency: part.currency,
         active: part.active,
         customFields: part.custom_fields || {},
+        parentPartId: part.parent_part_id,
+        parentPartNumber: part.parent_part_number,
+        bomLevel: part.bom_level || 1,
+        childrenCount: parseInt(part.children_count) || 0,
+        children: [],
         createdAt: part.created_at,
         updatedAt: part.updated_at
       };
+
+      partsMap.set(transformedPart.id, transformedPart);
     });
+
+    // Second pass: build tree
+    const rootParts = [];
+    partsMap.forEach(part => {
+      if (part.parentPartId && partsMap.has(part.parentPartId)) {
+        partsMap.get(part.parentPartId).children.push(part);
+      } else {
+        rootParts.push(part);
+      }
+    });
+
+    // Flatten tree with depth for display
+    const flattenWithDepth = (parts, depth = 0) => {
+      const result = [];
+      parts.forEach(part => {
+        result.push({ ...part, _depth: depth });
+        if (part.children && part.children.length > 0) {
+          result.push(...flattenWithDepth(part.children, depth + 1));
+        }
+      });
+      return result;
+    };
+
+    const flatParts = flattenWithDepth(rootParts);
 
     res.json({
       success: true,
-      parts: parts,
-      total: parts.length,
-      activeCount: parts.filter(p => p.active).length,
-      inactiveCount: parts.filter(p => !p.active).length,
+      parts: flatParts,
+      total: flatParts.length,
+      activeCount: flatParts.filter(p => p.active).length,
+      inactiveCount: flatParts.filter(p => !p.active).length,
       allCustomFieldNames: Array.from(allCustomFieldNames).sort() // All unique custom field names across all clients
     });
   } catch (error) {
