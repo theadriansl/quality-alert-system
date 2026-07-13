@@ -2,14 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { getCurrentUser, isUserAdmin } from '../../utils/permissions';
 // UX Improvements (MEJORAS)
 import CollapsibleSection from './CollapsibleSection';
 import ApprovalStepper from './ApprovalStepper';
 import SectionProgressIndicator from './SectionProgressIndicator';
 
-const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = false }) => {
+const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = false, isReadOnly = false }) => {
   const { theme: themeColors } = useTheme();
+  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
   const { showSuccess, showError, showWarning } = useToast();
 
   // Get current user from centralized utility
@@ -17,6 +19,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
   const isAdmin = isUserAdmin(currentUser);
 
   // Check if current user is the approver for the current step
+  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
   const isCurrentApprover = () => {
     // Admins can approve anything
     if (isAdmin) return true;
@@ -34,17 +37,20 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
     if (effectiveStep < 1 || effectiveStep > 3) return false;
 
     const countermeasureUsers = data.escalationPath.countermeasure_users;
-    const expectedApproverId = countermeasureUsers[effectiveStep];
+    const expectedApprover = countermeasureUsers[effectiveStep];
+    const expectedApproverId = typeof expectedApprover === 'object' ? expectedApprover.id : expectedApprover;
     return currentUser.id === expectedApproverId;
   };
 
   // Check if current user is the primary responsible
+  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
   const isPrimaryUser = () => {
     if (!data || !data.escalationPath || !data.escalationPath.countermeasure_users) {
       return false;
     }
     const countermeasureUsers = data.escalationPath.countermeasure_users;
-    const primaryUserId = countermeasureUsers[0];
+    const primaryUser = countermeasureUsers[0];
+    const primaryUserId = typeof primaryUser === 'object' ? primaryUser.id : primaryUser;
     return currentUser.id === primaryUserId;
   };
 
@@ -82,6 +88,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
   }, []);
 
   // Get current user in process
+  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
   const currentUserInProcess = useMemo(() => {
     if (!data || !data.escalationPath || !data.escalationPath.countermeasure_users) {
       return null;
@@ -93,14 +100,23 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
 
     const countermeasureUsers = data.escalationPath.countermeasure_users;
 
+    // Helper para obtener nombre del usuario (compatible con ambos formatos)
+    const getUserName = (userData) => {
+      if (!userData) return null;
+      // Si es objeto con nombre congelado, usarlo
+      if (typeof userData === 'object' && userData.name) {
+        return userData.name;
+      }
+      // Formato antiguo: buscar en lista de usuarios
+      const userId = typeof userData === 'object' ? userData.id : userData;
+      const user = users.find(u => u.id === userId);
+      return user ? (user.name || user.email || `Usuario ID: ${userId}`) : `Usuario ID: ${userId}`;
+    };
+
     if (effectiveStep === 0) {
-      const primaryUserId = countermeasureUsers[0];
-      const user = users.find(u => u.id === primaryUserId);
-      return user ? (user.name || user.email || `Usuario ID: ${primaryUserId}`) : `Usuario ID: ${primaryUserId}`;
+      return getUserName(countermeasureUsers[0]);
     } else if (effectiveStep >= 1 && effectiveStep <= 3) {
-      const approverId = countermeasureUsers[effectiveStep];
-      const user = users.find(u => u.id === approverId);
-      return user ? (user.name || user.email || `Usuario ID: ${approverId}`) : `Usuario ID: ${approverId}`;
+      return getUserName(countermeasureUsers[effectiveStep]);
     } else if (effectiveStep === 4) {
       return 'Completado';
     }
@@ -1222,6 +1238,26 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            Este 8D está cerrado y es de solo lectura
+          </span>
+        </div>
+      )}
+
+      <div style={{ pointerEvents: isReadOnly ? 'none' : 'auto', opacity: isReadOnly ? 0.7 : 1 }}>
       <div style={styles.header}>
         <div style={styles.title}> {t.title}</div>
         <div style={styles.subtitle}>{t.subtitle}</div>
@@ -2400,6 +2436,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           </div>
         </div>
       )}
+      </div>{/* End of read-only wrapper */}
     </div>
   );
 };

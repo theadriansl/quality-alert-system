@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { isUserAdmin } from '../../utils/permissions';
 // UX Improvements (MEJORAS)
 import CollapsibleSection from './CollapsibleSection';
@@ -10,15 +11,17 @@ import SectionProgressIndicator from './SectionProgressIndicator';
 const D8FollowUpEvidence = ({
   data,
   onDataUpdate,
-  language = 'es',
+  language: propLanguage = 'es',
   isBlocked = false,
   onSendToApproval,
   onApprove,
   onReject,
   isSending,
-  currentUser
+  currentUser,
+  isReadOnly = false
 }) => {
   const { theme: themeColors } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const { showSuccess, showError, showWarning } = useToast();
 
   // Check if current user is admin - admins can ALWAYS edit
@@ -659,6 +662,26 @@ const D8FollowUpEvidence = ({
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            Este 8D está cerrado y es de solo lectura
+          </span>
+        </div>
+      )}
+
+      <div style={{ pointerEvents: isReadOnly ? 'none' : 'auto', opacity: isReadOnly ? 0.7 : 1 }}>
       <div style={styles.header}>
         <div style={styles.title}> {t.title}</div>
         <div style={styles.subtitle}>{t.subtitle}</div>
@@ -1134,11 +1157,16 @@ const D8FollowUpEvidence = ({
                     const isPast = step < d8CurrentStep;
                     const isCurrent = step === d8CurrentStep && data?.d8Status === 'under_review';
                     const approval = approvalData[step];
-                    const approverId = confirmationUsers[step];
+                    // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
+                    const approverData = confirmationUsers[step];
+                    const approverId = typeof approverData === 'object' ? approverData.id : approverData;
                     const approverUser = users.find(u => u.id === approverId);
-                    const approverName = approverUser
-                      ? `${approverUser.firstName || approverUser.first_name || ''} ${approverUser.lastName || approverUser.last_name || ''}`.trim() || approverUser.email
-                      : `ID: ${approverId}`;
+                    // Si es formato nuevo con nombre congelado, usarlo
+                    const approverName = (typeof approverData === 'object' && approverData.name)
+                      ? approverData.name
+                      : approverUser
+                        ? `${approverUser.firstName || approverUser.first_name || ''} ${approverUser.lastName || approverUser.last_name || ''}`.trim() || approverUser.email
+                        : `ID: ${approverId}`;
                     const approverEmail = approverUser?.email || '';
 
                     return (
@@ -1278,8 +1306,24 @@ const D8FollowUpEvidence = ({
               );
             }
 
-            const getUserInfo = (userId, role) => {
-              if (!userId) return null;
+            // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
+            const getUserInfo = (userIdOrObject, role) => {
+              if (!userIdOrObject) return null;
+
+              // Si ya es objeto con nombre congelado
+              if (typeof userIdOrObject === 'object' && userIdOrObject.name) {
+                const userId = userIdOrObject.id;
+                const user = users.find(u => u.id === userId);
+                return {
+                  name: userIdOrObject.name,
+                  email: user?.email || '',
+                  position: user?.position || user?.cargo || '',
+                  role
+                };
+              }
+
+              // Formato antiguo: solo ID
+              const userId = typeof userIdOrObject === 'object' ? userIdOrObject.id : userIdOrObject;
               const user = users.find(u => u.id === userId);
               const name = user
                 ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email
@@ -1571,6 +1615,7 @@ const D8FollowUpEvidence = ({
           </div>
         </div>
       )}
+      </div>{/* End of read-only wrapper */}
     </div>
   );
 };

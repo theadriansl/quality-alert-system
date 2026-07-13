@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
 import ecrService from '../services/ecrService';
 import { getCurrentUser, isUserAdmin, canUserEdit, isReadOnly } from '../utils/permissions';
@@ -14,54 +15,7 @@ import ECRImpactAnalysis from '../components/ECR/ECRImpactAnalysis';
 import ECRValidationPlan from '../components/ECR/ECRValidationPlan';
 import ECRClosure from '../components/ECR/ECRClosure';
 
-// Stages definition - color keys reference theme colors (resolved in component)
-const STAGES_CONFIG = [
-  {
-    id: 'ecr1',
-    label: 'ECR-1',
-    title: 'Change Request Board',
-    subtitle: 'Asignación de equipos y TFT',
-    icon: '1',
-    component: ECRTeamTab,
-    colorKey: 'primary'
-  },
-  {
-    id: 'ecr2',
-    label: 'ECR-2',
-    title: 'Change Description',
-    subtitle: 'Descripción del cambio',
-    icon: '2',
-    component: ECRChangeRequest,
-    colorKey: 'primary'
-  },
-  {
-    id: 'ecr2b',
-    label: 'ECR-2B',
-    title: 'Impact Analysis',
-    subtitle: 'Análisis de Impacto',
-    icon: '3',
-    component: ECRImpactAnalysis,
-    colorKey: 'warning'
-  },
-  {
-    id: 'ecr3',
-    label: 'ECR-3',
-    title: 'Validation & Implementation',
-    subtitle: 'Plan de validaciones',
-    icon: '4',
-    component: ECRValidationPlan,
-    colorKey: 'primary'
-  },
-  {
-    id: 'ecr4',
-    label: 'ECR-4',
-    title: 'Closure & Confirmation',
-    subtitle: 'Cierre formal',
-    icon: '5',
-    component: ECRClosure,
-    colorKey: 'success'
-  }
-];
+// Stages definition moved inside component to use translations
 
 const ECRWorkflow = () => {
   const navigate = useNavigate();
@@ -69,14 +23,72 @@ const ECRWorkflow = () => {
   const location = useLocation();
   const { showSuccess, showError } = useToast();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   // Permission check
   const canEdit = canUserEdit('ecr');
   const readOnly = isReadOnly('ecr');
 
+  // Stages with translations and theme colors
+  const STAGES = useMemo(() => [
+    {
+      id: 'ecr1',
+      label: 'ECR-1',
+      title: tr('ecr.team.title'),
+      subtitle: tr('ecr.team.tftTeam'),
+      icon: '1',
+      component: ECRTeamTab,
+      colorKey: 'primary',
+      color: t.primary
+    },
+    {
+      id: 'ecr2',
+      label: 'ECR-2',
+      title: tr('ecr.changeRequest.title'),
+      subtitle: tr('ecr.changeRequest.changeDescription'),
+      icon: '2',
+      component: ECRChangeRequest,
+      colorKey: 'primary',
+      color: t.primary
+    },
+    {
+      id: 'ecr2b',
+      label: 'ECR-2B',
+      title: tr('ecr.impactAnalysis.title'),
+      subtitle: tr('ecr.impactAnalysis.riskAssessment'),
+      icon: '3',
+      component: ECRImpactAnalysis,
+      colorKey: 'warning',
+      color: t.warning
+    },
+    {
+      id: 'ecr3',
+      label: 'ECR-3',
+      title: tr('ecr.validationPlan.title'),
+      subtitle: tr('ecr.validationPlan.validationActivities'),
+      icon: '4',
+      component: ECRValidationPlan,
+      colorKey: 'primary',
+      color: t.primary
+    },
+    {
+      id: 'ecr4',
+      label: 'ECR-4',
+      title: tr('ecr.closure.title'),
+      subtitle: tr('ecr.closure.finalApproval'),
+      icon: '5',
+      component: ECRClosure,
+      colorKey: 'success',
+      color: t.success
+    }
+  ], [tr, t]);
+
   const [showLog, setShowLog] = useState(false);
   const [auditLog, setAuditLog] = useState([]);
   const [loadingLog, setLoadingLog] = useState(false);
+
+  // Stage IDs for initial state (before STAGES is available)
+  const STAGE_IDS = ['ecr1', 'ecr2', 'ecr2b', 'ecr3', 'ecr4'];
 
   const [currentStage, setCurrentStage] = useState(() => {
     // Nuevo ECR (sin ID) siempre inicia en ECR-1
@@ -85,7 +97,7 @@ const ECRWorkflow = () => {
     const params = new URLSearchParams(location.search);
     const stageParam = params.get('stage');
     if (stageParam) {
-      const idx = STAGES_CONFIG.findIndex(s => s.id === stageParam);
+      const idx = STAGE_IDS.findIndex(sid => sid === stageParam);
       if (idx !== -1) return idx;
     }
     const saved = localStorage.getItem(`ecr-current-stage-${id}`);
@@ -197,12 +209,6 @@ const ECRWorkflow = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Resolve STAGES colors from theme
-  const STAGES = useMemo(() => STAGES_CONFIG.map(stage => ({
-    ...stage,
-    color: t[stage.colorKey]
-  })), [t]);
-
   // Load ECR data if ID exists
   useEffect(() => {
     if (id) {
@@ -251,7 +257,7 @@ const ECRWorkflow = () => {
     }
   };
 
-  const handleSave = async (isDraft = true) => {
+  const handleSave = async (isDraft = true, overrideData = {}) => {
     try {
       // Validate risk assessment if in ECR-2B and not saving as draft
       if (!isDraft && STAGES[currentStage].id === 'ecr2b') {
@@ -283,6 +289,7 @@ const ECRWorkflow = () => {
         plannedAdoptionDate: workflowData.plannedAdoptionDate,
         riskAssessment: workflowData.riskAssessment,
         impactAnalysis: workflowData.impactAnalysis,
+        customerImpact: workflowData.customerImpact,
         selectedParts: workflowData.selectedParts,
         affectedDocuments: workflowData.affectedDocuments,
         beforePhotos: workflowData.beforePhotos,
@@ -340,6 +347,7 @@ const ECRWorkflow = () => {
         // Production Results
         productionJudgment: workflowData.productionJudgment,
         productionComments: workflowData.productionComments,
+        productionEvidence: workflowData.productionEvidence,
 
         // Closure Audit
         requiresClosureAudit: workflowData.requiresClosureAudit,
@@ -349,7 +357,10 @@ const ECRWorkflow = () => {
         stageCompletionStatus: workflowData.stageCompletionStatus,
 
         // Audit log hint
-        _auditStageLabel: STAGES[currentStage]?.label || null
+        _auditStageLabel: STAGES[currentStage]?.label || null,
+
+        // Override data (for immediate saves like TFT signatures)
+        ...overrideData
       };
 
       let result;
@@ -367,7 +378,9 @@ const ECRWorkflow = () => {
           ...result.ecr,
           stageCompletionStatus: workflowData.stageCompletionStatus,
           affectedDocuments: workflowData.affectedDocuments || result.ecr.affectedDocuments,
-          changeAttachments: workflowData.changeAttachments || result.ecr.changeAttachments
+          changeAttachments: workflowData.changeAttachments || result.ecr.changeAttachments,
+          // Merge override data to ensure signature data is reflected
+          ...overrideData
         };
         setWorkflowData(updatedEcr);
         showSuccess(isDraft ? 'Borrador guardado' : 'ECR guardado exitosamente');
@@ -463,31 +476,38 @@ const ECRWorkflow = () => {
         return;
       }
 
-      // Validate Production Results (must be OK)
-      const productionErrors = [];
-      if (workflowData.isirFirstArticle === 'nok') {
-        productionErrors.push('ISIR/First Article es NOK');
-      }
-      if (workflowData.cpPostChange !== '' && workflowData.cpPostChange !== undefined) {
-        const cpVal = parseFloat(workflowData.cpPostChange);
-        if (!isNaN(cpVal) && cpVal < 1.0) {
-          productionErrors.push(`Cp (${cpVal}) es menor a 1.0`);
-        }
-      }
-      if (workflowData.cpkPostChange !== '' && workflowData.cpkPostChange !== undefined) {
-        const cpkVal = parseFloat(workflowData.cpkPostChange);
-        if (!isNaN(cpkVal) && cpkVal < 1.0) {
-          productionErrors.push(`Cpk (${cpkVal}) es menor a 1.0`);
-        }
-      }
+      // Validate Production Results - User's judgment is the only validation
+      // No automatic Cp/Cpk validation - trust the user's decision
+      const productionJudgment = workflowData.productionJudgment?.toUpperCase();
 
-      if (productionErrors.length > 0) {
+      // Judgment is mandatory
+      if (!productionJudgment || productionJudgment === '') {
         showError(
-          `No se puede enviar a aprobación. Resultados de Producción NOK:\n\n` +
-          `• ${productionErrors.join('\n• ')}\n\n` +
-          `Los resultados de producción deben ser OK para enviar a aprobación.`
+          'Falta el "Juicio de Resultados de Producción".\n\n' +
+          'Selecciona OK, Condicional o NOK antes de enviar a aprobación.'
         );
         return;
+      }
+
+      // If NOK, must close as No Adoptable
+      if (productionJudgment === 'NOK') {
+        showError(
+          'Juicio de Producción es "NOK".\n\n' +
+          'Para continuar, cambia el juicio a OK/Condicional,\n' +
+          'o cierra el ECR como "No Adoptable".'
+        );
+        return;
+      }
+
+      // If Condicional, require comments explaining the conditions
+      if (productionJudgment === 'CONDICIONAL' || productionJudgment === 'CONDITIONAL') {
+        if (!workflowData.productionComments || !workflowData.productionComments.trim()) {
+          showError(
+            'Juicio de Producción "Condicional" requiere comentarios explicativos.\n\n' +
+            'Describe las condiciones bajo las cuales se acepta el resultado.'
+          );
+          return;
+        }
       }
 
       // Validate audit items (if audit is required)
@@ -513,7 +533,7 @@ const ECRWorkflow = () => {
       }
 
       // Confirm action
-      if (!window.confirm('¿Estás seguro de enviar este ECR a aprobación?\n\nUna vez enviado, no podrás editar hasta que sea aprobado o rechazado.')) {
+      if (!window.confirm('¿Estás seguro de enviar este ECR a aprobación?\n\nUna vez enviado, no podrás editar hasta que sea aprobado o devuelto.')) {
         return;
       }
 
@@ -614,8 +634,10 @@ const ECRWorkflow = () => {
   // Check if ECR is locked (pending approval or approved)
   // Admins can always edit
   const isECRLocked = () => {
-    if (isAdmin()) return false; // Admins bypass lock
     const status = workflowData.status;
+    // Closed ECRs are always locked, even for admins
+    if (status === 'closed' || status === 'closed_rejected') return true;
+    if (isAdmin()) return false; // Admins bypass lock for non-closed statuses
     return status === 'pending_approval' || status === 'approved' || status === 'completed';
   };
 
@@ -643,6 +665,12 @@ const ECRWorkflow = () => {
 
   // Handle stage completion toggle
   const handleStageCompletion = async (stageId, completed) => {
+    // Block changes when ECR is closed
+    if (workflowData.status === 'closed' || workflowData.status === 'closed_rejected') {
+      showError('No se pueden modificar etapas en un ECR cerrado');
+      return;
+    }
+
     // Validate ECR-2B before marking as complete
     if (stageId === 'ecr2b' && completed) {
       const impactAnalysis = workflowData.impactAnalysis || [];
@@ -701,11 +729,24 @@ const ECRWorkflow = () => {
   };
 
   const isStageAccessible = (index) => {
-    if (isAdmin()) return true;
     if (index === 0) return true;
     if (index <= currentStage) return true; // backwards always free
+
+    // Closed ECRs allow free navigation (read-only mode)
+    const status = workflowData.status;
+    if (status === 'closed' || status === 'closed_rejected') return true;
+
+    // ECR-4 requires ECR to be approved first (applies to everyone including admins)
+    const ecr4Index = STAGES.findIndex(s => s.id === 'ecr4');
+    if (index >= ecr4Index) {
+      if (status !== 'approved' && status !== 'pending_closure') {
+        return false;
+      }
+    }
+
     const fullyUnlocked = isFullyApproved() || workflowData.status === 'approved' || workflowData.status === 'closed';
     if (fullyUnlocked) return true;
+
     // All previous stages must be completed
     for (let i = 0; i < index; i++) {
       if (!isStageCompleted(STAGES[i].id)) return false;
@@ -714,6 +755,12 @@ const ECRWorkflow = () => {
   };
 
   const handleNextStage = () => {
+    // Validate stage is marked as completed before advancing
+    if (!isStageCompleted(STAGES[currentStage].id)) {
+      showError('Debes marcar esta etapa como completada antes de avanzar');
+      return;
+    }
+
     // Validate ECR-2B before advancing
     if (STAGES[currentStage].id === 'ecr2b') {
       // Check if risk assessment is complete
@@ -731,7 +778,16 @@ const ECRWorkflow = () => {
       }
     }
 
-    // If validation passes or not ECR-2B, advance to next stage
+    // Validate ECR-3: Must be approved before advancing to ECR-4
+    if (STAGES[currentStage].id === 'ecr3') {
+      const status = workflowData.status;
+      if (status !== 'approved' && status !== 'closed' && status !== 'pending_closure') {
+        showError('El ECR debe estar aprobado antes de avanzar a ECR-4. Envía a aprobación y espera las firmas.');
+        return;
+      }
+    }
+
+    // If validation passes, advance to next stage
     isManualStageChange.current = true;
     setCurrentStage(prev => prev + 1);
   };
@@ -777,8 +833,17 @@ const ECRWorkflow = () => {
 
   const handleStageChange = (index) => {
     if (isStageAccessible(index)) {
-      // Validate ECR-2B before leaving (only when going forward)
-      if (STAGES[currentStage].id === 'ecr2b' && index > currentStage) {
+      // Skip validation for closed ECRs (read-only mode allows free navigation)
+      const isClosed = workflowData.status === 'closed' || workflowData.status === 'closed_rejected';
+
+      // Validate current stage is completed before advancing (only when going forward, not for closed ECRs)
+      if (!isClosed && index > currentStage && !isStageCompleted(STAGES[currentStage].id)) {
+        showError('Debes marcar esta etapa como completada antes de avanzar');
+        return;
+      }
+
+      // Validate ECR-2B before leaving (only when going forward, not for closed ECRs)
+      if (!isClosed && STAGES[currentStage].id === 'ecr2b' && index > currentStage) {
         const impactAnalysis = workflowData.impactAnalysis || [];
         if (impactAnalysis.length > 0) {
           const areasWithoutRisk = impactAnalysis.filter(area =>
@@ -791,6 +856,21 @@ const ECRWorkflow = () => {
           }
         }
       }
+
+      // Validate ECR-3: Must be approved before going to ECR-4 (not for closed ECRs)
+      if (!isClosed && index > currentStage) {
+        // Check if trying to go to ECR-4 (index 4) and ECR-3 is not approved
+        const ecr3Index = STAGES.findIndex(s => s.id === 'ecr3');
+        const ecr4Index = STAGES.findIndex(s => s.id === 'ecr4');
+        if (index >= ecr4Index && currentStage <= ecr3Index) {
+          const status = workflowData.status;
+          if (status !== 'approved' && status !== 'pending_closure') {
+            showError('El ECR debe estar aprobado antes de avanzar a ECR-4. Envía a aprobación y espera las firmas.');
+            return;
+          }
+        }
+      }
+
       isManualStageChange.current = true;
       setCurrentStage(index);
       setShowLog(false);
@@ -851,12 +931,12 @@ const ECRWorkflow = () => {
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           <button onClick={handleGoBack} style={styles.backButton}>
-            ← Volver
+            ← {tr('ecr.backToDashboard')}
           </button>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <h1 style={styles.title}>
-                {workflowData.ecrNumber || 'Nuevo ECR'}
+                {workflowData.ecrNumber || tr('ecr.newEcr')}
               </h1>
               {/* Priority Badge */}
               {workflowData.priority && (
@@ -872,14 +952,31 @@ const ECRWorkflow = () => {
                          workflowData.priority === 'high' ? '#9a3412' :
                          workflowData.priority === 'medium' ? '#854d0e' : '#166534'
                 }}>
-                  {workflowData.priority === 'critical' ? ' Crítica' :
-                   workflowData.priority === 'high' ? ' Alta' :
-                   workflowData.priority === 'medium' ? ' Media' : ' Baja'}
+                  {workflowData.priority === 'critical' ? ` ${tr('ecr.changeRequest.priorities.critical')}` :
+                   workflowData.priority === 'high' ? ` ${tr('ecr.changeRequest.priorities.high')}` :
+                   workflowData.priority === 'medium' ? ` ${tr('ecr.changeRequest.priorities.medium')}` : ` ${tr('ecr.changeRequest.priorities.low')}`}
                 </span>
               )}
+              {/* Language Selector */}
+              <select
+                value={language}
+                onChange={(e) => changeLanguage(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: `1px solid ${t.border}`,
+                  backgroundColor: t.bgCard,
+                  color: t.text,
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
             </div>
             <p style={styles.subtitle}>
-              {workflowData.changeTitle || 'Sin título'}
+              {workflowData.changeTitle || tr('ecr.changeRequest.title')}
             </p>
             {/* Info Badges Row */}
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -918,11 +1015,11 @@ const ECRWorkflow = () => {
               workflowData.status === 'rejected' ? '#ef4444' :
               t.textMuted
           }}>
-            {workflowData.status === 'closed' ? 'Cerrado' :
-             workflowData.status === 'pending_closure' ? 'Pendiente de Cierre' :
-             workflowData.status === 'pending_approval' ? 'Pendiente de Firmas' :
-             workflowData.status === 'rejected' ? 'Rechazado' :
-             workflowData.status === 'draft' ? 'Borrador' : workflowData.status}
+            {workflowData.status === 'closed' ? tr('ecr.status.closed') :
+             workflowData.status === 'pending_closure' ? tr('ecr.status.pending_approval') :
+             workflowData.status === 'pending_approval' ? tr('ecr.status.pending_approval') :
+             workflowData.status === 'rejected' ? tr('ecr.status.rejected') :
+             workflowData.status === 'draft' ? tr('ecr.status.draft') : workflowData.status}
           </span>
           {(workflowData.status === 'draft' || workflowData.status === 'pending_closure') && (
             <button
@@ -930,7 +1027,7 @@ const ECRWorkflow = () => {
               disabled={saving}
               style={{...styles.button, ...styles.draftButton}}
             >
-              {saving ? 'Guardando...' : ' Guardar Borrador'}
+              {saving ? (language === 'es' ? 'Guardando...' : 'Saving...') : ` ${tr('ecr.actions.saveDraft')}`}
             </button>
           )}
         </div>
@@ -1082,9 +1179,12 @@ const ECRWorkflow = () => {
             data={workflowData}
             onDataUpdate={isECRLocked() ? () => {} : handleDataUpdate}
             isLocked={isECRLocked()}
+            isReadOnly={workflowData.status === 'closed' || workflowData.status === 'closed_rejected'}
             isAdmin={isAdmin()}
             onApprovalStatusChange={loadECRData}
-            onSaveDraft={workflowData.id ? () => handleSave(true) : null}
+            onSaveDraft={workflowData.id ? (overrideData) => handleSave(true, overrideData) : null}
+            language={language}
+            t={tr}
           />
         )}
       </div>
@@ -1097,7 +1197,7 @@ const ECRWorkflow = () => {
               onClick={() => { isManualStageChange.current = true; setCurrentStage(prev => prev - 1); }}
               style={{...styles.button, ...styles.secondaryButton}}
             >
-              ← Anterior
+              ← {tr('ecr.actions.previous')}
             </button>
           )}
         </div>
@@ -1112,25 +1212,36 @@ const ECRWorkflow = () => {
                 style={styles.footerCheckbox}
               />
               <span style={styles.footerCheckboxLabel}>
-                MARCAR ETAPA COMPLETADA
+                {language === 'es' ? 'MARCAR ETAPA COMPLETADA' : 'MARK STAGE COMPLETE'}
               </span>
             </label>
           )}
-          {/* Close as Rejected Checkbox - Only in ECR-4 and when in draft/pending_closure */}
+          {/* Close as Rejected Checkbox - Only in ECR-4 and when not locked */}
           {workflowData.id && !showLog && STAGES[currentStage].id === 'ecr4' &&
-           (workflowData.status === 'draft' || workflowData.status === 'pending_closure' || workflowData.status === 'rejected') &&
-           workflowData.closureApprovalStatus !== 'pending' && (
+           !['closed', 'closed_rejected', 'pending_approval', 'pending_rejected_closure'].includes(workflowData.status) && (
             <label style={{...styles.footerCompletionCheckbox, marginLeft: '16px', backgroundColor: workflowData.closureType === 'rejected' ? '#fee2e2' : 'transparent', border: workflowData.closureType === 'rejected' ? '2px solid #dc2626' : '2px solid transparent', borderRadius: '6px', padding: '6px 10px'}}>
               <input
                 type="checkbox"
                 checked={workflowData.closureType === 'rejected'}
                 onChange={async (e) => {
                   const newClosureType = e.target.checked ? 'rejected' : null;
-                  setWorkflowData(prev => ({ ...prev, closureType: newClosureType }));
+                  const previousClosureType = workflowData.closureType;
+
+                  // If closure type CHANGES, clear signatures (Rule 3: start from level 1)
+                  const closureTypeChanged = (previousClosureType === 'rejected' && newClosureType !== 'rejected') ||
+                                             (previousClosureType !== 'rejected' && newClosureType === 'rejected');
+
+                  const updateData = {
+                    closureType: newClosureType,
+                    ...(newClosureType === 'rejected' ? { rejectionReason: '' } : {}),
+                    // Clear signatures if closure type changed
+                    ...(closureTypeChanged ? { closureSignatures: {} } : {})
+                  };
+                  setWorkflowData(prev => ({ ...prev, ...updateData }));
                   // Auto-save to backend
                   try {
-                    await ecrService.updateECR(workflowData.id, { closureType: newClosureType });
-                    showSuccess(newClosureType === 'rejected' ? 'Marcado para cerrar como rechazado' : 'Desmarcado cierre como rechazado');
+                    await ecrService.updateECR(workflowData.id, updateData);
+                    showSuccess(newClosureType === 'rejected' ? 'Marcado para cerrar como No Adoptable - Ingresa el motivo en la sección de cierre' : 'Desmarcado cierre como No Adoptable');
                   } catch (error) {
                     console.error('Error saving closureType:', error);
                     showError('Error al guardar el tipo de cierre');
@@ -1139,24 +1250,24 @@ const ECRWorkflow = () => {
                 style={styles.footerCheckbox}
               />
               <span style={{...styles.footerCheckboxLabel, color: workflowData.closureType === 'rejected' ? '#dc2626' : t.textMuted}}>
-                CERRAR COMO RECHAZADO
+                CERRAR COMO NO ADOPTABLE
               </span>
             </label>
           )}
           {showLog ? (
-            <span style={{ color: t.textMuted, fontSize: '13px' }}>Vista de consulta</span>
+            <span style={{ color: t.textMuted, fontSize: '13px' }}>{language === 'es' ? 'Vista de consulta' : 'View only'}</span>
           ) : currentStage < STAGES.length - 1 ? (
             <button
               onClick={handleNextStage}
-              disabled={!isAdmin() && !isStageCompleted(STAGES[currentStage].id)}
-              title={!isAdmin() && !isStageCompleted(STAGES[currentStage].id) ? 'Marca esta etapa como completada para continuar' : undefined}
+              disabled={!isStageCompleted(STAGES[currentStage].id)}
+              title={!isStageCompleted(STAGES[currentStage].id) ? (language === 'es' ? 'Marca esta etapa como completada para continuar' : 'Mark this stage as complete to continue') : undefined}
               style={{
                 ...styles.button, ...styles.primaryButton,
-                opacity: !isAdmin() && !isStageCompleted(STAGES[currentStage].id) ? 0.4 : 1,
-                cursor: !isAdmin() && !isStageCompleted(STAGES[currentStage].id) ? 'not-allowed' : 'pointer'
+                opacity: !isStageCompleted(STAGES[currentStage].id) ? 0.4 : 1,
+                cursor: !isStageCompleted(STAGES[currentStage].id) ? 'not-allowed' : 'pointer'
               }}
             >
-              Siguiente →
+              {tr('ecr.actions.next')} →
             </button>
           ) : (
             // Show submit button if: not locked AND not fully approved AND (status is draft OR rejected)
@@ -1170,7 +1281,7 @@ const ECRWorkflow = () => {
                   backgroundColor: workflowData.status === 'rejected' ? '#C77700' : t.accent
                 }}
               >
-                {saving ? 'Enviando...' : workflowData.status === 'rejected' ? '↻ Re-enviar a Aprobación' : ' Enviar a Aprobación'}
+                {saving ? (language === 'es' ? 'Enviando...' : 'Sending...') : workflowData.status === 'rejected' ? `↻ ${language === 'es' ? 'Re-enviar a Aprobación' : 'Re-submit for Approval'}` : ` ${tr('ecr.actions.submit')}`}
               </button>
             ) : (
               <span style={{
@@ -1187,8 +1298,8 @@ const ECRWorkflow = () => {
                 fontWeight: '600'
               }}>
                 {workflowData.status === 'closed' ? ' Cerrado' :
-                 workflowData.status === 'closed_rejected' ? ' Cerrado como Rechazado' :
-                 workflowData.status === 'pending_rejected_closure' ? ' Pendiente de Cierre como Rechazado' :
+                 workflowData.status === 'closed_rejected' ? ' Cerrado como No Adoptable' :
+                 workflowData.status === 'pending_rejected_closure' ? ' Pendiente de Cierre como No Adoptable' :
                  workflowData.status === 'pending_closure' ? ' Pendiente de Cierre' :
                  workflowData.status === 'pending_approval' ? ' Pendiente de Firmas' : ' Borrador'}
               </span>
@@ -1218,7 +1329,9 @@ const ECRWorkflow = () => {
                   submitted: { bg: '#dbeafe', color: '#1e40af', label: '→ Enviado' },
                   submitted_rejected: { bg: '#fef2f2', color: '#991b1b', label: '→ Enviado (No Adoptable)' },
                   approved: { bg: '#d1fae5', color: '#166534', label: '✓ Firmado' },
-                  rejected: { bg: '#fee2e2', color: '#991b1b', label: '✗ Rechazado' }
+                  rejected: { bg: '#fee2e2', color: '#991b1b', label: '↩ Devuelto' },
+                  rejection_approved: { bg: '#7f1d1d', color: '#fecaca', label: '✓ Confirmado No Adoptable' },
+                  rejection_cancelled: { bg: '#fef3c7', color: '#92400e', label: '↩ No Adoptable Cancelado' }
                 };
                 const style = actionStyles[entry.action] || actionStyles.submitted;
                 return (

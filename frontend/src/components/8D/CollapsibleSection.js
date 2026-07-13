@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const CollapsibleSection = ({
   title,
@@ -24,7 +25,23 @@ const CollapsibleSection = ({
   id
 }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
+
+  const tr = {
+    en: {
+      complete: 'Complete',
+      incomplete: 'Incomplete',
+      warning: 'Warning',
+      locked: 'Locked'
+    },
+    es: {
+      complete: 'Completado',
+      incomplete: 'Incompleto',
+      warning: 'Atención',
+      locked: 'Bloqueado'
+    }
+  }[language] || {};
 
   // Support both controlled and uncontrolled modes
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
@@ -43,13 +60,13 @@ const CollapsibleSection = ({
   const getStatusConfig = () => {
     switch (status) {
       case 'complete':
-        return { color: t.success, icon: CheckCircle, label: 'Completado' };
+        return { color: t.success, icon: CheckCircle, label: tr.complete };
       case 'incomplete':
-        return { color: t.warning, icon: AlertCircle, label: 'Incompleto' };
+        return { color: t.warning, icon: AlertCircle, label: tr.incomplete };
       case 'warning':
-        return { color: t.warning, icon: AlertCircle, label: 'Atención' };
+        return { color: t.warning, icon: AlertCircle, label: tr.warning };
       case 'locked':
-        return { color: t.textMuted, icon: Lock, label: 'Bloqueado' };
+        return { color: t.textMuted, icon: Lock, label: tr.locked };
       default:
         return null;
     }

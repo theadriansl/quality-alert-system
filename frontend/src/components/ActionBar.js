@@ -114,14 +114,6 @@ const MANAGEMENT_ACTIONS = {
     validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE'],
     requiresModal: true
   },
-  ASSIGN_AREA: {
-    id: 'ASSIGN_AREA',
-    labelEs: 'Asignar Área',
-    labelEn: 'Assign Area',
-    icon: '🏭',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE', 'SCRAPPED'],
-    requiresModal: true
-  },
   CHANGE_RESPONSIBLE: {
     id: 'CHANGE_RESPONSIBLE',
     labelEs: 'Cambiar Responsable',
@@ -136,30 +128,6 @@ const MANAGEMENT_ACTIONS = {
     labelEn: 'Assign Deviation',
     icon: '📄',
     validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE', 'IN_VALIDATION'],
-    requiresModal: true
-  },
-  ASSIGN_PRIORITY: {
-    id: 'ASSIGN_PRIORITY',
-    labelEs: 'Asignar Prioridad',
-    labelEn: 'Assign Priority',
-    icon: '🔥',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE'],
-    requiresModal: true
-  },
-  ADD_COMMENT: {
-    id: 'ADD_COMMENT',
-    labelEs: 'Agregar Comentario',
-    labelEn: 'Add Comment',
-    icon: '💬',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'QUARANTINE', 'SCRAPPED'],
-    requiresModal: true
-  },
-  ATTACH_EVIDENCE: {
-    id: 'ATTACH_EVIDENCE',
-    labelEs: 'Adjuntar Evidencia',
-    labelEn: 'Attach Evidence',
-    icon: '📎',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'QUARANTINE', 'SCRAPPED'],
     requiresModal: true
   },
   PRINT_LABELS: {
@@ -177,30 +145,6 @@ const TOOLS_ACTIONS = {
     labelEs: 'Ver Trazabilidad',
     labelEn: 'View Traceability',
     icon: '🔍',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'QUARANTINE', 'SCRAPPED', 'RELEASED', 'CLOSED'],
-    singleOnly: true
-  },
-  VIEW_PICTURES: {
-    id: 'VIEW_PICTURES',
-    labelEs: 'Ver Fotos',
-    labelEn: 'View Pictures',
-    icon: '📷',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'QUARANTINE', 'SCRAPPED', 'RELEASED', 'CLOSED'],
-    singleOnly: true
-  },
-  VIEW_8D: {
-    id: 'VIEW_8D',
-    labelEs: 'Ver 8D',
-    labelEn: 'View 8D',
-    icon: '📊',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'QUARANTINE', 'SCRAPPED', 'RELEASED', 'CLOSED'],
-    singleOnly: true
-  },
-  VIEW_HISTORY: {
-    id: 'VIEW_HISTORY',
-    labelEs: 'Ver Historial',
-    labelEn: 'View History',
-    icon: '📜',
     validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'QUARANTINE', 'SCRAPPED', 'RELEASED', 'CLOSED'],
     singleOnly: true
   },

@@ -131,6 +131,17 @@ const DefectCapture = () => {
   const [serialScrapped, setSerialScrapped] = useState(false); // Track if serial is scrapped
   const [scrapModalOpen, setScrapModalOpen] = useState(false); // Modal for scrapped serial
   const [scrapInfo, setScrapInfo] = useState(null); // Info about scrapped serial
+  const [productionInfo, setProductionInfo] = useState(null); // Info from production_entries
+
+  // ============================================================================
+  // STATE - Specs Checklist
+  // ============================================================================
+  const [partSpecs, setPartSpecs] = useState([]); // All specs for selected part
+  const [specsWarningOpen, setSpecsWarningOpen] = useState(false); // Warning modal
+  const [specsChecklistOpen, setSpecsChecklistOpen] = useState(false); // Checklist modal
+  const [pendingAction, setPendingAction] = useState(null); // 'OK' | 'DEFECT' - what to do after checklist
+  const [checklistResults, setChecklistResults] = useState({}); // { specId: { result, measuredValue, qualitativeValue, notes } }
+  const [checklistSaving, setChecklistSaving] = useState(false);
 
   // ============================================================================
   // STATE - Access Control
@@ -359,10 +370,11 @@ const DefectCapture = () => {
     }
   }, [selectedProject]);
 
-  // Load defects when part changes - RESET ALL fields
+  // Load defects and specs when part or station changes - RESET ALL fields
   useEffect(() => {
     if (selectedPart) {
       loadPartDefects(selectedPart.id);
+      loadPartSpecs(selectedPart.id, selectedStation?.id);
       setDefectFilter('');
       // Reset ALL form fields when part changes
       setSelectedDefect(null);
@@ -373,12 +385,16 @@ const DefectCapture = () => {
       setComment('');
       setHasDowntime(false);
       setDowntimeMinutes('');
+      // Reset checklist
+      setChecklistResults({});
     } else {
       setPartDefects([]);
       setDefectsByCategory([]);
       setSelectedDefect(null);
+      setPartSpecs([]);
+      setChecklistResults({});
     }
-  }, [selectedPart]);
+  }, [selectedPart, selectedStation]);
 
   // Reset specific fields when defect changes (same part)
   useEffect(() => {
@@ -631,9 +647,243 @@ const DefectCapture = () => {
     }
   };
 
+  const loadPartSpecs = async (partId, stationId = null) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/spec-catalog/parts/${partId}/specs-with-stations`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        let specs = data.specs || [];
+        // Filter by current station if one is selected
+        if (stationId) {
+          specs = specs.filter(spec =>
+            spec.stations && spec.stations.some(st => st.id === stationId)
+          );
+        }
+        setPartSpecs(specs);
+      } else {
+        setPartSpecs([]);
+      }
+    } catch (err) {
+      console.error('Error loading part specs:', err);
+      setPartSpecs([]);
+    }
+  };
+
   // ============================================================================
   // HANDLERS
   // ============================================================================
+
+  // Check if specs need verification before OK or Defect
+  const handlePiezaOkClick = () => {
+    if (!lotNumber.trim()) {
+      setError('Ingresa Serial/Lote antes de marcar OK');
+      return;
+    }
+    if (!selectedPart) {
+      setError('Selecciona una parte antes de marcar OK');
+      return;
+    }
+
+    if (partSpecs.length > 0) {
+      setPendingAction('OK');
+      setSpecsWarningOpen(true);
+    } else {
+      handlePiezaOk();
+    }
+  };
+
+  const handleAgregarDefectoClick = () => {
+    if (partSpecs.length > 0 && !checklistResults._completed) {
+      setPendingAction('DEFECT');
+      setSpecsWarningOpen(true);
+    } else {
+      handleSubmitDefect();
+    }
+  };
+
+  const handleSkipChecklist = async () => {
+    setSpecsWarningOpen(false);
+    const userName = currentUser?.firstName || currentUser?.username || 'Usuario';
+
+    // Register skip in spec_inspection_entries with SKIPPED result
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_URL}/spec-inspection/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          serialNumber: lotNumber,
+          clientId: selectedClient?.id,
+          projectId: selectedProject?.id,
+          partId: selectedPart?.id,
+          stationId: selectedStation?.id,
+          shiftId: selectedShift?.id,
+          entries: partSpecs.map(spec => ({
+            specId: spec.id,
+            result: 'SKIPPED',
+            notes: `Checklist omitido por ${userName}`
+          }))
+        })
+      });
+    } catch (err) {
+      console.error('Error registering skip:', err);
+    }
+
+    // Proceed with original action
+    if (pendingAction === 'OK') {
+      handlePiezaOk();
+    } else if (pendingAction === 'DEFECT') {
+      handleSubmitDefect();
+    }
+    setPendingAction(null);
+  };
+
+  const handleOpenChecklist = () => {
+    setSpecsWarningOpen(false);
+    setChecklistResults({});
+    setSpecsChecklistOpen(true);
+  };
+
+  const handleChecklistResult = (specId, result, value = null) => {
+    setChecklistResults(prev => ({
+      ...prev,
+      [specId]: {
+        ...prev[specId],
+        result,
+        measuredValue: value
+      }
+    }));
+  };
+
+  const handleChecklistSubmit = async () => {
+    // Validate all specs have results
+    const specsWithResults = Object.keys(checklistResults).filter(k => k !== '_completed');
+    if (specsWithResults.length < partSpecs.length) {
+      setError('Completa todos los items del checklist');
+      return;
+    }
+
+    setChecklistSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+
+      // Build entries array
+      const entries = partSpecs.map(spec => {
+        const result = checklistResults[spec.id];
+        return {
+          specId: spec.id,
+          result: result?.result || 'OK',
+          measuredValue: result?.measuredValue || null,
+          qualitativeValue: result?.qualitativeValue || null,
+          notes: result?.notes || null
+        };
+      });
+
+      // Save bulk entries
+      const saveRes = await fetch(`${API_URL}/spec-inspection/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          serialNumber: lotNumber,
+          clientId: selectedClient?.id,
+          projectId: selectedProject?.id,
+          partId: selectedPart?.id,
+          stationId: selectedStation?.id,
+          shiftId: selectedShift?.id,
+          entries
+        })
+      });
+
+      const saveData = await saveRes.json();
+
+      // Get NOK entries to auto-create defects
+      const nokEntries = entries.filter(e => e.result === 'NOK');
+      console.log('[Checklist] Entries:', entries);
+      console.log('[Checklist] NOK entries:', nokEntries);
+
+      if (nokEntries.length > 0) {
+        // Auto-create defects for each NOK spec
+        for (const nokEntry of nokEntries) {
+          const spec = partSpecs.find(s => s.id === nokEntry.specId);
+          console.log('[Checklist] Processing NOK spec:', nokEntry.specId, 'Found spec:', spec);
+          if (!spec) continue;
+
+          // Build defect comment with spec info
+          let defectComment = `Spec ${spec.specNumber} - ${spec.specName}: NOK`;
+          if (nokEntry.measuredValue !== null) {
+            defectComment += ` (Medido: ${nokEntry.measuredValue}`;
+            if (spec.lowerLimit !== null && spec.upperLimit !== null) {
+              defectComment += `, Límites: ${spec.lowerLimit} - ${spec.upperLimit}`;
+            }
+            defectComment += ')';
+          }
+
+          // Create defect via API
+          const defectPayload = {
+            partId: selectedPart?.id,
+            specId: spec.id,
+            stationId: selectedStation?.id,
+            shiftId: selectedShift?.id,
+            inspectorId: selectedInspector?.id || currentUser?.id,
+            lotNumber: lotNumber,
+            notes: defectComment,
+            measuredValue: nokEntry.measuredValue
+          };
+          console.log('[Checklist] Creating defect with payload:', defectPayload);
+
+          try {
+            const defectRes = await fetch(`${API_URL}/defects-v2/from-spec`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify(defectPayload)
+            });
+            const defectData = await defectRes.json();
+            console.log('[Checklist] Defect creation response:', defectData);
+            if (!defectData.success) {
+              console.error('[Checklist] Failed to create defect:', defectData.message);
+            }
+          } catch (defectErr) {
+            console.error('[Checklist] Error creating defect:', defectErr);
+          }
+        }
+
+        setNgCount(prev => prev + nokEntries.length);
+        showSuccessMessage(`Checklist completado. ${nokEntries.length} defecto(s) auto-registrado(s)`);
+      } else {
+        showSuccessMessage('Checklist completado - Todo OK');
+      }
+
+      // Mark checklist as completed
+      setChecklistResults(prev => ({ ...prev, _completed: true }));
+      setSpecsChecklistOpen(false);
+
+      // Proceed with original action
+      if (pendingAction === 'OK' && nokEntries.length === 0) {
+        handlePiezaOk();
+      }
+      // If there were NOK entries, don't auto-mark OK
+
+      setPendingAction(null);
+    } catch (err) {
+      console.error('Error saving checklist:', err);
+      setError('Error al guardar checklist: ' + err.message);
+    } finally {
+      setChecklistSaving(false);
+    }
+  };
+
   const handlePiezaOk = useCallback(() => {
     setOkCount(prev => prev + 1);
     // Clear lot for next piece
@@ -710,6 +960,13 @@ const DefectCapture = () => {
             setScrapInfo(null);
           }
 
+          // Capturar info de producción si existe
+          if (data.productionInfo) {
+            setProductionInfo(data.productionInfo);
+          } else {
+            setProductionInfo(null);
+          }
+
           // Auto-rellenar Cliente, Proyecto y Parte
           const { clientId, projectId, partId, projectNumber, projectName } = data.unit;
 
@@ -757,6 +1014,7 @@ const DefectCapture = () => {
     if (value.trim()) {
       setHasRegisteredDefect(false);
       setSerialScrapped(false); // Reset scrapped state when serial changes
+      setProductionInfo(null); // Reset production info
       setError(null);
     }
   };
@@ -935,7 +1193,8 @@ const DefectCapture = () => {
         lotNumber: lotNumber || null,
         downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
         notes: comment || null,
-        quantity: 1
+        quantity: 1,
+        workOrder: productionInfo?.workOrder || null
       };
 
       const res = await fetch(`${API_URL}/defects-v2/entries`, {
@@ -1630,7 +1889,7 @@ const DefectCapture = () => {
           </div>
 
           {/* PIEZA OK Button */}
-          <button style={styles.piezaOkButton} onClick={handlePiezaOk}>
+          <button style={styles.piezaOkButton} onClick={handlePiezaOkClick}>
             <CheckCircle size={20} />
             PIEZA OK
           </button>
@@ -1807,6 +2066,31 @@ const DefectCapture = () => {
                 />
               </div>
             )}
+            {/* Indicador de producción */}
+            {productionInfo && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: productionInfo.inspectionStatus === 'PENDING' ? '#fef3c7' : '#dcfce7',
+                borderRadius: '6px',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '16px' }}>
+                  {productionInfo.inspectionStatus === 'PENDING' ? '📋' : '✅'}
+                </span>
+                <div>
+                  <div style={{ fontWeight: '500', color: productionInfo.inspectionStatus === 'PENDING' ? '#92400e' : '#166534' }}>
+                    {productionInfo.inspectionStatus === 'PENDING' ? 'Pendiente de inspección' : 'Ya inspeccionado'}
+                  </div>
+                  {productionInfo.workOrder && (
+                    <div style={{ color: '#6b7280' }}>OT: {productionInfo.workOrder}</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Etapa */}
@@ -1919,88 +2203,6 @@ const DefectCapture = () => {
 
         {/* ====== RIGHT PANEL (75%) ====== */}
         <div style={styles.rightPanel}>
-          {/* Specs Section (only if station has specs configured) */}
-          {stationSpecs.length > 0 && (
-            <div style={styles.specsSection}>
-              <div style={styles.specsTitle}>
-                <AlertTriangle size={16} />
-                Especificaciones a Verificar ({stationSpecs.length})
-                <span style={{ marginLeft: 'auto', display: 'flex', gap: '12px', fontSize: '13px' }}>
-                  <span style={{ color: '#065f46' }}>OK: {specOkCount}</span>
-                  <span style={{ color: '#991b1b' }}>NOK: {specNokCount}</span>
-                  <span style={{ color: t.textMuted }}>Pendiente: {specPendingCount}</span>
-                </span>
-              </div>
-              <div style={styles.specsGrid}>
-                {stationSpecs.map(spec => (
-                  <div
-                    key={spec.id}
-                    style={{
-                      ...styles.specCard,
-                      ...(spec.isCritical ? styles.specCardCritical : {})
-                    }}
-                  >
-                    <div style={styles.specHeader}>
-                      <div>
-                        <div style={styles.specName}>{spec.specName}</div>
-                        <code style={styles.specCode}>{spec.specNumber}</code>
-                      </div>
-                      {spec.isCritical && <span style={styles.criticalBadge}>CTQ</span>}
-                    </div>
-
-                    {/* Show limits for dimensional specs */}
-                    {spec.specType === 'DIMENSIONAL' && (
-                      <div style={styles.specLimits}>
-                        <span style={styles.specLimitValue}>{spec.lowerLimit ?? '-'}</span>
-                        <span>≤</span>
-                        <span style={{ ...styles.specLimitValue, ...styles.specNominal }}>
-                          {spec.nominalValue ?? '-'} {spec.unitSymbol || ''}
-                        </span>
-                        <span>≤</span>
-                        <span style={styles.specLimitValue}>{spec.upperLimit ?? '-'}</span>
-                      </div>
-                    )}
-
-                    {/* OK / NOK Buttons */}
-                    <div style={styles.specActions}>
-                      <button
-                        style={{
-                          ...styles.specButton,
-                          ...styles.specButtonOk,
-                          ...(specResults[spec.id] === 'OK' ? styles.specButtonSelected : { opacity: specResults[spec.id] ? 0.5 : 1 }),
-                          ...(specSaving[spec.id] ? { opacity: 0.6, cursor: 'wait' } : {})
-                        }}
-                        onClick={() => handleSpecResult(spec.id, 'OK')}
-                        disabled={specSaving[spec.id] || !lotNumber.trim()}
-                      >
-                        <CheckCircle size={16} /> OK
-                      </button>
-                      <button
-                        style={{
-                          ...styles.specButton,
-                          ...styles.specButtonNok,
-                          ...(specResults[spec.id] === 'NOK' ? styles.specButtonSelected : { opacity: specResults[spec.id] ? 0.5 : 1 }),
-                          ...(specSaving[spec.id] ? { opacity: 0.6, cursor: 'wait' } : {})
-                        }}
-                        onClick={() => handleSpecResult(spec.id, 'NOK')}
-                        disabled={specSaving[spec.id] || !lotNumber.trim()}
-                      >
-                        <XCircle size={16} /> NOK
-                      </button>
-                      {/* Saved indicator */}
-                      {specSaved[spec.id] && (
-                        <span style={{ color: '#10b981', fontSize: '11px', marginLeft: '4px' }}>Guardado</span>
-                      )}
-                      {specSaving[spec.id] && (
-                        <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>...</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Defects Grid (75% of right) */}
           <div style={styles.defectsGrid}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -2222,7 +2424,7 @@ const DefectCapture = () => {
                 ...styles.submitButton,
                 ...((!isFormValid || submitting) ? styles.submitButtonDisabled : {})
               }}
-              onClick={handleSubmitDefect}
+              onClick={handleAgregarDefectoClick}
               disabled={!isFormValid || submitting}
             >
               <Plus size={20} />
@@ -2387,6 +2589,344 @@ const DefectCapture = () => {
             >
               ENTENDIDO
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Warning - Specs Checklist */}
+      {specsWarningOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <AlertTriangle size={28} style={{ color: '#f59e0b' }} />
+              <h3 style={{ margin: 0, color: t.text, fontSize: '18px' }}>
+                Verificación de Especificaciones
+              </h3>
+            </div>
+
+            <p style={{ color: t.textMuted, lineHeight: '1.6', margin: '0 0 8px 0' }}>
+              Esta parte tiene <strong style={{ color: t.text }}>{partSpecs.length} especificaciones</strong> configuradas para verificar.
+            </p>
+            <p style={{ color: t.textMuted, lineHeight: '1.6', margin: '0 0 20px 0', fontSize: '13px' }}>
+              Serial: <strong style={{ color: t.text }}>{lotNumber}</strong>
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleSkipChecklist}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                OMITIR
+              </button>
+              <button
+                onClick={handleOpenChecklist}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                VERIFICAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Checklist de Especificaciones */}
+      {specsChecklistOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            maxWidth: '700px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '20px',
+              borderBottom: `1px solid ${t.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ margin: '0 0 4px 0', color: t.text, fontSize: '18px' }}>
+                  Checklist de Especificaciones
+                </h3>
+                <p style={{ margin: 0, color: t.textMuted, fontSize: '13px' }}>
+                  Serial: {lotNumber} | Parte: {selectedPart?.partNumber || selectedPart?.captureDisplayName}
+                </p>
+              </div>
+              <button
+                onClick={() => setSpecsChecklistOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  color: t.textMuted
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Specs List */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '16px'
+            }}>
+              {partSpecs.map((spec, idx) => {
+                const result = checklistResults[spec.id];
+                const isDimensional = spec.specType === 'DIMENSIONAL';
+                const isQualitative = spec.specType === 'QUALITATIVE';
+
+                return (
+                  <div
+                    key={spec.id}
+                    style={{
+                      padding: '16px',
+                      marginBottom: '12px',
+                      backgroundColor: t.bgPanel,
+                      borderRadius: '8px',
+                      border: `1px solid ${
+                        result?.result === 'OK' ? '#10b981' :
+                        result?.result === 'NOK' ? '#ef4444' : t.border
+                      }`
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: '12px'
+                    }}>
+                      <div>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginBottom: '4px'
+                        }}>
+                          <span style={{
+                            backgroundColor: t.bgCard,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontFamily: 'monospace',
+                            color: t.textMuted
+                          }}>
+                            {spec.specNumber}
+                          </span>
+                          {spec.isCritical && (
+                            <span style={{
+                              backgroundColor: '#fee2e2',
+                              color: '#dc2626',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: '600'
+                            }}>
+                              CRÍTICO
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ margin: 0, color: t.text, fontWeight: '500' }}>
+                          {spec.specName}
+                        </p>
+                        {isDimensional && (
+                          <p style={{ margin: '4px 0 0 0', color: t.textMuted, fontSize: '12px' }}>
+                            {spec.lowerLimit} - <strong>{spec.nominalValue}</strong> - {spec.upperLimit} {spec.unitSymbol || ''}
+                          </p>
+                        )}
+                        {isQualitative && spec.acceptableValues && (
+                          <p style={{ margin: '4px 0 0 0', color: t.textMuted, fontSize: '12px' }}>
+                            Valores: {spec.acceptableValues}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* OK/NOK Buttons */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleChecklistResult(spec.id, 'OK')}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: result?.result === 'OK' ? '#10b981' : t.bgCard,
+                            color: result?.result === 'OK' ? 'white' : '#10b981',
+                            border: `2px solid #10b981`,
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <CheckCircle size={16} />
+                          OK
+                        </button>
+                        <button
+                          onClick={() => handleChecklistResult(spec.id, 'NOK')}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: result?.result === 'NOK' ? '#ef4444' : t.bgCard,
+                            color: result?.result === 'NOK' ? 'white' : '#ef4444',
+                            border: `2px solid #ef4444`,
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <XCircle size={16} />
+                          NOK
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Measured Value Input (for dimensional specs) */}
+                    {isDimensional && (
+                      <div style={{ marginTop: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>
+                          Valor Medido:
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={result?.measuredValue || ''}
+                          onChange={(e) => handleChecklistResult(spec.id, result?.result || null, e.target.value ? parseFloat(e.target.value) : null)}
+                          placeholder={`Ej: ${spec.nominalValue || '0.00'}`}
+                          style={{
+                            width: '150px',
+                            padding: '8px 12px',
+                            backgroundColor: t.bgCard,
+                            color: t.text,
+                            border: `1px solid ${t.border}`,
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <span style={{ marginLeft: '8px', color: t.textMuted, fontSize: '13px' }}>
+                          {spec.unitSymbol || ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 20px',
+              borderTop: `1px solid ${t.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ color: t.textMuted, fontSize: '13px' }}>
+                <span style={{ color: '#10b981' }}>
+                  OK: {Object.values(checklistResults).filter(r => r?.result === 'OK').length}
+                </span>
+                {' | '}
+                <span style={{ color: '#ef4444' }}>
+                  NOK: {Object.values(checklistResults).filter(r => r?.result === 'NOK').length}
+                </span>
+                {' | '}
+                Pendientes: {partSpecs.length - Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length}
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setSpecsChecklistOpen(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: t.bgPanel,
+                    color: t.text,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '6px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleChecklistSubmit}
+                  disabled={checklistSaving || Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length < partSpecs.length}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length < partSpecs.length ? '#94a3b8' : '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length < partSpecs.length ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {checklistSaving ? 'Guardando...' : 'CONFIRMAR'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

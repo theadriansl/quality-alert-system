@@ -17,15 +17,18 @@ import CreateClient from './pages/CreateClient';
 import LessonsLearned from './pages/LessonsLearned';
 import ECRWorkflow from './pages/ECRWorkflow';
 import ECRDashboard from './pages/ECRDashboard';
-import ECRDashboardPowerBI from './pages/ECRDashboardPowerBI';
+import ECRDashboardAdvanced from './pages/ECRDashboardAdvanced';
+import ECRConfig from './pages/ECRConfig';
+import ECRQualityTargets from './pages/ECRQualityTargets';
 import RiskMatrixConfig from './pages/RiskMatrixConfig';
 import ImpactAnalysisConfig from './pages/ImpactAnalysisConfig';
 import WorkloadManager from './pages/WorkloadManager';
-import DefectAdmin from './pages/DefectAdmin';
 import DefectAdminV2 from './pages/DefectAdminV2';
 import DefectCapture from './pages/DefectCapture';
 import DefectConfig from './pages/DefectConfig';
 import DefectQuery from './pages/DefectQuery';
+import DefectHospital from './pages/DefectHospital';
+import HospitalDashboard from './pages/HospitalDashboard';
 import QARCreate from './pages/QARCreate';
 import QARList from './pages/QARList';
 import QARDetail from './pages/QARDetail';
@@ -36,6 +39,8 @@ import MRBCampaigns from './pages/MRBCampaigns';
 import MRBCampaignDetail from './pages/MRBCampaignDetail';
 import MRBDashboard from './pages/MRBDashboard';
 import MRBDefectCapture from './pages/MRBDefectCapture';
+import MRBConfig from './pages/MRBConfig';
+import MRBBuffer from './pages/MRBBuffer';
 // Audit Module
 import AuditDashboard from './pages/AuditDashboard';
 import AuditPrograms from './pages/AuditPrograms';
@@ -59,19 +64,29 @@ import ConfigurationPage from './pages/ConfigurationPage';
 import { WorkInstructionsList, WorkInstructionDetail, WIPlantConfig, WIDashboard } from './components/WorkInstructions';
 // Management Review
 import ManagementReview from './pages/ManagementReview';
-// Statistical Tools
-import StatisticalTools from './pages/StatisticalTools';
+// Unit Traceability
+import UnitTraceability from './pages/UnitTraceability';
+// Skills & Training Module
+import SkillsConfig from './pages/SkillsConfig';
+import SkillsTeam from './pages/SkillsTeam';
+import SkillsProfile from './pages/SkillsProfile';
+import SkillsEvaluate from './pages/SkillsEvaluate';
+import SkillsDashboard from './pages/SkillsDashboard';
+// WI Operator Profile (ILUO)
+import WIOperatorProfile from './pages/WIOperatorProfile';
+// User Manual
+import UserManual from './pages/UserManual';
 
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#FAFBFC'
       }}>
@@ -90,8 +105,56 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   return user ? children : <Navigate to="/login" />;
+};
+
+// Ruta protegida solo para administradores
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FAFBFC'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '4px solid #E6EAEE',
+            borderTop: '4px solid #0072CE',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <p style={{ color: '#6b7280', fontSize: '16px' }}>Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  // Verificar si es admin
+  const isAdmin = user.systemRole === 'admin' ||
+                  user.userType === 'super_admin' ||
+                  user.role === 'admin' ||
+                  user.role === 'Admin' ||
+                  user.role === 'Administrador' ||
+                  user.role === 'superadmin';
+
+  if (!isAdmin) {
+    return <Navigate to="/" />;
+  }
+
+  return children;
 };
 
 function App() {
@@ -208,10 +271,10 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* ECR/ECO Module - Dashboard con Widgets Configurables */}
+              {/* ECR/ECO Module - Dashboard Avanzado con Widgets Configurables */}
               <Route path="/ecr-dashboard" element={
                 <ProtectedRoute>
-                  <ECRDashboardPowerBI />
+                  <ECRDashboardAdvanced />
                 </ProtectedRoute>
               } />
 
@@ -219,6 +282,17 @@ function App() {
               <Route path="/ecr-dashboard-simple" element={
                 <ProtectedRoute>
                   <ECRDashboard />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/ecr-config" element={
+                <ProtectedRoute>
+                  <ECRConfig />
+                </ProtectedRoute>
+              } />
+              <Route path="/ecr-quality-targets" element={
+                <ProtectedRoute>
+                  <ECRQualityTargets />
                 </ProtectedRoute>
               } />
 
@@ -257,18 +331,11 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Defect Module - Admin Catalogs (V2 Simplified) */}
+              {/* Defect Module - Admin (Defectos, Estaciones, Specs) - Solo Administradores */}
               <Route path="/defect-admin" element={
-                <ProtectedRoute>
+                <AdminRoute>
                   <DefectAdminV2 />
-                </ProtectedRoute>
-              } />
-
-              {/* Defect Module - Admin Catalogs (Old - Legacy) */}
-              <Route path="/defect-admin-legacy" element={
-                <ProtectedRoute>
-                  <DefectAdmin />
-                </ProtectedRoute>
+                </AdminRoute>
               } />
 
               {/* Defect Module - Capture Form */}
@@ -296,6 +363,27 @@ function App() {
               <Route path="/defect-query" element={
                 <ProtectedRoute>
                   <DefectQuery />
+                </ProtectedRoute>
+              } />
+
+              {/* Defect Hospital - Repair & Release */}
+              <Route path="/defect-hospital" element={
+                <ProtectedRoute>
+                  <DefectHospital />
+                </ProtectedRoute>
+              } />
+
+              {/* Hospital Dashboard - Analytics */}
+              <Route path="/hospital-dashboard" element={
+                <ProtectedRoute>
+                  <HospitalDashboard />
+                </ProtectedRoute>
+              } />
+
+              {/* Unit Traceability - Serial/Lot History */}
+              <Route path="/unit-traceability" element={
+                <ProtectedRoute>
+                  <UnitTraceability />
                 </ProtectedRoute>
               } />
 
@@ -349,6 +437,49 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              <Route path="/mrb-config" element={
+                <ProtectedRoute>
+                  <MRBConfig />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/mrb-buffer" element={
+                <ProtectedRoute>
+                  <MRBBuffer />
+                </ProtectedRoute>
+              } />
+
+              {/* Skills & Training Module */}
+              <Route path="/skills/config" element={
+                <ProtectedRoute>
+                  <SkillsConfig />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/skills/team" element={
+                <ProtectedRoute>
+                  <SkillsTeam />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/skills/profile/:userId" element={
+                <ProtectedRoute>
+                  <SkillsProfile />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/skills/evaluate/:userId" element={
+                <ProtectedRoute>
+                  <SkillsEvaluate />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/skills/dashboard" element={
+                <ProtectedRoute>
+                  <SkillsDashboard />
+                </ProtectedRoute>
+              } />
+
               {/* Audit Module Routes */}
               <Route path="/audit-dashboard" element={
                 <ProtectedRoute>
@@ -375,6 +506,12 @@ function App() {
               } />
 
               <Route path="/audit-schedule-create" element={
+                <ProtectedRoute>
+                  <AuditScheduleCreate />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/audit-schedule-edit/:id" element={
                 <ProtectedRoute>
                   <AuditScheduleCreate />
                 </ProtectedRoute>
@@ -435,6 +572,12 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              <Route path="/work-instructions/operator/:operatorId" element={
+                <ProtectedRoute>
+                  <WIOperatorProfile />
+                </ProtectedRoute>
+              } />
+
               <Route path="/work-instructions/:id" element={
                 <ProtectedRoute>
                   <WorkInstructionDetail />
@@ -466,10 +609,11 @@ function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Statistical Tools */}
-              <Route path="/statistical-tools" element={
+
+              {/* User Manual */}
+              <Route path="/manual" element={
                 <ProtectedRoute>
-                  <StatisticalTools />
+                  <UserManual />
                 </ProtectedRoute>
               } />
 

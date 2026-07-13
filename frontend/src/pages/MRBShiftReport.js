@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { X, Printer, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -12,6 +13,121 @@ const DISP_COLORS = {
   HOLD:            { bg: '#f3f4f6', color: '#374151' },
   RETURN_SUPPLIER: { bg: '#ede9fe', color: '#5b21b6' },
   USE_AS_IS:       { bg: '#d1fae5', color: '#065f46' },
+};
+
+const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
+  const { theme: t } = useTheme();
+  const { language } = useLanguage();
+  const [editingId, setEditingId] = useState(null);
+
+  // Traducciones locales
+  const L = {
+    en: { hour: 'Hour', serial: 'Serial', type: 'Type', minutes: 'Minutes', comment: 'Comment', inspector: 'Inspector', noDowntime: 'No downtime records.' },
+    es: { hour: 'Hora', serial: 'Serial', type: 'Tipo', minutes: 'Minutos', comment: 'Comentario', inspector: 'Inspector', noDowntime: 'Sin registros de downtime.' }
+  }[language] || {};
+  const [editMin, setEditMin]     = useState('');
+  const [editNote, setEditNote]   = useState('');
+  const [saving, setSaving]       = useState(false);
+
+  const startEdit = (row) => {
+    setEditingId(row.id);
+    setEditMin(String(row.downtimeMinutes));
+    setEditNote(row.notes || '');
+  };
+
+  const cancelEdit = () => { setEditingId(null); setEditMin(''); setEditNote(''); };
+
+  const saveEdit = async (row) => {
+    if (parseInt(editMin) < 0 || editMin === '') return;
+    setSaving(true);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/mrb/${campaignId}/downtime/${row.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ downtimeMinutes: parseInt(editMin), notes: editNote || null })
+      });
+      if (!res.ok) throw new Error();
+      cancelEdit();
+      onRefresh();
+    } catch { /* silent */ } finally { setSaving(false); }
+  };
+
+  const deleteEntry = async (row) => {
+    if (!window.confirm(`¿Eliminar ${row.downtimeMinutes} min de downtime (${row.lotNumber || 'sin serial'})?`)) return;
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`${API_URL}/mrb/${campaignId}/downtime/${row.id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+      });
+      onRefresh();
+    } catch { /* silent */ }
+  };
+
+  const total = downtimeLog.reduce((s, r) => s + r.downtimeMinutes, 0);
+
+  return (
+    <Section title={`Registro de Downtime${downtimeLog.length > 0 ? ` (${downtimeLog.length}) — ${total} min total` : ''}`}>
+      {downtimeLog.length === 0 ? <p style={{ color: t.textMuted, fontSize: '13px' }}>{L.noDowntime}</p> : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <thead>
+            <tr style={{ borderBottom: `2px solid ${t.border}` }}>
+              {[L.hour, L.serial, L.type, L.minutes, L.comment, L.inspector, ''].map(h => (
+                <th key={h} style={{ padding: '6px 10px', textAlign: h === L.minutes ? 'center' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {downtimeLog.map((row, i) => {
+              const isEditing = editingId === row.id;
+              return (
+                <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: t.textMuted, whiteSpace: 'nowrap' }}>{fmtTime(row.createdAt)}</td>
+                  <td style={{ padding: '8px 10px', color: t.text }}>{row.lotNumber || '—'}</td>
+                  <td style={{ padding: '8px 10px' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', backgroundColor: row.sourceType === 'NOK' ? '#fee2e2' : '#d1fae5', color: row.sourceType === 'NOK' ? '#991b1b' : '#065f46' }}>
+                      {row.sourceType}
+                    </span>
+                  </td>
+                  <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                    {isEditing
+                      ? <input type="number" value={editMin} onChange={e => setEditMin(e.target.value)} min="0" style={{ width: '70px', padding: '4px 6px', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgInput, color: t.text, fontSize: '13px', textAlign: 'center' }} />
+                      : <span style={{ fontWeight: '700', color: '#f59e0b' }}>{row.downtimeMinutes}</span>}
+                  </td>
+                  <td style={{ padding: '8px 10px', color: t.text, maxWidth: '220px' }}>
+                    {isEditing
+                      ? <input type="text" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="Comentario" style={{ width: '100%', padding: '4px 6px', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgInput, color: t.text, fontSize: '13px' }} />
+                      : (row.notes || '—')}
+                  </td>
+                  <td style={{ padding: '8px 10px', color: t.textMuted, whiteSpace: 'nowrap' }}>{row.inspector || '—'}</td>
+                  <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                    {isEditing ? (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => saveEdit(row)} disabled={saving} style={{ padding: '3px 10px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>✓</button>
+                        <button onClick={cancelEdit} style={{ padding: '3px 10px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => startEdit(row)} style={{ padding: '3px 10px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✏</button>
+                        <button onClick={() => deleteEntry(row)} style={{ padding: '3px 10px', backgroundColor: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>✕</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: `2px solid ${t.border}` }}>
+              <td colSpan={3} style={{ padding: '8px 10px', fontWeight: '700', color: t.text, fontSize: '12px' }}>Total</td>
+              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: '#f59e0b' }}>{total} min</td>
+              <td colSpan={3} />
+            </tr>
+          </tfoot>
+        </table>
+      )}
+    </Section>
+  );
 };
 
 const Section = ({ title, children, defaultOpen = true, sectionId }) => {
@@ -30,6 +146,27 @@ const Section = ({ title, children, defaultOpen = true, sectionId }) => {
 
 const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
+
+  // Traducciones locales
+  const L = {
+    en: {
+      shift: 'Shift', date: 'Date', campaign: 'Campaign', client: 'Client', part: 'Part', lot: 'Lot', generated: 'Generated',
+      scrap: 'Scrap', downtime: 'Downtime', inspected: 'Inspected', remaining: 'Remaining',
+      defect: 'Defect', qty: 'Qty', nokPct: '% NOK', accumPct: '% Accum', bar: 'Bar',
+      inspector: 'Inspector', ok: 'OK', nok: 'NOK', insp: 'INSP', yieldPct: 'Yield %', detectionPct: 'Detection %',
+      unclassified: 'Unclassified', hour: 'Hour', serial: 'Serial', disposition: 'Disposition', notes: 'Notes', noNotes: 'No notes',
+      type: 'Type', minutes: 'Minutes', comment: 'Comment',
+    },
+    es: {
+      shift: 'Turno', date: 'Fecha', campaign: 'Campaña', client: 'Cliente', part: 'Parte', lot: 'Lote', generated: 'Generado',
+      scrap: 'Scrap', downtime: 'Downtime', inspected: 'Inspeccionado', remaining: 'Restante',
+      defect: 'Defecto', qty: 'Qty', nokPct: '% NOK', accumPct: '% Acum', bar: 'Barra',
+      inspector: 'Inspector', ok: 'OK', nok: 'NOK', insp: 'INSP', yieldPct: 'Yield %', detectionPct: 'Detection %',
+      unclassified: 'Sin clasificar', hour: 'Hora', serial: 'Serial', disposition: 'Disposición', notes: 'Notas', noNotes: 'Sin notas',
+      type: 'Tipo', minutes: 'Minutos', comment: 'Comentario',
+    }
+  }[language] || {};
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
@@ -175,6 +312,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
   const tallies = data?.tallies || [];
   const entries = data?.defectEntries || [];
   const okEntries = data?.okEntries || [];
+  const downtimeLog = data?.downtimeLog || [];
 
   const avancePct = avance.qtyEnPlanta > 0 ? Math.min(100, (avance.qtyInspected / avance.qtyEnPlanta) * 100) : 0;
   const paretoMax = pareto[0]?.qty || 1;
@@ -232,13 +370,13 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
             <div data-pdf-header="1" style={{ backgroundColor: `${t.accent}10`, border: `1px solid ${t.accent}30`, borderRadius: '10px', padding: '16px 20px', marginBottom: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
                 {[
-                  { label: 'Campaña', value: h.campaignNumber },
-                  { label: 'Cliente', value: h.clientName },
-                  { label: 'Parte', value: h.partNumber ? `${h.partNumber}${h.partName ? ' — ' + h.partName : ''}` : '—' },
-                  { label: 'Lote', value: h.lotNumber || '—' },
-                  { label: 'Turno', value: h.shiftCode ? `${h.shiftCode} — ${h.shiftName}` : shiftLabel },
-                  { label: 'Fecha', value: fmtDate(date) },
-                  { label: 'Generado', value: data?.generatedAt ? fmtTime(data.generatedAt) : '—' },
+                  { label: L.campaign, value: h.campaignNumber },
+                  { label: L.client, value: h.clientName },
+                  { label: L.part, value: h.partNumber ? `${h.partNumber}${h.partName ? ' — ' + h.partName : ''}` : '—' },
+                  { label: L.lot, value: h.lotNumber || '—' },
+                  { label: L.shift, value: h.shiftCode ? `${h.shiftCode} — ${h.shiftName}` : shiftLabel },
+                  { label: L.date, value: fmtDate(date) },
+                  { label: L.generated, value: data?.generatedAt ? fmtTime(data.generatedAt) : '—' },
                 ].map(f => (
                   <div key={f.label}>
                     <div style={{ fontSize: '10px', color: t.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>{f.label}</div>
@@ -256,8 +394,8 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   { label: 'OK', value: kpis.qtyOk, color: '#16a34a' },
                   { label: 'NOK', value: kpis.qtyNok, color: '#B00020' },
                   { label: 'Yield %', value: kpis.yieldPct != null ? `${kpis.yieldPct}%` : '—', color: parseFloat(kpis.yieldPct) >= 95 ? '#16a34a' : '#f59e0b' },
-                  { label: 'Scrap', value: kpis.qtyScrap, color: '#ef4444' },
-                  { label: 'Downtime', value: kpis.downtimeMin > 0 ? `${kpis.downtimeMin} min` : '—', color: kpis.downtimeMin > 0 ? '#f59e0b' : t.textMuted },
+                  { label: L.scrap, value: kpis.qtyScrap, color: '#ef4444' },
+                  { label: L.downtime, value: kpis.downtimeMin > 0 ? `${kpis.downtimeMin} min` : '—', color: kpis.downtimeMin > 0 ? '#f59e0b' : t.textMuted },
                 ].map(k => (
                   <div key={k.label} style={{ textAlign: 'center', minWidth: '70px' }}>
                     <div style={{ fontSize: '28px', fontWeight: '700', color: k.color }}>{k.value ?? '—'}</div>
@@ -273,8 +411,8 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
                   {[
                     { label: 'En Planta', value: avance.qtyEnPlanta, color: '#f59e0b' },
-                    { label: 'Inspeccionado', value: avance.qtyInspected, color: '#7c3aed' },
-                    { label: 'Restante', value: Math.max(0, avance.qtyEnPlanta - avance.qtyInspected), color: avance.qtyEnPlanta - avance.qtyInspected > 0 ? '#B00020' : '#16a34a' },
+                    { label: L.inspected, value: avance.qtyInspected, color: '#7c3aed' },
+                    { label: L.remaining, value: Math.max(0, avance.qtyEnPlanta - avance.qtyInspected), color: avance.qtyEnPlanta - avance.qtyInspected > 0 ? '#B00020' : '#16a34a' },
                   ].map(a => (
                     <div key={a.label} style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '28px', fontWeight: '700', color: a.color }}>{a.value}</div>
@@ -302,8 +440,8 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                      {['Defecto', 'Qty', '% NOK', '% Acum', 'Barra'].map(h => (
-                        <th key={h} style={{ padding: '6px 10px', textAlign: h === 'Qty' || h === '% NOK' || h === '% Acum' ? 'center' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
+                      {[L.defect, L.qty, L.nokPct, L.accumPct, L.bar].map(h => (
+                        <th key={h} style={{ padding: '6px 10px', textAlign: h === L.qty || h === L.nokPct || h === L.accumPct ? 'center' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -325,6 +463,14 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 </table>
               )}
             </Section>
+
+            {/* ── 4b. REGISTRO DE DOWNTIME ── */}
+            <DowntimeSection
+              downtimeLog={downtimeLog}
+              campaignId={campaignId}
+              onRefresh={fetchReport}
+              fmtTime={fmtTime}
+            />
 
             {/* ── 5. DISPOSICIÓN ── */}
             <Section title="Breakdown por Disposición">
@@ -350,8 +496,8 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                      {['Inspector', 'OK', 'NOK', 'INSP', 'Yield %', 'Detection %'].map(h => (
-                        <th key={h} style={{ padding: '6px 10px', textAlign: h === 'Inspector' ? 'left' : 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
+                      {[L.inspector, L.ok, L.nok, L.insp, L.yieldPct, L.detectionPct].map(h => (
+                        <th key={h} style={{ padding: '6px 10px', textAlign: h === L.inspector ? 'left' : 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -381,7 +527,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
               entries.forEach(e => {
                 const dc = e.dispositionCode || 'SIN_DISP';
                 if (!dispCodes.includes(dc)) { dispCodes.push(dc); dispNames[dc] = e.dispositionName || dc; }
-                const dn = e.defectName || 'Sin clasificar';
+                const dn = e.defectName || L.unclassified;
                 if (!defectMap[dn]) defectMap[dn] = { total: 0 };
                 defectMap[dn][dc] = (defectMap[dn][dc] || 0) + (e.quantity || 1);
                 defectMap[dn].total += (e.quantity || 1);
@@ -496,16 +642,16 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   {entries.map((e, i) => {
                     const dispStyle = DISP_COLORS[e.dispositionCode] || { bg: t.bgPanel, color: t.text };
                     const fields = [
-                      { label: 'Hora',        value: <span style={{ fontFamily: 'monospace', color: t.accent, fontWeight: '700' }}>{fmtTime(e.createdAt)}</span> },
-                      { label: 'Serial',      value: <span style={{ fontWeight: '700', color: t.text }}>{e.lotNumber || '—'}</span> },
-                      { label: 'Parte',       value: e.partNumber || '—' },
-                      { label: 'Defecto',     value: <span style={{ fontWeight: '700', color: '#B00020' }}>{e.defectName || '—'}</span> },
-                      { label: 'Disposición', value: e.dispositionCode
+                      { label: L.hour,        value: <span style={{ fontFamily: 'monospace', color: t.accent, fontWeight: '700' }}>{fmtTime(e.createdAt)}</span> },
+                      { label: L.serial,      value: <span style={{ fontWeight: '700', color: t.text }}>{e.lotNumber || '—'}</span> },
+                      { label: L.part,       value: e.partNumber || '—' },
+                      { label: L.defect,     value: <span style={{ fontWeight: '700', color: '#B00020' }}>{e.defectName || '—'}</span> },
+                      { label: L.disposition, value: e.dispositionCode
                           ? <span style={{ padding: '2px 10px', backgroundColor: dispStyle.bg, color: dispStyle.color, borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>{e.dispositionName || e.dispositionCode}</span>
                           : '—'
                       },
-                      { label: 'Inspector',   value: e.inspector || '—' },
-                      { label: 'Notas',       value: e.notes || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>Sin notas</span> },
+                      { label: L.inspector,   value: e.inspector || '—' },
+                      { label: L.notes,       value: e.notes || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>{L.noNotes}</span> },
                     ];
                     return (
                       <div key={e.id} data-pdf-entry="1" style={{

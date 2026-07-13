@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import eightDService from '../../services/eightDService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import PartsInventoryTable from './PartsInventoryTable';
 import { isUserAdmin } from '../../utils/permissions';
 // UX Improvements (MEJORAS)
@@ -9,8 +10,9 @@ import CollapsibleSection from './CollapsibleSection';
 import ApprovalStepper from './ApprovalStepper';
 import SectionProgressIndicator from './SectionProgressIndicator';
 
-const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection }) => {
+const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isReadOnly = false }) => {
   const { theme: themeColors } = useTheme();
+  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
 
@@ -564,10 +566,27 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection }) => {
       return;
     }
 
-    // Función para encontrar usuario por ID
-    const findUserById = (userId) => {
-      if (!userId) return null;
-      return users.find(user => user.id === userId);
+    // Función para encontrar usuario por ID o datos congelados
+    // Compatible con formato antiguo (solo ID) y nuevo (objeto {id, name})
+    const findUserById = (userData) => {
+      if (!userData) return null;
+
+      // Si es un objeto con id y name (datos congelados)
+      if (typeof userData === 'object' && userData.id) {
+        const userId = userData.id;
+        const foundUser = users.find(user => user.id === userId);
+        // Si encontramos el usuario en la lista, usarlo (puede tener datos más completos)
+        // Si no, usar los datos congelados
+        return foundUser || {
+          id: userId,
+          name: userData.name,
+          firstName: userData.name?.split(' ')[0] || '',
+          lastName: userData.name?.split(' ').slice(1).join(' ') || ''
+        };
+      }
+
+      // Formato antiguo: solo ID numérico
+      return users.find(user => user.id === userData);
     };
 
     // Verificar si hay escalation_path del backend con arrays de user IDs
@@ -1320,7 +1339,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection }) => {
                   fontSize: '16px',
                   padding: '0 4px'
                 }}
-                title="Eliminar"
+                title={language === 'es' ? 'Eliminar' : 'Delete'}
               >
                 ×
               </button>
@@ -2099,6 +2118,29 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection }) => {
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            Este 8D está cerrado y es de solo lectura
+          </span>
+        </div>
+      )}
+
+      <div style={{
+        pointerEvents: isReadOnly ? 'none' : 'auto',
+        opacity: isReadOnly ? 0.7 : 1
+      }}>
       {/* ================== D1 - INFORMACIÓN BÁSICA + EQUIPO ================== */}
       {(!activeSection || activeSection === 'd1') && (
       <>
@@ -4492,6 +4534,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection }) => {
           </div>
         </div>
       )}
+      </div>{/* End of read-only wrapper */}
     </div>
   );
 };

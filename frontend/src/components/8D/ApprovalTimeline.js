@@ -7,9 +7,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, MessageSquare, User, Calendar, Clock } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ApprovalTimeline = ({ approvalHistory, language = 'es' }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
 
   const translations = {
     es: {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import usePermissions from '../hooks/usePermissions';
 import { isUserAdmin } from '../utils/permissions';
 
@@ -9,6 +10,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const { hasAccess, loading: permissionsLoading, getAccessibleModules } = usePermissions();
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -85,20 +87,60 @@ const Home = () => {
       code: 'WI'
     },
     {
-      id: 'statistical_tools',
-      moduleId: 'statistical_tools',
-      name: 'Statistical Tools',
-      description: 'Análisis estadístico: Cp/Cpk, Gage R&R, Pareto, SPC, Taguchi DOE',
-      path: '/statistical-tools',
-      code: 'STAT'
-    },
-    {
       id: 'inspeccion',
       moduleId: 'quality_alert',
       name: 'Inspección de Defectos',
       description: 'Captura directa de defectos en línea para generación de QARs',
       path: '/defect-capture',
       code: 'INS'
+    },
+    {
+      id: 'defect_hospital',
+      moduleId: 'quality_alert',
+      name: 'Hospital de Defectos',
+      description: 'Reparación y liberación de defectos capturados',
+      path: '/hospital-dashboard',
+      code: 'REP'
+    },
+    {
+      id: 'skills',
+      moduleId: 'skills',
+      name: 'Skills & Training',
+      description: 'Gestión de habilidades, evaluaciones y matriz de competencias del equipo',
+      path: '/skills/dashboard',
+      code: 'SKL'
+    },
+    {
+      id: 'iluo',
+      moduleId: 'work_instructions',
+      name: 'ILUO Certifications',
+      description: 'Certificaciones de operadores en Work Instructions con matriz de cobertura',
+      path: '/work-instructions-dashboard',
+      code: 'ILUO'
+    },
+    {
+      id: 'hospital_dashboard',
+      moduleId: 'hospital',
+      name: 'Hospital Dashboard',
+      description: 'Analytics de reparación y liberación de defectos',
+      path: '/hospital-dashboard',
+      code: 'HOS'
+    },
+    {
+      id: 'management_review',
+      moduleId: 'management_review',
+      name: 'Management Review',
+      description: 'Revisión por la dirección y seguimiento de objetivos',
+      path: '/management-review',
+      code: 'MGT'
+    },
+    {
+      id: 'user_manual',
+      moduleId: 'help',
+      name: 'Manual de Usuario',
+      description: 'Guía completa del sistema con tutoriales por módulo',
+      path: '/manual',
+      code: '?'
     }
   ];
 
@@ -131,7 +173,7 @@ const Home = () => {
   };
 
   const formatDate = () => {
-    return currentTime.toLocaleDateString('es-MX', {
+    return currentTime.toLocaleDateString(language === 'es' ? 'es-MX' : 'en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -398,21 +440,24 @@ const Home = () => {
         <div style={styles.headerLeft}>
           <div style={styles.logo}>QMS</div>
           <div style={styles.brandText}>
-            <div style={styles.brandName}>Quality Management System</div>
-            <div style={styles.brandSubtitle}>Industrial Quality Control Platform</div>
+            <div style={styles.brandName}>{tr('home.title')}</div>
+            <div style={styles.brandSubtitle}>{tr('home.subtitle')}</div>
           </div>
         </div>
 
         <div style={styles.headerRight}>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '500', color: t.text, backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}>
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
           <div style={styles.themeSection}>
-            <span style={styles.themeLabel}>Tema</span>
+            <span style={styles.themeLabel}>{tr('header.theme')}</span>
             <ThemeSelector />
           </div>
 
           <div style={styles.dateTime}>
             <div style={styles.dateText}>{formatDate()}</div>
             <div style={styles.timeText}>
-              {currentTime.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+              {currentTime.toLocaleTimeString(language === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
 
@@ -439,7 +484,7 @@ const Home = () => {
                 e.target.style.backgroundColor = t.bg;
               }}
             >
-              Cerrar Sesión
+              {tr('header.logout')}
             </button>
           </div>
         </div>
@@ -448,14 +493,14 @@ const Home = () => {
       {/* Main Content */}
       <main style={styles.main}>
         <div style={styles.pageTitle}>
-          <h1 style={styles.title}>Modules</h1>
-          <p style={styles.subtitle}>{visibleApps.length} modules available</p>
+          <h1 style={styles.title}>{tr('common.modules')}</h1>
+          <p style={styles.subtitle}>{visibleApps.length} {language === 'es' ? 'módulos disponibles' : 'modules available'}</p>
         </div>
 
         {visibleApps.length === 0 ? (
           <div style={styles.noAccess}>
-            <div style={styles.noAccessTitle}>No module access</div>
-            <div style={styles.noAccessText}>Contact your administrator to request permissions</div>
+            <div style={styles.noAccessTitle}>{language === 'es' ? 'Sin acceso a módulos' : 'No module access'}</div>
+            <div style={styles.noAccessText}>{language === 'es' ? 'Contacte a su administrador para solicitar permisos' : 'Contact your administrator to request permissions'}</div>
           </div>
         ) : (
           <div style={styles.grid}>

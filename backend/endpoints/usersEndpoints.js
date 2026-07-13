@@ -455,6 +455,58 @@ async function createUser(req, res) {
   }
 }
 
+// GET /users/mrb-validators - Get all users with MRB validator status
+async function getMrbValidators(req, res) {
+  try {
+    const result = await query(`
+      SELECT
+        u.id, u.email, u.first_name, u.last_name, u.role,
+        u.department, u.can_validate_mrb
+      FROM users u
+      ORDER BY u.can_validate_mrb DESC, u.department, u.last_name
+    `);
+
+    const users = result.rows.map(row => transformToCamelCase(row));
+
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('Error fetching MRB validators:', error);
+    res.status(500).json({ success: false, message: 'Error fetching MRB validators', error: error.message });
+  }
+}
+
+// PUT /users/:id/mrb-validator - Toggle MRB validator status (admin only)
+async function toggleMrbValidator(req, res) {
+  try {
+    const userId = parseInt(req.params.id);
+    const { canValidateMrb } = req.body;
+
+    const result = await query(`
+      UPDATE users
+      SET can_validate_mrb = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING id, email, first_name, last_name, department, can_validate_mrb
+    `, [canValidateMrb, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = transformToCamelCase(result.rows[0]);
+
+    res.json({
+      success: true,
+      user,
+      message: canValidateMrb
+        ? `${user.firstName} ${user.lastName} ahora puede validar campañas MRB`
+        : `${user.firstName} ${user.lastName} ya no puede validar campañas MRB`
+    });
+  } catch (error) {
+    console.error('Error toggling MRB validator:', error);
+    res.status(500).json({ success: false, message: 'Error updating MRB validator status', error: error.message });
+  }
+}
+
 module.exports = {
   getUsersList,
   createUser,
@@ -462,5 +514,7 @@ module.exports = {
   getUserById,
   requireAdmin,
   getQarValidators,
-  toggleQarValidator
+  toggleQarValidator,
+  getMrbValidators,
+  toggleMrbValidator
 };

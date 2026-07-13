@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -6,11 +6,14 @@ import GanttChart from '../8D/GanttChart';
 import ECRApprovalPanel from './ECRApprovalPanel';
 import impactAreasService from '../../services/impactAreasService';
 
-const ECRValidationPlan = ({ data, onDataUpdate }) => {
+const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveDraft, isReadOnly = false, language = 'es', t: translate }) => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
   const { showSuccess, showError } = useToast();
   const { user: currentUser } = useAuth();
+
+  // Translation helper with fallback
+  const tr = (key) => translate ? translate(key) : key;
 
   const [users, setUsers] = useState([]);
   const [impactAreas, setImpactAreas] = useState([]);
@@ -154,6 +157,9 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
   // Uploading state for action evidence
   const [uploadingActionEvidence, setUploadingActionEvidence] = useState(null);
 
+  // Image modal state for viewing enlarged images
+  const [imageModal, setImageModal] = useState({ isOpen: false, imageUrl: '', imageName: '' });
+
   // Collapsed Master Plan actions state with localStorage persistence
   const [collapsedMasterActions, setCollapsedMasterActions] = useState(() => {
     const saved = localStorage.getItem(`ecr3_collapsed_master_actions_${data?.id || 'temp'}`);
@@ -256,7 +262,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
   // ============================================================================
   // AUTO-SYNC: Sincronizar automáticamente desde ECR-2B
-  // - validationAreas (áreas a validar desde ECR-1)
+  // - validationAreas (TFT a validar desde ECR-1)
   // - impactAnalysis.selectedSubsections (aspectos afectados desde ECR-2B)
   // - selectedValidations (validaciones por riesgo desde ECR-2B)
   // ============================================================================
@@ -485,6 +491,29 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
     }
   }, [data.id]);
 
+  // Fix inconsistent states: if actualProgress >= 100 but status != 'completed', fix it
+  useEffect(() => {
+    setFormData(prev => {
+      let hasChanges = false;
+      const fixedActions = prev.validationActions.map(action => {
+        const progress = action.actualProgress || 0;
+        if (progress >= 100 && action.status !== 'completed') {
+          hasChanges = true;
+          return { ...action, status: 'completed' };
+        }
+        if (progress > 0 && progress < 100 && action.status === 'pending') {
+          hasChanges = true;
+          return { ...action, status: 'in_progress' };
+        }
+        return action;
+      });
+      if (hasChanges) {
+        return { ...prev, validationActions: fixedActions };
+      }
+      return prev;
+    });
+  }, [formData.validationActions.length, data.id]);
+
   // Calculate planned progress based on dates
   const calcPlanned = (startDate, endDate) => {
     if (!startDate || !endDate) return 0;
@@ -515,19 +544,19 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
   const handleAddAction = () => {
     if (!newAction.action.trim()) {
-      showError('El campo Acción es requerido');
+      showError(language === 'es' ? 'El campo Acción es requerido' : 'Action field is required');
       return;
     }
     if (!newAction.area) {
-      showError('Debes seleccionar un área');
+      showError(language === 'es' ? 'Debes seleccionar un TFT' : 'You must select a TFT');
       return;
     }
     if (!newAction.responsible) {
-      showError('Debes asignar un responsable');
+      showError(language === 'es' ? 'Debes asignar un responsable' : 'You must assign a responsible');
       return;
     }
     if (!newAction.startDate || !newAction.endDate) {
-      showError('Debes especificar fechas de inicio y fin');
+      showError(language === 'es' ? 'Debes especificar fechas de inicio y fin' : 'You must specify start and end dates');
       return;
     }
 
@@ -559,7 +588,12 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
       checklist: []
     });
 
-    showSuccess('Acción agregada exitosamente');
+    showSuccess(language === 'es' ? 'Acción agregada exitosamente' : 'Action added successfully');
+
+    // Auto-save after adding action
+    if (onSaveDraft) {
+      setTimeout(() => onSaveDraft(), 500);
+    }
   };
 
   const handleRemoveAction = (actionId) => {
@@ -585,19 +619,44 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
         ...prev,
         validationActions: prev.validationActions.filter(a => a.id !== actionId)
       }));
-      showSuccess('Acción eliminada');
+      showSuccess(language === 'es' ? 'Acción eliminada' : 'Action deleted');
     }
   };
+
+  // Ref for auto-save debounce
+  const autoSaveTimeoutRef = useRef(null);
 
   // Update action fields - memoizado para evitar re-renders del Gantt
   const handleUpdateAction = useCallback((actionId, updates) => {
     setFormData(prev => {
-      const updated = prev.validationActions.map(action =>
-        action.id === actionId ? { ...action, ...updates } : action
-      );
+      const updated = prev.validationActions.map(action => {
+        if (action.id !== actionId) return action;
+
+        const updatedAction = { ...action, ...updates };
+
+        // Auto-update status based on progress
+        const progress = updates.actualProgress !== undefined ? updates.actualProgress : action.actualProgress;
+        if (progress >= 100 && updatedAction.status !== 'completed') {
+          updatedAction.status = 'completed';
+        } else if (progress > 0 && progress < 100 && updatedAction.status === 'pending') {
+          updatedAction.status = 'in_progress';
+        }
+
+        return updatedAction;
+      });
       return { ...prev, validationActions: updated };
     });
-  }, []);
+
+    // Auto-save when progress or status changes (with debounce)
+    if (onSaveDraft && (updates.actualProgress !== undefined || updates.status !== undefined)) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        onSaveDraft();
+      }, 1500); // 1.5 second debounce
+    }
+  }, [onSaveDraft]);
 
   // Update sub-action fields
   const handleUpdateSubAction = (actionId, subActionId, updates) => {
@@ -667,11 +726,11 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
           )
         }));
 
-        showSuccess(`${uploadedFiles.length} archivo(s) subido(s) exitosamente`);
+        showSuccess(language === 'es' ? `${uploadedFiles.length} archivo(s) subido(s) exitosamente` : `${uploadedFiles.length} file(s) uploaded successfully`);
       }
     } catch (error) {
       console.error('Error uploading action evidence:', error);
-      showError('Error al subir evidencia');
+      showError(language === 'es' ? 'Error al subir evidencia' : 'Error uploading evidence');
     } finally {
       setUploadingActionEvidence(null);
     }
@@ -687,7 +746,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
           : action
       )
     }));
-    showSuccess('Evidencia eliminada');
+    showSuccess(language === 'es' ? 'Evidencia eliminada' : 'Evidence deleted');
   };
 
   // Helper to parse local date
@@ -743,7 +802,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
           isLocked: true
         }
       }));
-      showSuccess('Validación firmada exitosamente');
+      showSuccess(language === 'es' ? 'Validación firmada exitosamente' : 'Validation signed successfully');
     }
   };
 
@@ -841,11 +900,11 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
           }
         }));
 
-        showSuccess(`${uploadedFiles.length} archivo(s) subido(s)`);
+        showSuccess(language === 'es' ? `${uploadedFiles.length} archivo(s) subido(s)` : `${uploadedFiles.length} file(s) uploaded`);
       }
     } catch (error) {
       console.error('Error uploading evidence:', error);
-      showError('Error al subir evidencia');
+      showError(language === 'es' ? 'Error al subir evidencia' : 'Error uploading evidence');
     }
   };
 
@@ -899,11 +958,11 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
           }
         }));
 
-        showSuccess(`${uploadedFiles.length} archivo(s) subido(s)`);
+        showSuccess(language === 'es' ? `${uploadedFiles.length} archivo(s) subido(s)` : `${uploadedFiles.length} file(s) uploaded`);
       }
     } catch (error) {
       console.error('Error uploading evidence:', error);
-      showError('Error al subir evidencia');
+      showError(language === 'es' ? 'Error al subir evidencia' : 'Error uploading evidence');
     }
   };
   // ========== End Validation Evidence Helpers ==========
@@ -926,13 +985,13 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
   const handleAddDailyProgress = (actionId) => {
     const entry = dailyEntries[actionId];
     if (!entry || !entry.date || entry.progress === undefined || entry.progress === '') {
-      showError('Debes ingresar una fecha y un progreso');
+      showError(language === 'es' ? 'Debes ingresar una fecha y un progreso' : 'You must enter a date and progress');
       return;
     }
 
     const progress = parseFloat(entry.progress);
     if (progress < 0 || progress > 100) {
-      showError('El progreso debe estar entre 0 y 100');
+      showError(language === 'es' ? 'El progreso debe estar entre 0 y 100' : 'Progress must be between 0 and 100');
       return;
     }
 
@@ -942,10 +1001,9 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
     if (existingEntry) {
       const confirmUpdate = window.confirm(
-        ` Ya existe una actividad para ${new Date(entry.date).toLocaleDateString('es-MX')}:\n\n` +
-        `Progreso: ${existingEntry.progress}%\n` +
-        `Actividades: ${existingEntry.activities || '(sin descripción)'}\n\n` +
-        `¿Deseas reemplazarla con los nuevos datos?`
+        language === 'es'
+          ? ` Ya existe una actividad para ${new Date(entry.date).toLocaleDateString('es-MX')}:\n\nProgreso: ${existingEntry.progress}%\nActividades: ${existingEntry.activities || '(sin descripción)'}\n\n¿Deseas reemplazarla con los nuevos datos?`
+          : ` An activity already exists for ${new Date(entry.date).toLocaleDateString('en-US')}:\n\nProgress: ${existingEntry.progress}%\nActivities: ${existingEntry.activities || '(no description)'}\n\nDo you want to replace it with the new data?`
       );
 
       if (!confirmUpdate) return;
@@ -959,10 +1017,13 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
           // If date exists, replace it; otherwise add new
           let newDailyProgress;
+          const hours = entry.hours ? parseFloat(entry.hours) : null;
+          const updatedBy = currentUser?.id;
+          const updatedByName = `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim();
           if (existingEntry) {
             newDailyProgress = dailyProgress.map(d =>
               d.date === entry.date
-                ? { ...d, progress: progress, activities: entry.activities || '' }
+                ? { ...d, progress: progress, activities: entry.activities || '', hours: hours, updatedBy, updatedByName }
                 : d
             );
           } else {
@@ -970,7 +1031,10 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
               date: entry.date,
               progress: progress,
               accumulated: 0,
-              activities: entry.activities || ''
+              activities: entry.activities || '',
+              hours: hours,
+              updatedBy,
+              updatedByName
             }];
           }
 
@@ -1001,14 +1065,14 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
     setDailyEntries(prev => ({
       ...prev,
-      [actionId]: { date: new Date().toISOString().split('T')[0], progress: '', activities: '' }
+      [actionId]: { date: new Date().toISOString().split('T')[0], progress: '', activities: '', hours: '' }
     }));
     setExpandedActions(prev => ({
       ...prev,
       [actionId]: false
     }));
 
-    showSuccess('Progreso agregado correctamente');
+    showSuccess(language === 'es' ? 'Progreso agregado correctamente' : 'Progress added successfully');
   };
 
   const getUserName = (userId) => {
@@ -1042,6 +1106,11 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
         {badge.text}
       </span>
     );
+  };
+
+  // Check if action is missing required information
+  const isActionIncomplete = (action) => {
+    return !action.responsible || !action.startDate || !action.endDate || !action.result;
   };
 
   // Handle communication plan changes
@@ -1110,11 +1179,11 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
           }
         }));
 
-        showSuccess(`${uploadedFiles.length} archivo(s) subido(s) exitosamente`);
+        showSuccess(language === 'es' ? `${uploadedFiles.length} archivo(s) subido(s) exitosamente` : `${uploadedFiles.length} file(s) uploaded successfully`);
       }
     } catch (error) {
       console.error('Error uploading customer approval evidence:', error);
-      showError('Error al subir evidencia');
+      showError(language === 'es' ? 'Error al subir evidencia' : 'Error uploading evidence');
     } finally {
       setUploadingValidation(null);
     }
@@ -1132,16 +1201,39 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            {tr('ecr.messages.readOnlyMode')}
+          </span>
+        </div>
+      )}
+
+      <div style={{
+        pointerEvents: isReadOnly ? 'none' : 'auto',
+        opacity: isReadOnly ? 0.7 : 1
+      }}>
       <div style={styles.header}>
-        <h2 style={styles.title}> ECR-3: Validation & Implementation Plan</h2>
-        <p style={styles.subtitle}>Plan de validaciones por área y plan de implementación</p>
+        <h2 style={styles.title}> ECR-3: {tr('ecr.validationPlan.title')}</h2>
+        <p style={styles.subtitle}>{language === 'es' ? 'Plan de validaciones por TFT y plan de implementación' : 'Validation plan by TFT and implementation plan'}</p>
       </div>
 
-      {/* MASTER PLAN: Validation by Area, Trial & Evaluation and Production Implementation */}
+      {/* MASTER PLAN: Validation by TFT, Trial & Evaluation and Production Implementation */}
       <div style={styles.section}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 style={styles.sectionTitle}>
-            <span style={styles.badge}>MASTER PLAN: Validation by Area, Trial & Evaluation and Production Implementation</span>
+            <span style={styles.badge}>{language === 'es' ? 'PLAN MAESTRO: Validación por TFT, Prueba & Evaluación e Implementación en Producción' : 'MASTER PLAN: Validation by TFT, Trial & Evaluation and Production Implementation'}</span>
           </h3>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -1152,7 +1244,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                 color: viewMode === 'table' ? 'white' : t.text
               }}
             >
-               Vista Tabla
+               {language === 'es' ? 'Vista Tabla' : 'Table View'}
             </button>
             <button
               onClick={() => updateViewMode('gantt')}
@@ -1162,7 +1254,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                 color: viewMode === 'gantt' ? 'white' : t.text
               }}
             >
-               Vista Gantt
+               {language === 'es' ? 'Vista Gantt' : 'Gantt View'}
             </button>
           </div>
         </div>
@@ -1180,7 +1272,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
         }}>
           <span style={{ fontSize: '16px' }}></span>
           <span style={{ fontSize: '13px', color: t.text }}>
-            <strong>Tip:</strong> Para agregar avance de progreso, puede hacerlo desde la <strong>Vista Gantt</strong> haciendo clic en cada actividad.
+            <strong>{language === 'es' ? 'Tip:' : 'Tip:'}</strong> {language === 'es' ? 'Para agregar avance de progreso, puede hacerlo desde la' : 'To add progress updates, you can do it from the'} <strong>{language === 'es' ? 'Vista Gantt' : 'Gantt View'}</strong> {language === 'es' ? 'haciendo clic en cada actividad.' : 'by clicking on each activity.'}
           </span>
         </div>
 
@@ -1190,7 +1282,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
             {formData.validationActions.length === 0 ? (
               <div style={styles.emptyState}>
                 <p style={{ fontSize: '14px', color: t.textMuted }}>
-                  No hay acciones de validación agregadas. Agrega la primera acción abajo.
+                  {language === 'es' ? 'No hay acciones de validación agregadas. Agrega la primera acción abajo.' : 'No validation actions added. Add the first action below.'}
                 </p>
               </div>
             ) : (
@@ -1237,6 +1329,19 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                           }}>
                             {action.area}
                           </span>
+                          {isActionIncomplete(action) && (
+                            <span style={{
+                              padding: '4px 12px',
+                              backgroundColor: '#fef3c7',
+                              color: '#92400e',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              border: '1px solid #f59e0b'
+                            }}>
+                              Falta información
+                            </span>
+                          )}
                         </div>
 
                         {/* Always visible: Progress & Responsible */}
@@ -1278,7 +1383,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               cursor: 'pointer'
                             }}
                           >
-                            {editingAction === action.id ? ' Cancelar' : ' Editar'}
+                            {editingAction === action.id ? (language === 'es' ? ' Cancelar' : ' Cancel') : (language === 'es' ? ' Editar' : ' Edit')}
                           </button>
                           <button
                             onClick={(e) => {
@@ -1321,26 +1426,26 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                             <div style={styles.field}>
-                              <label style={styles.label}>Área *</label>
+                              <label style={styles.label}>TFT *</label>
                               <select
                                 style={styles.select}
                                 value={action.area}
                                 onChange={(e) => handleUpdateAction(action.id, { area: e.target.value })}
                               >
-                                <option value="">Seleccionar área...</option>
+                                <option value="">{language === 'es' ? 'Seleccionar TFT...' : 'Select TFT...'}</option>
                                 {availableAreas.map(area => (
                                   <option key={area} value={area}>{area}</option>
                                 ))}
                               </select>
                             </div>
                             <div style={styles.field}>
-                              <label style={styles.label}>Responsable *</label>
+                              <label style={styles.label}>{language === 'es' ? 'Responsable' : 'Responsible'} *</label>
                               <select
                                 style={styles.select}
                                 value={action.responsible || ''}
                                 onChange={(e) => handleUpdateAction(action.id, { responsible: parseInt(e.target.value) })}
                               >
-                                <option value="">Seleccionar responsable...</option>
+                                <option value="">{language === 'es' ? 'Seleccionar responsable...' : 'Select responsible...'}</option>
                                 {users.map(user => (
                                   <option key={user.id} value={user.id}>
                                     {user.firstName} {user.lastName} - {user.position}
@@ -1419,7 +1524,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               {/* Planned Progress */}
                               <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
-                                  <span style={{ color: t.textMuted }}> Planeado</span>
+                                  <span style={{ color: t.textMuted }}> {language === 'es' ? 'Planeado' : 'Planned'}</span>
                                   <span style={{ fontWeight: '600', color: t.textMuted }}>{currentPlanned}%</span>
                                 </div>
                                 <div style={{ width: '100%', height: '6px', backgroundColor: t.bgPanel, borderRadius: '3px', overflow: 'hidden' }}>
@@ -1429,7 +1534,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               {/* Actual Progress */}
                               <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
-                                  <span style={{ color: t.textMuted }}> Real</span>
+                                  <span style={{ color: t.textMuted }}> {language === 'es' ? 'Real' : 'Actual'}</span>
                                   <span style={{ fontWeight: '600', color: getProgressColor(action.actualProgress, currentPlanned) }}>
                                     {action.actualProgress || 0}%
                                   </span>
@@ -1549,9 +1654,9 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               </div>
                               {/* Progress summary */}
                               <div style={{ marginTop: '12px', fontSize: '11px', color: t.textMuted, display: 'flex', gap: '16px' }}>
-                                <span> Completados: {action.subActions.filter(s => s.status === 'completed').length}</span>
-                                <span> En progreso: {action.subActions.filter(s => s.status === 'in_progress').length}</span>
-                                <span> Pendientes: {action.subActions.filter(s => s.status === 'pending').length}</span>
+                                <span> {language === 'es' ? 'Completados:' : 'Completed:'} {action.subActions.filter(s => s.status === 'completed').length}</span>
+                                <span> {language === 'es' ? 'En progreso:' : 'In progress:'} {action.subActions.filter(s => s.status === 'in_progress').length}</span>
+                                <span> {language === 'es' ? 'Pendientes:' : 'Pending:'} {action.subActions.filter(s => s.status === 'pending').length}</span>
                               </div>
                             </div>
                           )}
@@ -1589,7 +1694,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                                   cursor: 'pointer'
                                 }}
                               >
-                                {expandedActions[action.id] ? ' Cancelar' : '+ Agregar'}
+                                {expandedActions[action.id] ? (language === 'es' ? ' Cancelar' : ' Cancel') : (language === 'es' ? '+ Agregar' : '+ Add')}
                               </button>
                             </div>
 
@@ -1604,9 +1709,9 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               }}
                               onClick={(e) => e.stopPropagation()}
                               >
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                                   <div>
-                                    <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Fecha</label>
+                                    <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>{language === 'es' ? 'Fecha' : 'Date'}</label>
                                     <input
                                       type="date"
                                       style={{ ...styles.input, padding: '6px 8px', fontSize: '12px' }}
@@ -1618,7 +1723,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                                     />
                                   </div>
                                   <div>
-                                    <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Progreso (%)</label>
+                                    <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>{language === 'es' ? 'Progreso (%)' : 'Progress (%)'}</label>
                                     <input
                                       type="number"
                                       min="0"
@@ -1632,17 +1737,32 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                                       placeholder="0-100"
                                     />
                                   </div>
+                                  <div>
+                                    <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Horas invertidas</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.5"
+                                      style={{ ...styles.input, padding: '6px 8px', fontSize: '12px' }}
+                                      value={dailyEntries[action.id]?.hours || ''}
+                                      onChange={(e) => setDailyEntries(prev => ({
+                                        ...prev,
+                                        [action.id]: { ...prev[action.id], hours: e.target.value }
+                                      }))}
+                                      placeholder="Hrs"
+                                    />
+                                  </div>
                                 </div>
                                 <div style={{ marginBottom: '8px' }}>
-                                  <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Actividades realizadas</label>
+                                  <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>{language === 'es' ? 'Actividades realizadas' : 'Activities performed'}</label>
                                   <textarea
-                                    style={{ ...styles.input, minHeight: '50px', fontSize: '12px', resize: 'vertical' }}
+                                    style={{ ...styles.input, width: '100%', minHeight: '80px', fontSize: '12px', resize: 'vertical' }}
                                     value={dailyEntries[action.id]?.activities || ''}
                                     onChange={(e) => setDailyEntries(prev => ({
                                       ...prev,
                                       [action.id]: { ...prev[action.id], activities: e.target.value }
                                     }))}
-                                    placeholder="Describe las actividades realizadas..."
+                                    placeholder={language === 'es' ? 'Describe las actividades realizadas...' : 'Describe the activities performed...'}
                                   />
                                 </div>
                                 <button
@@ -1659,7 +1779,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                                     cursor: 'pointer'
                                   }}
                                 >
-                                   Guardar Actividad
+                                   {language === 'es' ? 'Guardar Actividad' : 'Save Activity'}
                                 </button>
                               </div>
                             )}
@@ -1679,21 +1799,40 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                                     }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: entry.activities ? '4px' : '0' }}>
                                         <span style={{ fontWeight: '600', color: t.text }}>
-                                           {parseLocalDate(entry.date).toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                           {parseLocalDate(entry.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                                         </span>
-                                        <span style={{
-                                          fontSize: '11px',
-                                          fontWeight: '600',
-                                          color: t.accent,
-                                          backgroundColor: '#dbeafe',
-                                          padding: '2px 6px',
-                                          borderRadius: '3px'
-                                        }}>
-                                          +{entry.progress}% → {entry.accumulated}%
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          {entry.hours && (
+                                            <span style={{
+                                              fontSize: '11px',
+                                              fontWeight: '600',
+                                              color: '#7c3aed',
+                                              backgroundColor: '#ede9fe',
+                                              padding: '2px 6px',
+                                              borderRadius: '3px'
+                                            }}>
+                                              {entry.hours} hrs
+                                            </span>
+                                          )}
+                                          <span style={{
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            color: t.accent,
+                                            backgroundColor: '#dbeafe',
+                                            padding: '2px 6px',
+                                            borderRadius: '3px'
+                                          }}>
+                                            +{entry.progress}% → {entry.accumulated}%
+                                          </span>
+                                        </div>
                                       </div>
                                       {entry.activities && (
                                         <div style={{ color: t.textMuted, lineHeight: '1.4' }}>{entry.activities}</div>
+                                      )}
+                                      {entry.updatedByName && (
+                                        <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '4px', fontStyle: 'italic' }}>
+                                          Por: {entry.updatedByName}
+                                        </div>
                                       )}
                                     </div>
                                   ))}
@@ -1774,11 +1913,11 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                                 cursor: data.id ? 'pointer' : 'not-allowed'
                               }}
                             >
-                              {uploadingActionEvidence === action.id ? ' Subiendo...' : ' Subir Evidencia'}
+                              {uploadingActionEvidence === action.id ? (language === 'es' ? ' Subiendo...' : ' Uploading...') : (language === 'es' ? ' Subir Evidencia' : ' Upload Evidence')}
                             </label>
                             {!data.id && (
                               <span style={{ fontSize: '10px', color: '#B00020', marginLeft: '8px' }}>
-                                Guarda el ECR primero
+                                {language === 'es' ? 'Guarda el ECR primero' : 'Save ECR first'}
                               </span>
                             )}
                           </div>
@@ -1794,7 +1933,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
           <div style={{ marginBottom: '24px' }}>
             {formData.validationActions.length === 0 ? (
               <div style={styles.emptyState}>
-                <p>No hay acciones para mostrar en el Gantt. Agrega acciones abajo.</p>
+                <p>{language === 'es' ? 'No hay acciones para mostrar en el Gantt. Agrega acciones abajo.' : 'No actions to show in Gantt. Add actions below.'}</p>
               </div>
             ) : (
               <GanttChart
@@ -1835,7 +1974,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                 color: t.textMuted
               }}>▼</span>
               <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: t.text }}>
-                 Agregar Nueva Acción de Validación
+                 {language === 'es' ? 'Agregar Nueva Acción de Validación' : 'Add New Validation Action'}
               </h4>
             </div>
             <span style={{
@@ -1845,7 +1984,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
               backgroundColor: t.bg,
               borderRadius: '4px'
             }}>
-              {addFormCollapsed ? 'Clic para expandir' : 'Clic para colapsar'}
+              {addFormCollapsed ? (language === 'es' ? 'Clic para expandir' : 'Click to expand') : (language === 'es' ? 'Clic para colapsar' : 'Click to collapse')}
             </span>
           </div>
 
@@ -1854,22 +1993,22 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
             <>
               <div style={styles.grid}>
                 <div style={styles.field}>
-                  <label style={styles.label}>Acción de Validación *</label>
+                  <label style={styles.label}>{language === 'es' ? 'Acción de Validación' : 'Validation Action'} *</label>
                   <textarea
                     style={{ ...styles.input, minHeight: '60px', resize: 'vertical' }}
                     value={newAction.action}
                     onChange={(e) => handleNewActionChange('action', e.target.value)}
-                    placeholder="Ej: Validar factibilidad de diseño con simulación FEA"
+                    placeholder={language === 'es' ? 'Ej: Validar factibilidad de diseño con simulación FEA' : 'Ex: Validate design feasibility with FEA simulation'}
                     rows="2"
                   />
                 </div>
                 <div style={styles.field}>
-                  <label style={styles.label}>Resultado Esperado</label>
+                  <label style={styles.label}>{language === 'es' ? 'Resultado Esperado' : 'Expected Result'}</label>
                   <textarea
                     style={{ ...styles.input, minHeight: '60px', resize: 'vertical' }}
                     value={newAction.result}
                     onChange={(e) => handleNewActionChange('result', e.target.value)}
-                    placeholder="Describe el resultado esperado de esta acción..."
+                    placeholder={language === 'es' ? 'Describe el resultado esperado de esta acción...' : 'Describe the expected result of this action...'}
                     rows="2"
                   />
                 </div>
@@ -1877,26 +2016,26 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
               <div style={styles.grid}>
                 <div style={styles.field}>
-                  <label style={styles.label}>Área *</label>
+                  <label style={styles.label}>TFT *</label>
                   <select
                     style={styles.select}
                     value={newAction.area}
                     onChange={(e) => handleNewActionChange('area', e.target.value)}
                   >
-                    <option value="">Seleccionar área...</option>
+                    <option value="">{language === 'es' ? 'Seleccionar TFT...' : 'Select TFT...'}</option>
                     {availableAreas.map(area => (
                       <option key={area} value={area}>{area}</option>
                     ))}
                   </select>
                 </div>
                 <div style={styles.field}>
-                  <label style={styles.label}>Responsable *</label>
+                  <label style={styles.label}>{tr('ecr.validationPlan.responsibleTeam')} *</label>
                   <select
                     style={styles.select}
                     value={newAction.responsible || ''}
                     onChange={(e) => handleNewActionChange('responsible', parseInt(e.target.value))}
                   >
-                    <option value="">Seleccionar responsable...</option>
+                    <option value="">{language === 'es' ? 'Seleccionar responsable...' : 'Select responsible...'}</option>
                     {users.map(user => (
                       <option key={user.id} value={user.id}>
                         {user.firstName} {user.lastName} - {user.position}
@@ -1908,7 +2047,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div style={styles.field}>
-                  <label style={styles.label}>Fecha Inicio *</label>
+                  <label style={styles.label}>{language === 'es' ? 'Fecha Inicio' : 'Start Date'} *</label>
                   <input
                     type="date"
                     style={styles.input}
@@ -1917,7 +2056,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                   />
                 </div>
                 <div style={styles.field}>
-                  <label style={styles.label}>Fecha Fin *</label>
+                  <label style={styles.label}>{language === 'es' ? 'Fecha Fin' : 'End Date'} *</label>
                   <input
                     type="date"
                     style={styles.input}
@@ -1926,21 +2065,21 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                   />
                 </div>
                 <div style={styles.field}>
-                  <label style={styles.label}>Status</label>
+                  <label style={styles.label}>{tr('ecr.validationPlan.status')}</label>
                   <select
                     style={styles.select}
                     value={newAction.status}
                     onChange={(e) => handleNewActionChange('status', e.target.value)}
                   >
-                    <option value="pending">Pendiente</option>
-                    <option value="in_progress">En Progreso</option>
-                    <option value="completed">Completado</option>
+                    <option value="pending">{tr('ecr.validationPlan.activityStatus.pending')}</option>
+                    <option value="in_progress">{tr('ecr.validationPlan.activityStatus.in_progress')}</option>
+                    <option value="completed">{tr('ecr.validationPlan.activityStatus.completed')}</option>
                   </select>
                 </div>
                 <div style={{ ...styles.field, justifyContent: 'flex-end' }}>
                   <label style={{ ...styles.label, visibility: 'hidden' }}>.</label>
                   <button onClick={handleAddAction} style={styles.addButton}>
-                     Agregar Acción
+                     {tr('ecr.validationPlan.addActivity')}
                   </button>
                 </div>
               </div>
@@ -1952,10 +2091,10 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
       {/* Validation Evidence - New Flow */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Validation Evidence</span>
+          <span style={styles.badge}>{language === 'es' ? 'Evidencia de Validación' : 'Validation Evidence'}</span>
         </h3>
         <p style={styles.sectionDescription}>
-          Evidencia y resultados de la validación del cambio
+          {language === 'es' ? 'Evidencia y resultados de la validación del cambio' : 'Evidence and results of the change validation'}
         </p>
 
         {/* Initial Question - Show when null or undefined */}
@@ -2094,22 +2233,22 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                       cursor: 'pointer'
                     }}
                   >
-                    + Agregar Criterio
+                    + {language === 'es' ? 'Agregar Criterio' : 'Add Criterion'}
                   </button>
                 )}
               </div>
 
               {formData.validationEvidence.criteria.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '24px', color: t.textDim, fontStyle: 'italic' }}>
-                  No hay criterios agregados. Haz clic en "+ Agregar Criterio" para comenzar.
+                  {language === 'es' ? 'No hay criterios agregados. Haz clic en "+ Agregar Criterio" para comenzar.' : 'No criteria added. Click "+ Add Criterion" to start.'}
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ backgroundColor: t.bg }}>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`, fontWeight: '600' }}>Parámetro</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`, fontWeight: '600' }}>Método</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`, fontWeight: '600' }}>{language === 'es' ? 'Parámetro' : 'Parameter'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`, fontWeight: '600' }}>{language === 'es' ? 'Método' : 'Method'}</th>
                         <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`, fontWeight: '600' }}>Target</th>
                         <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`, fontWeight: '600' }}>Before</th>
                         <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`, fontWeight: '600' }}>After</th>
@@ -2125,7 +2264,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               type="text"
                               value={criteria.parameter}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'parameter', e.target.value)}
-                              placeholder="Ej: Dimensión X"
+                              placeholder={language === 'es' ? 'Ej: Dimensión X' : 'Ex: Dimension X'}
                               disabled={formData.validationEvidence.isLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
@@ -2135,7 +2274,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               type="text"
                               value={criteria.method}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'method', e.target.value)}
-                              placeholder="Ej: CMM"
+                              placeholder={language === 'es' ? 'Ej: CMM' : 'Ex: CMM'}
                               disabled={formData.validationEvidence.isLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
@@ -2145,7 +2284,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               type="text"
                               value={criteria.target}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'target', e.target.value)}
-                              placeholder="Ej: 10±0.5mm"
+                              placeholder={language === 'es' ? 'Ej: 10±0.5mm' : 'Ex: 10±0.5mm'}
                               disabled={formData.validationEvidence.isLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
@@ -2155,7 +2294,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               type="text"
                               value={criteria.before}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'before', e.target.value)}
-                              placeholder="Valor antes"
+                              placeholder={language === 'es' ? 'Valor antes' : 'Value before'}
                               disabled={formData.validationEvidence.isLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
@@ -2165,7 +2304,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                               type="text"
                               value={criteria.after}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'after', e.target.value)}
-                              placeholder="Valor después"
+                              placeholder={language === 'es' ? 'Valor después' : 'Value after'}
                               disabled={formData.validationEvidence.isLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
@@ -2227,28 +2366,60 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                 border: '1px solid #C77700'
               }}>
                 <label style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', display: 'block', marginBottom: '12px' }}>
-                   Evidencia ANTES
+                   {language === 'es' ? 'Evidencia ANTES' : 'BEFORE Evidence'}
                 </label>
                 <textarea
                   value={formData.validationEvidence.beforeEvidence.description}
                   onChange={(e) => updateEvidenceSection('beforeEvidence', 'description', e.target.value)}
-                  placeholder="Descripción de la condición antes del cambio..."
+                  placeholder={language === 'es' ? 'Descripción de la condición antes del cambio...' : 'Description of the condition before the change...'}
                   disabled={formData.validationEvidence.isLocked}
                   style={{ ...styles.input, width: '100%', minHeight: '80px', marginBottom: '12px', resize: 'vertical', boxSizing: 'border-box' }}
                 />
-                {/* File list */}
+                {/* File grid with thumbnails for images */}
                 {formData.validationEvidence.beforeEvidence.files?.length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
-                    {formData.validationEvidence.beforeEvidence.files.map((file, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '12px' }}>
-                        <a href={`http://localhost:5000${file.url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#92400e' }}>
-                           {file.name}
-                        </a>
-                        {!formData.validationEvidence.isLocked && (
-                          <button onClick={() => removeEvidenceFile('beforeEvidence', idx)} style={{ background: 'none', border: 'none', color: '#B00020', cursor: 'pointer' }}></button>
-                        )}
-                      </div>
-                    ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+                    {formData.validationEvidence.beforeEvidence.files.map((file, idx) => {
+                      const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file.name);
+                      const fileUrl = `http://localhost:5000${file.url}`;
+                      return (
+                        <div key={idx} style={{
+                          position: 'relative',
+                          aspectRatio: '1',
+                          backgroundColor: '#fff',
+                          borderRadius: '6px',
+                          overflow: 'hidden',
+                          border: '1px solid #C77700'
+                        }}>
+                          {isImage ? (
+                            <img
+                              src={fileUrl}
+                              alt={file.name}
+                              onClick={() => setImageModal({ isOpen: true, imageUrl: fileUrl, imageName: file.name })}
+                              style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'pointer' }}
+                            />
+                          ) : (
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              width: '100%', height: '100%', textDecoration: 'none', color: '#92400e', fontSize: '11px', textAlign: 'center', padding: '8px'
+                            }}>
+                              <span style={{ fontSize: '24px', marginBottom: '4px' }}></span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{file.name}</span>
+                            </a>
+                          )}
+                          {!formData.validationEvidence.isLocked && (
+                            <button
+                              onClick={() => removeEvidenceFile('beforeEvidence', idx)}
+                              style={{
+                                position: 'absolute', top: '4px', right: '4px',
+                                backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '50%',
+                                width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1'
+                              }}
+                            >×</button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {!formData.validationEvidence.isLocked && (
@@ -2273,7 +2444,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                         cursor: data.id ? 'pointer' : 'not-allowed'
                       }}
                     >
-                       Subir archivos
+                       {language === 'es' ? 'Subir archivos' : 'Upload files'}
                     </label>
                   </>
                 )}
@@ -2287,28 +2458,60 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                 border: '1px solid #2E7D32'
               }}>
                 <label style={{ fontSize: '14px', fontWeight: '600', color: '#065f46', display: 'block', marginBottom: '12px' }}>
-                   Evidencia DESPUÉS
+                   {language === 'es' ? 'Evidencia DESPUÉS' : 'AFTER Evidence'}
                 </label>
                 <textarea
                   value={formData.validationEvidence.afterEvidence.description}
                   onChange={(e) => updateEvidenceSection('afterEvidence', 'description', e.target.value)}
-                  placeholder="Descripción de la condición después del cambio..."
+                  placeholder={language === 'es' ? 'Descripción de la condición después del cambio...' : 'Description of the condition after the change...'}
                   disabled={formData.validationEvidence.isLocked}
                   style={{ ...styles.input, width: '100%', minHeight: '80px', marginBottom: '12px', resize: 'vertical', boxSizing: 'border-box' }}
                 />
-                {/* File list */}
+                {/* File grid with thumbnails for images */}
                 {formData.validationEvidence.afterEvidence.files?.length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
-                    {formData.validationEvidence.afterEvidence.files.map((file, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '12px' }}>
-                        <a href={`http://localhost:5000${file.url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#065f46' }}>
-                           {file.name}
-                        </a>
-                        {!formData.validationEvidence.isLocked && (
-                          <button onClick={() => removeEvidenceFile('afterEvidence', idx)} style={{ background: 'none', border: 'none', color: '#B00020', cursor: 'pointer' }}></button>
-                        )}
-                      </div>
-                    ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+                    {formData.validationEvidence.afterEvidence.files.map((file, idx) => {
+                      const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file.name);
+                      const fileUrl = `http://localhost:5000${file.url}`;
+                      return (
+                        <div key={idx} style={{
+                          position: 'relative',
+                          aspectRatio: '1',
+                          backgroundColor: '#fff',
+                          borderRadius: '6px',
+                          overflow: 'hidden',
+                          border: '1px solid #2E7D32'
+                        }}>
+                          {isImage ? (
+                            <img
+                              src={fileUrl}
+                              alt={file.name}
+                              onClick={() => setImageModal({ isOpen: true, imageUrl: fileUrl, imageName: file.name })}
+                              style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'pointer' }}
+                            />
+                          ) : (
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              width: '100%', height: '100%', textDecoration: 'none', color: '#065f46', fontSize: '11px', textAlign: 'center', padding: '8px'
+                            }}>
+                              <span style={{ fontSize: '24px', marginBottom: '4px' }}></span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{file.name}</span>
+                            </a>
+                          )}
+                          {!formData.validationEvidence.isLocked && (
+                            <button
+                              onClick={() => removeEvidenceFile('afterEvidence', idx)}
+                              style={{
+                                position: 'absolute', top: '4px', right: '4px',
+                                backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '50%',
+                                width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1'
+                              }}
+                            >×</button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {!formData.validationEvidence.isLocked && (
@@ -2333,7 +2536,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                         cursor: data.id ? 'pointer' : 'not-allowed'
                       }}
                     >
-                       Subir archivos
+                       {language === 'es' ? 'Subir archivos' : 'Upload files'}
                     </label>
                   </>
                 )}
@@ -2348,7 +2551,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
               border: `1px solid ${t.border}`
             }}>
               <label style={{ fontSize: '14px', fontWeight: '600', color: t.text, display: 'block', marginBottom: '12px' }}>
-                 Resumen de Validación
+                 {language === 'es' ? 'Resumen de Validación' : 'Validation Summary'}
               </label>
               <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
@@ -2359,7 +2562,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                     onChange={() => updateEvidenceSection('summary', 'status', 'pass')}
                     disabled={formData.validationEvidence.isLocked}
                   />
-                  <span style={{ color: '#2E7D32', fontWeight: '600' }}> Aprobado</span>
+                  <span style={{ color: '#2E7D32', fontWeight: '600' }}> {language === 'es' ? 'Aprobado' : 'Approved'}</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
                   <input
@@ -2369,7 +2572,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                     onChange={() => updateEvidenceSection('summary', 'status', 'conditional')}
                     disabled={formData.validationEvidence.isLocked}
                   />
-                  <span style={{ color: '#C77700', fontWeight: '600' }}> Condicional</span>
+                  <span style={{ color: '#C77700', fontWeight: '600' }}> {language === 'es' ? 'Condicional' : 'Conditional'}</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
                   <input
@@ -2379,13 +2582,13 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                     onChange={() => updateEvidenceSection('summary', 'status', 'fail')}
                     disabled={formData.validationEvidence.isLocked}
                   />
-                  <span style={{ color: '#B00020', fontWeight: '600' }}> Rechazado</span>
+                  <span style={{ color: '#B00020', fontWeight: '600' }}> {language === 'es' ? 'No Aprobado' : 'Not Approved'}</span>
                 </label>
               </div>
               <textarea
                 value={formData.validationEvidence.summary.observations}
                 onChange={(e) => updateEvidenceSection('summary', 'observations', e.target.value)}
-                placeholder="Observaciones adicionales sobre la validación..."
+                placeholder={language === 'es' ? 'Observaciones adicionales sobre la validación...' : 'Additional observations about the validation...'}
                 disabled={formData.validationEvidence.isLocked}
                 style={{ ...styles.input, width: '100%', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box' }}
               />
@@ -2402,24 +2605,24 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: formData.validationEvidence.isLocked ? '#065f46' : '#92400e' }}>
-                    {formData.validationEvidence.isLocked ? ' Validación Firmada' : ' Firma de Validación'}
+                    {formData.validationEvidence.isLocked ? (language === 'es' ? ' Validación Firmada' : ' Validation Signed') : (language === 'es' ? ' Firma de Validación' : ' Validation Signature')}
                   </h4>
                   {formData.validationEvidence.isLocked ? (
                     <div style={{ fontSize: '13px', color: '#065f46' }}>
                       <p style={{ margin: '0 0 4px 0' }}>
-                        <strong>Firmado por:</strong> {formData.validationEvidence.signedByName}
+                        <strong>{language === 'es' ? 'Firmado por:' : 'Signed by:'}</strong> {formData.validationEvidence.signedByName}
                       </p>
                       <p style={{ margin: 0 }}>
-                        <strong>Fecha:</strong> {new Date(formData.validationEvidence.signedAt).toLocaleString('es-MX')}
+                        <strong>{language === 'es' ? 'Fecha:' : 'Date:'}</strong> {new Date(formData.validationEvidence.signedAt).toLocaleString(language === 'es' ? 'es-MX' : 'en-US')}
                       </p>
                     </div>
                   ) : (
                     <div style={{ fontSize: '13px', color: '#92400e' }}>
                       <p style={{ margin: '0 0 4px 0' }}>
-                        <strong>Usuario responsable:</strong> {currentUser?.firstName} {currentUser?.lastName}
+                        <strong>{language === 'es' ? 'Usuario responsable:' : 'Responsible user:'}</strong> {currentUser?.firstName} {currentUser?.lastName}
                       </p>
                       <p style={{ margin: 0, fontStyle: 'italic' }}>
-                        Solo el usuario que realizó la validación debe firmar esta sección.
+                        {language === 'es' ? 'Solo el usuario que realizó la validación debe firmar esta sección.' : 'Only the user who performed the validation should sign this section.'}
                       </p>
                     </div>
                   )}
@@ -2535,23 +2738,23 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                   type="text"
                   value={formData.validationEvidence.noValidationReasonOther}
                   onChange={(e) => updateValidationEvidence('noValidationReasonOther', e.target.value)}
-                  placeholder="Especifica el motivo..."
+                  placeholder={language === 'es' ? 'Especifica el motivo...' : 'Specify the reason...'}
                   style={{ ...styles.input, marginBottom: '16px' }}
                 />
               )}
 
               <label style={{ fontSize: '14px', fontWeight: '600', color: t.text, display: 'block', marginBottom: '8px' }}>
-                Observaciones (opcional):
+                {language === 'es' ? 'Observaciones (opcional):' : 'Observations (optional):'}
               </label>
               <textarea
                 value={formData.validationEvidence.noValidationObservations}
                 onChange={(e) => updateValidationEvidence('noValidationObservations', e.target.value)}
-                placeholder="Observaciones adicionales..."
+                placeholder={language === 'es' ? 'Observaciones adicionales...' : 'Additional observations...'}
                 style={{ ...styles.input, minHeight: '80px', marginBottom: '16px', resize: 'vertical' }}
               />
 
               <label style={{ fontSize: '14px', fontWeight: '600', color: t.text, display: 'block', marginBottom: '8px' }}>
-                Evidencia de recepción/confirmación (opcional):
+                {language === 'es' ? 'Evidencia de recepción/confirmación (opcional):' : 'Receipt/confirmation evidence (optional):'}
               </label>
               {formData.validationEvidence.noValidationFiles?.length > 0 && (
                 <div style={{ marginBottom: '12px' }}>
@@ -2610,10 +2813,10 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
         )}
       </div>
 
-      {/* Communication Plan (IATF 8.5.6.1.1) */}
+      {/* Communication Plan */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Communication Plan (IATF 8.5.6.1.1)</span>
+          <span style={styles.badge}>Communication Plan</span>
         </h3>
         <p style={styles.sectionDescription}>
           Plan de comunicación a partes interesadas sobre el cambio
@@ -2664,22 +2867,22 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                 <>
                   <div style={styles.grid}>
                 <div style={styles.field}>
-                  <label style={styles.label}>Método de Comunicación</label>
+                  <label style={styles.label}>{language === 'es' ? 'Método de Comunicación' : 'Communication Method'}</label>
                   <select
                     style={styles.select}
                     value={commData.method}
                     onChange={(e) => handleCommunicationPlanChange(stakeholder, 'method', e.target.value)}
                   >
-                    <option value="">Seleccionar método...</option>
+                    <option value="">{language === 'es' ? 'Seleccionar método...' : 'Select method...'}</option>
                     <option value="email"> Email</option>
-                    <option value="formal_letter"> Carta Formal</option>
-                    <option value="meeting"> Reunión</option>
-                    <option value="portal"> Portal/Sistema</option>
+                    <option value="formal_letter"> {language === 'es' ? 'Carta Formal' : 'Formal Letter'}</option>
+                    <option value="meeting"> {language === 'es' ? 'Reunión' : 'Meeting'}</option>
+                    <option value="portal"> Portal/{language === 'es' ? 'Sistema' : 'System'}</option>
                   </select>
                 </div>
 
                 <div style={styles.field}>
-                  <label style={styles.label}>Fecha Programada</label>
+                  <label style={styles.label}>{language === 'es' ? 'Fecha Programada' : 'Scheduled Date'}</label>
                   <input
                     type="date"
                     style={styles.input}
@@ -2691,15 +2894,15 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
 
               <div style={styles.grid}>
                 <div style={styles.field}>
-                  <label style={styles.label}>Estado</label>
+                  <label style={styles.label}>{language === 'es' ? 'Estado' : 'Status'}</label>
                   <select
                     style={styles.select}
                     value={commData.status}
                     onChange={(e) => handleCommunicationPlanChange(stakeholder, 'status', e.target.value)}
                   >
-                    <option value="pending"> Pendiente</option>
-                    <option value="sent"> Enviado</option>
-                    <option value="confirmed"> Confirmado</option>
+                    <option value="pending"> {language === 'es' ? 'Pendiente' : 'Pending'}</option>
+                    <option value="sent"> {language === 'es' ? 'Enviado' : 'Sent'}</option>
+                    <option value="confirmed"> {language === 'es' ? 'Confirmado' : 'Confirmed'}</option>
                   </select>
                 </div>
 
@@ -2710,7 +2913,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                     style={styles.input}
                     value={commData.notes}
                     onChange={(e) => handleCommunicationPlanChange(stakeholder, 'notes', e.target.value)}
-                    placeholder="Notas adicionales..."
+                    placeholder={language === 'es' ? 'Notas adicionales...' : 'Additional notes...'}
                   />
                 </div>
               </div>
@@ -2721,7 +2924,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
         })}
       </div>
 
-      {/* Customer Approval (IATF Requirement) */}
+      {/* Customer Approval */}
       <div style={{
         ...styles.section,
         backgroundColor: formData.customerApproval.required ? '#fef3c7' : t.bgPanel,
@@ -2732,7 +2935,7 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
             ...styles.badge,
             backgroundColor: formData.customerApproval.required ? '#C77700' : '#8b5cf6'
           }}>
-            Customer Approval (IATF)
+            Customer Approval
           </span>
         </h3>
         <p style={styles.sectionDescription}>
@@ -2770,27 +2973,27 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                   value={formData.customerApproval.status}
                   onChange={(e) => handleCustomerApprovalChange('status', e.target.value)}
                 >
-                  <option value="pending"> Pendiente</option>
-                  <option value="approved"> Aprobado</option>
-                  <option value="rejected"> Rechazado</option>
+                  <option value="pending"> {language === 'es' ? 'Pendiente' : 'Pending'}</option>
+                  <option value="approved"> {language === 'es' ? 'Aprobado' : 'Approved'}</option>
+                  <option value="rejected"> {language === 'es' ? 'No Aprobado' : 'Not Approved'}</option>
                 </select>
               </div>
 
               <div style={styles.field}>
-                <label style={styles.label}>Aprobado Por</label>
+                <label style={styles.label}>{language === 'es' ? 'Aprobado Por' : 'Approved By'}</label>
                 <input
                   type="text"
                   style={styles.input}
                   value={formData.customerApproval.approvedBy}
                   onChange={(e) => handleCustomerApprovalChange('approvedBy', e.target.value)}
-                  placeholder="Nombre del contacto del cliente"
+                  placeholder={language === 'es' ? 'Nombre del contacto del cliente' : 'Customer contact name'}
                 />
               </div>
             </div>
 
             <div style={styles.grid}>
               <div style={styles.field}>
-                <label style={styles.label}>Fecha de Aprobación</label>
+                <label style={styles.label}>{language === 'es' ? 'Fecha de Aprobación' : 'Approval Date'}</label>
                 <input
                   type="date"
                   style={styles.input}
@@ -2800,13 +3003,13 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
               </div>
 
               <div style={styles.field}>
-                <label style={styles.label}>Comentarios del Cliente</label>
+                <label style={styles.label}>{language === 'es' ? 'Comentarios del Cliente' : 'Customer Comments'}</label>
                 <input
                   type="text"
                   style={styles.input}
                   value={formData.customerApproval.comments}
                   onChange={(e) => handleCustomerApprovalChange('comments', e.target.value)}
-                  placeholder="Comentarios o condiciones..."
+                  placeholder={language === 'es' ? 'Comentarios o condiciones...' : 'Comments or conditions...'}
                 />
               </div>
             </div>
@@ -2826,18 +3029,18 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
                 disabled={uploadingValidation === 'customerApproval' || !data.id}
               />
               {!data.id && (
-                <p style={styles.hint}> Guarda el ECR primero para poder subir evidencia</p>
+                <p style={styles.hint}> {language === 'es' ? 'Guarda el ECR primero para poder subir evidencia' : 'Save the ECR first to upload evidence'}</p>
               )}
               {uploadingValidation === 'customerApproval' && (
                 <p style={{ fontSize: '13px', color: t.accent, margin: '4px 0 0 0' }}>
-                  Subiendo archivos...
+                  {language === 'es' ? 'Subiendo archivos...' : 'Uploading files...'}
                 </p>
               )}
 
               {formData.customerApproval.evidence.length > 0 && (
                 <div style={{ marginTop: '12px' }}>
                   <p style={{ fontSize: '13px', fontWeight: '600', color: t.text, margin: '0 0 8px 0' }}>
-                    Archivos adjuntos:
+                    {language === 'es' ? 'Archivos adjuntos:' : 'Attached files:'}
                   </p>
                   {formData.customerApproval.evidence.map((file, idx) => (
                     <div key={idx} style={{
@@ -2917,10 +3120,66 @@ const ECRValidationPlan = ({ data, onDataUpdate }) => {
         <ECRApprovalPanel
           ecrId={data.id}
           currentUser={currentUser}
-          onStatusChange={() => {
-            // Refresh data if needed
+          onStatusChange={onApprovalStatusChange}
+          validationData={{
+            validationActions: formData.validationActions,
+            validationEvidence: formData.validationEvidence,
+            approvers: data.approvers
           }}
+          language={language}
         />
+      )}
+      </div>{/* End of read-only wrapper */}
+
+      {/* Image Modal for viewing enlarged images */}
+      {imageModal.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setImageModal({ isOpen: false, imageUrl: '', imageName: '' })}
+        >
+          <div style={{ maxWidth: '90%', maxHeight: '90%', position: 'relative' }}>
+            <img
+              src={imageModal.imageUrl}
+              alt={imageModal.imageName}
+              style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain' }}
+            />
+            <button
+              onClick={() => setImageModal({ isOpen: false, imageUrl: '', imageName: '' })}
+              style={{
+                position: 'absolute',
+                top: '-40px',
+                right: '0',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: 'white',
+                fontSize: '32px',
+                cursor: 'pointer'
+              }}
+            >×</button>
+            <p style={{
+              position: 'absolute',
+              bottom: '-35px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: 'white',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              padding: '4px 12px',
+              borderRadius: '6px',
+              whiteSpace: 'nowrap',
+              fontSize: '13px'
+            }}>
+              {imageModal.imageName}
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

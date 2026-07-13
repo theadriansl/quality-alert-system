@@ -1,9 +1,11 @@
 import React from 'react';
 import { getStatusDescription, getStatusBadgeColor } from '../../services/approvalsService';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const StatusBadge = ({ status }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const description = getStatusDescription(status);
   const colorClass = getStatusBadgeColor(status);
 

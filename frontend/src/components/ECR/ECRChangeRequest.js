@@ -3,9 +3,12 @@ import axios from 'axios';
 import { useTheme } from '../../context/ThemeContext';
 import PartsInventoryTable from '../8D/PartsInventoryTable';
 
-const ECRChangeRequest = ({ data, onDataUpdate }) => {
+const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t: translate }) => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
+
+  // Translation helper with fallback
+  const tr = (key) => translate ? translate(key) : key;
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
   const [availableParts, setAvailableParts] = useState([]);
@@ -42,15 +45,40 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
     imageName: ''
   });
 
-  const [isPartsSelectionExpanded, setIsPartsSelectionExpanded] = useState(false);
+  // Auto-expand if there's already data selected
+  const [isPartsSelectionExpanded, setIsPartsSelectionExpanded] = useState(
+    !!(data.selectedClient || data.selectedProjects?.length > 0 || data.selectedParts?.length > 0)
+  );
 
-  // Sync state when data changes from parent (after save)
+  // Sync state when data changes from parent (after save/load)
   useEffect(() => {
+    if (data.selectedClient && JSON.stringify(data.selectedClient) !== JSON.stringify(selectedClient)) {
+      setSelectedClient(data.selectedClient);
+    }
+    if (data.selectedProjects && JSON.stringify(data.selectedProjects) !== JSON.stringify(selectedProjects)) {
+      setSelectedProjects(data.selectedProjects);
+    }
+    if (data.selectedParts && JSON.stringify(data.selectedParts) !== JSON.stringify(selectedParts)) {
+      setSelectedParts(data.selectedParts);
+    }
+    if (data.customColumns && JSON.stringify(data.customColumns) !== JSON.stringify(customColumns)) {
+      setCustomColumns(data.customColumns);
+    }
+    if (data.beforeConditionDescription !== beforeConditionDescription) {
+      setBeforeConditionDescription(data.beforeConditionDescription || '');
+    }
+    if (data.afterConditionDescription !== afterConditionDescription) {
+      setAfterConditionDescription(data.afterConditionDescription || '');
+    }
     if (data.affectedDocuments && JSON.stringify(data.affectedDocuments) !== JSON.stringify(affectedDocuments)) {
       setAffectedDocuments(data.affectedDocuments);
     }
     if (data.changeAttachments && JSON.stringify(data.changeAttachments) !== JSON.stringify(changeAttachments)) {
       setChangeAttachments(data.changeAttachments);
+    }
+    // Auto-expand if there's data
+    if (data.selectedClient || data.selectedProjects?.length > 0 || data.selectedParts?.length > 0) {
+      setIsPartsSelectionExpanded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.id]); // Only sync when ECR ID changes (reload/save)
@@ -152,6 +180,10 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
     setSelectedProjects([]); // Clear selected projects
     setSelectedParts([]);
     setAvailableParts([]);
+    // Keep expanded if selecting a client
+    if (client) {
+      setIsPartsSelectionExpanded(true);
+    }
   };
 
   const handleProjectToggle = (project) => {
@@ -244,7 +276,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
       setPhotoArray([...photoArray, ...newPhotos]);
     } catch (error) {
       console.error('Error converting photos to base64:', error);
-      alert('Error al procesar las imágenes');
+      alert(language === 'es' ? 'Error al procesar las imágenes' : 'Error processing images');
     }
   };
 
@@ -285,7 +317,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
       setChangeAttachments([...changeAttachments, ...newAttachments]);
     } catch (error) {
       console.error('Error converting attachments to base64:', error);
-      alert('Error al procesar los archivos');
+      alert(language === 'es' ? 'Error al procesar los archivos' : 'Error processing files');
     }
   };
 
@@ -296,14 +328,14 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
 
   const handleAddDocument = async () => {
     if (!newDocument || !newDocument.trim()) {
-      alert('Por favor ingresa el nombre del documento antes de agregar');
+      alert(language === 'es' ? 'Por favor ingresa el nombre del documento antes de agregar' : 'Please enter the document name before adding');
       return;
     }
 
     // Check for duplicates (comparing by name)
     const docName = newDocument.trim();
     if (affectedDocuments.some(doc => (typeof doc === 'string' ? doc : doc.name) === docName)) {
-      alert('Este documento ya está en la lista');
+      alert(language === 'es' ? 'Este documento ya está en la lista' : 'This document is already in the list');
       return;
     }
 
@@ -328,7 +360,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
         };
       } catch (error) {
         console.error('Error converting file to base64:', error);
-        alert('Error al procesar el archivo');
+        alert(language === 'es' ? 'Error al procesar el archivo' : 'Error processing file');
         return;
       }
     }
@@ -344,18 +376,41 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            {tr('ecr.messages.readOnlyMode')}
+          </span>
+        </div>
+      )}
+
+      <div style={{
+        pointerEvents: isReadOnly ? 'none' : 'auto',
+        opacity: isReadOnly ? 0.7 : 1
+      }}>
       <div style={styles.header}>
-        <h2 style={styles.title}> ECR-2: Change Description</h2>
-        <p style={styles.subtitle}>Descripción detallada del cambio solicitado</p>
+        <h2 style={styles.title}> ECR-2: {language === 'es' ? 'Descripción del Cambio' : 'Change Description'}</h2>
+        <p style={styles.subtitle}>{language === 'es' ? 'Descripción detallada del cambio solicitado' : 'Detailed description of the requested change'}</p>
       </div>
 
       {/* Descripción detallada del cambio solicitado */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Descripción detallada del cambio solicitado</span>
+          <span style={styles.badge}>{language === 'es' ? 'Descripción detallada del cambio solicitado' : 'Detailed description of the requested change'}</span>
         </h3>
         <p style={styles.sectionDescription}>
-          Descripción de condiciones antes/después, evidencia fotográfica y documentos adjuntos
+          {language === 'es' ? 'Descripción de condiciones antes/después, evidencia fotográfica y documentos adjuntos' : 'Before/after conditions description, photographic evidence and attachments'}
         </p>
 
         {/* Before/After Conditions with Photos */}
@@ -376,7 +431,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               alignItems: 'center',
               gap: '6px'
             }}>
-               Before (Condición Actual)
+               {language === 'es' ? 'Before (Condición Actual)' : 'Before (Current Condition)'}
             </h4>
 
             {/* Description Text Box */}
@@ -388,7 +443,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                 color: '#991b1b',
                 marginBottom: '6px'
               }}>
-                Describe a detalle la condición anterior:
+                {language === 'es' ? 'Describe a detalle la condición anterior:' : 'Describe in detail the previous condition:'}
               </label>
               <textarea
                 value={beforeConditionDescription}
@@ -404,7 +459,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                   resize: 'vertical',
                   backgroundColor: t.bgCard
                 }}
-                placeholder="Describe el estado actual, problemas encontrados, defectos, situación antes del cambio..."
+                placeholder={language === 'es' ? 'Describe el estado actual, problemas encontrados, defectos, situación antes del cambio...' : 'Describe the current state, problems found, defects, situation before the change...'}
               />
             </div>
 
@@ -425,7 +480,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               fontWeight: '500'
             }}>
               <span style={{ fontSize: '16px' }}></span>
-              Agregar Fotos
+              {language === 'es' ? 'Agregar Fotos' : 'Add Photos'}
               <input
                 type="file"
                 accept="image/*"
@@ -505,7 +560,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               alignItems: 'center',
               gap: '6px'
             }}>
-               After (Condición Nueva)
+               {language === 'es' ? 'After (Condición Nueva)' : 'After (New Condition)'}
             </h4>
 
             {/* Description Text Box */}
@@ -517,7 +572,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                 color: '#166534',
                 marginBottom: '6px'
               }}>
-                Describe a detalle la condición nueva:
+                {language === 'es' ? 'Describe a detalle la condición nueva:' : 'Describe in detail the new condition:'}
               </label>
               <textarea
                 value={afterConditionDescription}
@@ -533,7 +588,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                   resize: 'vertical',
                   backgroundColor: t.bgCard
                 }}
-                placeholder="Describe el estado propuesto, mejoras esperadas, solución implementada, situación después del cambio..."
+                placeholder={language === 'es' ? 'Describe el estado propuesto, mejoras esperadas, solución implementada, situación después del cambio...' : 'Describe the proposed state, expected improvements, implemented solution, situation after the change...'}
               />
             </div>
 
@@ -554,7 +609,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               fontWeight: '500'
             }}>
               <span style={{ fontSize: '16px' }}></span>
-              Agregar Fotos
+              {language === 'es' ? 'Agregar Fotos' : 'Add Photos'}
               <input
                 type="file"
                 accept="image/*"
@@ -634,10 +689,10 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
             color: '#0369a1',
             marginBottom: '8px'
           }}>
-             Documentos Adjuntos (opcional)
+             {language === 'es' ? 'Documentos Adjuntos (opcional)' : 'Attachments (optional)'}
           </label>
           <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
-            Adjunta PDFs, documentos, planos, especificaciones u otros archivos que ayuden a explicar el cambio
+            {language === 'es' ? 'Adjunta PDFs, documentos, planos, especificaciones u otros archivos que ayuden a explicar el cambio' : 'Attach PDFs, documents, drawings, specifications or other files that help explain the change'}
           </p>
 
           <label style={{
@@ -655,7 +710,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
             color: '#0369a1'
           }}>
             <span style={{ marginRight: '8px' }}></span>
-            Seleccionar Archivos
+            {language === 'es' ? 'Seleccionar Archivos' : 'Select Files'}
             <input
               type="file"
               multiple
@@ -742,20 +797,20 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
           }}
           onClick={() => setIsPartsSelectionExpanded(!isPartsSelectionExpanded)}
         >
-          <span style={styles.badge}>Client, Project & Affected Parts (Opcional)</span>
+          <span style={styles.badge}>{language === 'es' ? 'Cliente, Proyecto y Partes Afectadas (Opcional)' : 'Client, Project & Affected Parts (Optional)'}</span>
           <span style={{
             fontSize: '18px',
             marginLeft: '8px',
             transition: 'transform 0.2s',
             transform: isPartsSelectionExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
           }}>
-            
+
           </span>
         </h3>
         <p style={styles.sectionDescription}>
           {isPartsSelectionExpanded
-            ? 'Selecciona el cliente, proyecto(s) y partes afectadas por este cambio'
-            : 'Click para expandir si el cambio incluye partes específicas (ej: cambios de materiales, componentes). Omite esta sección para cambios de layout, procesos, etc.'
+            ? (language === 'es' ? 'Selecciona el cliente, proyecto(s) y partes afectadas por este cambio' : 'Select the client, project(s) and parts affected by this change')
+            : (language === 'es' ? 'Click para expandir si el cambio incluye partes específicas (ej: cambios de materiales, componentes). Omite esta sección para cambios de layout, procesos, etc.' : 'Click to expand if the change includes specific parts (e.g., material changes, components). Skip this section for layout changes, processes, etc.')
           }
         </p>
 
@@ -763,13 +818,13 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
           <div>
             <div style={styles.grid}>
               <div style={styles.field}>
-                <label style={styles.label}>Cliente / Proveedor *</label>
+                <label style={styles.label}>{language === 'es' ? 'Cliente / Proveedor' : 'Client / Supplier'} *</label>
                 <select
                   style={styles.input}
                   value={selectedClient?.id || ''}
                   onChange={(e) => handleClientChange(e.target.value)}
                 >
-                  <option value="">Selecciona un cliente...</option>
+                  <option value="">{language === 'es' ? 'Selecciona un cliente...' : 'Select a client...'}</option>
                   {clients.map(client => (
                     <option key={client.id} value={client.id}>
                       {client.name} ({client.alias})
@@ -782,9 +837,9 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
             {/* Projects Multi-Select */}
             {selectedClient && projects.length > 0 && (
               <div style={{ marginTop: '16px' }}>
-                <label style={styles.label}>Proyectos (Selección Múltiple) *</label>
+                <label style={styles.label}>{language === 'es' ? 'Proyectos (Selección Múltiple)' : 'Projects (Multi-Select)'} *</label>
                 <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
-                  Selecciona uno o más proyectos del cliente para ver sus partes
+                  {language === 'es' ? 'Selecciona uno o más proyectos del cliente para ver sus partes' : 'Select one or more client projects to view their parts'}
                 </p>
                 <div style={{
                   border: '1px solid #ddd',
@@ -837,7 +892,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
             {/* Parts Multi-Select */}
             {selectedProjects.length > 0 && availableParts.length > 0 && (
               <div style={{ marginTop: '16px' }}>
-                <label style={styles.label}>Números de Parte Afectados (Selección Múltiple) *</label>
+                <label style={styles.label}>{language === 'es' ? 'Números de Parte Afectados (Selección Múltiple)' : 'Affected Part Numbers (Multi-Select)'} *</label>
                 <div style={{
                   border: '1px solid #ddd',
                   borderRadius: '8px',
@@ -923,7 +978,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                           {/* Current Part (Nueva) */}
                           <div>
                             <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px', fontWeight: '600' }}>
-                               Parte Seleccionada:
+                               {language === 'es' ? 'Parte Seleccionada:' : 'Selected Part:'}
                             </div>
                             <div style={{ fontWeight: '700', color: '#2196f3', fontSize: '13px' }}>
                               {part.partNumber}
@@ -936,7 +991,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                           {/* Replaced Part Selection (Anterior) */}
                           <div>
                             <label style={{ fontSize: '11px', color: '#666', marginBottom: '4px', display: 'block', fontWeight: '600' }}>
-                               Reemplaza a (opcional):
+                               {language === 'es' ? 'Reemplaza a (opcional):' : 'Replaces (optional):'}
                             </label>
                             <select
                               value={part.replacedPartId || ''}
@@ -950,7 +1005,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                                 backgroundColor: part.isReplacement ? '#fef3c7' : 'white'
                               }}
                             >
-                              <option value="">N/A - Es nueva parte</option>
+                              <option value="">{language === 'es' ? 'N/A - Es nueva parte' : 'N/A - New part'}</option>
                               {availableParts
                                 .filter(p => p.id !== part.id)
                                 .map(oldPart => (
@@ -969,7 +1024,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                                 alignItems: 'center',
                                 gap: '4px'
                               }}>
-                                 Parte anterior: {part.replacedPartNumber}
+                                 {language === 'es' ? 'Parte anterior:' : 'Previous part:'} {part.replacedPartNumber}
                               </div>
                             )}
                           </div>
@@ -987,7 +1042,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <strong style={{ fontSize: '15px', color: '#2e7d32' }}>
-                          Costo Estimado Total:
+                          {language === 'es' ? 'Costo Estimado Total:' : 'Total Estimated Cost:'}
                         </strong>
                         <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1b5e20' }}>
                           ${(selectedParts?.reduce((total, part) => {
@@ -997,7 +1052,10 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                         </span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#558b2f', marginTop: '6px' }}>
-                        Basado en {selectedParts?.reduce((total, part) => total + (parseInt(part.totalAffectedQty) || 0), 0) || 0} {selectedParts?.reduce((total, part) => total + (parseInt(part.totalAffectedQty) || 0), 0) === 1 ? 'pieza' : 'piezas'} afectada{selectedParts?.reduce((total, part) => total + (parseInt(part.totalAffectedQty) || 0), 0) === 1 ? '' : 's'}
+                        {language === 'es'
+                          ? `Basado en ${selectedParts?.reduce((total, part) => total + (parseInt(part.totalAffectedQty) || 0), 0) || 0} ${selectedParts?.reduce((total, part) => total + (parseInt(part.totalAffectedQty) || 0), 0) === 1 ? 'pieza afectada' : 'piezas afectadas'}`
+                          : `Based on ${selectedParts?.reduce((total, part) => total + (parseInt(part.totalAffectedQty) || 0), 0) || 0} affected ${selectedParts?.reduce((total, part) => total + (parseInt(part.totalAffectedQty) || 0), 0) === 1 ? 'piece' : 'pieces'}`
+                        }
                       </div>
                     </div>
 
@@ -1013,7 +1071,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                         gap: '8px'
                       }}>
                         <span></span>
-                        Inventario de Partes Afectadas
+                        {language === 'es' ? 'Inventario de Partes Afectadas' : 'Affected Parts Inventory'}
                       </h3>
                       <PartsInventoryTable
                         parts={selectedParts}
@@ -1033,10 +1091,10 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
       {/* Affected Documents */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Affected Documents</span>
+          <span style={styles.badge}>{tr('ecr.impactAnalysis.affectedDocuments')}</span>
         </h3>
         <p style={styles.sectionDescription}>
-          Documentos que serán afectados por este cambio (planos, especificaciones, procedimientos, etc.)
+          {language === 'es' ? 'Documentos que serán afectados por este cambio (planos, especificaciones, procedimientos, etc.)' : 'Documents that will be affected by this change (drawings, specifications, procedures, etc.)'}
         </p>
 
         <div style={{
@@ -1054,7 +1112,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               color: t.text,
               marginBottom: '6px'
             }}>
-              Nombre del Documento *
+              {language === 'es' ? 'Nombre del Documento' : 'Document Name'} *
             </label>
             <input
               type="text"
@@ -1067,7 +1125,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                   handleAddDocument();
                 }
               }}
-              placeholder="Ej: Drawing #12345, Spec ABC-001, WI-MFG-789..."
+              placeholder={language === 'es' ? 'Ej: Drawing #12345, Spec ABC-001, WI-MFG-789...' : 'Ex: Drawing #12345, Spec ABC-001, WI-MFG-789...'}
             />
           </div>
 
@@ -1079,7 +1137,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               color: t.text,
               marginBottom: '6px'
             }}>
-              Anexar Archivo del Documento (Opcional pero Recomendado)
+              {language === 'es' ? 'Anexar Archivo del Documento (Opcional pero Recomendado)' : 'Attach Document File (Optional but Recommended)'}
             </label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <label style={{
@@ -1095,7 +1153,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                 fontWeight: '500'
               }}>
                 <span style={{ marginRight: '6px' }}></span>
-                {newDocumentFile ? 'Cambiar Archivo' : 'Seleccionar Archivo'}
+                {newDocumentFile ? (language === 'es' ? 'Cambiar Archivo' : 'Change File') : (language === 'es' ? 'Seleccionar Archivo' : 'Select File')}
                 <input
                   type="file"
                   onChange={(e) => setNewDocumentFile(e.target.files[0])}
@@ -1128,7 +1186,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                       fontSize: '11px'
                     }}
                   >
-                    Quitar
+                    {language === 'es' ? 'Quitar' : 'Remove'}
                   </button>
                 </div>
               )}
@@ -1149,7 +1207,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               fontWeight: '600'
             }}
           >
-            + Agregar Documento a la Lista
+            + {language === 'es' ? 'Agregar Documento a la Lista' : 'Add Document to List'}
           </button>
         </div>
 
@@ -1166,7 +1224,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
               color: t.text,
               marginBottom: '12px'
             }}>
-              Documentos Afectados ({affectedDocuments.length})
+              {tr('ecr.impactAnalysis.affectedDocuments')} ({affectedDocuments.length})
             </h4>
             {affectedDocuments.map((doc, index) => {
               // Handle both old format (string) and new format (object)
@@ -1216,7 +1274,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
                         color: '#92400e',
                         marginLeft: '20px'
                       }}>
-                         Sin archivo adjunto
+                         {language === 'es' ? 'Sin archivo adjunto' : 'No file attached'}
                       </div>
                     )}
                   </div>
@@ -1244,6 +1302,7 @@ const ECRChangeRequest = ({ data, onDataUpdate }) => {
           </div>
         )}
       </div>
+      </div>{/* End of read-only wrapper */}
 
       {/* Image Modal */}
       {imageModal.isOpen && (

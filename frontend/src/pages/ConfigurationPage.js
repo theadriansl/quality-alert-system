@@ -582,6 +582,7 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -592,28 +593,28 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
 
   const modules = [
     // Calidad
-    { id: '8d', name: '8D Problem Solving', icon: '🔧', category: 'Calidad' },
-    { id: 'quality_alert', name: 'Quality Alert / Defectos', icon: '🚨', category: 'Calidad' },
-    { id: 'qar', name: 'QAR (Quality Action Request)', icon: '📋', category: 'Calidad' },
-    { id: 'mrb', name: 'MRB (Material Review Board)', icon: '🔍', category: 'Calidad' },
-    { id: 'hospital', name: 'Hospital Dashboard', icon: '🏥', category: 'Calidad' },
-    { id: 'lessons_learned', name: 'Lecciones Aprendidas', icon: '📚', category: 'Calidad' },
+    { id: '8d', name: '8D Problem Solving', category: 'Calidad' },
+    { id: 'quality_alert', name: 'Quality Alert / Defectos', category: 'Calidad' },
+    { id: 'qar', name: 'QAR (Quality Action Request)', category: 'Calidad' },
+    { id: 'mrb', name: 'MRB (Material Review Board)', category: 'Calidad' },
+    { id: 'hospital', name: 'Hospital Dashboard', category: 'Calidad' },
+    { id: 'lessons_learned', name: 'Lecciones Aprendidas', category: 'Calidad' },
     // Ingeniería
-    { id: 'ecr', name: 'ECR/ECO (Cambios de Ingeniería)', icon: '⚙️', category: 'Ingeniería' },
-    { id: 'risk_matrix', name: 'Matriz de Riesgo', icon: '⚠️', category: 'Ingeniería' },
-    { id: 'work_instructions', name: 'Instrucciones de Trabajo', icon: '📄', category: 'Ingeniería' },
+    { id: 'ecr', name: 'ECR/ECO (Cambios de Ingeniería)', category: 'Ingeniería' },
+    { id: 'risk_matrix', name: 'Matriz de Riesgo', category: 'Ingeniería' },
+    { id: 'work_instructions', name: 'Instrucciones de Trabajo', category: 'Ingeniería' },
     // Auditorías
-    { id: 'audits', name: 'Auditorías ISO', icon: '✅', category: 'Auditorías' },
+    { id: 'audits', name: 'Auditorías ISO', category: 'Auditorías' },
     // Operaciones
-    { id: 'workload', name: 'Gestión de Carga de Trabajo', icon: '📅', category: 'Operaciones' },
-    { id: 'management_review', name: 'Revisión Gerencial', icon: '🏢', category: 'Operaciones' },
+    { id: 'workload', name: 'Gestión de Carga de Trabajo', category: 'Operaciones' },
+    { id: 'management_review', name: 'Revisión Gerencial', category: 'Operaciones' },
     // Recursos Humanos
-    { id: 'skills', name: 'Skills & Training', icon: '🎯', category: 'Recursos Humanos' },
+    { id: 'skills', name: 'Skills & Training', category: 'Recursos Humanos' },
     // Administración
-    { id: 'clients', name: 'Clientes', icon: '🤝', category: 'Administración' },
-    { id: 'users', name: 'Usuarios', icon: '👥', category: 'Administración' },
-    { id: 'configuration', name: 'Configuración del Sistema', icon: '🔑', category: 'Administración' },
-    { id: 'dashboard', name: 'Dashboard / Reportes', icon: '📈', category: 'Administración' },
+    { id: 'clients', name: 'Clientes', category: 'Administración' },
+    { id: 'users', name: 'Usuarios', category: 'Administración' },
+    { id: 'configuration', name: 'Configuración del Sistema', category: 'Administración' },
+    { id: 'dashboard', name: 'Dashboard / Reportes', category: 'Administración' },
   ];
 
   const loadRoles = useCallback(async () => {
@@ -706,10 +707,199 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
           <h2 style={styles.tabTitle}>Gestión de Roles</h2>
           <p style={styles.tabSubtitle}>{roles.length} roles configurados</p>
         </div>
-        <button onClick={() => { resetForm(); setShowModal(true); }} style={styles.primaryBtn}>
-          + Nuevo Rol
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => setShowGuide(true)} style={{ ...styles.primaryBtn, backgroundColor: t.bgHover, color: t.text }}>
+            ? Guía de Configuración
+          </button>
+          <button onClick={() => { resetForm(); setShowModal(true); }} style={styles.primaryBtn}>
+            + Nuevo Rol
+          </button>
+        </div>
       </div>
+
+      {/* Modal Guía de Configuración */}
+      {showGuide && (
+        <Modal title="Guía de Configuración de Roles" onClose={() => setShowGuide(false)} wide styles={styles}>
+          <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            {/* Sección 1: Niveles de Acceso */}
+            <div style={{ marginBottom: '24px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+                1. Nivel de Acceso (Clearance Level)
+              </h4>
+              <div style={{ padding: '12px', backgroundColor: t.warning + '20', borderRadius: '6px', marginBottom: '12px', border: `1px solid ${t.warning}` }}>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: t.warning, marginBottom: '6px' }}>
+                  IMPORTANTE: Este nivel es principalmente ORGANIZATIVO
+                </div>
+                <div style={{ fontSize: '12px', color: t.text, lineHeight: '1.6' }}>
+                  El control real de acceso se define en los <strong>permisos por módulo</strong> (sección 2).<br/><br/>
+                  <strong>¿Cuándo aplica el nivel?</strong> Solo cuando un módulo NO tiene acceso configurado:<br/>
+                  • Si el módulo tiene acceso definido (Sin acceso, Solo lectura, Parcial, Completo) → el nivel se ignora<br/>
+                  • Si el módulo NO tiene acceso definido → usuarios nivel 3 o 4 pueden acceder, nivel 1 o 2 son denegados
+                </div>
+              </div>
+              <p style={{ fontSize: '13px', color: t.textMuted, marginBottom: '12px' }}>
+                Referencia organizativa para clasificar roles jerárquicamente:
+              </p>
+              <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: t.bgHover }}>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Nivel</th>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Nombre</th>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Uso típico</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>1</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>Público</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Visitantes, consultas básicas</td></tr>
+                  <tr><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>2</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>Restringido</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Operadores, técnicos, inspectores</td></tr>
+                  <tr><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>3</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>Confidencial</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Supervisores, ingenieros, aprobadores</td></tr>
+                  <tr><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>4</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>Alta Dirección</td><td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Gerentes, administradores del sistema</td></tr>
+                </tbody>
+              </table>
+              <div style={{ marginTop: '12px', padding: '10px', backgroundColor: t.bgCard, borderRadius: '6px', fontSize: '12px', color: t.textMuted, fontStyle: 'italic' }}>
+                Recomendación: Configure siempre los accesos por módulo para control preciso. No dependa solo del nivel.
+              </div>
+            </div>
+
+            {/* Sección 2: Tipos de Acceso */}
+            <div style={{ marginBottom: '24px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+                2. Tipo de Acceso por Módulo
+              </h4>
+              <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: t.bgHover }}>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Tipo</th>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Descripción</th>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Puede hacer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, fontWeight: '600', color: t.textDim }}>Sin acceso</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Módulo completamente oculto</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Nada</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, fontWeight: '600', color: t.warning }}>Solo lectura</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Puede ver pero no modificar</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Ver listados, consultar detalles</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, fontWeight: '600', color: t.accent }}>Parcial</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Acceso limitado a ciertas acciones</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Depende de sections (ver ejemplos)</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, fontWeight: '600', color: t.success }}>Completo</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Control total del módulo</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Crear, editar, eliminar, aprobar</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sección 3: Ejemplos Prácticos */}
+            <div style={{ marginBottom: '24px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+                3. Ejemplos de Configuración
+              </h4>
+
+              {/* Ejemplo 1: Auditor/Consultor */}
+              <div style={{ backgroundColor: t.bgHover, padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+                  Auditor / Consultor (Solo consulta, sin captura)
+                </div>
+                <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
+                  Usuario que puede ver defectos y reportes pero NO puede capturar nuevos defectos.
+                </p>
+                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: 'monospace' }}>
+                  <div><strong>Nivel:</strong> 2 (Restringido)</div>
+                  <div><strong>Hospital Dashboard:</strong> Parcial</div>
+                  <div style={{ marginLeft: '16px', color: t.textMuted }}>
+                    → sections.query = true (puede consultar)<br/>
+                    → sections.capture = false (NO puede capturar)
+                  </div>
+                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: t.warning + '20', borderRadius: '4px', color: t.warning }}>
+                    Resultado: El usuario ve el módulo Hospital pero al intentar entrar a Captura es redirigido con mensaje "Layer 1: Permiso insuficiente"
+                  </div>
+                </div>
+              </div>
+
+              {/* Ejemplo 2: Inspector */}
+              <div style={{ backgroundColor: t.bgHover, padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+                  Inspector (Captura completa)
+                </div>
+                <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
+                  Usuario que captura defectos en línea de producción.
+                </p>
+                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: 'monospace' }}>
+                  <div><strong>Nivel:</strong> 2 (Restringido)</div>
+                  <div><strong>Hospital Dashboard:</strong> Completo</div>
+                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: t.success + '20', borderRadius: '4px', color: t.success }}>
+                    Importante: También requiere rol "Inspector" en Hospital de Defectos → Configuración → Roles de Usuario (Layer 2)
+                  </div>
+                </div>
+              </div>
+
+              {/* Ejemplo 3: Supervisor */}
+              <div style={{ backgroundColor: t.bgHover, padding: '16px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+                  Supervisor de Calidad
+                </div>
+                <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
+                  Usuario que gestiona 8D, QAR y tiene acceso completo a calidad.
+                </p>
+                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: 'monospace' }}>
+                  <div><strong>Nivel:</strong> 3 (Confidencial)</div>
+                  <div><strong>8D Problem Solving:</strong> Completo</div>
+                  <div><strong>Quality Alert:</strong> Completo</div>
+                  <div><strong>Hospital Dashboard:</strong> Completo</div>
+                  <div><strong>MRB:</strong> Completo</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sección 4: Sistema de Dos Capas */}
+            <div style={{ marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+                4. Sistema de Dos Capas (Hospital de Defectos)
+              </h4>
+              <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '12px' }}>
+                El módulo Hospital de Defectos requiere verificación de DOS capas para operaciones:
+              </p>
+              <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: t.bgHover }}>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Capa</th>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Dónde se configura</th>
+                    <th style={{ padding: '8px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Qué controla</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, fontWeight: '600' }}>Layer 1: Sistema</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Aquí (Configuración → Roles)</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Permiso general del módulo (access, sections)</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, fontWeight: '600' }}>Layer 2: Hospital</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Hospital → Configuración → Roles de Usuario</td>
+                    <td style={{ padding: '8px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>Rol específico: Inspector, Reparador, Liberador</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style={{ marginTop: '12px', padding: '12px', backgroundColor: t.accent + '15', borderRadius: '6px', fontSize: '12px', color: t.text }}>
+                <strong>Ambas capas deben cumplirse.</strong> Si Layer 1 falla, el usuario ve "Permiso de sistema insuficiente". Si Layer 2 falla, ve "Sin rol de Hospital".
+              </div>
+            </div>
+          </div>
+
+          <div style={{ ...styles.modalActions, marginTop: '16px' }}>
+            <button onClick={() => setShowGuide(false)} style={styles.submitBtn}>Entendido</button>
+          </div>
+        </Modal>
+      )}
 
       {/* Roles Grid */}
       <div style={styles.rolesGrid}>
@@ -789,7 +979,6 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
                         borderLeft: `3px solid ${accessColor}`,
                         display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px'
                       }}>
-                        <span style={{ fontSize: '16px', flexShrink: 0 }}>{mod.icon}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={mod.name}>
                             {mod.name}
@@ -804,10 +993,10 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
                               fontWeight: '600', cursor: 'pointer', outline: 'none'
                             }}
                           >
-                            <option value="none">🚫 Sin acceso</option>
-                            <option value="view">👁 Solo lectura</option>
-                            <option value="partial">✏️ Parcial</option>
-                            <option value="full">✅ Completo</option>
+                            <option value="none">Sin acceso</option>
+                            <option value="view">Solo lectura</option>
+                            <option value="partial">Parcial</option>
+                            <option value="full">Completo</option>
                           </select>
                         </div>
                       </div>

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
-const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
+const ECRApprovalAssignment = ({ data, onDataUpdate, language = 'es' }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language: lang, changeLanguage } = useLanguage();
   const [users, setUsers] = useState([]);
   const [approvers, setApprovers] = useState({
     level1: data.approvers?.level1 || null,
@@ -80,11 +82,20 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
   });
 
   const getLevelTitle = (level) => {
-    switch(level) {
-      case 'level1': return 'Aprobador 1';
-      case 'level2': return 'Aprobador 2';
-      case 'level3': return 'Aprobador 3';
-      default: return level;
+    if (language === 'es') {
+      switch(level) {
+        case 'level1': return 'Aprobador 1';
+        case 'level2': return 'Aprobador 2';
+        case 'level3': return 'Aprobador 3';
+        default: return level;
+      }
+    } else {
+      switch(level) {
+        case 'level1': return 'Approver 1';
+        case 'level2': return 'Approver 2';
+        case 'level3': return 'Approver 3';
+        default: return level;
+      }
     }
   };
 
@@ -92,15 +103,16 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}> Asignación de Equipo de Aprobadores</h3>
+      <h3 style={styles.title}> {language === 'es' ? 'Asignación de Equipo de Aprobadores' : 'Approver Team Assignment'}</h3>
       <p style={styles.subtitle}>
-        Asigna los aprobadores secuenciales que revisarán este ECR en la fase de validación
+        {language === 'es' ? 'Asigna los aprobadores secuenciales que revisarán este ECR en la fase de validación' : 'Assign the sequential approvers who will review this ECR in the validation phase'}
       </p>
 
       <div style={styles.infoBox}>
         <p style={styles.infoText}>
-          ℹ Los aprobadores serán notificados secuencialmente. El proceso comenzará con el Nivel 1,
-          y solo avanzará al siguiente nivel si el anterior aprueba.
+          {language === 'es'
+            ? 'ℹ Los aprobadores serán notificados secuencialmente. El proceso comenzará con el Nivel 1, y solo avanzará al siguiente nivel si el anterior aprueba.'
+            : 'ℹ Approvers will be notified sequentially. The process will start with Level 1, and will only advance to the next level if the previous one approves.'}
         </p>
       </div>
 
@@ -146,7 +158,7 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
                         handleRemoveUser(level);
                       }}
                       style={styles.removeButton}
-                      title="Remover usuario"
+                      title={language === 'es' ? 'Remover usuario' : 'Remove user'}
                     >
                       ×
                     </button>
@@ -158,14 +170,14 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Buscar por nombre o puesto..."
+                        placeholder={language === 'es' ? 'Buscar por nombre o puesto...' : 'Search by name or position...'}
                         style={styles.searchInput}
                         autoFocus
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
                       <span style={styles.placeholderText}>
-                        + Seleccionar Aprobador
+                        {language === 'es' ? '+ Seleccionar Aprobador' : '+ Select Approver'}
                       </span>
                     )}
                   </div>
@@ -199,7 +211,7 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
                     </div>
                   ) : (
                     <div style={styles.noResults}>
-                      No se encontraron usuarios
+                      {language === 'es' ? 'No se encontraron usuarios' : 'No users found'}
                     </div>
                   )}
                 </div>
@@ -212,7 +224,7 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
       {/* Summary */}
       {(approvers.level1 || approvers.level2 || approvers.level3) && (
         <div style={styles.summary}>
-          <h4 style={styles.summaryTitle}>Resumen del Flujo de Aprobación</h4>
+          <h4 style={styles.summaryTitle}>{language === 'es' ? 'Resumen del Flujo de Aprobación' : 'Approval Flow Summary'}</h4>
           <div style={styles.flowSteps}>
             {approvers.level1 && (
               <div style={styles.flowStep}>
@@ -221,7 +233,7 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
                   <div style={styles.stepTitle}>
                     {getUserById(approvers.level1)?.firstName} {getUserById(approvers.level1)?.lastName}
                   </div>
-                  <div style={styles.stepSubtitle}>Aprobador 1</div>
+                  <div style={styles.stepSubtitle}>{language === 'es' ? 'Aprobador 1' : 'Approver 1'}</div>
                 </div>
               </div>
             )}
@@ -233,7 +245,7 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
                   <div style={styles.stepTitle}>
                     {getUserById(approvers.level2)?.firstName} {getUserById(approvers.level2)?.lastName}
                   </div>
-                  <div style={styles.stepSubtitle}>Aprobador 2</div>
+                  <div style={styles.stepSubtitle}>{language === 'es' ? 'Aprobador 2' : 'Approver 2'}</div>
                 </div>
               </div>
             )}
@@ -245,7 +257,7 @@ const ECRApprovalAssignment = ({ data, onDataUpdate }) => {
                   <div style={styles.stepTitle}>
                     {getUserById(approvers.level3)?.firstName} {getUserById(approvers.level3)?.lastName}
                   </div>
-                  <div style={styles.stepSubtitle}>Aprobador 3</div>
+                  <div style={styles.stepSubtitle}>{language === 'es' ? 'Aprobador 3' : 'Approver 3'}</div>
                 </div>
               </div>
             )}

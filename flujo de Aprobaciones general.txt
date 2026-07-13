@@ -1,0 +1,49 @@
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                    FLUJO ECR-4 CIERRE (CORREGIDO)                   │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  Responsable ──▶ Enviar a Aprobación ──▶ Aprobador 1
+                                                │
+                                          ┌─────┴─────┐
+                                          │           │
+                                        OK ✓        ❌ Rechaza
+                                          │           │
+                                          ▼           │
+                                     Aprobador 2      │
+                                          │           │
+                                    ┌─────┴─────┐     │
+                                    │           │     │
+                                  OK ✓        ❌ Rechaza
+                                    │           │     │
+                                    ▼           │     │
+                               Aprobador 3      │     │
+                                    │           │     │
+                              ┌─────┴─────┐     │     │
+                              │           │     │     │
+                            OK ✓        ❌ Rechaza    │
+                              │           │     │     │
+                              ▼           │     │     │
+                          ┌───────┐       │     │     │
+                          │CLOSED │       │     │     │
+                          └───────┘       │     │     │
+                                          │     │     │
+            ┌─────────────────────────────┴─────┴─────┴──────┐
+            │                                                │
+            ▼                                                │
+     ┌──────────────┐                                        │
+     │ Responsable  │  (Firmas anteriores PRESERVADAS)       │
+     │ Corrige      │                                        │
+     └──────┬───────┘                                        │
+            │                                                │
+            ▼                                                │
+     ┌──────────────┐     ┌─────────────────────────────────────────┐
+     │ Re-enviar    │────▶│ Va DIRECTO al nivel que rechazó         │
+     └──────────────┘     │ (salta los que ya aprobaron)            │
+                          └─────────────────────────────────────────┘
+
+  Ejemplo:
+    Nivel 1: ✓ Firmado (preservado)
+    Nivel 2: ✓ Firmado (preservado)
+    Nivel 3: Pendiente ← Re-envío llega aquí directamente
+
+ 

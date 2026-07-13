@@ -126,11 +126,13 @@ router.get('/parts/:partId/specs', authenticateToken, async (req, res) => {
     let sql = `
       SELECT ps.*, mu.symbol as unit_symbol, mu.name as unit_name, mu.category as unit_category,
              u.first_name || ' ' || u.last_name as created_by_name,
-             bp.part_number as bom_part_number, bp.part_name as bom_part_name
+             bp.part_number as bom_part_number, bp.part_name as bom_part_name,
+             dep.name as default_department_name
       FROM part_specifications ps
       LEFT JOIN measurement_units mu ON ps.unit_id = mu.id
       LEFT JOIN users u ON ps.created_by = u.id
       LEFT JOIN client_parts bp ON ps.bom_part_id = bp.id
+      LEFT JOIN departments dep ON ps.default_department_id = dep.id
       WHERE ps.part_id = $1 AND ps.is_active = true
     `;
     const params = [partId];
@@ -234,7 +236,8 @@ router.post('/parts/:partId/specs', authenticateToken, async (req, res) => {
     notes,
     qarTriggerEnabled,
     qarTriggerCount,
-    qarTriggerHours
+    qarTriggerHours,
+    defaultDepartmentId
   } = req.body;
 
   try {
@@ -259,9 +262,9 @@ router.post('/parts/:partId/specs', authenticateToken, async (req, res) => {
         is_critical, requires_measurement, inspection_method, inspection_frequency, sample_size,
         photo_ok_url, photo_nok_url, reference_photo_url, drawing_ref, notes,
         qar_trigger_enabled, qar_trigger_count, qar_trigger_hours,
-        display_order, created_by
+        display_order, created_by, default_department_id
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
       ) RETURNING *
     `, [
       partId, clientId, specNumber, specName, specType,
@@ -270,7 +273,7 @@ router.post('/parts/:partId/specs', authenticateToken, async (req, res) => {
       isCritical || false, requiresMeasurement || false, inspectionMethod, inspectionFrequency, sampleSize,
       photoOkUrl, photoNokUrl, referencePhotoUrl, drawingRef, notes,
       qarTriggerEnabled || false, qarTriggerCount || 3, qarTriggerHours || 8,
-      maxOrder.rows[0].next_order, req.user.id
+      maxOrder.rows[0].next_order, req.user.id, defaultDepartmentId || null
     ]);
 
     res.json({
@@ -310,7 +313,8 @@ router.put('/specs/:specId', authenticateToken, async (req, res) => {
     qarTriggerEnabled,
     qarTriggerCount,
     qarTriggerHours,
-    displayOrder
+    displayOrder,
+    defaultDepartmentId
   } = req.body;
 
   try {
@@ -339,8 +343,9 @@ router.put('/specs/:specId', authenticateToken, async (req, res) => {
         qar_trigger_count = COALESCE($21, qar_trigger_count),
         qar_trigger_hours = COALESCE($22, qar_trigger_hours),
         display_order = COALESCE($23, display_order),
+        default_department_id = $24,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $24
+      WHERE id = $25
       RETURNING *
     `, [
       specNumber, specName, specType,
@@ -349,7 +354,7 @@ router.put('/specs/:specId', authenticateToken, async (req, res) => {
       isCritical, requiresMeasurement, inspectionMethod, inspectionFrequency, sampleSize,
       photoOkUrl, photoNokUrl, referencePhotoUrl, drawingRef, notes,
       qarTriggerEnabled, qarTriggerCount, qarTriggerHours, displayOrder,
-      specId
+      defaultDepartmentId, specId
     ]);
 
     if (result.rows.length === 0) {
@@ -528,6 +533,176 @@ router.post('/parts/:partId/bom-components', authenticateToken, async (req, res)
     });
   } catch (error) {
     console.error('Error adding BOM component:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================================================
+// SPEC-STATION LINKING (Assign specs to inspection stations)
+// ============================================================================
+
+// GET stations assigned to a spec
+router.get('/specs/:specId/stations', authenticateToken, async (req, res) => {
+  const { specId } = req.params;
+
+  try {
+    const result = await query(`
+      SELECT DISTINCT ist.id, ist.name, ist.code
+      FROM station_inspection_items sii
+      JOIN station_part_config spc ON sii.station_part_config_id = spc.id
+      JOIN inspection_stations ist ON spc.station_id = ist.id
+      WHERE sii.spec_id = $1 AND sii.is_active = true AND spc.is_active = true
+      ORDER BY ist.name
+    `, [specId]);
+
+    res.json({
+      success: true,
+      stations: result.rows  // Ya tiene id, name, code directamente
+    });
+  } catch (error) {
+    console.error('Error fetching spec stations:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PUT update stations for a spec (replace all)
+router.put('/specs/:specId/stations', authenticateToken, async (req, res) => {
+  const { specId } = req.params;
+  const { stationIds } = req.body; // Array of station IDs
+
+  if (!Array.isArray(stationIds)) {
+    return res.status(400).json({ success: false, message: 'stationIds debe ser un array' });
+  }
+
+  try {
+    // Get spec's part_id
+    const specResult = await query('SELECT part_id FROM part_specifications WHERE id = $1', [specId]);
+    if (specResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Spec no encontrada' });
+    }
+    const partId = specResult.rows[0].part_id;
+
+    // Deactivate existing station_inspection_items for this spec
+    await query(`
+      UPDATE station_inspection_items SET is_active = false
+      WHERE spec_id = $1
+    `, [specId]);
+
+    // For each station, ensure station_part_config exists and create station_inspection_item
+    const addedStations = [];
+    for (const stationId of stationIds) {
+      // Get or create station_part_config
+      let configResult = await query(`
+        SELECT id FROM station_part_config
+        WHERE station_id = $1 AND part_id = $2
+      `, [stationId, partId]);
+
+      let configId;
+      if (configResult.rows.length === 0) {
+        // Create config
+        const insertConfig = await query(`
+          INSERT INTO station_part_config (station_id, part_id, is_active, created_by)
+          VALUES ($1, $2, true, $3)
+          RETURNING id
+        `, [stationId, partId, req.user.id]);
+        configId = insertConfig.rows[0].id;
+      } else {
+        configId = configResult.rows[0].id;
+        // Ensure it's active
+        await query('UPDATE station_part_config SET is_active = true WHERE id = $1', [configId]);
+      }
+
+      // Check if item already exists (might be deactivated)
+      const existingItem = await query(`
+        SELECT id FROM station_inspection_items
+        WHERE station_part_config_id = $1 AND spec_id = $2
+      `, [configId, specId]);
+
+      if (existingItem.rows.length > 0) {
+        // Reactivate
+        await query(`
+          UPDATE station_inspection_items SET is_active = true
+          WHERE id = $1
+        `, [existingItem.rows[0].id]);
+      } else {
+        // Create new
+        await query(`
+          INSERT INTO station_inspection_items (station_part_config_id, item_type, spec_id, is_active)
+          VALUES ($1, 'SPEC', $2, true)
+        `, [configId, specId]);
+      }
+
+      addedStations.push(stationId);
+    }
+
+    res.json({
+      success: true,
+      stationIds: addedStations,
+      message: `Spec vinculada a ${addedStations.length} estación(es)`
+    });
+  } catch (error) {
+    console.error('Error updating spec stations:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET all specs for a part WITH their assigned stations
+router.get('/parts/:partId/specs-with-stations', authenticateToken, async (req, res) => {
+  const { partId } = req.params;
+
+  try {
+    // Get specs
+    const specsResult = await query(`
+      SELECT ps.*, mu.symbol as unit_symbol, mu.name as unit_name,
+             u.first_name || ' ' || u.last_name as created_by_name,
+             dep.name as default_department_name
+      FROM part_specifications ps
+      LEFT JOIN measurement_units mu ON ps.unit_id = mu.id
+      LEFT JOIN users u ON ps.created_by = u.id
+      LEFT JOIN departments dep ON ps.default_department_id = dep.id
+      WHERE ps.part_id = $1 AND ps.is_active = true
+      ORDER BY ps.spec_type, ps.display_order, ps.spec_number
+    `, [partId]);
+
+    // Get stations for each spec
+    const specsWithStations = await Promise.all(specsResult.rows.map(async (spec) => {
+      const stationsResult = await query(`
+        SELECT DISTINCT ist.id, ist.name, ist.code
+        FROM station_inspection_items sii
+        JOIN station_part_config spc ON sii.station_part_config_id = spc.id
+        JOIN inspection_stations ist ON spc.station_id = ist.id
+        WHERE sii.spec_id = $1 AND sii.is_active = true AND spc.is_active = true
+        ORDER BY ist.name
+      `, [spec.id]);
+
+      return {
+        ...transformToCamelCase(spec),
+        stations: stationsResult.rows  // Ya tiene id, name, code directamente
+      };
+    }));
+
+    // Group by type
+    const specsByType = {
+      dimensional: specsWithStations.filter(s => s.specType === 'DIMENSIONAL'),
+      qualitative: specsWithStations.filter(s => s.specType === 'QUALITATIVE'),
+      bomComponent: specsWithStations.filter(s => s.specType === 'BOM_COMPONENT')
+    };
+
+    res.json({
+      success: true,
+      specs: specsWithStations,
+      specsByType,
+      counts: {
+        total: specsWithStations.length,
+        dimensional: specsByType.dimensional.length,
+        qualitative: specsByType.qualitative.length,
+        bomComponent: specsByType.bomComponent.length,
+        critical: specsWithStations.filter(s => s.isCritical).length,
+        withoutStation: specsWithStations.filter(s => s.stations.length === 0).length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching specs with stations:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

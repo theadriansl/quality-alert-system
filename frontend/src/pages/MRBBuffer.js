@@ -10,7 +10,6 @@ import { useLanguage } from '../context/LanguageContext';
 import {
   getMRBBuffer,
   getMRBBufferSummary,
-  assignBufferArea,
   assignBufferToCampaign,
   batchAssignToCampaign
 } from '../services/hospitalDashboardService';
@@ -28,12 +27,8 @@ const COLORS = {
 
 const AGING_COLORS = { GREEN: COLORS.green, YELLOW: COLORS.yellow, RED: COLORS.red, GRAY: COLORS.gray };
 
-const AREAS = [
-  { value: 'SUPPLIER', label: 'Proveedor', color: COLORS.purple },
-  { value: 'PRODUCTION', label: 'Producción', color: COLORS.blue },
-  { value: 'MFG', label: 'Manufactura', color: COLORS.green },
-  { value: 'UNKNOWN', label: 'Por Definir', color: COLORS.gray }
-];
+// Colores para departamentos (se asignan dinámicamente)
+const DEPT_COLORS = ['#0072CE', '#16a34a', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
 
 const fmtN = v => v == null ? '—' : Number(v).toLocaleString('es-MX');
 const fmt$ = v => v == null ? '$0' : v >= 1000 ? `$${(v/1000).toFixed(1)}k` : `$${Number(v).toFixed(0)}`;
@@ -43,49 +38,44 @@ const MRBBuffer = () => {
   const { t: tr, language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
 
-  // Traducciones locales
-  const L = {
-    en: { supplier: 'Supplier', production: 'Production', manufacturing: 'Manufacturing', toDefine: 'To Define' },
-    es: { supplier: 'Proveedor', production: 'Producción', manufacturing: 'Manufactura', toDefine: 'Por Definir' }
-  }[language] || {};
-
-  // Areas con labels traducidos
-  const AREAS = [
-    { value: 'SUPPLIER', label: L.supplier, color: COLORS.purple },
-    { value: 'PRODUCTION', label: L.production, color: COLORS.blue },
-    { value: 'MFG', label: L.manufacturing, color: COLORS.green },
-    { value: 'UNKNOWN', label: L.toDefine, color: COLORS.gray }
-  ];
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [buffer, setBuffer] = useState([]);
   const [summary, setSummary] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
-  const [filterArea, setFilterArea] = useState('ALL');
+  const [filterDeptId, setFilterDeptId] = useState('ALL');
+
+  // Obtener color para departamento
+  const getDeptColor = (deptId) => {
+    const idx = departments.findIndex(d => d.id === deptId);
+    return DEPT_COLORS[idx % DEPT_COLORS.length] || COLORS.gray;
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [bufferRes, summaryRes, campaignsRes] = await Promise.all([
+      const token = localStorage.getItem('token');
+      const [bufferRes, summaryRes, campaignsRes, deptsRes] = await Promise.all([
         getMRBBuffer(),
         getMRBBufferSummary(),
         fetch(`${API_URL}/mrb?status=ABIERTA&limit=100`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${API_URL}/departments`, {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
         }).then(r => r.json())
       ]);
 
       setBuffer(bufferRes.data || []);
       setSummary(summaryRes.data || []);
       setCampaigns(campaignsRes.campaigns || []);
+      setDepartments(deptsRes.departments || []);
     } catch (err) {
       console.error('Error loading buffer:', err);
       setError('Error al cargar el buffer');
@@ -98,17 +88,23 @@ const MRBBuffer = () => {
     loadData();
   }, [loadData]);
 
-  const handleAssignArea = async (defectId, area) => {
+  const handleAssignDepartment = async (defectId, departmentId) => {
     try {
-      const res = await assignBufferArea(defectId, area);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/buffer/${defectId}/assign-department`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ departmentId: departmentId ? parseInt(departmentId) : null })
+      }).then(r => r.json());
+
       if (res.success) {
-        setSuccess('Área asignada correctamente');
+        setSuccess('Departamento asignado correctamente');
         loadData();
       } else {
-        setError(res.message || 'Error al asignar área');
+        setError(res.message || 'Error al asignar departamento');
       }
     } catch (err) {
-      setError('Error al asignar área');
+      setError('Error al asignar departamento');
     }
     setTimeout(() => { setSuccess(null); setError(null); }, 3000);
   };
@@ -148,9 +144,11 @@ const MRBBuffer = () => {
     }
   };
 
-  const filteredBuffer = filterArea === 'ALL'
+  const filteredBuffer = filterDeptId === 'ALL'
     ? buffer
-    : buffer.filter(d => (d.mrbResponsibleArea || 'SIN_ASIGNAR') === filterArea);
+    : filterDeptId === 'NULL'
+      ? buffer.filter(d => !d.departmentId)
+      : buffer.filter(d => d.departmentId === parseInt(filterDeptId));
 
   return (
     <div style={{ padding: '24px', backgroundColor: t.bgPage, minHeight: '100vh' }}>
@@ -212,27 +210,27 @@ const MRBBuffer = () => {
         </div>
       )}
 
-      {/* Resumen por área */}
+      {/* Resumen por departamento */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {summary.map((s, i) => (
           <div
             key={i}
-            onClick={() => setFilterArea(s.responsibleArea)}
+            onClick={() => setFilterDeptId(s.departmentId ? String(s.departmentId) : 'NULL')}
             style={{
               backgroundColor: t.bgCard,
-              border: `1px solid ${filterArea === s.responsibleArea ? COLORS.blue : t.border}`,
+              border: `1px solid ${filterDeptId === (s.departmentId ? String(s.departmentId) : 'NULL') ? COLORS.blue : t.border}`,
               borderRadius: '8px',
               padding: '16px',
               cursor: 'pointer',
-              borderLeft: `4px solid ${AREAS.find(a => a.value === s.responsibleArea)?.color || COLORS.gray}`
+              borderLeft: `4px solid ${s.departmentId ? getDeptColor(s.departmentId) : COLORS.gray}`
             }}
           >
             <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
-              {AREAS.find(a => a.value === s.responsibleArea)?.label || s.responsibleArea}
+              {s.departmentName || 'Sin Asignar'}
             </div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: t.text }}>{fmtN(s.totalCount)}</div>
             <div style={{ fontSize: '11px', color: t.textMuted }}>
-              {fmt$(s.totalCost)} · Prom: {s.avgHoursWaiting?.toFixed(1) || 0}h
+              {fmt$(s.totalCost)} · Prom: {s.avgHoursWaiting ? Number(s.avgHoursWaiting).toFixed(1) : '0'}h
             </div>
             {s.criticalCount > 0 && (
               <div style={{ fontSize: '11px', color: COLORS.red, marginTop: '4px' }}>
@@ -242,10 +240,10 @@ const MRBBuffer = () => {
           </div>
         ))}
         <div
-          onClick={() => setFilterArea('ALL')}
+          onClick={() => setFilterDeptId('ALL')}
           style={{
             backgroundColor: t.bgCard,
-            border: `1px solid ${filterArea === 'ALL' ? COLORS.blue : t.border}`,
+            border: `1px solid ${filterDeptId === 'ALL' ? COLORS.blue : t.border}`,
             borderRadius: '8px',
             padding: '16px',
             cursor: 'pointer',
@@ -378,7 +376,7 @@ const MRBBuffer = () => {
                     {d.locationCode || '—'}
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center', color: t.text }}>
-                    {d.hoursInBuffer?.toFixed(1) || '—'}
+                    {d.hoursInBuffer ? Number(d.hoursInBuffer).toFixed(1) : '—'}
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
                     <span style={{
@@ -391,8 +389,8 @@ const MRBBuffer = () => {
                   </td>
                   <td style={{ padding: '12px' }}>
                     <select
-                      value={d.mrbResponsibleArea || ''}
-                      onChange={(e) => handleAssignArea(d.id, e.target.value)}
+                      value={d.departmentId || ''}
+                      onChange={(e) => handleAssignDepartment(d.id, e.target.value)}
                       style={{
                         padding: '4px 8px',
                         backgroundColor: t.bgPanel,
@@ -404,8 +402,8 @@ const MRBBuffer = () => {
                       }}
                     >
                       <option value="">Seleccionar...</option>
-                      {AREAS.map(a => (
-                        <option key={a.value} value={a.value}>{a.label}</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>{dept.name}</option>
                       ))}
                     </select>
                   </td>

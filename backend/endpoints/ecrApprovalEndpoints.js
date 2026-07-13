@@ -237,22 +237,29 @@ async function submitECRForApproval(req, res) {
     // Determine starting level: use rejected_at_level if resubmitting, otherwise level 1
     const startLevel = ecr.rejected_at_level || 1;
 
+    const submitterName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
+    const isResubmit = ecr.rejected_at_level !== null;
+
     // Update status to pending_approval and set current level
-    // Clear rejected_at_level after resubmit
+    // Also add to approval_history
     await client.query(
       `UPDATE ecr_reports
        SET approval_status = 'pending_approval',
            current_approval_level = $2,
            rejected_at_level = NULL,
+           approval_history = COALESCE(approval_history, '[]'::jsonb) || $3::jsonb,
            updated_at = NOW()
        WHERE id = $1`,
-      [id, startLevel]
+      [id, startLevel, JSON.stringify({
+        action: isResubmit ? 'resubmitted' : 'submitted',
+        level: startLevel,
+        userId,
+        userName: submitterName,
+        timestamp: new Date().toISOString()
+      })]
     );
 
     await client.query('COMMIT');
-
-    const submitterName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
-    const isResubmit = ecr.rejected_at_level !== null;
     logECRAction({ ecrId: parseInt(id), actionType: 'submitted_approval', actionCategory: 'approval', userId: req.user?.id, userName: submitterName, description: isResubmit ? `ECR re-enviado a aprobación (Nivel ${startLevel})` : 'ECR enviado a aprobación' });
 
     // Send email notification to approver at startLevel
@@ -376,9 +383,10 @@ async function approveECR(req, res) {
       });
     }
 
-    // Verify user is the assigned approver for this level
+    // Verify user is the assigned approver for this level (or admin)
     const approverIdField = `level${level}_approver`;
-    if (ecr[approverIdField] !== userId) {
+    const isAdmin = req.user?.systemRole === 'admin' || req.user?.role === 'admin';
+    if (ecr[approverIdField] !== userId && !isAdmin) {
       await client.query('ROLLBACK');
       return res.status(403).json({
         success: false,
@@ -630,9 +638,10 @@ async function rejectECR(req, res) {
       });
     }
 
-    // Verify user is the assigned approver for this level
+    // Verify user is the assigned approver for this level (or admin)
     const approverIdField = `level${level}_approver`;
-    if (ecr[approverIdField] !== userId) {
+    const isAdmin = req.user?.systemRole === 'admin' || req.user?.role === 'admin';
+    if (ecr[approverIdField] !== userId && !isAdmin) {
       await client.query('ROLLBACK');
       return res.status(403).json({
         success: false,
@@ -1081,9 +1090,9 @@ async function submitClosureForApproval(req, res) {
 
     await client.query('BEGIN');
 
-    // Get ECR current state
+    // Get ECR current state (including closure_type for comparison)
     const ecrResult = await client.query(
-      `SELECT status, closure_approval_status, closure_approval_history
+      `SELECT status, closure_approval_status, closure_approval_history, closure_type, closure_signatures
        FROM ecr_reports WHERE id = $1`,
       [id]
     );
@@ -1095,13 +1104,21 @@ async function submitClosureForApproval(req, res) {
 
     const ecr = ecrResult.rows[0];
     const closureApprovalHistory = ecr.closure_approval_history || [];
+    const previousClosureType = ecr.closure_type;
 
-    // Verify ECR is in pending_closure status (ready to be sent for closure approval)
-    if (ecr.status !== 'pending_closure') {
+    // Rule 3: If closure type CHANGES, clear signatures (start from level 1)
+    const closureTypeChanged = (previousClosureType === 'rejected' && closureType !== 'rejected') ||
+                               (previousClosureType !== 'rejected' && closureType === 'rejected');
+    const newSignatures = closureTypeChanged ? {} : (ecr.closure_signatures || {});
+
+    // Verify ECR is in a valid status for closure submission
+    // Include pending_approval for re-submission cases where closure_approval_status may be inconsistent
+    const validStatuses = ['pending_closure', 'draft', 'rejected', 'pending_approval', 'pending_rejected_closure'];
+    if (!validStatuses.includes(ecr.status)) {
       await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
-        message: 'ECR debe estar en estado pendiente de cierre para enviar a aprobación'
+        message: 'ECR debe estar en estado pendiente de cierre, borrador o devuelto para enviar a aprobación'
       });
     }
 
@@ -1126,7 +1143,7 @@ async function submitClosureForApproval(req, res) {
     };
     const newHistory = [...closureApprovalHistory, historyEntry];
 
-    // Update database
+    // Update database (clear signatures if closure type changed per Rule 3)
     await client.query(
       `UPDATE ecr_reports
        SET closure_approval_history = $2,
@@ -1134,9 +1151,10 @@ async function submitClosureForApproval(req, res) {
            closure_type = $3,
            rejection_reason = $4,
            status = $5,
+           closure_signatures = $6,
            updated_at = NOW()
        WHERE id = $1`,
-      [id, JSON.stringify(newHistory), closureType, closureType === 'rejected' ? rejectionReason : null, newStatus]
+      [id, JSON.stringify(newHistory), closureType, closureType === 'rejected' ? rejectionReason : null, newStatus, JSON.stringify(newSignatures)]
     );
 
     await client.query('COMMIT');
@@ -1158,6 +1176,7 @@ async function submitClosureForApproval(req, res) {
       closureApprovalHistory: newHistory,
       closureApprovalStatus: 'pending',
       closureType,
+      closureSignatures: newSignatures,
       status: newStatus
     });
 

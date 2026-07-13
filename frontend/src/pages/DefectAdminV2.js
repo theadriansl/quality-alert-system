@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import StationConfigTab from '../components/StationConfigTab';
+import SpecCatalogTab from '../components/SpecCatalogTab';
+import LocationCodesTab from '../components/LocationCodesTab';
+import HospitalRolesManager from '../components/HospitalRolesManager';
+import ProductionTab from '../components/ProductionTab';
 
 const API_URL = 'http://localhost:5000';
 
 const DefectAdminV2 = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const token = localStorage.getItem('token');
 
   // Filters
@@ -19,12 +26,15 @@ const DefectAdminV2 = () => {
   const [parts, setParts] = useState([]);
   const [defectTypes, setDefectTypes] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   // Selection
   const [selectedPartIds, setSelectedPartIds] = useState([]);
   const [selectedDefectIds, setSelectedDefectIds] = useState([]);
   const [partDisplayNames, setPartDisplayNames] = useState({});
-  const [partDefectConfig, setPartDefectConfig] = useState({});
+  const [partDefectConfig, setPartDefectConfig] = useState({}); // Original config from DB
+  const [gridConfig, setGridConfig] = useState({}); // Editable grid config (partId -> [defectIds])
+  const [hasGridChanges, setHasGridChanges] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
 
   // UI
@@ -41,14 +51,25 @@ const DefectAdminV2 = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Form states
-  const [defectForm, setDefectForm] = useState({ code: '', name: '', description: '', color: '#0072CE', categoryId: '' });
+  const [defectForm, setDefectForm] = useState({ code: '', name: '', description: '', color: '#0072CE', categoryId: '', defaultDepartmentId: '' });
   const [categoryForm, setCategoryForm] = useState({ code: '', name: '', description: '', color: '#6b7280' });
+
+  // Tab state (with localStorage persistence)
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('defectAdminActiveTab') || 'defects';
+  });
+
+  // Persist tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('defectAdminActiveTab', activeTab);
+  }, [activeTab]);
 
   // Fetch on mount
   useEffect(() => {
     fetchClients();
     fetchDefectTypes();
     fetchCategories();
+    fetchDepartments();
   }, []);
 
   // Fetch projects when client changes
@@ -179,39 +200,164 @@ const DefectAdminV2 = () => {
     }
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const res = await fetch(`${API_URL}/departments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setDepartments(data.departments || []);
+    } catch (err) {
+      console.error('Error fetching departments:', err);
+    }
+  };
+
   // Handlers
   const handlePartToggle = (partId) => {
     if (selectedPartIds.includes(partId)) {
-      setSelectedPartIds(prev => prev.filter(id => id !== partId));
+      // Deselecting a part - remove from grid
+      const newSelectedPartIds = selectedPartIds.filter(id => id !== partId);
+      setSelectedPartIds(newSelectedPartIds);
+
+      // Remove from grid config
+      setGridConfig(prev => {
+        const newConfig = { ...prev };
+        delete newConfig[partId];
+        return newConfig;
+      });
+
+      if (newSelectedPartIds.length === 0) {
+        setSelectedDefectIds([]);
+        setHasGridChanges(false);
+      }
     } else {
+      // Selecting a part - add to grid with its current config
       const part = parts.find(p => p.id === partId);
       if (part) {
         const displayName = part.captureDisplayName || part.partName;
         setPartDisplayNames(names => ({ ...names, [partId]: displayName }));
       }
 
-      const partDefects = partDefectConfig[partId] || [];
-      if (partDefects.length > 0) {
-        setSelectedDefectIds(prev => {
-          const newIds = partDefects.filter(id => !prev.includes(id));
-          return [...prev, ...newIds];
-        });
-      }
+      // Initialize grid config for this part with its current defects
+      const currentDefects = partDefectConfig[partId] || [];
+      setGridConfig(prev => ({
+        ...prev,
+        [partId]: [...currentDefects]
+      }));
 
       setSelectedPartIds(prev => [...prev, partId]);
     }
   };
 
+  // Toggle a single cell in the grid (part + defect combination)
+  const handleGridToggle = (partId, defectId) => {
+    setGridConfig(prev => {
+      const currentDefects = prev[partId] || [];
+      let newDefects;
+      if (currentDefects.includes(defectId)) {
+        newDefects = currentDefects.filter(id => id !== defectId);
+      } else {
+        newDefects = [...currentDefects, defectId];
+      }
+      return { ...prev, [partId]: newDefects };
+    });
+    setHasGridChanges(true);
+  };
+
+  // Toggle entire row (all parts for a defect)
+  const handleRowToggle = (defectId) => {
+    const allHave = selectedPartIds.every(partId =>
+      (gridConfig[partId] || []).includes(defectId)
+    );
+
+    setGridConfig(prev => {
+      const newConfig = { ...prev };
+      selectedPartIds.forEach(partId => {
+        const currentDefects = newConfig[partId] || [];
+        if (allHave) {
+          // Remove from all
+          newConfig[partId] = currentDefects.filter(id => id !== defectId);
+        } else {
+          // Add to all that don't have it
+          if (!currentDefects.includes(defectId)) {
+            newConfig[partId] = [...currentDefects, defectId];
+          }
+        }
+      });
+      return newConfig;
+    });
+    setHasGridChanges(true);
+  };
+
+  // Save all grid changes
+  const handleSaveGrid = async () => {
+    if (!hasGridChanges) return;
+
+    try {
+      setLoading(true);
+      let successCount = 0;
+
+      for (const partId of selectedPartIds) {
+        const defectIds = gridConfig[partId] || [];
+        const res = await fetch(`${API_URL}/defects-v2/parts/${partId}/defects-bulk`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            defectTypeIds: defectIds,
+            captureDisplayName: partDisplayNames[partId] || null
+          })
+        });
+
+        if (res.ok) {
+          successCount++;
+          // Update local partDefectConfig
+          setPartDefectConfig(prev => ({
+            ...prev,
+            [partId]: [...defectIds]
+          }));
+        }
+      }
+
+      setSuccess(`Configuración guardada para ${successCount} partes`);
+      setTimeout(() => setSuccess(null), 3000);
+      setHasGridChanges(false);
+
+    } catch (err) {
+      setError('Error guardando configuración');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Discard grid changes
+  const handleDiscardChanges = () => {
+    // Reset grid config to original
+    const resetConfig = {};
+    selectedPartIds.forEach(partId => {
+      resetConfig[partId] = [...(partDefectConfig[partId] || [])];
+    });
+    setGridConfig(resetConfig);
+    setHasGridChanges(false);
+  };
+
   const handleSelectAllParts = () => {
     if (selectedPartIds.length === parts.length) {
+      // Deselect all - clear everything
       setSelectedPartIds([]);
       setPartDisplayNames({});
+      setSelectedDefectIds([]);
     } else {
+      // Select all - DON'T auto-load defects
       const allIds = parts.map(p => p.id);
       const names = {};
       parts.forEach(p => { names[p.id] = p.partName; });
       setSelectedPartIds(allIds);
       setPartDisplayNames(names);
+      // Keep current defect selection or clear if none
+      // User selects defects manually
     }
   };
 
@@ -265,11 +411,12 @@ const DefectAdminV2 = () => {
         name: defect.name,
         description: defect.description || '',
         color: defect.color || '#0072CE',
-        categoryId: defect.categoryId
+        categoryId: defect.categoryId,
+        defaultDepartmentId: defect.defaultDepartmentId || ''
       });
     } else {
       setEditingDefect(null);
-      setDefectForm({ code: '', name: '', description: '', color: '#0072CE', categoryId: categories[0]?.id || '' });
+      setDefectForm({ code: '', name: '', description: '', color: '#0072CE', categoryId: categories[0]?.id || '', defaultDepartmentId: '' });
     }
     setShowDefectModal(true);
   };
@@ -298,7 +445,7 @@ const DefectAdminV2 = () => {
       const data = await res.json();
       if (data.success) {
         setShowDefectModal(false);
-        setDefectForm({ code: '', name: '', description: '', color: '#0072CE', categoryId: '' });
+        setDefectForm({ code: '', name: '', description: '', color: '#0072CE', categoryId: '', defaultDepartmentId: '' });
         setEditingDefect(null);
         fetchDefectTypes();
         setSuccess(editingDefect ? 'Defecto actualizado' : 'Defecto creado');
@@ -423,6 +570,21 @@ const DefectAdminV2 = () => {
       return;
     }
 
+    // Always confirm for "Establecer" since it replaces all defects
+    const partNames = selectedPartIds.map(id => {
+      const part = parts.find(p => p.id === id);
+      return part ? part.partNumber : id;
+    }).join(', ');
+
+    const confirmed = window.confirm(
+      `⚠️ ESTABLECER reemplazará TODOS los defectos existentes.\n\n` +
+      `Las ${selectedPartIds.length} parte(s) quedarán con SOLO estos ${selectedDefectIds.length} defecto(s).\n\n` +
+      `Partes afectadas:\n${partNames}\n\n` +
+      `Si solo quieres AGREGAR defectos sin perder los existentes, usa el botón "+ Agregar".`
+    );
+
+    if (!confirmed) return;
+
     try {
       setLoading(true);
       let successCount = 0;
@@ -452,15 +614,77 @@ const DefectAdminV2 = () => {
         }
       }
 
-      setSuccess(`${selectedDefectIds.length} defectos asignados a ${successCount} partes`);
+      setSuccess(`${selectedDefectIds.length} defectos establecidos en ${successCount} partes`);
       setTimeout(() => setSuccess(null), 5000);
 
       setSelectedPartIds([]);
       setSelectedDefectIds([]);
       setPartDisplayNames({});
 
+      // Refetch to ensure UI shows real data from database
+      if (parts.length > 0) {
+        fetchAllPartsConfig(parts.map(p => p.id));
+      }
+
     } catch (err) {
       setError('Error asignando defectos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ADD defects without removing existing ones
+  const handleAddDefects = async () => {
+    if (selectedPartIds.length === 0) {
+      setError('Selecciona al menos una parte');
+      return;
+    }
+    if (selectedDefectIds.length === 0) {
+      setError('Selecciona al menos un defecto para agregar');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      let successCount = 0;
+
+      for (const partId of selectedPartIds) {
+        const res = await fetch(`${API_URL}/defects-v2/parts/${partId}/defects-add`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            defectTypeIds: selectedDefectIds
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          successCount++;
+          // Update local state with new total
+          setPartDefectConfig(prev => ({
+            ...prev,
+            [partId]: data.assignedDefects.map(d => d.id)
+          }));
+        }
+      }
+
+      setSuccess(`${selectedDefectIds.length} defectos agregados a ${successCount} partes (sin perder los existentes)`);
+      setTimeout(() => setSuccess(null), 5000);
+
+      setSelectedPartIds([]);
+      setSelectedDefectIds([]);
+      setPartDisplayNames({});
+
+      // Refetch to ensure UI shows real data from database
+      if (parts.length > 0) {
+        fetchAllPartsConfig(parts.map(p => p.id));
+      }
+
+    } catch (err) {
+      setError('Error agregando defectos');
     } finally {
       setLoading(false);
     }
@@ -532,24 +756,95 @@ const DefectAdminV2 = () => {
     modalContent: { backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px', width: '450px', maxWidth: '90%', border: `1px solid ${t.border}` },
     emptyState: { textAlign: 'center', padding: '40px 20px', color: t.textMuted },
     badge: { padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text },
-    iconBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '4px', opacity: 0.6 }
+    iconBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '4px', opacity: 0.6 },
+    tabs: { display: 'flex', gap: '4px', marginBottom: '20px', backgroundColor: t.bgPanel, padding: '4px', borderRadius: '8px' },
+    tab: { padding: '10px 20px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s', backgroundColor: 'transparent', color: t.textMuted },
+    tabActive: { backgroundColor: t.bgCard, color: t.accent, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
   };
 
   return (
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <h1 style={styles.title}>Configuracion de Defectos por Parte</h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={() => navigate('/defect-capture')}>
-            Ir a Captura
+        <h1 style={styles.title}>{language === 'es' ? 'Administración de Defectos' : 'Defect Administration'}</h1>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
+            style={{ padding: '6px 10px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}
+          >
+            {language === 'es' ? 'EN' : 'ES'}
           </button>
-          <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={() => navigate(-1)}>
-            Volver
+          <div style={{ width: '1px', height: '24px', backgroundColor: t.border }} />
+          <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={() => navigate('/defect-config')}>
+            Config
+          </button>
+          <button style={{ ...styles.btn, ...styles.btnPrimary }} onClick={() => navigate('/defect-capture')}>
+            {language === 'es' ? 'Volver a Inspección' : 'Back to Inspection'}
+          </button>
+          <button style={{ ...styles.btn, ...styles.btnSuccess }} onClick={() => navigate('/hospital-dashboard')}>
+            {language === 'es' ? 'Volver a Hospital' : 'Back to Hospital'}
           </button>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={styles.tabs}>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'defects' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('defects')}
+        >
+          Defectos por Parte
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'stations' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('stations')}
+        >
+          Estaciones
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'specs' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('specs')}
+        >
+          Especificaciones
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'locations' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('locations')}
+        >
+          Ubicaciones
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'hospital-roles' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('hospital-roles')}
+        >
+          Roles Hospital
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'production' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('production')}
+        >
+          Producción
+        </button>
+      </div>
+
+      {/* Production Tab */}
+      {activeTab === 'production' && <ProductionTab theme={t} />}
+
+      {/* Stations Tab */}
+      {activeTab === 'stations' && <StationConfigTab theme={t} />}
+
+      {/* Specs Tab */}
+      {activeTab === 'specs' && <SpecCatalogTab theme={t} />}
+
+      {/* Locations Tab */}
+      {activeTab === 'locations' && <LocationCodesTab theme={t} />}
+
+      {/* Hospital Roles Tab */}
+      {activeTab === 'hospital-roles' && <HospitalRolesManager />}
+
+      {/* Defects Tab - Alerts */}
+      {activeTab === 'defects' && (
+      <>
       {/* Alerts */}
       {error && (
         <div style={{ ...styles.alert, ...styles.alertError }}>
@@ -589,37 +884,6 @@ const DefectAdminV2 = () => {
               <option key={p.id} value={p.id}>{p.projectNumber} - {p.projectName}</option>
             ))}
           </select>
-        </div>
-
-        {/* Assign Button */}
-        <button
-          style={{
-            padding: '16px 24px',
-            backgroundColor: (selectedPartIds.length === 0 || selectedDefectIds.length === 0) ? '#9ca3af' : '#2E7D32',
-            color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600',
-            cursor: (selectedPartIds.length === 0 || selectedDefectIds.length === 0 || loading) ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1, minWidth: '200px'
-          }}
-          onClick={handleAssignDefects}
-          disabled={selectedPartIds.length === 0 || selectedDefectIds.length === 0 || loading}
-        >
-          {loading ? 'Asignando...' : `Asignar ${selectedDefectIds.length} -> ${selectedPartIds.length} partes`}
-        </button>
-
-        {/* Action buttons */}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            style={{ ...styles.btn, backgroundColor: '#374151', color: 'white' }}
-            onClick={() => openCategoryModal()}
-          >
-            + Categoria
-          </button>
-          <button
-            style={{ ...styles.btn, ...styles.btnPrimary }}
-            onClick={() => openDefectModal()}
-          >
-            + Defecto
-          </button>
         </div>
       </div>
 
@@ -674,6 +938,11 @@ const DefectAdminV2 = () => {
                         )}
                       </div>
                       <div style={styles.partName}>{part.partName}</div>
+                      {selectedProjectIds.length === 0 && part.projectName && (
+                        <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>
+                          {part.projectName}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -681,161 +950,165 @@ const DefectAdminV2 = () => {
             </div>
           </div>
 
-          {/* Column 2: Selected Parts with editable names */}
-          <div style={styles.column}>
+          {/* Column 2+3: Configuration Grid */}
+          <div style={{ ...styles.column, flex: 2 }}>
             <div style={styles.columnHeader}>
-              <span>Nombre para Captura</span>
-              <span style={styles.badge}>{selectedParts.length} seleccionadas</span>
-            </div>
-            <div style={styles.columnContent}>
-              {selectedParts.length === 0 ? (
-                <div style={styles.emptyState}>Selecciona partes en la columna izquierda</div>
-              ) : (
-                selectedParts.map(part => (
-                  <div key={part.id} style={styles.selectedPartItem}>
-                    <div style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>
-                      {part.partNumber}
-                    </div>
-                    <input
-                      type="text"
-                      style={styles.input}
-                      value={partDisplayNames[part.id] || part.partName}
-                      onChange={(e) => handleDisplayNameChange(part.id, e.target.value)}
-                      placeholder="Nombre para mostrar en captura"
-                    />
-                  </div>
-                ))
+              <span>Configuración de Defectos</span>
+              {selectedParts.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {hasGridChanges && (
+                    <>
+                      <button
+                        onClick={handleDiscardChanges}
+                        style={{
+                          padding: '4px 12px', fontSize: '12px', border: `1px solid ${t.border}`,
+                          borderRadius: '4px', backgroundColor: 'transparent', color: t.text, cursor: 'pointer'
+                        }}
+                      >
+                        Descartar
+                      </button>
+                      <button
+                        onClick={handleSaveGrid}
+                        disabled={loading}
+                        style={{
+                          padding: '4px 12px', fontSize: '12px', border: 'none',
+                          borderRadius: '4px', backgroundColor: '#2E7D32', color: 'white',
+                          cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600'
+                        }}
+                      >
+                        {loading ? 'Guardando...' : 'Guardar Cambios'}
+                      </button>
+                    </>
+                  )}
+                  <span style={styles.badge}>{selectedParts.length} partes</span>
+                </div>
               )}
             </div>
-          </div>
-
-          {/* Column 3: Defects by Category */}
-          <div style={styles.column}>
-            <div style={styles.columnHeader}>
-              <span>Defectos por Categoria</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={selectedDefectIds.length === defectTypes.length && defectTypes.length > 0}
-                  onChange={handleSelectAllDefects}
-                />
-                Todos
-              </label>
-            </div>
-            <div style={styles.columnContent}>
-              {defectsByCategory.map(category => {
-                const categoryDefectIds = category.defects.map(d => d.id);
-                const allSelected = categoryDefectIds.length > 0 && categoryDefectIds.every(id => selectedDefectIds.includes(id));
-                const someSelected = categoryDefectIds.some(id => selectedDefectIds.includes(id));
-                const isExpanded = expandedCategories[category.id];
-
-                return (
-                  <div key={category.id} style={{ marginBottom: '8px' }}>
-                    {/* Category Header */}
-                    <div style={styles.categoryHeader}>
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                        onChange={() => handleCategoryToggle(category.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <div
-                        style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: category.color }}
-                      />
-                      <span
-                        style={{ fontWeight: '600', fontSize: '13px', color: t.text, flex: 1, cursor: 'pointer' }}
-                        onClick={() => toggleCategoryExpand(category.id)}
-                      >
-                        {category.name}
-                      </span>
-                      <span style={{ fontSize: '11px', color: t.textMuted }}>{category.defects.length}</span>
-                      <button
-                        style={styles.iconBtn}
-                        onClick={(e) => { e.stopPropagation(); openCategoryModal(category); }}
-                        title="Editar categoria"
-                      >
-                        &#9998;
-                      </button>
-                      <button
-                        style={styles.iconBtn}
-                        onClick={(e) => { e.stopPropagation(); handleDeleteCategory(category); }}
-                        title="Eliminar categoria"
-                      >
-                        &#128465;
-                      </button>
-                      <span
-                        style={{ cursor: 'pointer', fontSize: '12px', color: t.textMuted }}
-                        onClick={() => toggleCategoryExpand(category.id)}
-                      >
-                        {isExpanded ? '▼' : ''}
-                      </span>
-                    </div>
-
-                    {/* Defects in Category */}
-                    {isExpanded && category.defects.map(defect => {
-                      const partsWithDefect = selectedPartIds.filter(
-                        partId => partDefectConfig[partId]?.includes(defect.id)
-                      ).length;
-                      const allPartsHave = partsWithDefect === selectedPartIds.length && selectedPartIds.length > 0;
-                      const somePartsHave = partsWithDefect > 0 && partsWithDefect < selectedPartIds.length;
-
-                      return (
-                        <div
-                          key={defect.id}
-                          style={{
-                            ...styles.defectItem,
-                            backgroundColor: selectedDefectIds.includes(defect.id) ? '#ecfdf5' : 'transparent'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedDefectIds.includes(defect.id)}
-                            onChange={() => handleDefectToggle(defect.id)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <div style={{ ...styles.defectColor, backgroundColor: defect.color }} />
-                          <span
-                            style={{ fontSize: '13px', color: t.text, flex: 1, cursor: 'pointer' }}
-                            onClick={() => handleDefectToggle(defect.id)}
-                          >
-                            {defect.name}
-                          </span>
-                          {allPartsHave && (
-                            <span style={{ color: '#2E7D32', fontSize: '12px' }} title="Asignado a todas">●</span>
-                          )}
-                          {somePartsHave && (
-                            <span style={{ color: '#C77700', fontSize: '12px' }} title={`Asignado a ${partsWithDefect}/${selectedPartIds.length}`}>◐</span>
-                          )}
-                          <button
-                            style={styles.iconBtn}
-                            onClick={(e) => { e.stopPropagation(); openDefectModal(defect); }}
-                            title="Editar defecto"
-                          >
-                            &#9998;
-                          </button>
-                          <button
-                            style={styles.iconBtn}
-                            onClick={(e) => { e.stopPropagation(); handleDeleteDefect(defect); }}
-                            title="Eliminar defecto"
-                          >
-                            &#128465;
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+            <div style={{ ...styles.columnContent, padding: 0, overflow: 'auto' }}>
+              {selectedParts.length === 0 ? (
+                <div style={{ ...styles.emptyState, padding: '40px' }}>
+                  Selecciona partes en la columna izquierda para configurar sus defectos
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: t.bgCard, position: 'sticky', top: 0, zIndex: 1 }}>
+                      <th style={{
+                        padding: '10px 8px', textAlign: 'left', borderBottom: `2px solid ${t.border}`,
+                        minWidth: '180px', color: t.text, fontWeight: '600'
+                      }}>
+                        Defecto
+                      </th>
+                      {selectedParts.map(part => (
+                        <th key={part.id} style={{
+                          padding: '10px 4px', textAlign: 'center', borderBottom: `2px solid ${t.border}`,
+                          minWidth: '80px', maxWidth: '120px', color: t.text, fontWeight: '600'
+                        }}>
+                          <div style={{ fontSize: '11px', lineHeight: '1.2' }}>{part.partNumber}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {defectsByCategory.map(category => (
+                      <React.Fragment key={category.id}>
+                        {/* Category row */}
+                        <tr style={{ backgroundColor: t.bg }}>
+                          <td colSpan={selectedParts.length + 1} style={{
+                            padding: '8px', fontWeight: '600', color: t.text,
+                            borderBottom: `1px solid ${t.border}`, cursor: 'pointer'
+                          }} onClick={() => toggleCategoryExpand(category.id)}>
+                            <span style={{ marginRight: '8px' }}>{expandedCategories[category.id] ? '▼' : '▶'}</span>
+                            <span style={{
+                              display: 'inline-block', width: '12px', height: '12px',
+                              backgroundColor: category.color, borderRadius: '3px', marginRight: '8px', verticalAlign: 'middle'
+                            }} />
+                            {category.name}
+                            <span style={{ color: t.textMuted, fontWeight: 'normal', marginLeft: '8px' }}>
+                              ({category.defects.length})
+                            </span>
+                          </td>
+                        </tr>
+                        {/* Defect rows */}
+                        {expandedCategories[category.id] && category.defects.map(defect => {
+                          const allHave = selectedParts.every(p => (gridConfig[p.id] || []).includes(defect.id));
+                          const someHave = selectedParts.some(p => (gridConfig[p.id] || []).includes(defect.id));
+                          return (
+                            <tr key={defect.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                              <td style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={allHave}
+                                  ref={el => { if (el) el.indeterminate = someHave && !allHave; }}
+                                  onChange={() => handleRowToggle(defect.id)}
+                                  style={{ cursor: 'pointer' }}
+                                  title="Toggle para todas las partes"
+                                />
+                                <span style={{
+                                  display: 'inline-block', width: '10px', height: '10px',
+                                  backgroundColor: defect.color, borderRadius: '2px'
+                                }} />
+                                <span style={{ color: t.text }}>{defect.name}</span>
+                              </td>
+                              {selectedParts.map(part => {
+                                const isChecked = (gridConfig[part.id] || []).includes(defect.id);
+                                const wasOriginal = (partDefectConfig[part.id] || []).includes(defect.id);
+                                const changed = isChecked !== wasOriginal;
+                                return (
+                                  <td key={part.id} style={{
+                                    padding: '6px 4px', textAlign: 'center',
+                                    backgroundColor: changed ? (isChecked ? '#dcfce7' : '#fee2e2') : 'transparent'
+                                  }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => handleGridToggle(part.id, defect.id)}
+                                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
       ) : (
         <div style={{ ...styles.column, padding: '60px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
           <div style={{ fontSize: '16px', color: t.textMuted }}>Selecciona un cliente para comenzar</div>
         </div>
+      )}
+
+      {/* Hidden section for category/defect management - shown via buttons */}
+      {selectedClientId && (
+        <div style={{
+          marginTop: '20px', padding: '16px', backgroundColor: t.bgCard,
+          borderRadius: '12px', border: `1px solid ${t.border}`
+        }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              style={{ ...styles.btn, backgroundColor: '#374151', color: 'white' }}
+              onClick={() => openCategoryModal()}
+            >
+              + Categoria
+            </button>
+            <button
+              style={{ ...styles.btn, backgroundColor: '#0072CE', color: 'white' }}
+              onClick={() => openDefectModal()}
+            >
+              + Defecto
+            </button>
+          </div>
+        </div>
+      )}
+      </>
       )}
 
       {/* Defect Modal */}
@@ -911,6 +1184,22 @@ const DefectAdminV2 = () => {
                 onChange={(e) => setDefectForm({ ...defectForm, color: e.target.value })}
                 style={{ width: '50px', height: '36px', border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}
               />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>
+                Departamento Responsable (Default)
+              </label>
+              <select
+                value={defectForm.defaultDepartmentId}
+                onChange={(e) => setDefectForm({ ...defectForm, defaultDepartmentId: e.target.value ? parseInt(e.target.value) : '' })}
+                style={{ ...styles.input, marginTop: 0 }}
+              >
+                <option value="">Sin asignar</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>

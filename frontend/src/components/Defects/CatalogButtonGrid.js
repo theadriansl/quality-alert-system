@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 /**
  * Grid de botones para selección de items de catálogo
@@ -16,6 +17,7 @@ const CatalogButtonGrid = ({
   emptyMessage = 'No hay opciones disponibles'
 }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
 
   const styles = {
     container: {

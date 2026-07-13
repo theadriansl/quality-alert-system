@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle, XCircle, Plus, Home, List, BarChart3,
   Search, Package, Layers, Hash, Users, Info, Eye,
-  RefreshCw, Scissors, RotateCcw, Truck, PauseCircle, Trash2, Calendar
+  RefreshCw, Scissors, RotateCcw, Truck, PauseCircle, Trash2, Calendar,
+  Download, Upload
 } from 'lucide-react';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import DefectConsultTab, { DefectCounter } from '../components/DefectConsultTab';
 
 /**
  * MRBDefectCapture - Plataforma de Inspección para Campañas MRB
@@ -36,9 +39,38 @@ const DISP_COLS = [
   { code: 'USE_AS_IS',       label: 'UAI',     color: '#22c55e', bg: '#d1fae5' },
 ];
 
+const DISPOSITION_SEVERITY = {
+  SCRAP:           'CRITICAL',
+  REWORK:          'MAJOR',
+  RETURN_SUPPLIER: 'MAJOR',
+  HOLD:            'MINOR',
+  USE_AS_IS:       'MINOR',
+};
+
 const MRBDefectCapture = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
+
+  // Traducciones locales
+  const L = {
+    en: {
+      selectShift: 'Select the shift', selectCampaign: 'Select at least one campaign', selectMRB: 'Select an MRB campaign',
+      selectDefect: 'Select a defect', errorSave: 'Error saving', errorUpload: 'Error uploading file', errorDelete: 'Error deleting',
+      selectCampaignPlaceholder: 'Select MRB Campaign...', selectCampaignStart: 'Select an MRB campaign to start',
+      noActiveCampaigns: 'No active campaigns for this part',
+      noDefectsConfigured: 'No defects configured for this part.', selectPartDefects: 'Select a part to see defects.',
+      selectDefectContinue: 'Select a defect to continue',
+    },
+    es: {
+      selectShift: 'Selecciona el turno', selectCampaign: 'Selecciona al menos una campaña', selectMRB: 'Selecciona una campaña MRB',
+      selectDefect: 'Selecciona un defecto', errorSave: 'Error guardando', errorUpload: 'Error subiendo archivo', errorDelete: 'Error eliminando',
+      selectCampaignPlaceholder: 'Seleccionar Campaña MRB...', selectCampaignStart: 'Selecciona una campaña MRB para comenzar',
+      noActiveCampaigns: 'No hay campañas activas para esta parte',
+      noDefectsConfigured: 'No hay defectos configurados para esta parte.', selectPartDefects: 'Selecciona una parte para ver los defectos.',
+      selectDefectContinue: 'Selecciona un defecto para continuar',
+    }
+  }[language] || {};
 
   // ── MODE ──────────────────────────────────────────────────────────────────
   const [captureMode, setCaptureMode] = useState('individual'); // 'individual' | 'bulk'
@@ -64,13 +96,22 @@ const MRBDefectCapture = () => {
   const [selectedSeverity, setSelectedSeverity]     = useState(null);
   const [hasDowntime, setHasDowntime]               = useState(false);
   const [downtimeMinutes, setDowntimeMinutes]       = useState('');
+  const [downtimeTodayMin, setDowntimeTodayMin]     = useState(0);
   const [lotNumber, setLotNumber]                   = useState('');
   const lotNumberRef                                = useRef('');
   const [comment, setComment]                       = useState('');
+  const [defectConsultOpen, setDefectConsultOpen] = useState(false);
   const [selectedDefect, setSelectedDefect]         = useState(null);
   const [stagedEvidence, setStagedEvidence]         = useState([]); // { file, previewUrl }
   const [uploadedEvidence, setUploadedEvidence]     = useState([]); // last submitted entry's attachments
   const serialCheckTimer                            = useRef(null);
+
+  // ── MULTI-CAMPAIGN MODE STATE ───────────────────────────────────────────────
+  const [detectedPart, setDetectedPart]             = useState(null);  // { id, partNumber, partName, clientName }
+  const [availableCampaigns, setAvailableCampaigns] = useState([]);    // Campañas activas para la parte detectada
+  const [selectedCampaigns, setSelectedCampaigns]   = useState([]);    // Campañas seleccionadas (multi-select)
+  const [campaignResults, setCampaignResults]       = useState({});    // { campaignId: 'OK' | 'NOK' | null }
+  const lastDetectedPartId                          = useRef(null);    // Para mantener selección por lote
 
   // ── BULK / TALLY MODE STATE ───────────────────────────────────────────────
   const [okQty, setOkQty]               = useState('');
@@ -288,6 +329,19 @@ const MRBDefectCapture = () => {
     }
   }, [selectedShift?.id, selectedPart?.id, selectedCampaign?.id]); // eslint-disable-line
 
+  // Load today's downtime total when campaign+shift change
+  useEffect(() => {
+    setDowntimeTodayMin(0);
+    if (!selectedCampaign || !selectedShift) return;
+    const token = localStorage.getItem('token');
+    const today = new Date().toISOString().split('T')[0];
+    fetch(`${API_URL}/mrb/${selectedCampaign.id}/shift-report?date=${today}&shiftId=${selectedShift.id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json()).then(d => {
+      if (d.success) setDowntimeTodayMin(d.kpis?.downtimeMin || 0);
+    }).catch(() => {});
+  }, [selectedShift?.id, selectedCampaign?.id]); // eslint-disable-line
+
   // Check duplicate only when shift or campaign changes (not on part change)
   useEffect(() => {
     setShiftDuplicateWarning(false);
@@ -295,6 +349,15 @@ const MRBDefectCapture = () => {
       checkShiftDuplicate(selectedCampaign.id, selectedShift.id);
     }
   }, [selectedShift?.id, selectedCampaign?.id, currentUser?.id]); // eslint-disable-line
+
+  // Auto-fill severity from disposition in individual mode
+  useEffect(() => {
+    if (!selectedDisposition || !severities.length) return;
+    const sevCode = DISPOSITION_SEVERITY[selectedDisposition.code];
+    if (!sevCode) return;
+    const sev = severities.find(s => s.code === sevCode);
+    if (sev) setSelectedSeverity(sev);
+  }, [selectedDisposition?.id]); // eslint-disable-line
 
   const checkShiftDuplicate = async (campaignId, shiftId) => {
     if (!currentUser?.id) return;
@@ -341,23 +404,75 @@ const MRBDefectCapture = () => {
     else { setSuccess(msg); setTimeout(() => setSuccess(null), 2500); }
   };
 
-  // ── SERIAL CHECK (debounce 300ms) ─────────────────────────────────────────
+  // ── SERIAL CHECK (debounce 300ms) + PART DETECTION ───────────────────────
   const handleSerialChange = (val) => {
     setLotNumber(val);
     lotNumberRef.current = val;
     if (serialCheckTimer.current) clearTimeout(serialCheckTimer.current);
-    if (!val || !selectedCampaign) return;
+    if (!val) {
+      // No limpiar detectedPart para mantener selección por lote
+      return;
+    }
+
     serialCheckTimer.current = setTimeout(async () => {
+      const token = localStorage.getItem('token');
+      const today = new Date().toISOString().split('T')[0];
+
       try {
-        const token = localStorage.getItem('token');
-        const today = new Date().toISOString().split('T')[0];
-        const res = await fetch(
-          `${API_URL}/mrb/${selectedCampaign.id}/check-serial?lotNumber=${encodeURIComponent(val)}&date=${today}`,
+        // 1. Buscar parte por serial en unit_registry
+        const unitRes = await fetch(
+          `${API_URL}/unit-registry/by-serial/${encodeURIComponent(val)}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        const data = await res.json();
-        if (data.exists) {
-          setComment(prev => prev.includes('[Reproceso]') ? prev : (prev ? `${prev} [Reproceso]` : '[Reproceso]'));
+
+        if (unitRes.ok) {
+          const unitData = await unitRes.json();
+          if (unitData.success && unitData.unit) {
+            const unit = unitData.unit;
+            const newPartId = unit.partId;
+
+            // Si la parte cambió, actualizar campañas disponibles
+            if (newPartId !== lastDetectedPartId.current) {
+              setDetectedPart({
+                id: unit.partId,
+                partNumber: unit.partNumber,
+                partName: unit.partName,
+                clientName: unit.clientName
+              });
+              lastDetectedPartId.current = newPartId;
+
+              // Buscar campañas activas para esta parte
+              const campRes = await fetch(
+                `${API_URL}/mrb/campaigns-by-part/${newPartId}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              if (campRes.ok) {
+                const campData = await campRes.json();
+                setAvailableCampaigns(campData.campaigns || []);
+                // Auto-seleccionar todas por defecto si hay pocas
+                if ((campData.campaigns || []).length <= 3) {
+                  setSelectedCampaigns(campData.campaigns || []);
+                } else {
+                  setSelectedCampaigns([]);
+                }
+                // Reset results
+                setCampaignResults({});
+              }
+            }
+            // Parte ya detectada, mantener selección
+          }
+        }
+
+        // 2. Check si es reproceso en campaña seleccionada (compatibilidad)
+        if (selectedCampaign) {
+          const res = await fetch(
+            `${API_URL}/mrb/${selectedCampaign.id}/check-serial?lotNumber=${encodeURIComponent(val)}&date=${today}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const data = await res.json();
+          if (data.exists) {
+            setComment(prev => prev.includes('[Reproceso]') ? prev : (prev ? `${prev} [Reproceso]` : '[Reproceso]'));
+          }
         }
       } catch (e) { /* silent */ }
     }, 300);
@@ -365,33 +480,110 @@ const MRBDefectCapture = () => {
 
   const isClosed = selectedCampaign?.status === 'CERRADA';
 
+  // ── MULTI-CAMPAIGN SUBMIT HANDLER ───────────────────────────────────────────
+  const handleMultiCampaignSubmit = useCallback(async () => {
+    if (!selectedShift) return showMsg(L.selectShift, true);
+    if (selectedCampaigns.length === 0) return showMsg(L.selectCampaign, true);
+
+    const results = Object.entries(campaignResults);
+    if (results.length === 0) return showMsg('Marca OK o NOK en al menos una campaña', true);
+
+    setSubmitting(true);
+    const token = localStorage.getItem('token');
+    const today = new Date().toLocaleDateString('en-CA');
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const [campaignId, result] of results) {
+        if (!result) continue;
+
+        const camp = selectedCampaigns.find(c => c.campaignId === parseInt(campaignId));
+        if (!camp) continue;
+
+        const endpoint = result === 'OK' ? 'capture-ok' : 'capture-nok';
+        const body = {
+          quantity: 1,
+          shiftId: selectedShift.id,
+          partId: detectedPart?.id,
+          lotNumber: lotNumberRef.current.trim() || undefined,
+          inspectionDate: today,
+          downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
+          notes: comment || null
+        };
+
+        // Si es NOK, agregar defecto default de la campaña si existe
+        if (result === 'NOK') {
+          body.defectTypeId = camp.defectTypeId || null;
+          body.dispositionId = selectedDisposition?.id || null;
+        }
+
+        try {
+          const res = await fetch(`${API_URL}/mrb/${campaignId}/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(body)
+          });
+          if (res.ok) successCount++;
+          else errorCount++;
+        } catch (e) {
+          errorCount++;
+        }
+      }
+
+      // Reset para siguiente pieza
+      setLotNumber('');
+      lotNumberRef.current = '';
+      setCampaignResults({});
+      setHasDowntime(false);
+      setDowntimeMinutes('');
+      setComment('');
+
+      if (errorCount === 0) {
+        showMsg(`✓ ${successCount} resultado(s) registrado(s)`);
+      } else {
+        showMsg(`${successCount} OK, ${errorCount} errores`, true);
+      }
+      refocusScan();
+    } catch (e) {
+      showMsg(e.message || 'Error', true);
+      refocusScan();
+    } finally {
+      setSubmitting(false);
+    }
+  }, [selectedShift, selectedCampaigns, campaignResults, detectedPart, hasDowntime, downtimeMinutes, comment, selectedDisposition]); // eslint-disable-line
+
   // ── INDIVIDUAL MODE HANDLERS ──────────────────────────────────────────────
   const handlePiezaOk = useCallback(async () => {
-    if (!selectedCampaign) return showMsg('Selecciona una campaña MRB', true);
-    if (!selectedShift) return showMsg('Selecciona el turno', true);
+    if (!selectedCampaign) return showMsg(L.selectMRB, true);
+    if (!selectedShift) return showMsg(L.selectShift, true);
     setSubmitting(true);
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/capture-ok`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ quantity: 1, shiftId: selectedShift.id, partId: selectedPart?.id, lotNumber: lotNumberRef.current.trim() || undefined, inspectionDate: new Date().toLocaleDateString('en-CA') })
+        body: JSON.stringify({ quantity: 1, shiftId: selectedShift.id, partId: selectedPart?.id, lotNumber: lotNumberRef.current.trim() || undefined, inspectionDate: new Date().toLocaleDateString('en-CA'), downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0, notes: comment || null })
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
       setSelectedCampaign(prev => ({ ...prev, ...result.mrb }));
+      if (result.downtimeTodayMin !== undefined) setDowntimeTodayMin(result.downtimeTodayMin);
       setLotNumber('');
       lotNumberRef.current = '';
+      setHasDowntime(false);
+      setDowntimeMinutes('');
+      setComment('');
       showMsg('✓ Pieza OK');
       refocusScan();
     } catch (e) { showMsg(e.message || 'Error', true); refocusScan(); }
     finally { setSubmitting(false); }
-  }, [selectedCampaign, selectedShift, selectedPart, lotNumber]); // eslint-disable-line
+  }, [selectedCampaign, selectedShift, selectedPart, lotNumber, hasDowntime, downtimeMinutes, comment]); // eslint-disable-line
 
   const handleSubmitDefect = async () => {
-    if (!selectedCampaign) return showMsg('Selecciona una campaña MRB', true);
-    if (!selectedShift) return showMsg('Selecciona el turno', true);
-    if (!selectedDefect) return showMsg('Selecciona un defecto', true);
+    if (!selectedCampaign) return showMsg(L.selectMRB, true);
+    if (!selectedShift) return showMsg(L.selectShift, true);
+    if (!selectedDefect) return showMsg(L.selectDefect, true);
     setSubmitting(true);
     const token = localStorage.getItem('token');
     try {
@@ -414,6 +606,7 @@ const MRBDefectCapture = () => {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
       setSelectedCampaign(prev => ({ ...prev, ...result.mrb }));
+      if (result.downtimeTodayMin !== undefined) setDowntimeTodayMin(result.downtimeTodayMin);
       // Upload staged evidence linked by serial
       if (stagedEvidence.length > 0 && lotNumber) {
         const today = new Date().toISOString().split('T')[0];
@@ -451,8 +644,8 @@ const MRBDefectCapture = () => {
 
   // ── BULK MODE: GUARDAR AVANCE ─────────────────────────────────────────────
   const handleGuardarAvance = async () => {
-    if (!selectedCampaign) return showMsg('Selecciona una campaña MRB', true);
-    if (!selectedShift)    return showMsg('Selecciona el turno', true);
+    if (!selectedCampaign) return showMsg(L.selectMRB, true);
+    if (!selectedShift)    return showMsg(L.selectShift, true);
     if (totalOk === 0 && totalNok === 0) return showMsg('Ingresa al menos una cantidad', true);
 
     setSubmitting(true);
@@ -474,9 +667,11 @@ const MRBDefectCapture = () => {
         for (const col of DISP_COLS) {
           const qty = parseInt(defectGrid[defect.id]?.[col.code]) || 0;
           if (qty <= 0) continue;
+          const sevCode = DISPOSITION_SEVERITY[col.code];
+          const sevId   = severities.find(s => s.code === sevCode)?.id || null;
           await fetch(`${API_URL}/mrb/${selectedCampaign.id}/capture-nok`, {
             method: 'POST', headers: h,
-            body: JSON.stringify({ partId: selectedPart?.id, defectTypeId: defect.id, dispositionId: dispMap[col.code] || null, shiftId: selectedShift.id, quantity: qty, notes: turnNotes || null })
+            body: JSON.stringify({ partId: selectedPart?.id, defectTypeId: defect.id, dispositionId: dispMap[col.code] || null, shiftId: selectedShift.id, quantity: qty, notes: turnNotes || null, severityId: sevId })
           });
         }
       }
@@ -505,7 +700,7 @@ const MRBDefectCapture = () => {
       loadAccumulated(selectedCampaign.id, selectedShift.id, selectedPart?.id);
       showMsg(`Avance guardado: ${totalOk} OK · ${totalNok} NOK ✓`);
     } catch (e) {
-      showMsg(e.message || 'Error al guardar', true);
+      showMsg(e.message || L.errorSave, true);
     } finally {
       setSubmitting(false);
     }
@@ -579,7 +774,7 @@ const MRBDefectCapture = () => {
 
   // ── FILE UPLOAD ───────────────────────────────────────────────────────────
   const handleUploadFile = async (files, attachmentType) => {
-    if (!selectedCampaign) return showMsg('Selecciona una campaña MRB', true);
+    if (!selectedCampaign) return showMsg(L.selectMRB, true);
     if (!files?.length) return;
     const setter = attachmentType === 'tally_sheet' ? setUploadingTally : setUploadingEvidence;
     setter(true);
@@ -602,7 +797,7 @@ const MRBDefectCapture = () => {
       }
       showMsg(attachmentType === 'tally_sheet' ? 'Tally sheet subido ✓' : 'Evidencia subida ✓');
     } catch (e) {
-      showMsg(e.message || 'Error al subir archivo', true);
+      showMsg(e.message || L.errorUpload, true);
     } finally {
       setter(false);
     }
@@ -616,8 +811,8 @@ const MRBDefectCapture = () => {
       });
       const data = await res.json();
       if (data.success) setUploadedEvidence(prev => prev.filter(e => e.id !== attachId));
-      else showMsg(data.message || 'Error al eliminar', true);
-    } catch (e) { showMsg('Error al eliminar', true); }
+      else showMsg(data.message || L.errorDelete, true);
+    } catch (e) { showMsg(L.errorDelete, true); }
   };
 
   const handleDeleteTally = async (tallyId) => {
@@ -629,13 +824,65 @@ const MRBDefectCapture = () => {
       });
       const data = await res.json();
       if (data.success) setTallySheets(prev => prev.filter(t => t.id !== tallyId));
-      else showMsg(data.message || 'Error al eliminar', true);
-    } catch (e) { showMsg('Error al eliminar', true); }
+      else showMsg(data.message || L.errorDelete, true);
+    } catch (e) { showMsg(L.errorDelete, true); }
+  };
+
+  // ── IMPORT TALLY EXCEL ───────────────────────────────────────────────────
+  const handleImportTally = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    if (!selectedCampaign) return showMsg('Selecciona una campaña primero', true);
+
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+    if (selectedShift?.id) formData.append('shiftId', selectedShift.id);
+
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/import-tally`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const { defectCounts, totalOk, totalNok, errors } = data.summary;
+        let msg = `✓ Importado: ${totalOk} OK, ${totalNok} NOK`;
+        if (errors?.length > 0) {
+          msg += ` (${errors.length} errores)`;
+        }
+        showMsg(msg);
+
+        // Refresh campaign data
+        const refreshRes = await fetch(`${API_URL}/mrb/active-campaigns`, { headers: { Authorization: `Bearer ${token}` } });
+        const refreshData = await refreshRes.json();
+        const updated = (refreshData.campaigns || []).find(c => c.id === selectedCampaign.id);
+        if (updated) setSelectedCampaign(updated);
+
+        // Show errors if any
+        if (errors?.length > 0) {
+          console.warn('Import errors:', errors);
+          alert(`Errores en importación:\n${errors.slice(0, 5).map(e => `- ${e.serial}: ${e.reason}`).join('\n')}${errors.length > 5 ? `\n... y ${errors.length - 5} más` : ''}`);
+        }
+      } else {
+        showMsg(data.message || 'Error importando', true);
+      }
+    } catch (err) {
+      showMsg('Error importando tally', true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ── COMPUTED ──────────────────────────────────────────────────────────────
-  const isIndividualValid = selectedCampaign && selectedShift && selectedDefect && lotNumber.trim();
-  const isOkValid         = selectedCampaign && selectedShift && lotNumber.trim();
+  const downtimeRequiresComment = hasDowntime && parseInt(downtimeMinutes) > 0 && !comment.trim();
+  const isIndividualValid = selectedCampaign && selectedShift && selectedDefect && lotNumber.trim() && !downtimeRequiresComment;
+  const isOkValid         = selectedCampaign && selectedShift && lotNumber.trim() && !downtimeRequiresComment;
 
   const filteredDefects = defectsByCategory.map(cat => ({
     ...cat,
@@ -693,6 +940,7 @@ const MRBDefectCapture = () => {
           onChange={e => {
             const sh = shifts.find(sh => sh.id === parseInt(e.target.value)) || null;
             setSelectedShift(sh);
+            setDowntimeTodayMin(0);
             if (sh) {
               const today = new Date().toISOString().split('T')[0];
               localStorage.setItem('mrbLastShiftId', sh.id);
@@ -714,6 +962,7 @@ const MRBDefectCapture = () => {
           <div style={s.counter('#ef4444', '#fee2e2')}><XCircle size={16} /> {c?.qtyNok || 0} NOK</div>
           {(c?.qtyRework > 0) && <div style={s.counter('#f59e0b', '#fef3c7')}><RotateCcw size={14} /> {c.qtyRework} RW</div>}
           {(c?.qtyScrap  > 0) && <div style={s.counter('#ef4444', '#fee2e2')}><Scissors size={14} /> {c.qtyScrap} SC</div>}
+          {downtimeTodayMin > 0 && <div style={s.counter('#f59e0b', '#fef3c7')} title="Downtime total del turno hoy">⏱ {downtimeTodayMin} min</div>}
           {captureMode === 'individual' && (
             <button style={{ ...s.piezaOkBtn, opacity: (submitting || !isOkValid || isClosed) ? 0.5 : 1 }} onClick={handlePiezaOk} disabled={submitting || !isOkValid || isClosed} title={isClosed ? 'Campaña cerrada' : !lotNumber.trim() ? 'Escanea el serial primero' : ''}>
               <CheckCircle size={18} /> PIEZA OK
@@ -769,7 +1018,7 @@ const MRBDefectCapture = () => {
           value={c?.id || ''}
           onChange={e => selectCampaign(campaigns.find(x => x.id === parseInt(e.target.value)) || null)}
         >
-          <option value="">📋 Seleccionar Campaña MRB...</option>
+          <option value="">📋 {L.selectCampaignPlaceholder}</option>
           {campaigns.map(camp => (
             <option key={camp.id} value={camp.id}>{camp.folio} — {camp.title} [{camp.clientName}]</option>
           ))}
@@ -802,9 +1051,43 @@ const MRBDefectCapture = () => {
           </button>
         )}
 
+        {c && captureMode === 'bulk' && (
+          <>
+            <button
+              style={{ ...s.iconBtn, display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', color: '#16a34a', borderColor: '#16a34a' }}
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem('token');
+                  const res = await fetch(`${API_URL}/mrb/${c.id}/tally-template`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  if (!res.ok) throw new Error('Error al descargar template');
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `Tally_${c.campaign_number || c.folio || c.id}.xlsx`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  alert('Error descargando template: ' + err.message);
+                }
+              }}
+              title="Descargar Template Excel"
+            >
+              <Download size={16} />Template Excel
+            </button>
+            <label style={{ ...s.iconBtn, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', color: '#8b5cf6', borderColor: '#8b5cf6' }} title="Importar Tally Excel">
+              <Upload size={16} />Importar Excel
+              <input type="file" accept=".xlsx,.xls" onChange={handleImportTally} style={{ display: 'none' }} />
+            </label>
+          </>
+        )}
         {c && (
-          <label style={{ ...s.iconBtn, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', color: uploadingTally ? t.textMuted : t.accent, borderColor: t.accent }} title="Subir Tally Sheet">
-            <Plus size={16} />{uploadingTally ? 'Subiendo...' : 'Tally Sheet'}
+          <label style={{ ...s.iconBtn, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', color: uploadingTally ? t.textMuted : t.accent, borderColor: t.accent }} title="Subir Tally Sheet (imagen/PDF)">
+            <Plus size={16} />{uploadingTally ? 'Subiendo...' : 'Foto Tally'}
             <input type="file" accept="image/*,.pdf" multiple onChange={e => { handleUploadFile(e.target.files, 'tally_sheet'); e.target.value = ''; }} style={{ display: 'none' }} disabled={uploadingTally} />
           </label>
         )}
@@ -848,7 +1131,7 @@ const MRBDefectCapture = () => {
       {!c ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', color: t.textMuted }}>
           <Package size={56} style={{ opacity: 0.3 }} />
-          <div style={{ fontSize: '18px' }}>Selecciona una campaña MRB para comenzar</div>
+          <div style={{ fontSize: '18px' }}>{L.selectCampaignStart}</div>
         </div>
 
       ) : captureMode === 'individual' ? (
@@ -878,6 +1161,156 @@ const MRBDefectCapture = () => {
               <span style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>
                 Enter → {selectedDefect ? 'registrar NOK' : 'registrar OK'}
               </span>
+
+              {/* ── PARTE DETECTADA ─────────────────────────────────────────── */}
+              {detectedPart && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: `${t.accent}10`, borderRadius: '6px', border: `1px solid ${t.accent}30` }}>
+                  <div style={{ fontSize: '10px', color: t.textMuted, marginBottom: '2px' }}>PARTE DETECTADA</div>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: t.accent }}>{detectedPart.partNumber}</div>
+                  <div style={{ fontSize: '11px', color: t.text }}>{detectedPart.partName}</div>
+                </div>
+              )}
+
+              {/* ── CAMPAÑAS DISPONIBLES (Multi-select) ────────────────────── */}
+              {availableCampaigns.length > 0 && (
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '10px', color: t.textMuted, marginBottom: '6px', textTransform: 'uppercase', fontWeight: '600' }}>
+                    Campañas Activas ({availableCampaigns.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '140px', overflowY: 'auto' }}>
+                    {availableCampaigns.map(camp => {
+                      const isSelected = selectedCampaigns.some(sc => sc.campaignId === camp.campaignId);
+                      return (
+                        <label
+                          key={camp.campaignId}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px',
+                            backgroundColor: isSelected ? `${camp.severityColor || t.accent}15` : t.bgInput,
+                            border: `1px solid ${isSelected ? (camp.severityColor || t.accent) : t.border}`,
+                            borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedCampaigns(prev => prev.filter(sc => sc.campaignId !== camp.campaignId));
+                              } else {
+                                setSelectedCampaigns(prev => [...prev, camp]);
+                              }
+                            }}
+                            style={{ width: '14px', height: '14px', accentColor: camp.severityColor || t.accent }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '600', color: t.text }}>{camp.campaignNumber}</div>
+                            <div style={{ fontSize: '10px', color: t.textMuted }}>{camp.title}</div>
+                          </div>
+                          {camp.severityName && (
+                            <span style={{
+                              padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '700',
+                              backgroundColor: camp.severityColor || t.accent, color: 'white'
+                            }}>
+                              {camp.severityName}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {selectedCampaigns.length > 0 && (
+                    <div style={{ marginTop: '6px', fontSize: '10px', color: t.accent, fontWeight: '600' }}>
+                      ✓ {selectedCampaigns.length} campaña(s) seleccionada(s)
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── CHECKLIST OK/NOK POR CAMPAÑA ─────────────────────────────── */}
+              {selectedCampaigns.length > 0 && lotNumber && (
+                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                  <div style={{ fontSize: '10px', color: t.textMuted, marginBottom: '8px', textTransform: 'uppercase', fontWeight: '600' }}>
+                    Resultado por Campaña
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedCampaigns.map(camp => {
+                      const result = campaignResults[camp.campaignId];
+                      return (
+                        <div
+                          key={camp.campaignId}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px',
+                            backgroundColor: result === 'OK' ? '#d1fae520' : result === 'NOK' ? '#fee2e220' : t.bgInput,
+                            border: `1px solid ${result === 'OK' ? '#22c55e' : result === 'NOK' ? '#ef4444' : t.border}`,
+                            borderRadius: '6px'
+                          }}
+                        >
+                          <div style={{ flex: 1, fontSize: '11px' }}>
+                            <div style={{ fontWeight: '600', color: t.text }}>{camp.campaignNumber}</div>
+                            <div style={{ fontSize: '9px', color: t.textMuted }}>{camp.title}</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={() => setCampaignResults(prev => ({ ...prev, [camp.campaignId]: prev[camp.campaignId] === 'OK' ? null : 'OK' }))}
+                              style={{
+                                padding: '4px 10px', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
+                                backgroundColor: result === 'OK' ? '#22c55e' : t.bgPanel,
+                                color: result === 'OK' ? 'white' : '#22c55e'
+                              }}
+                            >
+                              OK
+                            </button>
+                            <button
+                              onClick={() => setCampaignResults(prev => ({ ...prev, [camp.campaignId]: prev[camp.campaignId] === 'NOK' ? null : 'NOK' }))}
+                              style={{
+                                padding: '4px 10px', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
+                                backgroundColor: result === 'NOK' ? '#ef4444' : t.bgPanel,
+                                color: result === 'NOK' ? 'white' : '#ef4444'
+                              }}
+                            >
+                              NOK
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Botón Enviar Multi-Campaña */}
+                  {Object.values(campaignResults).some(r => r) && (
+                    <button
+                      onClick={handleMultiCampaignSubmit}
+                      disabled={submitting}
+                      style={{
+                        marginTop: '10px', width: '100%', padding: '10px', border: 'none', borderRadius: '6px',
+                        backgroundColor: submitting ? t.textDim : t.accent, color: 'white',
+                        fontSize: '13px', fontWeight: '700', cursor: submitting ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                      }}
+                    >
+                      <CheckCircle size={16} />
+                      {submitting ? 'Enviando...' : `Registrar ${Object.values(campaignResults).filter(r => r).length} resultado(s)`}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {availableCampaigns.length === 0 && detectedPart && (
+                <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '11px', color: '#92400e' }}>
+                  ⚠ {L.noActiveCampaigns}
+                </div>
+              )}
+
+              {/* Contador de defectos clickeable */}
+              {lotNumber && selectedCampaign && (
+                <div style={{ marginTop: '6px' }}>
+                  <DefectCounter
+                    serial={lotNumber}
+                    clientId={selectedCampaign?.clientId}
+                    onClick={() => setDefectConsultOpen(true)}
+                    theme={t}
+                  />
+                </div>
+              )}
             </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Disposición {!selectedDisposition && <span style={{ color: '#f59e0b', fontSize: '10px', fontWeight: '600' }}>→ On Hold por defecto</span>}</label>
@@ -887,7 +1320,7 @@ const MRBDefectCapture = () => {
               </select>
             </div>
             <div style={s.fieldGroup}>
-              <label style={s.label}>Tiempo de Paro</label>
+              <label style={s.label}>Tiempo de Paro / Downtime</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input type="checkbox" style={{ width: '18px', height: '18px', cursor: 'pointer' }} checked={hasDowntime} onChange={e => setHasDowntime(e.target.checked)} />
                 <input type="number" style={{ ...s.fieldInput, flex: 1 }} placeholder="min" value={downtimeMinutes} onChange={e => setDowntimeMinutes(e.target.value)} disabled={!hasDowntime} />
@@ -904,8 +1337,10 @@ const MRBDefectCapture = () => {
               </div>
             </div>
             <div style={s.fieldGroup}>
-              <label style={s.label}>Comentario</label>
-              <textarea style={s.textarea} placeholder="Observaciones..." value={comment} onChange={e => setComment(e.target.value)} />
+              <label style={{ ...s.label, color: downtimeRequiresComment ? '#ef4444' : undefined }}>
+                Comentario {downtimeRequiresComment ? '* — requerido con downtime' : ''}
+              </label>
+              <textarea style={{ ...s.textarea, borderColor: downtimeRequiresComment ? '#ef4444' : undefined }} placeholder="Observaciones..." value={comment} onChange={e => setComment(e.target.value)} />
             </div>
 
             {/* Evidencia fotográfica */}
@@ -966,7 +1401,7 @@ const MRBDefectCapture = () => {
               </div>
               {partDefects.length === 0 ? (
                 <div style={{ color: t.textMuted, textAlign: 'center', padding: '40px', fontSize: '14px' }}>
-                  {selectedPart ? 'No hay defectos configurados para esta parte.' : 'Selecciona una parte para ver los defectos.'}
+                  {selectedPart ? L.noDefectsConfigured : L.selectPartDefects}
                 </div>
               ) : (
                 <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -995,7 +1430,7 @@ const MRBDefectCapture = () => {
               <div style={{ padding: '10px 14px', backgroundColor: t.bgInput, borderRadius: '8px', color: t.text, fontSize: '13px', fontWeight: '500', textAlign: 'center' }}>
                 {selectedDefect
                   ? `${selectedPart?.captureDisplayName || selectedPart?.partNumber || 'Parte'} │ ${selectedDefect.name} │ ${selectedDisposition ? dispositions.find(d => d.id === selectedDisposition.id)?.name : 'Sin disposición'}`
-                  : 'Selecciona un defecto para continuar'}
+                  : L.selectDefectContinue}
               </div>
               <button style={s.submitBtn(!isIndividualValid || submitting || isClosed)} onClick={handleSubmitDefect} disabled={!isIndividualValid || submitting || isClosed} title={isClosed ? 'Campaña cerrada' : ''}>
                 <Plus size={18} /> {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO NOK'}
@@ -1059,7 +1494,7 @@ const MRBDefectCapture = () => {
           <div style={{ backgroundColor: t.bgPanel, borderRadius: '10px', overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {partDefects.length === 0 ? (
               <div style={{ padding: '60px', textAlign: 'center', color: t.textMuted }}>
-                {selectedPart ? 'No hay defectos configurados para esta parte.' : 'Selecciona una parte para ver los defectos.'}
+                {selectedPart ? L.noDefectsConfigured : L.selectPartDefects}
               </div>
             ) : (
               <div style={{ overflow: 'auto', flex: 1 }}>
@@ -1073,6 +1508,11 @@ const MRBDefectCapture = () => {
                         </th>
                       ))}
                       <th rowSpan={2} style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '700', color: t.textMuted, fontSize: '11px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, minWidth: '70px', backgroundColor: t.bgCard, boxShadow: `0 2px 0 ${t.border}`, verticalAlign: 'bottom' }}>Total</th>
+                      {severities.length > 0 && (
+                        <th colSpan={severities.length} style={{ padding: '8px 4px 4px', textAlign: 'center', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#7c3aed', borderBottom: `1px solid #7c3aed40`, borderLeft: `2px solid #7c3aed30`, backgroundColor: '#ede9fe', minWidth: `${severities.length * 56}px` }}>
+                          Severidad
+                        </th>
+                      )}
                     </tr>
                     <tr style={{ backgroundColor: t.bgCard }}>
                       {DISP_COLS.map(col => (
@@ -1081,13 +1521,18 @@ const MRBDefectCapture = () => {
                           <th style={{ padding: '4px 4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '600', color: t.textMuted, borderBottom: `2px solid ${t.border}`, backgroundColor: t.bgCard, boxShadow: `0 2px 0 ${t.border}`, minWidth: '68px' }}>CAP</th>
                         </React.Fragment>
                       ))}
+                      {severities.map(sev => (
+                        <th key={sev.id} style={{ padding: '4px 4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '700', color: sev.color || '#7c3aed', borderBottom: `2px solid ${t.border}`, borderLeft: `2px solid #7c3aed30`, backgroundColor: '#f5f3ff', boxShadow: `0 2px 0 ${t.border}`, minWidth: '52px' }}>
+                          {sev.code || sev.name}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {defectsByCategory.map(cat => (
                       <React.Fragment key={cat.categoryId}>
                         <tr>
-                          <td colSpan={DISP_COLS.length * 2 + 2} style={{ padding: '6px 16px', backgroundColor: `${cat.categoryColor}18`, borderTop: `2px solid ${cat.categoryColor}`, borderBottom: `1px solid ${cat.categoryColor}40` }}>
+                          <td colSpan={DISP_COLS.length * 2 + 2 + severities.length} style={{ padding: '6px 16px', backgroundColor: `${cat.categoryColor}18`, borderTop: `2px solid ${cat.categoryColor}`, borderBottom: `1px solid ${cat.categoryColor}40` }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: cat.categoryColor }}>
                               <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: cat.categoryColor, display: 'inline-block' }} />
                               {cat.categoryName}
@@ -1103,6 +1548,11 @@ const MRBDefectCapture = () => {
                             </React.Fragment>
                           ))}
                           <th style={{ padding: '4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', borderBottom: `1px solid ${t.border}` }}>Total</th>
+                          {severities.map(sev => (
+                            <th key={sev.id} style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '700', color: sev.color || '#7c3aed', borderBottom: `1px solid ${t.border}`, borderLeft: `2px solid #7c3aed30`, backgroundColor: '#f5f3ff' }}>
+                              {sev.code || sev.name}
+                            </th>
+                          ))}
                         </tr>
                         {cat.defects.map((defect, idx) => {
                           const acumRowTotal = rowAcumTotal(defect.id);
@@ -1132,6 +1582,17 @@ const MRBDefectCapture = () => {
                                 <div style={{ fontWeight: '700', fontSize: '15px', color: acumRowTotal > 0 ? t.accent : t.textDim }}>{acumRowTotal || '—'}</div>
                                 {capRowTotal > 0 && <div style={{ fontSize: '11px', color: '#B00020', fontWeight: '600' }}>+{capRowTotal}</div>}
                               </td>
+                              {severities.map(sev => {
+                                const qty = DISP_COLS.filter(col => DISPOSITION_SEVERITY[col.code] === sev.code)
+                                  .reduce((s, col) => s + (parseInt(defectGrid[defect.id]?.[col.code]) || 0), 0);
+                                return (
+                                  <td key={sev.id} style={{ padding: '8px 4px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, borderLeft: `2px solid #7c3aed30`, backgroundColor: qty > 0 ? `${sev.color || '#7c3aed'}18` : 'transparent' }}>
+                                    {qty > 0
+                                      ? <span style={{ fontWeight: '700', fontSize: '15px', color: sev.color || '#7c3aed' }}>{qty}</span>
+                                      : <span style={{ color: t.textDim, fontSize: '13px' }}>—</span>}
+                                  </td>
+                                );
+                              })}
                             </tr>
                           );
                         })}
@@ -1155,6 +1616,16 @@ const MRBDefectCapture = () => {
                         {DISP_COLS.reduce((s, col) => s + colAcumTotal(col.code), 0) > 0 && <div style={{ fontWeight: '700', fontSize: '16px', color: t.accent }}>{DISP_COLS.reduce((s, col) => s + colAcumTotal(col.code), 0)}</div>}
                         {totalNok > 0 && <div style={{ fontWeight: '700', fontSize: '14px', color: '#B00020' }}>+{totalNok}</div>}
                       </td>
+                      {severities.map(sev => {
+                        const capTotal = partDefects.reduce((s, d) =>
+                          s + DISP_COLS.filter(col => DISPOSITION_SEVERITY[col.code] === sev.code)
+                            .reduce((s2, col) => s2 + (parseInt(defectGrid[d.id]?.[col.code]) || 0), 0), 0);
+                        return (
+                          <td key={sev.id} style={{ padding: '12px 4px', textAlign: 'center', fontWeight: '700', fontSize: '16px', color: capTotal > 0 ? (sev.color || '#7c3aed') : t.textDim, backgroundColor: capTotal > 0 ? `${sev.color || '#7c3aed'}18` : t.bgCard, boxShadow: `0 -2px 0 ${t.border}`, borderLeft: `2px solid #7c3aed30` }}>
+                            {capTotal > 0 ? capTotal : '—'}
+                          </td>
+                        );
+                      })}
                     </tr>
                   </tfoot>
                 </table>
@@ -1225,8 +1696,8 @@ const MRBDefectCapture = () => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                     body: JSON.stringify({
-                      type: 'post_shift_capture',
-                      content: `Inspector continuó capturando en turno ${selectedShift?.code} — ${selectedShift?.name} después de haberlo registrado formalmente.`
+                      commentType: 'system',
+                      comment: `Inspector continuó capturando en turno ${selectedShift?.code} — ${selectedShift?.name} después de haberlo registrado formalmente.`
                     })
                   });
                 } catch (_) { /* silent */ }
@@ -1355,6 +1826,15 @@ const MRBDefectCapture = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Consulta de Defectos */}
+      <DefectConsultTab
+        isOpen={defectConsultOpen}
+        onClose={() => setDefectConsultOpen(false)}
+        serial={lotNumber}
+        clientId={selectedCampaign?.clientId}
+        theme={t}
+      />
     </div>
   );
 };

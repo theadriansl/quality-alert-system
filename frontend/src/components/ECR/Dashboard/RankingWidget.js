@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trophy, Medal, Award } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
+import { useLanguage } from '../../../context/LanguageContext';
 
 /**
  * Top Ranking Widget
@@ -16,6 +17,20 @@ const RankingWidget = ({
   color = '#0072CE'
 }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: {
+      noDataAvailable: 'No data available',
+      noName: 'No name',
+      approved: 'approved'
+    },
+    es: {
+      noDataAvailable: 'No hay datos disponibles',
+      noName: 'Sin nombre',
+      approved: 'aprobados'
+    }
+  }[language] || {};
   const styles = {
     container: {
       display: 'flex',
@@ -101,7 +116,7 @@ const RankingWidget = ({
   if (!data || data.length === 0) {
     return (
       <div style={styles.emptyState}>
-        No hay datos disponibles
+        {tr.noDataAvailable}
       </div>
     );
   }
@@ -112,7 +127,7 @@ const RankingWidget = ({
     <div style={styles.container}>
       {displayData.map((item, index) => {
         const rank = index + 1;
-        const name = item[nameKey] || 'Sin nombre';
+        const name = item[nameKey] || tr.noName;
         const value = item[valueKey] || 0;
         const medalIcon = getMedalIcon(rank);
 
@@ -136,7 +151,7 @@ const RankingWidget = ({
               </div>
               {item.approved !== undefined && (
                 <div style={styles.subtext}>
-                  {item.approved} aprobados
+                  {item.approved} {tr.approved}
                 </div>
               )}
             </div>

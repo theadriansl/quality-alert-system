@@ -7,23 +7,50 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertTriangle, CheckCircle, Trash2, HelpCircle, XCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ConfirmationModal = ({
   isOpen,
   onClose,
   onConfirm,
-  title = 'Confirmar',
+  title,
   message,
   variant = 'confirm', // 'confirm', 'approve', 'delete', 'warning', 'reject'
   confirmText,
-  cancelText = 'Cancelar',
+  cancelText,
   icon: CustomIcon,
   details,
   showInput = false,
-  inputPlaceholder = 'Escribe aquí...',
+  inputPlaceholder,
   inputRequired = false
 }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: {
+      confirm: 'Confirm',
+      cancel: 'Cancel',
+      approve: 'Approve',
+      delete: 'Delete',
+      continue: 'Continue',
+      reject: 'Reject',
+      writeHere: 'Write here...'
+    },
+    es: {
+      confirm: 'Confirmar',
+      cancel: 'Cancelar',
+      approve: 'Aprobar',
+      delete: 'Eliminar',
+      continue: 'Continuar',
+      reject: 'Rechazar',
+      writeHere: 'Escribe aquí...'
+    }
+  }[language] || {};
+
+  const defaultTitle = title || tr.confirm;
+  const defaultCancelText = cancelText || tr.cancel;
+  const defaultInputPlaceholder = inputPlaceholder || tr.writeHere;
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef(null);
   const confirmButtonRef = useRef(null);
@@ -69,31 +96,31 @@ const ConfirmationModal = ({
       color: t.accent,
       bgColor: t.accent + '15',
       icon: HelpCircle,
-      buttonText: 'Confirmar'
+      buttonText: tr.confirm
     },
     approve: {
       color: t.success,
       bgColor: t.success + '15',
       icon: CheckCircle,
-      buttonText: 'Aprobar'
+      buttonText: tr.approve
     },
     delete: {
       color: t.error,
       bgColor: t.error + '15',
       icon: Trash2,
-      buttonText: 'Eliminar'
+      buttonText: tr.delete
     },
     warning: {
       color: t.warning,
       bgColor: t.warning + '15',
       icon: AlertTriangle,
-      buttonText: 'Continuar'
+      buttonText: tr.continue
     },
     reject: {
       color: t.error,
       bgColor: t.error + '15',
       icon: XCircle,
-      buttonText: 'Rechazar'
+      buttonText: tr.reject
     }
   };
 
@@ -264,7 +291,7 @@ const ConfirmationModal = ({
                 <div style={styles.iconWrapper}>
                   <Icon size={20} />
                 </div>
-                <h3 style={styles.title}>{title}</h3>
+                <h3 style={styles.title}>{defaultTitle}</h3>
               </div>
               <button
                 style={styles.closeButton}
@@ -295,7 +322,7 @@ const ConfirmationModal = ({
                     style={styles.input}
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    placeholder={inputPlaceholder}
+                    placeholder={defaultInputPlaceholder}
                     onFocus={(e) => {
                       e.currentTarget.style.borderColor = config.color;
                     }}
@@ -319,7 +346,7 @@ const ConfirmationModal = ({
                   e.currentTarget.style.backgroundColor = t.bgCard;
                 }}
               >
-                {cancelText}
+                {defaultCancelText}
               </button>
               <button
                 ref={confirmButtonRef}

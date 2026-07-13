@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { isUserAdmin } from '../../utils/permissions';
 
 const D7Validation = ({
@@ -16,6 +17,7 @@ const D7Validation = ({
   isSending
 }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const { showSuccess, showError } = useToast();
   const styles = getStyles(t);
 
@@ -614,7 +616,7 @@ const D7Validation = ({
       const token = localStorage.getItem('token');
       const response = await axios.post(
         `http://localhost:5000/audit/d7-item/${item.id}/resend`,
-        { closureNotes: `Re-enviado por corrección de hallazgo ${item.auditorJudgment}` },
+        { closureNotes: item.auditorComments || `Re-enviado por corrección de hallazgo ${item.auditorJudgment}` },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -2422,14 +2424,19 @@ Sistema de Gestión de Calidad`
                         {round.auditorJudgment || 'Sin juicio'}
                       </span>
                     </div>
+                    {round.leaderComments && (
+                      <div style={{ fontSize: '13px', color: t.text, marginBottom: '6px' }}>
+                        <strong>Comentarios líder:</strong> {round.leaderComments}
+                      </div>
+                    )}
                     {round.auditorComments && (
                       <div style={{ fontSize: '13px', color: t.text, marginBottom: '6px' }}>
-                        <strong>Hallazgo:</strong> {round.auditorComments}
+                        <strong>Hallazgo auditor:</strong> {round.auditorComments}
                       </div>
                     )}
                     {round.closureNotes && (
                       <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '6px', fontStyle: 'italic' }}>
-                        <strong>Cierre:</strong> {round.closureNotes}
+                        <strong>Razón re-envío:</strong> {round.closureNotes}
                       </div>
                     )}
                     <div style={{ fontSize: '12px', color: t.textDim, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>

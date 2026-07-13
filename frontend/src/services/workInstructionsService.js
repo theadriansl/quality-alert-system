@@ -283,6 +283,241 @@ const workInstructionsService = {
       console.error('Error fetching revision snapshot:', error);
       throw error;
     }
+  },
+
+  // ============================================================================
+  // ILUO CERTIFICATIONS
+  // ============================================================================
+
+  // Get certifications for a specific WI
+  getCertifications: async (wiId) => {
+    try {
+      const response = await axios.get(`${API_URL}/${wiId}/certifications`, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching certifications:', error);
+      throw error;
+    }
+  },
+
+  // Get available operators for certification
+  getAvailableOperators: async (wiId) => {
+    try {
+      const response = await axios.get(`${API_URL}/${wiId}/certifications/available-operators`, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available operators:', error);
+      throw error;
+    }
+  },
+
+  // Create or update certification
+  saveCertification: async (wiId, certData) => {
+    try {
+      const response = await axios.post(`${API_URL}/${wiId}/certifications`, certData, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error saving certification:', error);
+      throw error;
+    }
+  },
+
+  // Update certification
+  updateCertification: async (wiId, certId, certData) => {
+    try {
+      const response = await axios.put(`${API_URL}/${wiId}/certifications/${certId}`, certData, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error updating certification:', error);
+      throw error;
+    }
+  },
+
+  // Revoke certification
+  revokeCertification: async (wiId, certId, revokedBy, reason) => {
+    try {
+      const params = new URLSearchParams();
+      if (revokedBy) params.append('revokedBy', revokedBy);
+      if (reason) params.append('reason', reason);
+      const response = await axios.delete(`${API_URL}/${wiId}/certifications/${certId}?${params}`, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error revoking certification:', error);
+      throw error;
+    }
+  },
+
+  // Get certification history for a WI
+  getCertificationHistory: async (wiId, limit = 50) => {
+    try {
+      const response = await axios.get(`${API_URL}/${wiId}/certifications/history?limit=${limit}`, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching certification history:', error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // ILUO MATRIX & REPORTS (using base API URL)
+  // ============================================================================
+
+  // Get ILUO matrix data
+  getILUOMatrix: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.clientId) params.append('clientId', filters.clientId);
+      if (filters.lineId) params.append('lineId', filters.lineId);
+      const url = params.toString()
+        ? `http://localhost:5000/wi-certifications/matrix?${params}`
+        : 'http://localhost:5000/wi-certifications/matrix';
+      const response = await axios.get(url, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching ILUO matrix:', error);
+      throw error;
+    }
+  },
+
+  // Get expiring certifications
+  getExpiringCertifications: async (days = 30) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/wi-certifications/expiring?days=${days}`, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching expiring certifications:', error);
+      throw error;
+    }
+  },
+
+  // Get certification summary for dashboard
+  getCertificationSummary: async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/wi-certifications/summary', getAuthHeader());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching certification summary:', error);
+      throw error;
+    }
+  },
+
+  // Get operator WI certifications
+  getOperatorCertifications: async (operatorId, includeExpired = false) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/operators/${operatorId}/wi-certifications?includeExpired=${includeExpired}`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching operator certifications:', error);
+      throw error;
+    }
+  },
+
+  // Get operator certification history
+  getOperatorCertificationHistory: async (operatorId, limit = 50) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/operators/${operatorId}/wi-certifications/history?limit=${limit}`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching operator certification history:', error);
+      throw error;
+    }
+  },
+
+  // Get operator certification pivot (for historical table)
+  getOperatorCertificationsPivot: async (operatorId, limit = 20) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/operators/${operatorId}/wi-certifications/pivot?limit=${limit}`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching operator certification pivot:', error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // CERTIFICATION EVIDENCE
+  // ============================================================================
+
+  // Upload evidence to a certification
+  uploadCertificationEvidence: async (wiId, certId, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('evidence', file);
+      const response = await axios.post(
+        `${API_URL}/${wiId}/certifications/${certId}/evidence`,
+        formData,
+        {
+          headers: {
+            ...getAuthHeader().headers,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading certification evidence:', error);
+      throw error;
+    }
+  },
+
+  // Get evidence download URL
+  getCertificationEvidenceUrl: (wiId, certId) => {
+    return `${API_URL}/${wiId}/certifications/${certId}/evidence`;
+  },
+
+  // Delete evidence from a certification
+  deleteCertificationEvidence: async (wiId, certId) => {
+    try {
+      const response = await axios.delete(
+        `${API_URL}/${wiId}/certifications/${certId}/evidence`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting certification evidence:', error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // CERTIFICATION SCALES
+  // ============================================================================
+
+  // Get all certification scales
+  getCertificationScales: async () => {
+    try {
+      const response = await axios.get(
+        'http://localhost:5000/wi-certification-scales',
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching certification scales:', error);
+      throw error;
+    }
+  },
+
+  // Get scale by ID
+  getCertificationScale: async (scaleId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/wi-certification-scales/${scaleId}`,
+        getAuthHeader()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching certification scale:', error);
+      throw error;
+    }
   }
 };
 

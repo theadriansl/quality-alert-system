@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import MRBShiftReport from './MRBShiftReport';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   AlertTriangle, ArrowLeft, Send, Check, Clock, User, MapPin,
   FileText, Camera, MessageSquare, CheckCircle, XCircle, Users,
@@ -74,7 +75,88 @@ const MRBCampaignDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const API_URL = 'http://localhost:5000';
+
+  // Traducciones locales
+  const L = {
+    en: {
+      // Status
+      draft: 'Draft', pendingDisposition: 'Pending Disposition', inProcessValidation: 'In Process - Pending Validation',
+      closed: 'Closed', cancelled: 'Cancelled',
+      // Tabs
+      caseDetail: 'Case Detail', campaignProgress: 'Campaign Progress',
+      // Quarantine
+      quarantineMaterial: 'Material in Quarantine', warehouse: 'Warehouse', process: 'Process', transit: 'Transit', customer: 'Customer',
+      quarantineSynced: 'Quarantine synced from 8D', quarantineUpdated: 'Quarantine updated',
+      syncFrom8D: 'Sync from 8D', edit: 'Edit', cancel: 'Cancel', save: 'Save', saving: 'Saving...',
+      quarantineHelp8D: 'Click "Sync from 8D" to load quantities from D2, or edit manually.',
+      quarantineHelpManual: 'Enter quarantine quantities using the "Edit" button.',
+      // Results
+      inspected: 'INSP', ok: 'OK', nok: 'NOK', rework: 'Rework', scrap: 'Scrap', return: 'Return', hold: 'Hold', useAsIs: 'Use as is', yield: 'Yield',
+      // Cost table
+      part: 'Part', qtyScrap: 'Qty Scrap', unitCost: 'Unit Cost', total: 'Total',
+      // Personnel table
+      date: 'Date', shift: 'Shift', hoursWorked: 'Hours Worked', resources: 'Resources', cost: 'Cost',
+      noRecord: '— no record', hrs: 'hrs', insp: 'insp', sup: 'sup',
+      // Alerts
+      errorConnection: 'Connection error', errorUpdateQuarantine: 'Error updating quarantine',
+      rootCauseRequired: 'Root cause and corrective action are required', errorSendResponse: 'Error sending response',
+      indicateRejectionReason: 'Please indicate the rejection reason', provideEarlyCloseReason: 'You must provide the early close reason',
+      errorValidation: 'Error in validation', errorAddComment: 'Error adding comment',
+      selectNewSource: 'Select a new source', errorChangeSource: 'Error changing source', errorSync: 'Error syncing',
+      titleRequired: 'Title is required', campaignPublished: 'MRB Campaign published successfully', changesSaved: 'Changes saved successfully',
+      errorSave: 'Error saving', d5d6NotCompleted: 'The linked 8D does not have D5/D6 completed yet.', errorSyncD5D6: 'Error syncing D5/D6',
+      errorDelete: 'Error deleting', errorPublish: 'Error publishing',
+      // Buttons
+      uploading: 'Uploading...', addFile: 'Add file', publishCampaign: 'Publish MRB Campaign', publishing: 'Publishing...',
+      saveChange: 'Save Change',
+      // Labels
+      client: 'Client', responsibleDept: 'Responsible Department', validator: 'Validator', responsible: 'Responsible',
+      unknownDate: 'Unknown date',
+      // Adopt fields
+      campaignTitle: 'Campaign Title', clientProject: 'Client / Project', partNumbers: 'Part Number(s)', problemDescription: 'Problem Description',
+      quarantineQty: 'Quarantine Quantities', photosNokOk: 'NOK / OK Photos', inspectionCriteria: 'Inspection Criteria (D3)', dispositionInstructions: 'Disposition Instructions (D3)',
+    },
+    es: {
+      // Status
+      draft: 'Borrador', pendingDisposition: 'Pendiente de Disposición', inProcessValidation: 'En Proceso - Pendiente Validación',
+      closed: 'Cerrado', cancelled: 'Cancelado',
+      // Tabs
+      caseDetail: 'Detalle del Caso', campaignProgress: 'Avance de Campaña',
+      // Quarantine
+      quarantineMaterial: 'Material en Cuarentena', warehouse: 'Almacén', process: 'Proceso', transit: 'Tránsito', customer: 'Cliente',
+      quarantineSynced: 'Cuarentena sincronizada desde 8D', quarantineUpdated: 'Cuarentena actualizada',
+      syncFrom8D: 'Sync desde 8D', edit: 'Editar', cancel: 'Cancelar', save: 'Guardar', saving: 'Guardando...',
+      quarantineHelp8D: 'Haz clic en "Sync desde 8D" para cargar las cantidades del D2, o edita manualmente.',
+      quarantineHelpManual: 'Captura las cantidades en cuarentena con el botón "Editar".',
+      // Results
+      inspected: 'INSP', ok: 'OK', nok: 'NOK', rework: 'Rework', scrap: 'Scrap', return: 'Return', hold: 'Hold', useAsIs: 'Usar c/es', yield: 'Yield',
+      // Cost table
+      part: 'Parte', qtyScrap: 'Qty Scrap', unitCost: 'Costo Unit.', total: 'Total',
+      // Personnel table
+      date: 'Fecha', shift: 'Turno', hoursWorked: 'Horas Trabajadas', resources: 'Recursos', cost: 'Costo',
+      noRecord: '— sin registrar', hrs: 'hrs', insp: 'insp', sup: 'sup',
+      // Alerts
+      errorConnection: 'Error de conexión', errorUpdateQuarantine: 'Error al actualizar cuarentena',
+      rootCauseRequired: 'Causa raíz y acción correctiva son requeridas', errorSendResponse: 'Error al enviar respuesta',
+      indicateRejectionReason: 'Por favor indica el motivo del rechazo', provideEarlyCloseReason: 'Debes proporcionar el motivo de cierre anticipado',
+      errorValidation: 'Error en validación', errorAddComment: 'Error al agregar comentario',
+      selectNewSource: 'Selecciona un nuevo origen', errorChangeSource: 'Error al cambiar origen', errorSync: 'Error al sincronizar',
+      titleRequired: 'El título es requerido', campaignPublished: 'Campaña MRB publicada exitosamente', changesSaved: 'Cambios guardados correctamente',
+      errorSave: 'Error al guardar', d5d6NotCompleted: 'El 8D vinculado aún no tiene D5/D6 completados.', errorSyncD5D6: 'Error al sincronizar D5/D6',
+      errorDelete: 'Error al eliminar', errorPublish: 'Error al publicar',
+      // Buttons
+      uploading: 'Subiendo...', addFile: 'Agregar archivo', publishCampaign: 'Publicar Campaña MRB', publishing: 'Publicando...',
+      saveChange: 'Guardar Cambio',
+      // Labels
+      client: 'Cliente', responsibleDept: 'Departamento Responsable', validator: 'Validador', responsible: 'Responsable',
+      unknownDate: 'Fecha desconocida',
+      // Adopt fields
+      campaignTitle: 'Título de la Campaña', clientProject: 'Cliente / Proyecto', partNumbers: 'Número(s) de Parte', problemDescription: 'Descripción del Problema',
+      quarantineQty: 'Cantidades de Cuarentena', photosNokOk: 'Fotos NOK / OK', inspectionCriteria: 'Criterio de Inspección (D3)', dispositionInstructions: 'Instrucciones de Disposición (D3)',
+    }
+  }[language] || {};
 
   const [mrbCase, setMrbCase] = useState(null);
   const [defects, setDefects] = useState([]);
@@ -266,12 +348,12 @@ const MRBCampaignDetail = () => {
             : `Cuarentena actualizada — Almacén: ${qWarehouse}, Proceso: ${qProcess}, Tránsito: ${qTransit}, Cliente: ${qCustomer}`,
           'audit'
         );
-        alert(syncFrom8D ? 'Cuarentena sincronizada desde 8D ✓' : 'Cuarentena actualizada ✓');
+        alert(syncFrom8D ? `${L.quarantineSynced} ✓` : `${L.quarantineUpdated} ✓`);
       } else {
-        alert(data.message || 'Error al actualizar cuarentena');
+        alert(data.message || L.errorUpdateQuarantine);
       }
     } catch (e) {
-      alert('Error de conexión');
+      alert(L.errorConnection);
     } finally {
       setSavingQuarantine(false);
     }
@@ -279,7 +361,7 @@ const MRBCampaignDetail = () => {
 
   const handleSubmitResponse = async () => {
     if (!rootCause.trim() || !correctiveAction.trim()) {
-      alert('Causa raíz y acción correctiva son requeridas');
+      alert(L.rootCauseRequired);
       return;
     }
 
@@ -317,10 +399,10 @@ const MRBCampaignDetail = () => {
         }
         setTimeout(() => window.location.reload(), 800);
       } else {
-        alert(data.message || 'Error al enviar respuesta');
+        alert(data.message || L.errorSendResponse);
       }
     } catch (err) {
-      alert('Error al enviar respuesta');
+      alert(L.errorSendResponse);
     } finally {
       setSubmitting(false);
     }
@@ -328,11 +410,11 @@ const MRBCampaignDetail = () => {
 
   const handleValidation = async (approved) => {
     if (!approved && !rejectionReason.trim()) {
-      alert('Por favor indica el motivo del rechazo');
+      alert(L.indicateRejectionReason);
       return;
     }
     if (approved && requiresEarlyCloseReason && !earlyCloseReason.trim()) {
-      alert('Debes proporcionar el motivo de cierre anticipado');
+      alert(L.provideEarlyCloseReason);
       return;
     }
 
@@ -371,10 +453,10 @@ const MRBCampaignDetail = () => {
         setRequiresEarlyCloseReason(true);
         alert(data.message);
       } else {
-        alert(data.message || 'Error en validación');
+        alert(data.message || L.errorValidation);
       }
     } catch (err) {
-      alert('Error en validación');
+      alert(L.errorValidation);
     } finally {
       setSubmitting(false);
     }
@@ -400,7 +482,7 @@ const MRBCampaignDetail = () => {
         loadMrb();
       }
     } catch (err) {
-      alert('Error al agregar comentario');
+      alert(L.errorAddComment);
     }
   };
 
@@ -428,13 +510,11 @@ const MRBCampaignDetail = () => {
   // Open source change modal
   const openSourceModal = () => {
     setIsLinking8d(false);
-    setSourceType(mrbCase?.sourceType || null);
+    setSourceType('8D');
     setSelectedNewSource(null);
     setSearchTerm('');
     setShowSourceModal(true);
-    if (mrbCase?.sourceType) {
-      loadSources(mrbCase.sourceType);
-    }
+    loadSources('8D');
   };
 
   // Open modal to link a 8D to an INCOMING campaign
@@ -451,7 +531,7 @@ const MRBCampaignDetail = () => {
   // Change source
   const handleChangeSource = async () => {
     if (!selectedNewSource) {
-      alert('Selecciona un nuevo origen');
+      alert(L.selectNewSource);
       return;
     }
 
@@ -520,10 +600,10 @@ const MRBCampaignDetail = () => {
         setIsLinking8d(false);
         loadMrb();
       } else {
-        alert(data.message || 'Error al cambiar origen');
+        alert(data.message || L.errorChangeSource);
       }
     } catch (err) {
-      alert('Error al cambiar origen');
+      alert(L.errorChangeSource);
     } finally {
       setSubmitting(false);
     }
@@ -545,14 +625,14 @@ const MRBCampaignDetail = () => {
         if (synced.inspectionCriteria) setDraftInspectionCriteria(synced.inspectionCriteria);
         if (synced.dispositionInstructions) setDraftDispositionInstructions(synced.dispositionInstructions);
       } else {
-        alert(data.message || 'Error al sincronizar');
+        alert(data.message || L.errorSync);
       }
-    } catch (e) { alert('Error al sincronizar'); }
+    } catch (e) { alert(L.errorSync); }
     finally { setSubmitting(false); }
   };
 
   const handleSaveDraft = async (publish = false) => {
-    if (!draftTitle.trim()) { alert('El título es requerido'); return; }
+    if (!draftTitle.trim()) { alert(L.titleRequired); return; }
     setSubmitting(true);
     const token = localStorage.getItem('token');
     try {
@@ -563,7 +643,9 @@ const MRBCampaignDetail = () => {
           title: draftTitle,
           description: draftDescription,
           lotNumber: draftLotNumber,
-          partDescription: draftPartDescription,
+          partDescription: Array.isArray(mrbCase.partsList) && mrbCase.partsList.length > 0
+            ? mrbCase.partsList.map(p => `${p.partNumber}${p.partName ? ' — ' + p.partName : ''}`).join('\n')
+            : draftPartDescription,
           inspectionCriteria: draftInspectionCriteria,
           dispositionInstructions: draftDispositionInstructions,
           inspectorCount: draftInspectorCount,
@@ -586,7 +668,7 @@ const MRBCampaignDetail = () => {
             `Campaña: ${mrb.campaignNumber}\n` +
             `Título: ${mrb.title}\n` +
             `Cliente: ${mrb.clientName || '—'}\n` +
-            `Parte: ${mrb.partNumber || '—'}\n` +
+            `Parte: ${(Array.isArray(mrb.partsList) && mrb.partsList.length > 0 ? mrb.partsList.map(p => p.partNumber).join(', ') : mrb.partNumber) || '—'}\n` +
             `Lote: ${mrb.lotNumber || '—'}\n\n` +
             `Criterio de Inspección:\n${mrb.inspectionCriteria || '—'}\n\n` +
             `Instrucción de Disposición:\n${mrb.dispositionInstructions || '—'}\n\n` +
@@ -595,15 +677,15 @@ const MRBCampaignDetail = () => {
           );
           window.location.href = `mailto:${toEmails}?subject=${subject}&body=${body}`;
         } else if (publish) {
-          alert('Campaña MRB publicada exitosamente');
+          alert(L.campaignPublished);
         } else {
-          alert('Cambios guardados correctamente');
+          alert(L.changesSaved);
         }
         loadMrb();
       } else {
-        alert(data.message || 'Error al guardar');
+        alert(data.message || L.errorSave);
       }
-    } catch (e) { alert('Error al guardar'); }
+    } catch (e) { alert(L.errorSave); }
     finally { setSubmitting(false); }
   };
 
@@ -622,12 +704,12 @@ const MRBCampaignDetail = () => {
         if (synced.rootCause) setRootCause(synced.rootCause);
         if (synced.correctiveAction) setCorrectiveAction(synced.correctiveAction);
         if (!synced.rootCause && !synced.correctiveAction) {
-          alert('El 8D vinculado aún no tiene D5/D6 completados.');
+          alert(L.d5d6NotCompleted);
         }
       } else {
-        alert(data.message || 'Error al sincronizar D5/D6');
+        alert(data.message || L.errorSyncD5D6);
       }
-    } catch (e) { alert('Error al sincronizar'); }
+    } catch (e) { alert(L.errorSync); }
     finally { setSubmitting(false); }
   };
 
@@ -706,11 +788,11 @@ const MRBCampaignDetail = () => {
 
   const getStatusConfig = (status) => {
     const configs = {
-      'BORRADOR': { color: '#6b7280', label: 'Borrador', icon: FileText },
-      'ABIERTA': { color: '#C77700', label: 'Pendiente de Disposición', icon: AlertTriangle },
-      'EN_PROCESO': { color: '#0072CE', label: 'En Proceso - Pendiente Validación', icon: Clock },
-      'CERRADA': { color: '#22c55e', label: 'Cerrado', icon: CheckCircle },
-      'CANCELADA': { color: '#B00020', label: 'Cancelado', icon: XCircle }
+      'BORRADOR': { color: '#6b7280', label: L.draft, icon: FileText },
+      'ABIERTA': { color: '#C77700', label: L.pendingDisposition, icon: AlertTriangle },
+      'EN_PROCESO': { color: '#0072CE', label: L.inProcessValidation, icon: Clock },
+      'CERRADA': { color: '#22c55e', label: L.closed, icon: CheckCircle },
+      'CANCELADA': { color: '#B00020', label: L.cancelled, icon: XCircle }
     };
     return configs[status] || { color: '#6b7280', label: status, icon: AlertTriangle };
   };
@@ -1044,7 +1126,7 @@ const MRBCampaignDetail = () => {
             style={{ padding: '8px 14px', backgroundColor: t.bgCard, color: t.text, border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
           >
             <List size={16} />
-            Casos MRB
+            Campaigns
           </button>
           {isDraft && (
             <>
@@ -1062,7 +1144,7 @@ const MRBCampaignDetail = () => {
                   const res = await fetch(`${API_URL}/mrb/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
                   const data = await res.json();
                   if (data.success) navigate('/mrb-campaigns');
-                  else alert(data.message || 'Error al eliminar');
+                  else alert(data.message || L.errorDelete);
                 }}
                 style={{ padding: '8px 14px', backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
               >
@@ -1153,17 +1235,20 @@ const MRBCampaignDetail = () => {
               <textarea style={{ ...styles.textarea }} value={draftDescription} onChange={e => setDraftDescription(e.target.value)}
                 placeholder="Descripción del problema..." />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div>
-                <label style={styles.label}>No. de Lote / Batch</label>
-                <input type="text" style={{ ...styles.infoValue, width: '100%', padding: '10px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '14px' }}
-                  value={draftLotNumber} onChange={e => setDraftLotNumber(e.target.value)} placeholder="LOT-2026-001" />
+            {Array.isArray(mrbCase.partsList) && mrbCase.partsList.length > 0 && (
+              <div style={{ marginBottom: '14px' }}>
+                <label style={styles.label}>No. de Parte</label>
+                <div style={{ padding: '10px', backgroundColor: t.bgAlt || t.bg, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '13px', color: t.text, lineHeight: '1.7' }}>
+                  {mrbCase.partsList.map((p, i) => (
+                    <div key={i}><strong>{p.partNumber}</strong>{p.partName ? ` — ${p.partName}` : ''}</div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label style={styles.label}>Descripción de Parte</label>
-                <input type="text" style={{ ...styles.infoValue, width: '100%', padding: '10px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '14px' }}
-                  value={draftPartDescription} onChange={e => setDraftPartDescription(e.target.value)} />
-              </div>
+            )}
+            <div>
+              <label style={styles.label}>No. de Lote / Batch</label>
+              <input type="text" style={{ ...styles.infoValue, width: '100%', padding: '10px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '14px' }}
+                value={draftLotNumber} onChange={e => setDraftLotNumber(e.target.value)} placeholder="LOT-2026-001" />
             </div>
           </div>
 
@@ -1226,7 +1311,7 @@ const MRBCampaignDetail = () => {
             </div>
             {(draftInspectorUnitCost > 0 || draftSupervisorUnitCost > 0) && (
               <div style={{ padding: '8px 12px', backgroundColor: t.bg, borderRadius: '6px', fontSize: '12px', color: t.textDim }}>
-                Costo estimado por turno: <strong style={{ color: t.text }}>${((draftInspectorCount * draftInspectorUnitCost) + (draftSupervisorCount * draftSupervisorUnitCost)).toFixed(2)}</strong>
+                Costo estimado por hora: <strong style={{ color: t.text }}>${((draftInspectorCount * draftInspectorUnitCost) + (draftSupervisorCount * draftSupervisorUnitCost)).toFixed(2)}</strong>
               </div>
             )}
           </div>
@@ -1237,7 +1322,7 @@ const MRBCampaignDetail = () => {
               <Camera size={18} color="#7c3aed" />
               Estándar Visual
               <label style={{ marginLeft: 'auto', padding: '5px 10px', backgroundColor: t.accent, color: 'white', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Paperclip size={12} />{uploadingAttach ? 'Subiendo...' : 'Agregar archivo'}
+                <Paperclip size={12} />{uploadingAttach ? L.uploading : L.addFile}
                 <input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={handleUploadAttachment} style={{ display: 'none' }} />
               </label>
             </div>
@@ -1297,7 +1382,7 @@ const MRBCampaignDetail = () => {
                 style={{ flex: 2, padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: submitting ? 0.7 : 1 }}
               >
                 <Send size={18} />
-                {submitting ? 'Publicando...' : 'Publicar Campaña MRB'}
+                {submitting ? L.publishing : L.publishCampaign}
               </button>
             </div>
           </div>
@@ -1309,8 +1394,8 @@ const MRBCampaignDetail = () => {
         {/* Tab bar */}
         <div style={{ display: 'flex', borderBottom: `2px solid ${t.border}`, marginBottom: '24px', gap: '0' }}>
           {[
-            { id: 'detail', label: 'Detalle del Caso' },
-            { id: 'progress', label: '📊 Avance de Campaña' }
+            { id: 'detail', label: L.caseDetail },
+            { id: 'progress', label: `📊 ${L.campaignProgress}` }
           ].map(tab => (
             <button
               key={tab.id}
@@ -1367,7 +1452,7 @@ const MRBCampaignDetail = () => {
                     <div style={{ ...styles.card, marginBottom: '16px', borderLeft: '4px solid #f59e0b' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
-                          <div style={styles.cardTitle}>⚠ Material en Cuarentena</div>
+                          <div style={styles.cardTitle}>⚠ {L.quarantineMaterial}</div>
                           {updatedAt && <div style={{ fontSize: '11px', color: t.textDim, marginTop: '-10px' }}>Actualizado: {updatedAt}</div>}
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1384,7 +1469,7 @@ const MRBCampaignDetail = () => {
                             onClick={() => setShowQuarantineEdit(v => !v)}
                             style={{ padding: '6px 12px', backgroundColor: showQuarantineEdit ? '#f59e0b' : t.bgInput, color: showQuarantineEdit ? 'white' : t.text, border: `1px solid ${showQuarantineEdit ? '#f59e0b' : t.border}`, borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                           >
-                            <Edit3 size={13} /> {showQuarantineEdit ? 'Cancelar' : 'Editar'}
+                            <Edit3 size={13} /> {showQuarantineEdit ? L.cancel : L.edit}
                           </button>
                         </div>
                       </div>
@@ -1416,10 +1501,10 @@ const MRBCampaignDetail = () => {
                             {(dispWarehouse > 0 || dispProcess > 0 || dispTransit > 0 || dispCustomer > 0) && (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
                                 {[
-                                  { label: 'Almacén', value: dispWarehouse, color: '#f59e0b', info: false },
-                                  { label: 'Proceso',  value: dispProcess,  color: '#f59e0b', info: false },
-                                  { label: 'Tránsito', value: dispTransit,  color: '#9ca3af', info: true },
-                                  { label: 'Cliente',  value: dispCustomer, color: '#9ca3af', info: true },
+                                  { label: L.warehouse, value: dispWarehouse, color: '#f59e0b', info: false },
+                                  { label: L.process,  value: dispProcess,  color: '#f59e0b', info: false },
+                                  { label: L.transit, value: dispTransit,  color: '#9ca3af', info: true },
+                                  { label: L.customer,  value: dispCustomer, color: '#9ca3af', info: true },
                                 ].filter(l => l.value > 0).map(loc => (
                                   <span key={loc.label} style={{ fontSize: '11px', padding: '2px 8px', backgroundColor: loc.info ? '#f3f4f6' : `${loc.color}18`, color: loc.color, borderRadius: '10px', fontWeight: loc.info ? '400' : '600', opacity: loc.info ? 0.7 : 1 }}>
                                     {loc.label}: {loc.value}{loc.info ? ' ℹ' : ''}
@@ -1431,7 +1516,7 @@ const MRBCampaignDetail = () => {
                         </>}
                         {qTotal === 0 && (
                           <div style={{ color: t.textDim, fontSize: '13px', alignSelf: 'center' }}>
-                            {has8D ? 'Haz clic en "Sync desde 8D" para cargar las cantidades del D2, o edita manualmente.' : 'Captura las cantidades en cuarentena con el botón "Editar".'}
+                            {has8D ? L.quarantineHelp8D : L.quarantineHelpManual}
                           </div>
                         )}
                       </div>
@@ -1440,10 +1525,10 @@ const MRBCampaignDetail = () => {
                       {showQuarantineEdit && (
                         <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '14px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                           {[
-                            { label: 'Almacén',  val: qWarehouse, set: setQWarehouse },
-                            { label: 'Proceso',  val: qProcess,   set: setQProcess   },
-                            { label: 'Tránsito', val: qTransit,   set: setQTransit   },
-                            { label: 'Cliente',  val: qCustomer,  set: setQCustomer  },
+                            { label: L.warehouse,  val: qWarehouse, set: setQWarehouse },
+                            { label: L.process,  val: qProcess,   set: setQProcess   },
+                            { label: L.transit, val: qTransit,   set: setQTransit   },
+                            { label: L.customer,  val: qCustomer,  set: setQCustomer  },
                           ].map(f => (
                             <div key={f.label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <label style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase' }}>{f.label}</label>
@@ -1466,7 +1551,7 @@ const MRBCampaignDetail = () => {
                             disabled={savingQuarantine}
                             style={{ padding: '8px 16px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-end' }}
                           >
-                            <Save size={14} /> {savingQuarantine ? 'Guardando...' : 'Guardar'}
+                            <Save size={14} /> {savingQuarantine ? L.saving : L.save}
                           </button>
                         </div>
                       )}
@@ -1479,15 +1564,15 @@ const MRBCampaignDetail = () => {
                   <div style={styles.cardTitle}>Totales Acumulados de la Campaña</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
                     {[
-                      { label: 'INSP', value: mrbCase.qtyInspected || 0, color: t.accent },
-                      { label: 'OK',   value: mrbCase.qtyOk || 0, color: '#22c55e' },
-                      { label: 'NOK',  value: mrbCase.qtyNok || 0, color: '#B00020' },
-                      { label: 'Rework',      value: mrbCase.qtyRework || 0,    color: '#f59e0b' },
-                      { label: 'Scrap',       value: mrbCase.qtyScrap || 0,     color: '#ef4444' },
-                      { label: 'Return',      value: mrbCase.qtyReturn || 0,    color: '#8b5cf6' },
-                      { label: 'Hold',        value: mrbCase.qtyHold || 0,      color: '#6b7280' },
-                      ...(mrbCase.qtyUseAsIs > 0 ? [{ label: 'Usar c/es', value: mrbCase.qtyUseAsIs, color: '#065f46' }] : []),
-                      { label: 'Yield',  value: mrbCase.qtyInspected > 0 ? `${((mrbCase.qtyOk / mrbCase.qtyInspected) * 100).toFixed(1)}%` : '—', color: t.text },
+                      { label: L.inspected, value: mrbCase.qtyInspected || 0, color: t.accent },
+                      { label: L.ok,   value: mrbCase.qtyOk || 0, color: '#22c55e' },
+                      { label: L.nok,  value: mrbCase.qtyNok || 0, color: '#B00020' },
+                      { label: L.rework,      value: mrbCase.qtyRework || 0,    color: '#f59e0b' },
+                      { label: L.scrap,       value: mrbCase.qtyScrap || 0,     color: '#ef4444' },
+                      { label: L.return,      value: mrbCase.qtyReturn || 0,    color: '#8b5cf6' },
+                      { label: L.hold,        value: mrbCase.qtyHold || 0,      color: '#6b7280' },
+                      ...(mrbCase.qtyUseAsIs > 0 ? [{ label: L.useAsIs, value: mrbCase.qtyUseAsIs, color: '#065f46' }] : []),
+                      { label: L.yield,  value: mrbCase.qtyInspected > 0 ? `${((mrbCase.qtyOk / mrbCase.qtyInspected) * 100).toFixed(1)}%` : '—', color: t.text },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ textAlign: 'center', minWidth: '60px' }}>
                         <div style={{ fontSize: '26px', fontWeight: '700', color }}>{value}</div>
@@ -1505,7 +1590,7 @@ const MRBCampaignDetail = () => {
                     : null;
                   const dateLabel = rawDate
                     ? new Date(rawDate + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
-                    : 'Fecha desconocida';
+                    : L.unknownDate;
                   const shiftLabel = row.shiftName ? `${row.shiftCode} — ${row.shiftName}` : '⚠ Sin turno asignado';
                   const totalNok = parseInt(row.totalNok) || 0;
                   const rework = parseInt(row.rework) || 0;
@@ -1633,7 +1718,7 @@ const MRBCampaignDetail = () => {
             </div>
             <div style={styles.infoGrid}>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Cliente</div>
+                <div style={styles.infoLabel}>{L.client}</div>
                 <div style={styles.infoValue}>{mrbCase.clientName || '-'}</div>
               </div>
               <div style={styles.infoItem}>
@@ -1654,12 +1739,18 @@ const MRBCampaignDetail = () => {
                   <div style={{ ...styles.infoValue, fontFamily: 'monospace', letterSpacing: '1px' }}>{mrbCase.lotNumber}</div>
                 </div>
               )}
-              {mrbCase.partDescription && (
-                <div style={{ ...styles.infoItem, gridColumn: '1 / -1' }}>
-                  <div style={styles.infoLabel}>Descripción de Parte</div>
-                  <div style={styles.infoValue}>{mrbCase.partDescription}</div>
-                </div>
-              )}
+              {(() => {
+                const hasParts = Array.isArray(mrbCase.partsList) && mrbCase.partsList.length > 0;
+                const partsText = hasParts
+                  ? mrbCase.partsList.map(p => `${p.partNumber}${p.partName ? ' — ' + p.partName : ''}`).join('\n')
+                  : (mrbCase.partDescription && mrbCase.partDescription !== 'See parts list' ? mrbCase.partDescription : null);
+                return partsText ? (
+                  <div style={{ ...styles.infoItem, gridColumn: '1 / -1' }}>
+                    <div style={styles.infoLabel}>Descripción de Parte</div>
+                    <div style={{ ...styles.infoValue, whiteSpace: 'pre-line' }}>{partsText}</div>
+                  </div>
+                ) : null;
+              })()}
               <div style={styles.infoItem}>
                 <div style={styles.infoLabel}>Severidad</div>
                 <div style={styles.infoValue}>
@@ -1669,7 +1760,7 @@ const MRBCampaignDetail = () => {
                 </div>
               </div>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Departamento Responsable</div>
+                <div style={styles.infoLabel}>{L.responsibleDept}</div>
                 <div style={styles.infoValue}>{mrbCase.departmentName || '-'}</div>
               </div>
               <div style={styles.infoItem}>
@@ -1696,7 +1787,7 @@ const MRBCampaignDetail = () => {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
                           <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                            {['Parte', 'Qty Scrap', 'Costo Unit.', 'Total'].map(h => (
+                            {[L.part, L.qtyScrap, L.unitCost, L.total].map(h => (
                               <th key={h} style={{ padding: '4px 8px', textAlign: h === 'Parte' ? 'left' : 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>{h}</th>
                             ))}
                           </tr>
@@ -1727,7 +1818,7 @@ const MRBCampaignDetail = () => {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
                           <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                            {['Fecha', 'Turno', 'Horas Trabajadas', 'Recursos', 'Costo', ''].map(h => (
+                            {[L.date, L.shift, L.hoursWorked, L.resources, L.cost, ''].map(h => (
                               <th key={h} style={{ padding: '4px 8px', textAlign: h === 'Fecha' || h === 'Turno' ? 'left' : 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>{h}</th>
                             ))}
                           </tr>
@@ -1951,7 +2042,7 @@ const MRBCampaignDetail = () => {
                 Sin origen vinculado
                 {mrbCase.status === 'ABIERTA' && (
                   <span style={{ marginLeft: '8px', color: '#C77700' }}>
-                    - Haz clic en "Cambiar Origen" para vincular a un QAR o 8D
+                    - Haz clic en "Cambiar Origen" para vincular a un 8D
                   </span>
                 )}
               </div>
@@ -2101,8 +2192,8 @@ const MRBCampaignDetail = () => {
                       });
                       const data = await res.json();
                       if (data.success) loadMrb();
-                      else alert(data.message || 'Error al publicar');
-                    } catch (e) { alert('Error al publicar'); }
+                      else alert(data.message || L.errorPublish);
+                    } catch (e) { alert(L.errorPublish); }
                     finally { setSubmitting(false); }
                   }}
                 >
@@ -2325,7 +2416,7 @@ const MRBCampaignDetail = () => {
                     `Campaña: ${mrbCase.campaignNumber}\n` +
                     `Título: ${mrbCase.title}\n` +
                     `Cliente: ${mrbCase.clientName || '—'}\n` +
-                    `Parte: ${mrbCase.partNumber || '—'}\n` +
+                    `Parte: ${(Array.isArray(mrbCase.partsList) && mrbCase.partsList.length > 0 ? mrbCase.partsList.map(p => `${p.partNumber}${p.partName ? ' — ' + p.partName : ''}`).join(', ') : mrbCase.partNumber ? `${mrbCase.partNumber}${mrbCase.partName ? ' — ' + mrbCase.partName : ''}` : '') || mrbCase.partDescription || '—'}\n` +
                     `Lote: ${mrbCase.lotNumber || '—'}\n` +
                     `Estado: ${mrbCase.status}\n\n` +
                     `Criterio de Inspección:\n${mrbCase.inspectionCriteria || '—'}\n\n` +
@@ -2635,34 +2726,12 @@ const MRBCampaignDetail = () => {
               </button>
             </div>
 
-            {/* Source Type Selection — hidden when linking 8D (already pre-selected) */}
+            {/* Source Type Selection — only 8D allowed, hidden when linking 8D (already pre-selected) */}
             {!isLinking8d && <div style={{ padding: '16px 20px', borderBottom: `1px solid ${t.border}` }}>
               <div style={{ color: t.textDim, fontSize: '12px', marginBottom: '10px' }}>
                 TIPO DE ORIGEN
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => {
-                    setSourceType('QAR');
-                    setSelectedNewSource(null);
-                    loadSources('QAR');
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    backgroundColor: sourceType === 'QAR' ? '#C7770022' : t.bg,
-                    border: `2px solid ${sourceType === 'QAR' ? '#C77700' : t.border}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <AlertTriangle size={20} color={sourceType === 'QAR' ? '#C77700' : t.textDim} />
-                  <span style={{ color: sourceType === 'QAR' ? '#C77700' : t.textDim, fontWeight: '600' }}>QAR</span>
-                </button>
                 <button
                   onClick={() => {
                     setSourceType('8D');
@@ -2732,7 +2801,7 @@ const MRBCampaignDetail = () => {
             <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
               {!sourceType ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
-                  Selecciona un tipo de origen (QAR o 8D)
+                  Selecciona un 8D para vincular como origen
                 </div>
               ) : sourcesLoading ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: t.textDim }}>
@@ -2784,14 +2853,14 @@ const MRBCampaignDetail = () => {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: '14px' }}>
                   {[
-                    { key: 'title',             label: 'Título de la Campaña' },
-                    { key: 'client',            label: 'Cliente / Proyecto' },
-                    { key: 'parts',             label: 'Número(s) de Parte' },
-                    { key: 'defectDescription', label: 'Descripción del Problema' },
-                    { key: 'quarantine',        label: 'Cantidades de Cuarentena' },
-                    { key: 'photos',            label: 'Fotos NOK / OK' },
-                    { key: 'criteria',          label: 'Criterio de Inspección (D3)' },
-                    { key: 'disposition',       label: 'Instrucciones de Disposición (D3)' },
+                    { key: 'title',             label: L.campaignTitle },
+                    { key: 'client',            label: L.clientProject },
+                    { key: 'parts',             label: L.partNumbers },
+                    { key: 'defectDescription', label: L.problemDescription },
+                    { key: 'quarantine',        label: L.quarantineQty },
+                    { key: 'photos',            label: L.photosNokOk },
+                    { key: 'criteria',          label: L.inspectionCriteria },
+                    { key: 'disposition',       label: L.dispositionInstructions },
                   ].map(f => (
                     <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: t.text }}>
                       <input type="checkbox" checked={adoptFields[f.key] ?? true} onChange={() => setAdoptFields(prev => ({ ...prev, [f.key]: !prev[f.key] }))} style={{ width: '15px', height: '15px' }} />
@@ -2815,7 +2884,7 @@ const MRBCampaignDetail = () => {
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button onClick={() => setShowSourceModal(false)} style={{ padding: '10px 20px', backgroundColor: t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
                   <button onClick={handleChangeSource} disabled={!selectedNewSource || submitting} style={{ padding: '10px 20px', backgroundColor: selectedNewSource ? '#2E7D32' : t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: selectedNewSource ? 'pointer' : 'not-allowed', opacity: submitting ? 0.7 : 1 }}>
-                    {submitting ? 'Guardando...' : 'Guardar Cambio'}
+                    {submitting ? L.saving : L.saveChange}
                   </button>
                 </div>
               </div>

@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Validar token al cargar la app
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -25,6 +26,7 @@ export const AuthProvider = ({ children }) => {
         })
         .catch(() => {
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
         })
         .finally(() => {
           setLoading(false);
@@ -32,6 +34,39 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+  }, []);
+
+  // Sincronización entre pestañas - detecta cambios en localStorage
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === 'token') {
+        if (!event.newValue) {
+          // Token removido en otra pestaña → logout aquí
+          setUser(null);
+          window.location.href = '/login';
+        } else if (event.newValue !== event.oldValue) {
+          // Token cambió (otro usuario logueado) → recargar
+          window.location.reload();
+        }
+      }
+
+      if (event.key === 'user') {
+        if (!event.newValue) {
+          // User removido → logout
+          setUser(null);
+          window.location.href = '/login';
+        } else if (event.newValue !== event.oldValue) {
+          // Usuario cambió → recargar para permisos correctos
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const login = async (email, password) => {

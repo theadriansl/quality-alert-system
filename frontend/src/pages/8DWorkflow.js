@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
+import { pdf } from '@react-pdf/renderer';
+import EightDPDF from '../components/8D/EightDPDF';
 import eightDService from '../services/eightDService';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { isUserAdmin, canUserEdit, isReadOnly } from '../utils/permissions';
 
 // Importar componentes de cada pestaña
@@ -19,12 +23,14 @@ import HistoryTab from '../components/8D/HistoryTab';
 import StatusBadge from '../components/8D/StatusBadge';
 import ApprovalStepper from '../components/8D/ApprovalStepper';
 
+
 const EightDWorkflow = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { showSuccess, showError, showWarning } = useToast();
   const { theme: t } = useTheme();
-  const [language, setLanguage] = useState('es');
+  const { language, changeLanguage } = useLanguage();
+  const [languageLocal, setLanguageLocal] = useState('es');
 
   // Permission check
   const canEdit = canUserEdit('8d');
@@ -176,6 +182,7 @@ const EightDWorkflow = () => {
   const isD123Approved = workflowData?.d1D2D3ApprovalStatus === 'approved';
 
   // Get current user in process for D1-D2-D3 approval status display
+  // Compatible con formato antiguo (solo IDs) y nuevo (objetos {id, name})
   const d123CurrentUserInProcess = useMemo(() => {
     if (!workflowData || !workflowData.escalationPath || !workflowData.escalationPath.issue_users) {
       return null;
@@ -192,25 +199,32 @@ const EightDWorkflow = () => {
     // approved -> completed
     // rejected_by_aX -> rejected by approver X
 
-    let userId = null;
+    let userData = null;
 
     if (approvalStatus === 'draft') {
       // Creator (Calidad) is working
-      userId = issueUsers[0];
+      userData = issueUsers[0];
     } else if (approvalStatus === 'pending_approval_1') {
-      userId = issueUsers[1];
+      userData = issueUsers[1];
     } else if (approvalStatus === 'pending_approval_2') {
-      userId = issueUsers[2];
+      userData = issueUsers[2];
     } else if (approvalStatus === 'pending_approval_3') {
-      userId = issueUsers[3];
+      userData = issueUsers[3];
     } else if (approvalStatus === 'approved') {
       return 'Completado';
     } else if (approvalStatus.startsWith('rejected_by_')) {
       return 'Rechazado';
     }
 
-    if (!userId) return null;
+    if (!userData) return null;
 
+    // Si ya es objeto con nombre congelado, usarlo directamente
+    if (typeof userData === 'object' && userData.name) {
+      return userData.name;
+    }
+
+    // Formato antiguo: buscar usuario por ID
+    const userId = typeof userData === 'object' ? userData.id : userData;
     const user = users.find(u => u.id === userId);
     return user ? (user.name || user.email || `Usuario ID: ${userId}`) : `Usuario ID: ${userId}`;
   }, [users, workflowData]);
@@ -247,6 +261,7 @@ const EightDWorkflow = () => {
   /**
    * Check if current user is responsible for Countermeasure section
    * Countermeasure users are stored in escalationPath.countermeasure_users array (snake_case dentro de JSONB)
+   * Compatible con formato antiguo (solo IDs) y nuevo (objetos {id, name})
    */
   const isCountermeasureResponsible = () => {
     if (!currentUser?.id || !workflowData?.escalationPath) {
@@ -254,7 +269,9 @@ const EightDWorkflow = () => {
     }
 
     const countermeasureUsers = workflowData.escalationPath.countermeasure_users || [];
-    return countermeasureUsers.includes(currentUser.id);
+    return countermeasureUsers.some(user =>
+      typeof user === 'object' ? user.id === currentUser.id : user === currentUser.id
+    );
   };
 
   /**
@@ -446,12 +463,14 @@ const EightDWorkflow = () => {
   const tr = (key) => translations[language][key] || key;
 
   const handleTabChange = useCallback((tabIndex) => {
-    if (tabs[tabIndex].enabled) {
+    // Allow free navigation when 8D is closed (read-only mode)
+    const isClosed = workflowData?.status === 'closed';
+    if (isClosed || tabs[tabIndex].enabled) {
       // Save current scroll position before changing tab
       scrollPositions.current[currentTab] = window.scrollY;
       setCurrentTab(tabIndex);
     }
-  }, [currentTab, tabs]);
+  }, [currentTab, tabs, workflowData?.status]);
 
   const handleDataUpdate = async (tabId, data) => {
     console.log('📥 handleDataUpdate called - tabId:', tabId, 'data:', data);
@@ -555,42 +574,64 @@ const EightDWorkflow = () => {
 
         // Agregar información de escalación con múltiples usuarios
         // Estructura: primary (1 responsable) + approvers (hasta 3 aprobadores)
-        const getSectionUserIds = (section) => {
-          const ids = [];
-          if (section?.primary?.id) ids.push(section.primary.id);
+        // CONGELAMIENTO DE USUARIOS: Guardar {id, name} para preservar datos históricos
+        const getSectionUserData = (section) => {
+          const userData = [];
+          if (section?.primary?.id) {
+            const name = section.primary.name ||
+              `${section.primary.firstName || ''} ${section.primary.lastName || ''}`.trim() ||
+              `Usuario ${section.primary.id}`;
+            userData.push({ id: section.primary.id, name });
+          }
           if (section?.approvers) {
             section.approvers.forEach(approver => {
-              if (approver?.id) ids.push(approver.id);
+              if (approver?.id) {
+                const name = approver.name ||
+                  `${approver.firstName || ''} ${approver.lastName || ''}`.trim() ||
+                  `Usuario ${approver.id}`;
+                userData.push({ id: approver.id, name });
+              }
             });
           }
-          return ids;
+          return userData;
         };
 
         //  IMPORTANTE: Para Issue Section, el primer usuario SIEMPRE debe ser el creador del reporte
-        const issueUserIds = [];
+        // CONGELAMIENTO: Guardar {id, name} para preservar datos históricos
+        const issueUserData = [];
         const creatorId = workflowData?.createdBy || currentUser?.id;
         if (creatorId) {
-          issueUserIds.push(creatorId);  // Siempre guardar el creador como primer usuario
+          // Buscar nombre del creador
+          const creatorUser = users.find(u => u.id === creatorId);
+          const creatorName = creatorUser
+            ? `${creatorUser.firstName || ''} ${creatorUser.lastName || ''}`.trim() || creatorUser.name || `Usuario ${creatorId}`
+            : `Usuario ${creatorId}`;
+          issueUserData.push({ id: creatorId, name: creatorName });
         }
         // Agregar los aprobadores (NO el primary, que podría ser incorrecto)
         if (updatedData.issueSection?.approvers) {
           updatedData.issueSection.approvers.forEach(approver => {
-            if (approver?.id) issueUserIds.push(approver.id);
+            if (approver?.id) {
+              const name = approver.name ||
+                `${approver.firstName || ''} ${approver.lastName || ''}`.trim() ||
+                `Usuario ${approver.id}`;
+              issueUserData.push({ id: approver.id, name });
+            }
           });
         }
 
-        // Obtener usuarios de countermeasure y confirmation
-        const countermeasureUserIds = getSectionUserIds(updatedData.countermeasureSection);
-        const confirmationUserIds = getSectionUserIds(updatedData.confirmationSection);
+        // Obtener usuarios de countermeasure y confirmation con nombres congelados
+        const countermeasureUserData = getSectionUserData(updatedData.countermeasureSection);
+        const confirmationUserData = getSectionUserData(updatedData.confirmationSection);
 
         //  PRESERVAR usuarios existentes si los nuevos están vacíos
         // Esto evita borrar usuarios cuando el componente no los tiene cargados
         const existingEscalationPath = workflowData?.escalation_path || workflowData?.escalationPath || {};
 
         reportData.escalation_path = {
-          issue_users: issueUserIds.length > 0 ? issueUserIds : (existingEscalationPath.issue_users || []),
-          countermeasure_users: countermeasureUserIds.length > 0 ? countermeasureUserIds : (existingEscalationPath.countermeasure_users || []),
-          confirmation_users: confirmationUserIds.length > 0 ? confirmationUserIds : (existingEscalationPath.confirmation_users || [])
+          issue_users: issueUserData.length > 0 ? issueUserData : (existingEscalationPath.issue_users || []),
+          countermeasure_users: countermeasureUserData.length > 0 ? countermeasureUserData : (existingEscalationPath.countermeasure_users || []),
+          confirmation_users: confirmationUserData.length > 0 ? confirmationUserData : (existingEscalationPath.confirmation_users || [])
         };
 
         // Agregar información de cliente, proyecto y partes seleccionadas
@@ -918,6 +959,163 @@ const EightDWorkflow = () => {
       } catch (error) {
         console.error('Error saving D8:', error);
       }
+    }
+  };
+
+  // ===================== PDF EXPORT FUNCTION =====================
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!workflowData || !workflowData.id) {
+      showWarning('Guarda el reporte primero antes de exportar');
+      return;
+    }
+
+    setIsExportingPDF(true);
+
+    try {
+      // Prepare images as base64 (to avoid CORS issues)
+      const images = {};
+
+      // Convert photo URLs to base64 if they exist
+      const convertToBase64 = async (url) => {
+        if (!url) return null;
+        try {
+          // If it's already base64, return as is
+          if (url.startsWith('data:')) return url;
+
+          // Handle relative URLs - add backend prefix
+          let fullUrl = url;
+          if (url.startsWith('/uploads') || url.startsWith('uploads')) {
+            const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            fullUrl = url.startsWith('/') ? `${backendUrl}${url}` : `${backendUrl}/${url}`;
+          } else if (!url.startsWith('http')) {
+            const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            fullUrl = `${backendUrl}/${url}`;
+          }
+
+          // For local URLs, fetch and convert
+          const response = await fetch(fullUrl);
+          if (!response.ok) throw new Error('Failed to fetch image');
+          const blob = await response.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.warn('Could not convert image:', url, err);
+          return null;
+        }
+      };
+
+      // Get image URL (can be string, object with .url, .path, .file_path, .filePath, or .file_url)
+      const getImageUrl = (img) => {
+        if (!img) return null;
+        if (typeof img === 'string') return img;
+        if (img.url) return img.url;
+        if (img.file_url) return img.file_url;
+        if (img.path) return img.path;
+        if (img.file_path) return img.file_path;
+        if (img.filePath) return img.filePath;
+        return null;
+      };
+
+      const photoNoGoodUrl = getImageUrl(workflowData.photoNoGood);
+      // photoOK can be stored as photoOK or photoOk depending on source
+      const photoOkUrl = getImageUrl(workflowData.photoOK || workflowData.photoOk);
+
+      if (photoNoGoodUrl) {
+        images.photo_no_good = await convertToBase64(photoNoGoodUrl);
+      }
+      if (photoOkUrl) {
+        images.photo_ok = await convertToBase64(photoOkUrl);
+      }
+
+      // Load D6 before/after photos and conditions from d7-validation endpoint
+      let d6ValidationData = {};
+      if (workflowData.id) {
+        try {
+          const token = localStorage.getItem('token');
+          const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+          const response = await fetch(
+            `${backendUrl}/api/8d/reports/${workflowData.id}/d7-validation`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          const result = await response.json();
+          if (result.success && result.data) {
+            // Load beforeCondition/afterCondition from validation
+            if (result.data.validation) {
+              d6ValidationData.beforeCondition = result.data.validation.before_condition || result.data.validation.beforeCondition;
+              d6ValidationData.afterCondition = result.data.validation.after_condition || result.data.validation.afterCondition;
+            }
+
+            // Load photos
+            if (result.data.validationFiles) {
+              const files = result.data.validationFiles;
+              const beforePhotos = files.filter(f => f.file_type === 'before_photo');
+              const afterPhotos = files.filter(f => f.file_type === 'after_photo');
+
+              // Convert first before photo
+              if (beforePhotos.length > 0) {
+                const beforeUrl = getImageUrl(beforePhotos[0]);
+                if (beforeUrl) {
+                  images.d6_before = await convertToBase64(beforeUrl);
+                }
+              }
+              // Convert first after photo
+              if (afterPhotos.length > 0) {
+                const afterUrl = getImageUrl(afterPhotos[0]);
+                if (afterUrl) {
+                  images.d6_after = await convertToBase64(afterUrl);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Could not load D6 validation data:', err);
+        }
+      }
+
+      // Merge D6 validation data into workflowData for PDF
+      const pdfData = {
+        ...workflowData,
+        beforeCondition: d6ValidationData.beforeCondition || workflowData.beforeCondition,
+        afterCondition: d6ValidationData.afterCondition || workflowData.afterCondition
+      };
+
+      // Generate PDF using @react-pdf/renderer
+      const pdfBlob = await pdf(
+        <EightDPDF
+          data={pdfData}
+          users={users}
+          images={images}
+        />
+      ).toBlob();
+
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+
+      const sanitizedTitle = (workflowData.title || 'Report')
+        .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 50);
+
+      link.href = url;
+      link.download = `${workflowData.reportId || '8D-Report'}_${sanitizedTitle}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showSuccess('PDF exportado exitosamente');
+
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      showError('Error al exportar PDF: ' + error.message);
+    } finally {
+      setIsExportingPDF(false);
     }
   };
 
@@ -1549,7 +1747,24 @@ const EightDWorkflow = () => {
           
           {/* Navigation Buttons */}
           <div style={styles.headerNavigation}>
-            <button 
+            {/* Export PDF Button */}
+            {workflowData?.id && (
+              <button
+                onClick={handleExportPDF}
+                disabled={isExportingPDF}
+                style={{
+                  ...styles.headerButton,
+                  backgroundColor: '#805AD5',
+                  color: 'white',
+                  opacity: isExportingPDF ? 0.7 : 1
+                }}
+                title="Exportar reporte completo a PDF"
+              >
+                {isExportingPDF ? '⏳ Generando...' : '📄 Exportar PDF'}
+              </button>
+            )}
+
+            <button
               onClick={() => navigate('/dashboard')}
               style={{...styles.headerButton, ...styles.backButton}}
             >
@@ -1587,9 +1802,9 @@ const EightDWorkflow = () => {
             )}
           </div>
           
-          <select 
-            value={language} 
-            onChange={(e) => setLanguage(e.target.value)}
+          <select
+            value={language}
+            onChange={(e) => changeLanguage(e.target.value)}
             style={styles.languageSelector}
           >
             <option value="es"> Español</option>
@@ -1620,9 +1835,13 @@ const EightDWorkflow = () => {
       <div style={styles.tabsContainer}>
         <div style={styles.tabsRow}>
           {tabs.map((tab, index) => {
+            // Allow all tabs when closed (read-only mode)
+            const isClosed = workflowData?.status === 'closed';
+            const isEnabled = isClosed || tab.enabled;
+
             // Determine tab status for visual indicator
             const getTabStatus = () => {
-              if (!tab.enabled) return 'blocked';
+              if (!isEnabled) return 'blocked';
               if (index < currentTab) return 'completed';
               if (index === currentTab) return 'active';
               return 'pending';
@@ -1633,7 +1852,7 @@ const EightDWorkflow = () => {
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(index)}
-                disabled={!tab.enabled}
+                disabled={!isEnabled}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1644,13 +1863,13 @@ const EightDWorkflow = () => {
                   border: 'none',
                   borderBottom: `3px solid ${index === currentTab ? t.accent : 'transparent'}`,
                   backgroundColor: index === currentTab ? t.bgPanel : 'transparent',
-                  color: !tab.enabled ? t.textMuted : index === currentTab ? t.primary : t.text,
-                  cursor: tab.enabled ? 'pointer' : 'not-allowed',
+                  color: !isEnabled ? t.textMuted : index === currentTab ? t.primary : t.text,
+                  cursor: isEnabled ? 'pointer' : 'not-allowed',
                   transition: 'all 0.2s',
-                  opacity: tab.enabled ? 1 : 0.5,
+                  opacity: isEnabled ? 1 : 0.5,
                   whiteSpace: 'nowrap'
                 }}
-                title={!tab.enabled ? getBlockedReason(tab.id) : tab.subtitle}
+                title={!isEnabled ? getBlockedReason(tab.id) : tab.subtitle}
               >
                 {/* Status Indicator */}
                 <span style={{
@@ -1787,7 +2006,7 @@ const EightDWorkflow = () => {
       )}
 
       {/* Content Area */}
-      <div style={styles.contentArea}>
+      <div style={styles.contentArea} data-tab-content="true">
         {/* D1-D2-D3 Approval Stepper (MEJORA 2) */}
         {workflowData?.id && !loading && ['d1', 'd2', 'd3'].includes(tabs[currentTab]?.id) && workflowData?.escalationPath && (
           <ApprovalStepper
@@ -1828,6 +2047,7 @@ const EightDWorkflow = () => {
             onDataUpdate={(data) => handleDataUpdate(tabs[currentTab].id, data)}
             language={language}
             activeSection={tabs[currentTab].section}
+            isReadOnly={workflowData?.status === 'closed'}
             {...(tabs[currentTab].id === 'd4' && { isBlocked: isD4Blocked })}
             {...(tabs[currentTab].id === 'd5' && { isBlocked: isD5Blocked })}
             {...(tabs[currentTab].id === 'd6' && { isBlocked: isD6Blocked })}

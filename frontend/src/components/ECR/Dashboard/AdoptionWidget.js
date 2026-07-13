@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../../context/ThemeContext';
+import { useLanguage } from '../../../context/LanguageContext';
 
 /**
  * Stage Adoption Progress Widget
@@ -7,12 +8,31 @@ import { useTheme } from '../../../context/ThemeContext';
  */
 const AdoptionWidget = ({ adoption = {} }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: {
+      ecr1: 'Change Request Board',
+      ecr2: 'Change Description',
+      ecr2b: 'Impact Analysis',
+      ecr3: 'Validation & Implementation',
+      ecr4: 'Closure & Confirmation'
+    },
+    es: {
+      ecr1: 'Tablero de Solicitud',
+      ecr2: 'Descripción del Cambio',
+      ecr2b: 'Análisis de Impacto',
+      ecr3: 'Validación e Implementación',
+      ecr4: 'Cierre y Confirmación'
+    }
+  }[language] || {};
+
   const stages = [
-    { id: 'ecr1', label: 'ECR-1', name: 'Change Request Board', color: '#0072CE' },
-    { id: 'ecr2', label: 'ECR-2', name: 'Change Description', color: '#2E7D32' },
-    { id: 'ecr2b', label: 'ECR-2B', name: 'Impact Analysis', color: '#C77700' },
-    { id: 'ecr3', label: 'ECR-3', name: 'Validation & Implementation', color: '#8b5cf6' },
-    { id: 'ecr4', label: 'ECR-4', name: 'Closure & Confirmation', color: '#ec4899' }
+    { id: 'ecr1', label: 'ECR-1', name: tr.ecr1, color: '#0072CE' },
+    { id: 'ecr2', label: 'ECR-2', name: tr.ecr2, color: '#2E7D32' },
+    { id: 'ecr2b', label: 'ECR-2B', name: tr.ecr2b, color: '#C77700' },
+    { id: 'ecr3', label: 'ECR-3', name: tr.ecr3, color: '#8b5cf6' },
+    { id: 'ecr4', label: 'ECR-4', name: tr.ecr4, color: '#ec4899' }
   ];
 
   const styles = {

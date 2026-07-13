@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { approveSection, rejectSection } from '../../services/approvalsService';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ApprovalModal = ({
   isOpen,
@@ -11,6 +12,7 @@ const ApprovalModal = ({
   onSuccess
 }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const [action, setAction] = useState(null); // 'approve' or 'reject'
   const [comments, setComments] = useState('');
   const [loading, setLoading] = useState(false);

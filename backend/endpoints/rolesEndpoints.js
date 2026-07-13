@@ -731,26 +731,41 @@ async function getAvailableModules(req, res) {
       actions: ['create', 'edit', 'view', 'delete', 'assign_roles']
     },
     {
-      id: 'statistical_tools',
-      name: 'Statistical Tools',
-      description: 'Herramientas estadísticas: Cp/Cpk, Gage R&R, Pareto, SPC, Taguchi DOE',
-      icon: '📈',
-      sections: [
-        { id: 'cpk', name: 'Cp/Cpk', description: 'Análisis de capacidad de proceso' },
-        { id: 'gagerr', name: 'Gage R&R', description: 'Estudios de repetibilidad y reproducibilidad' },
-        { id: 'pareto', name: 'Pareto', description: 'Análisis de Pareto' },
-        { id: 'spc', name: 'SPC', description: 'Control estadístico de proceso' },
-        { id: 'taguchi', name: 'Taguchi DOE', description: 'Diseño de experimentos Taguchi' }
-      ],
-      actions: ['view', 'create', 'analyze', 'export']
-    },
-    {
       id: 'work_instructions',
       name: 'Work Instructions',
       description: 'Instrucciones de trabajo con versionamiento',
       icon: '📝',
       sections: null,
       actions: ['create', 'edit', 'view', 'approve', 'publish']
+    },
+    {
+      id: 'skills',
+      name: 'Skills & Training',
+      description: 'Gestión de habilidades, evaluaciones y matriz de competencias',
+      icon: '🎯',
+      sections: [
+        { id: 'config', name: 'Configuración', description: 'Administrar categorías, habilidades y perfiles' },
+        { id: 'team', name: 'Mi Equipo', description: 'Ver y gestionar equipo' },
+        { id: 'evaluate', name: 'Evaluaciones', description: 'Crear y completar evaluaciones' },
+        { id: 'dashboard', name: 'Dashboard', description: 'Dashboard gerencial' }
+      ],
+      actions: ['view', 'config', 'evaluate', 'manage_team']
+    },
+    {
+      id: 'hospital',
+      name: 'Hospital Dashboard',
+      description: 'Analytics de reparación y liberación de defectos',
+      icon: '🏥',
+      sections: null,
+      actions: ['view', 'repair', 'release', 'export']
+    },
+    {
+      id: 'management_review',
+      name: 'Management Review',
+      description: 'Revisión por la dirección',
+      icon: '📊',
+      sections: null,
+      actions: ['view', 'create', 'edit', 'approve']
     }
   ];
 

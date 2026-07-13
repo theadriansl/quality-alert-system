@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const Shared8DHeader = ({
   data = {},
@@ -11,6 +12,7 @@ const Shared8DHeader = ({
   readOnly = false
 }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language: lang, changeLanguage } = useLanguage();
 
   const translations = {
     en: {

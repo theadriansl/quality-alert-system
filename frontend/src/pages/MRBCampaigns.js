@@ -1,12 +1,101 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
-import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw, FileText } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw, FileText, List } from 'lucide-react';
+
+const API_URL_CAMPAIGNS = 'http://localhost:5000';
+
+const fmtShiftDate = d => {
+  const s = typeof d === 'string' ? d.substring(0, 10) : d;
+  return new Date(s + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' });
+};
+
+const UnregisteredRow = ({ item, rowKey, edit, selected, t, onEditChange, onToggleSelect }) => {
+  const [editing, setEditing] = React.useState(false);
+  const inspRate = parseFloat(item.inspectorUnitCost || 0);
+  const supRate  = parseFloat(item.supervisorUnitCost || 0);
+  const cost = (parseFloat(edit.insp) * parseFloat(edit.hrs) * inspRate) + (parseFloat(edit.sup) * parseFloat(edit.hrs) * supRate);
+
+  return (
+    <tr style={{ borderBottom: `1px solid ${t.border}`, opacity: selected ? 1 : 0.45 }}>
+      <td style={{ padding: '5px 8px', textAlign: 'center' }}>
+        <input type="checkbox" checked={selected} onChange={() => onToggleSelect(rowKey)}
+          style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: t.accent }} />
+      </td>
+      <td style={{ padding: '5px 8px', color: t.text, fontSize: '12px' }}>{fmtShiftDate(item.inspectionDate)}</td>
+      <td style={{ padding: '5px 8px', fontSize: '12px' }}>
+        <span style={{ fontFamily: 'monospace', fontWeight: '700', color: t.accent, marginRight: '6px' }}>{item.campaignNumber}</span>
+        <span style={{ color: t.textMuted, fontSize: '11px' }}>{item.title}</span>
+      </td>
+      <td style={{ padding: '5px 8px', color: t.text, fontSize: '12px' }}>
+        {item.shiftCode || '—'} <span style={{ color: t.textMuted, fontSize: '11px' }}>{item.shiftName}</span>
+      </td>
+      <td style={{ padding: '5px 8px', textAlign: 'center' }}>
+        {editing
+          ? <input type="number" min="0.5" max="24" step="0.5" value={edit.hrs} autoFocus
+              onChange={e => onEditChange(rowKey, { hrs: parseFloat(e.target.value) || 0 })}
+              style={{ width: '64px', padding: '4px', textAlign: 'center', border: `1px solid ${t.accent}`, borderRadius: '4px', backgroundColor: t.bgPanel, color: t.text, fontSize: '13px', fontWeight: '700' }} />
+          : <span style={{ fontWeight: '700', color: t.text }}>{edit.hrs} hrs</span>
+        }
+      </td>
+      <td style={{ padding: '5px 8px', textAlign: 'center', fontSize: '12px' }}>
+        {editing ? (
+          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+            <input type="number" min="0" step="1" value={edit.insp}
+              onChange={e => onEditChange(rowKey, { insp: parseFloat(e.target.value) || 0 })}
+              style={{ width: '44px', padding: '3px', textAlign: 'center', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgPanel, color: t.text, fontSize: '12px' }} />
+            <span style={{ color: t.textMuted }}>insp</span>
+            <input type="number" min="0" step="1" value={edit.sup}
+              onChange={e => onEditChange(rowKey, { sup: parseFloat(e.target.value) || 0 })}
+              style={{ width: '44px', padding: '3px', textAlign: 'center', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgPanel, color: t.text, fontSize: '12px' }} />
+            <span style={{ color: t.textMuted }}>sup</span>
+          </div>
+        ) : <span style={{ color: t.textMuted }}>{edit.insp} insp · {edit.sup} sup</span>}
+      </td>
+      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '700', color: '#C77700', fontSize: '12px' }}>
+        ${cost.toFixed(2)}
+      </td>
+      <td style={{ padding: '5px 8px', textAlign: 'center' }}>
+        {editing ? (
+          <button onClick={() => setEditing(false)}
+            style={{ padding: '4px 10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '700' }}>
+            ✓ Ok
+          </button>
+        ) : (
+          <button onClick={() => setEditing(true)}
+            style={{ padding: '4px 8px', backgroundColor: t.bgPanel, color: t.accent, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+            ✎ Editar
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+};
 
 const MRBCampaigns = () => {
   const navigate = useNavigate();
   const { theme: currentTheme } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const API_URL = 'http://localhost:5000';
+
+  // Traducciones locales
+  const L = {
+    en: {
+      campaigns: 'Campaigns', unregisteredShifts: 'Unregistered Shifts',
+      draft: 'Draft', open: 'Open', inProcess: 'In Process', cancelled: 'Cancelled', closed: 'Closed',
+      drafts: 'Drafts', openItems: 'Open', inProcessItems: 'In Process', cancelledItems: 'Cancelled', closedItems: 'Closed',
+      complete: 'Complete', dispose: 'Dispose', validate: 'Validate', view: 'View',
+      date: 'Date', campaign: 'Campaign', shift: 'Shift', hoursWorked: 'Hours Worked', resources: 'Resources', cost: 'Cost',
+    },
+    es: {
+      campaigns: 'Campañas', unregisteredShifts: 'Turnos sin registrar',
+      draft: 'Borrador', open: 'Abierto', inProcess: 'En Proceso', cancelled: 'Cancelado', closed: 'Cerrado',
+      drafts: 'Borradores', openItems: 'Abiertos', inProcessItems: 'En Proceso', cancelledItems: 'Cancelados', closedItems: 'Cerrados',
+      complete: 'Completar', dispose: 'Disponer', validate: 'Validar', view: 'Ver',
+      date: 'Fecha', campaign: 'Campaña', shift: 'Turno', hoursWorked: 'Horas Trabajadas', resources: 'Recursos', cost: 'Costo',
+    }
+  }[language] || {};
 
   const [mrbs, setMrbs] = useState([]);
   const [allMrbs, setAllMrbs] = useState([]); // For counting
@@ -14,13 +103,73 @@ const MRBCampaigns = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterClient, setFilterClient] = useState('');
   const [clients, setClients] = useState([]);
+  const [unregisteredShifts, setUnregisteredShifts] = useState([]);
+  const [shiftEdits, setShiftEdits] = useState({});
+  const [selectedKeys, setSelectedKeys] = useState(new Set());
+  const [bulkRegistering, setBulkRegistering] = useState(false);
+  const [activeTab, setActiveTab] = useState('campaigns');
+  const [sortField, setSortField] = useState('campaignNumber');
+  const [sortDir, setSortDir] = useState('asc');
+
+  useEffect(() => {
+    if (!unregisteredShifts.length) return;
+    const edits = {};
+    const keys = new Set();
+    unregisteredShifts.forEach(item => {
+      const k = `${item.campaignId}-${item.shiftId}-${item.inspectionDate}`;
+      edits[k] = { hrs: 8, insp: item.inspectorCount || 1, sup: item.supervisorCount || 0 };
+      keys.add(k);
+    });
+    setShiftEdits(edits);
+    setSelectedKeys(keys);
+  }, [unregisteredShifts]);
+
+  const handleEditChange = (key, patch) =>
+    setShiftEdits(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+
+  const handleToggleSelect = key =>
+    setSelectedKeys(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
+
+  const handleSelectAll = checked => {
+    if (checked) setSelectedKeys(new Set(unregisteredShifts.map(i => `${i.campaignId}-${i.shiftId}-${i.inspectionDate}`)));
+    else setSelectedKeys(new Set());
+  };
+
+  const handleBulkRegister = async () => {
+    const token = localStorage.getItem('token');
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const userName = `${storedUser.firstName || ''} ${storedUser.lastName || ''}`.trim() || 'Usuario';
+    const toRegister = unregisteredShifts.filter(item => selectedKeys.has(`${item.campaignId}-${item.shiftId}-${item.inspectionDate}`));
+    if (!toRegister.length) return;
+    setBulkRegistering(true);
+    try {
+      await Promise.all(toRegister.map(async item => {
+        const key = `${item.campaignId}-${item.shiftId}-${item.inspectionDate}`;
+        const { hrs, insp, sup } = shiftEdits[key] || { hrs: 8, insp: 1, sup: 0 };
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+        await fetch(`${API_URL}/mrb/${item.campaignId}/shift-hours`, {
+          method: 'PUT', headers,
+          body: JSON.stringify({ shiftId: item.shiftId, inspectionDate: item.inspectionDate, inspectorCount: insp, supervisorCount: sup, hoursWorked: hrs })
+        });
+        const shiftLabel = item.shiftCode ? `${item.shiftCode} — ${item.shiftName}` : (item.shiftName || 'Sin turno');
+        const dateLabel = fmtShiftDate(item.inspectionDate);
+        await fetch(`${API_URL}/mrb/${item.campaignId}/comments`, {
+          method: 'POST', headers,
+          body: JSON.stringify({ comment: `📋 Turno registrado retroactivamente: ${shiftLabel} · ${dateLabel} · ${hrs}h · ${insp} insp · ${sup} sup — registrado por ${userName} desde Lista de Campañas`, commentType: 'note' })
+        });
+      }));
+      const registeredKeys = new Set(toRegister.map(i => `${i.campaignId}-${i.shiftId}-${i.inspectionDate}`));
+      setUnregisteredShifts(prev => prev.filter(i => !registeredKeys.has(`${i.campaignId}-${i.shiftId}-${i.inspectionDate}`)));
+    } catch (e) { console.error('Error bulk registering shifts:', e); }
+    finally { setBulkRegistering(false); }
+  };
 
   const STATUS_CONFIG = {
-    BORRADOR: { label: 'Borrador', color: '#6b7280', icon: FileText },
-    ABIERTA: { label: 'Abierto', color: '#C77700', icon: AlertTriangle },
-    EN_PROCESO: { label: 'En Proceso', color: currentTheme.accent, icon: Clock },
-    CANCELADA: { label: 'Cancelado', color: '#B00020', icon: XCircle },
-    CERRADA: { label: 'Cerrado', color: '#22c55e', icon: CheckCircle }
+    BORRADOR: { label: L.draft, color: '#6b7280', icon: FileText },
+    ABIERTA: { label: L.open, color: '#C77700', icon: AlertTriangle },
+    EN_PROCESO: { label: L.inProcess, color: currentTheme.accent, icon: Clock },
+    CANCELADA: { label: L.cancelled, color: '#B00020', icon: XCircle },
+    CERRADA: { label: L.closed, color: '#22c55e', icon: CheckCircle }
   };
 
   useEffect(() => {
@@ -33,24 +182,26 @@ const MRBCampaigns = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Build query params
       const params = new URLSearchParams();
       if (filterStatus) params.set('status', filterStatus);
       if (filterClient) params.set('clientId', filterClient);
 
-      const [mrbsRes, allMrbsRes, clientsRes] = await Promise.all([
+      const [mrbsRes, allMrbsRes, clientsRes, unregRes] = await Promise.all([
         fetch(`${API_URL}/mrb?${params.toString()}`, { headers }),
-        fetch(`${API_URL}/mrb`, { headers }), // All for counting
-        fetch(`${API_URL}/clients/list`, { headers })
+        fetch(`${API_URL}/mrb`, { headers }),
+        fetch(`${API_URL}/clients/list`, { headers }),
+        fetch(`${API_URL}/mrb/unregistered-shifts`, { headers })
       ]);
 
       const mrbsData = await mrbsRes.json();
       const allMrbsData = await allMrbsRes.json();
       const clientsData = await clientsRes.json();
+      const unregData = await unregRes.json();
 
       setMrbs(mrbsData.mrbs || mrbsData.campaigns || []);
       setAllMrbs(allMrbsData.mrbs || allMrbsData.campaigns || []);
       setClients(clientsData.clients || []);
+      setUnregisteredShifts(unregData.unregistered || []);
 
     } catch (err) {
       console.error('Error loading MRBs:', err);
@@ -59,6 +210,7 @@ const MRBCampaigns = () => {
     }
   };
 
+
   // Count MRBs by status
   const statusCounts = {
     BORRADOR: allMrbs.filter(m => m.status === 'BORRADOR').length,
@@ -66,6 +218,43 @@ const MRBCampaigns = () => {
     EN_PROCESO: allMrbs.filter(m => m.status === 'EN_PROCESO').length,
     CANCELADA: allMrbs.filter(m => m.status === 'CANCELADA').length,
     CERRADA: allMrbs.filter(m => m.status === 'CERRADA').length
+  };
+
+  const SORT_FIELDS = {
+    campaignNumber: m => m.campaignNumber || '',
+    sourceType:     m => m.sourceType || '',
+    title:          m => m.title || '',
+    clientName:     m => m.clientName || '',
+    partNumber:     m => m.partNumber || '',
+    departmentName: m => m.departmentName || '',
+    severityCode:   m => m.severityCode || m.severityName || '',
+    status:         m => m.status || '',
+    createdAt:      m => m.createdAt || '',
+    reportedByName: m => m.reportedByName || ''
+  };
+
+  const handleSort = field => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const sortedMrbs = [...mrbs].sort((a, b) => {
+    const fn = SORT_FIELDS[sortField] || (m => '');
+    const av = fn(a).toLowerCase(), bv = fn(b).toLowerCase();
+    return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+
+  const SortTh = ({ field, label, align = 'left' }) => {
+    const active = sortField === field;
+    return (
+      <th onClick={() => handleSort(field)} style={{
+        ...styles.th, textAlign: align, cursor: 'pointer', userSelect: 'none',
+        color: active ? currentTheme.accent : currentTheme.textDim,
+        whiteSpace: 'nowrap'
+      }}>
+        {label} {active ? (sortDir === 'asc' ? '▲' : '▼') : <span style={{ opacity: 0.3 }}>⇅</span>}
+      </th>
+    );
   };
 
   const formatDate = (dateStr) => {
@@ -231,14 +420,106 @@ const MRBCampaigns = () => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: `2px solid ${currentTheme.border}` }}>
+        {[
+          { id: 'campaigns', label: L.campaigns, icon: List },
+          { id: 'unregistered', label: `${L.unregisteredShifts}${unregisteredShifts.length ? ` (${unregisteredShifts.length})` : ''}`, icon: AlertTriangle, alert: unregisteredShifts.length > 0 }
+        ].map(({ id, label, icon: Icon, alert }) => (
+          <button key={id} onClick={() => setActiveTab(id)} style={{
+            padding: '10px 18px',
+            fontSize: '13px',
+            fontWeight: activeTab === id ? '700' : '500',
+            color: alert ? '#ef4444' : activeTab === id ? currentTheme.accent : currentTheme.textDim,
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderBottom: `2px solid ${activeTab === id ? (alert ? '#ef4444' : currentTheme.accent) : 'transparent'}`,
+            marginBottom: '-2px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'unregistered' && (
+        <>
+          {unregisteredShifts.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span style={{ fontSize: '13px', color: currentTheme.textDim }}>
+                {selectedKeys.size} de {unregisteredShifts.length} seleccionado{selectedKeys.size !== 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={handleBulkRegister}
+                disabled={bulkRegistering || selectedKeys.size === 0}
+                style={{
+                  padding: '9px 20px', fontSize: '13px', fontWeight: '700',
+                  backgroundColor: bulkRegistering || selectedKeys.size === 0 ? '#6b7280' : '#7c3aed',
+                  color: 'white', border: 'none', borderRadius: '8px',
+                  cursor: bulkRegistering || selectedKeys.size === 0 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {bulkRegistering ? 'Registrando…' : `✓ Registrar seleccionados (${selectedKeys.size})`}
+              </button>
+            </div>
+          )}
+          <div style={styles.card}>
+            {unregisteredShifts.length === 0 ? (
+              <div style={styles.emptyState}>
+                <CheckCircle size={40} style={{ marginBottom: '12px', opacity: 0.4 }} />
+                <p>Todos los turnos están registrados</p>
+              </div>
+            ) : (
+              <table style={styles.table}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${currentTheme.border}` }}>
+                    <th style={{ padding: '10px 8px', textAlign: 'center', width: '36px' }}>
+                      <input type="checkbox"
+                        checked={selectedKeys.size === unregisteredShifts.length}
+                        onChange={e => handleSelectAll(e.target.checked)}
+                        style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: currentTheme.accent }} />
+                    </th>
+                    {[L.date, L.campaign, L.shift, L.hoursWorked, L.resources, L.cost, ''].map(h => (
+                      <th key={h} style={{ padding: '10px 8px', textAlign: [L.date, L.campaign, L.shift].includes(h) ? 'left' : 'center', color: currentTheme.textDim, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {unregisteredShifts.map(item => {
+                    const key = `${item.campaignId}-${item.shiftId}-${item.inspectionDate}`;
+                    return (
+                      <UnregisteredRow
+                        key={key}
+                        rowKey={key}
+                        item={item}
+                        edit={shiftEdits[key] || { hrs: 8, insp: 1, sup: 0 }}
+                        selected={selectedKeys.has(key)}
+                        t={currentTheme}
+                        onEditChange={handleEditChange}
+                        onToggleSelect={handleToggleSelect}
+                      />
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'campaigns' && <>
       {/* Status Cards */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
         {[
-          { key: 'BORRADOR', label: 'Borradores', color: '#6b7280', icon: FileText },
-          { key: 'ABIERTA', label: 'Abiertos', color: '#C77700', icon: AlertTriangle },
-          { key: 'EN_PROCESO', label: 'En Proceso', color: currentTheme.accent, icon: Clock },
-          { key: 'CANCELADA', label: 'Cancelados', color: '#B00020', icon: XCircle },
-          { key: 'CERRADA', label: 'Cerrados', color: '#22c55e', icon: CheckCircle }
+          { key: 'BORRADOR', label: L.drafts, color: '#6b7280', icon: FileText },
+          { key: 'ABIERTA', label: L.openItems, color: '#C77700', icon: AlertTriangle },
+          { key: 'EN_PROCESO', label: L.inProcessItems, color: currentTheme.accent, icon: Clock },
+          { key: 'CANCELADA', label: L.cancelledItems, color: '#B00020', icon: XCircle },
+          { key: 'CERRADA', label: L.closedItems, color: '#22c55e', icon: CheckCircle }
         ].map(({ key, label, color, icon: Icon }) => (
           <div
             key={key}
@@ -312,26 +593,27 @@ const MRBCampaigns = () => {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>Número</th>
-                <th style={styles.th}>Origen</th>
-                <th style={styles.th}>Título</th>
-                <th style={styles.th}>Cliente</th>
-                <th style={styles.th}>Parte</th>
-                <th style={styles.th}>Depto</th>
-                <th style={styles.th}>Sev</th>
-                <th style={styles.th}>Estado</th>
-                <th style={styles.th}>Fecha</th>
+                <SortTh field="campaignNumber" label="Número" />
+                <SortTh field="sourceType"     label="Origen" />
+                <SortTh field="title"          label="Título" />
+                <SortTh field="clientName"     label="Cliente" />
+                <SortTh field="partNumber"     label="Parte" />
+                <SortTh field="departmentName" label="Depto" />
+                <SortTh field="severityCode"   label="Sev" align="center" />
+                <SortTh field="status"         label="Estado" align="center" />
+                <SortTh field="createdAt"      label="Fecha" />
+                <SortTh field="reportedByName" label="Emitida por" />
                 <th style={styles.th}>Acción</th>
               </tr>
             </thead>
             <tbody>
-              {mrbs.map(mrb => {
+              {sortedMrbs.map(mrb => {
                 const actionConfig = {
-                  'BORRADOR': { label: 'Completar', color: '#6b7280', icon: FileText },
-                  'ABIERTA': { label: 'Disponer', color: '#C77700', icon: Send },
-                  'EN_PROCESO': { label: 'Validar', color: currentTheme.accent, icon: CheckCircle },
-                  'CANCELADA': { label: 'Ver', color: '#B00020', icon: Eye },
-                  'CERRADA': { label: 'Ver', color: '#22c55e', icon: Eye }
+                  'BORRADOR': { label: L.complete, color: '#6b7280', icon: FileText },
+                  'ABIERTA': { label: L.dispose, color: '#C77700', icon: Send },
+                  'EN_PROCESO': { label: L.validate, color: currentTheme.accent, icon: CheckCircle },
+                  'CANCELADA': { label: L.view, color: '#B00020', icon: Eye },
+                  'CERRADA': { label: L.view, color: '#22c55e', icon: Eye }
                 };
                 const action = actionConfig[mrb.status] || actionConfig['CERRADA'];
                 const ActionIcon = action.icon;
@@ -400,6 +682,11 @@ const MRBCampaigns = () => {
                     <td style={styles.td}>{getStatusBadge(mrb.status)}</td>
                     <td style={styles.td}>{formatDate(mrb.createdAt)}</td>
                     <td style={styles.td}>
+                      <span style={{ fontSize: '12px', color: currentTheme.text }}>
+                        {mrb.reportedByName || '-'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
                       <button
                         style={{ ...styles.viewButton, backgroundColor: action.color }}
                         onClick={(e) => {
@@ -418,6 +705,7 @@ const MRBCampaigns = () => {
           </table>
         )}
       </div>
+      </>}
     </div>
   );
 };

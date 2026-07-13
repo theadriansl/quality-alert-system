@@ -9,6 +9,10 @@ const createTransporter = () => {
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
+    },
+    // Allow self-signed certificates (for development)
+    tls: {
+      rejectUnauthorized: false
     }
   });
 };
@@ -194,9 +198,161 @@ const sendMrbBulkNotifications = async (recipients, mrbInfo) => {
   return results;
 };
 
+// Send ECR approval/rejection notification to Review Board
+const sendEcrApprovalNotification = async ({ to, recipientName, ecrNumber, ecrTitle, action, approverName, level, comments }) => {
+  try {
+    const transporter = createTransporter();
+    const isApproved = action === 'approved';
+    const accentColor = isApproved ? '#22c55e' : '#ef4444';
+    const actionText = isApproved ? 'Aprobado' : 'Rechazado';
+    const actionUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ecr-workflow`;
+
+    const mailOptions = {
+      from: `"Sistema ECR" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `[ECR ${actionText}] ${ecrNumber} — Nivel ${level}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: ${accentColor}; color: white; padding: 20px 24px;">
+            <p style="margin: 0; font-size: 12px; opacity: 0.85; text-transform: uppercase; letter-spacing: 1px;">Engineering Change Request</p>
+            <h2 style="margin: 6px 0 0 0; font-size: 20px;">${ecrNumber}</h2>
+            <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.9;">${ecrTitle || ''}</p>
+          </div>
+
+          <div style="padding: 20px 24px; background-color: #f9fafb;">
+            <p style="margin: 0 0 16px 0; color: #374151;">Hola <strong>${recipientName}</strong>,</p>
+            <p style="margin: 0 0 16px 0; color: #374151;">
+              El ECR ha sido <strong style="color: ${accentColor};">${actionText}</strong> por el aprobador de nivel ${level}.
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+              <tr>
+                <td style="padding: 7px 0; font-weight: 600; color: #6b7280; font-size: 13px; width: 140px;">Aprobador</td>
+                <td style="padding: 7px 0; color: #1f2937; font-size: 13px;">${approverName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 7px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Nivel</td>
+                <td style="padding: 7px 0; color: #1f2937; font-size: 13px;">${level}</td>
+              </tr>
+              <tr>
+                <td style="padding: 7px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Estado</td>
+                <td style="padding: 7px 0; color: ${accentColor}; font-size: 13px; font-weight: 600;">${actionText}</td>
+              </tr>
+              ${comments ? `
+              <tr>
+                <td style="padding: 7px 0; font-weight: 600; color: #6b7280; font-size: 13px; vertical-align: top;">Comentarios</td>
+                <td style="padding: 7px 0; color: #1f2937; font-size: 13px;">${comments}</td>
+              </tr>
+              ` : ''}
+            </table>
+
+            <div style="text-align: center; margin-top: 24px;">
+              <a href="${actionUrl}" style="display: inline-block; background-color: #0072CE; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                Ver ECR
+              </a>
+            </div>
+          </div>
+
+          <div style="padding: 14px 24px; background-color: #e5e7eb; text-align: center; font-size: 11px; color: #6b7280;">
+            Sistema de Gestión de Calidad — Mensaje automático, no responder
+          </div>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`ECR notification email sent to ${to}:`, info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending ECR notification email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send ECR pending approval notification to approver
+const sendEcrPendingApprovalNotification = async ({ to, approverName, ecrNumber, ecrTitle, submitterName, level }) => {
+  try {
+    const transporter = createTransporter();
+    const actionUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ecr-workflow`;
+
+    const mailOptions = {
+      from: `"Sistema ECR" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `[ECR Pendiente] ${ecrNumber} — Requiere tu aprobación`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #C77700; color: white; padding: 20px 24px;">
+            <p style="margin: 0; font-size: 12px; opacity: 0.85; text-transform: uppercase; letter-spacing: 1px;">Engineering Change Request</p>
+            <h2 style="margin: 6px 0 0 0; font-size: 20px;">${ecrNumber}</h2>
+            <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.9;">${ecrTitle || ''}</p>
+          </div>
+
+          <div style="padding: 20px 24px; background-color: #f9fafb;">
+            <p style="margin: 0 0 16px 0; color: #374151;">Hola <strong>${approverName}</strong>,</p>
+            <p style="margin: 0 0 16px 0; color: #374151;">
+              Se te ha asignado como <strong>Aprobador Nivel ${level}</strong> para el siguiente ECR. Se requiere tu revisión y aprobación.
+            </p>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+              <tr>
+                <td style="padding: 7px 0; font-weight: 600; color: #6b7280; font-size: 13px; width: 140px;">Enviado por</td>
+                <td style="padding: 7px 0; color: #1f2937; font-size: 13px;">${submitterName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 7px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Nivel de Aprobación</td>
+                <td style="padding: 7px 0; color: #C77700; font-size: 13px; font-weight: 600;">${level}</td>
+              </tr>
+            </table>
+
+            <div style="text-align: center; margin-top: 24px;">
+              <a href="${actionUrl}" style="display: inline-block; background-color: #0072CE; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                Revisar y Aprobar
+              </a>
+            </div>
+          </div>
+
+          <div style="padding: 14px 24px; background-color: #e5e7eb; text-align: center; font-size: 11px; color: #6b7280;">
+            Sistema de Gestión de Calidad — Mensaje automático, no responder
+          </div>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`ECR pending approval email sent to ${to}:`, info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending ECR pending approval email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send ECR notification to all Review Board members
+const sendEcrNotificationToReviewBoard = async (reviewBoardMembers, ecrInfo) => {
+  const results = [];
+  for (const member of reviewBoardMembers) {
+    if (!member.email) continue;
+    const result = await sendEcrApprovalNotification({
+      to: member.email,
+      recipientName: `${member.firstName || member.first_name || ''} ${member.lastName || member.last_name || ''}`.trim(),
+      ecrNumber: ecrInfo.ecrNumber,
+      ecrTitle: ecrInfo.title,
+      action: ecrInfo.action,
+      approverName: ecrInfo.approverName,
+      level: ecrInfo.level,
+      comments: ecrInfo.comments
+    });
+    results.push({ email: member.email, ...result });
+  }
+  return results;
+};
+
 module.exports = {
   sendAuditNotification,
   sendBulkAuditNotifications,
   sendMrbNotification,
-  sendMrbBulkNotifications
+  sendMrbBulkNotifications,
+  sendEcrApprovalNotification,
+  sendEcrNotificationToReviewBoard,
+  sendEcrPendingApprovalNotification
 };

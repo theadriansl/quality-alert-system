@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 /**
  * ProcessFlowBuilder V3 - Grid 2D con descripciones inline
@@ -8,6 +9,58 @@ import { useTheme } from '../../context/ThemeContext';
  */
 const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: {
+      operation: 'Operation',
+      transport: 'Transport',
+      storage: 'Storage',
+      inspection: 'Inspection',
+      decision: 'Decision',
+      arrowUp: 'Arrow ↑',
+      arrowDown: 'Arrow ↓',
+      arrowLeft: 'Arrow ←',
+      arrowRight: 'Arrow →',
+      ansiSymbols: 'ANSI Symbols',
+      addRow: '+ Add Row',
+      removeRow: '- Remove Row',
+      minRows: 'Minimum 4 rows',
+      removeLastRow: 'Remove last row',
+      instructions: 'Instructions:',
+      instr1: '1. Drag symbols',
+      instr2: '2. Write descriptions',
+      instr3: '3. Connect flow',
+      instr4: '4. Mark problem',
+      connectionMode: 'Connection mode active - Click destination cell',
+      rowHasContent: 'The last row has content. Do you want to delete it anyway?',
+      connectionLabel: 'Label (OK/NG):'
+    },
+    es: {
+      operation: 'Operación',
+      transport: 'Transporte',
+      storage: 'Almacén',
+      inspection: 'Inspección',
+      decision: 'Decisión',
+      arrowUp: 'Flecha ↑',
+      arrowDown: 'Flecha ↓',
+      arrowLeft: 'Flecha ←',
+      arrowRight: 'Flecha →',
+      ansiSymbols: 'Símbolos ANSI',
+      addRow: '+ Agregar Fila',
+      removeRow: '- Quitar Fila',
+      minRows: 'Mínimo 4 filas',
+      removeLastRow: 'Quitar última fila',
+      instructions: 'Instrucciones:',
+      instr1: '1. Arrastra símbolos',
+      instr2: '2. Escribe descripciones',
+      instr3: '3. Conecta flujo',
+      instr4: '4. Marca problema',
+      connectionMode: 'Modo conexión activo - Haz clic en celda destino',
+      rowHasContent: 'La última fila tiene contenido. ¿Deseas eliminarla de todos modos?',
+      connectionLabel: 'Etiqueta (OK/NG):'
+    }
+  }[language] || {};
   const INITIAL_ROWS = 4;
   const GRID_COLS = 8;
   const CELL_SIZE = 120; // Más grande para acomodar texto
@@ -52,15 +105,15 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
 
   // Símbolos de flujo de proceso ANSI estándar industriales
   const processSymbols = [
-    { id: 'operation', name: '○', label: 'Operación', color: '#4CAF50', shape: 'circle' },
-    { id: 'transport', name: '⇨', label: 'Transporte', color: '#2196F3', shape: 'arrow' },
-    { id: 'storage', name: '▽', label: 'Almacén', color: '#FF9800', shape: 'triangle' },
-    { id: 'inspection', name: '□', label: 'Inspección', color: '#9C27B0', shape: 'square' },
-    { id: 'decision', name: '◇', label: 'Decisión', color: '#F44336', shape: 'diamond' },
-    { id: 'arrow_up', name: '↑', label: 'Flecha ↑', color: '#607D8B', shape: 'arrow' },
-    { id: 'arrow_down', name: '↓', label: 'Flecha ↓', color: '#607D8B', shape: 'arrow' },
-    { id: 'arrow_left', name: '←', label: 'Flecha ←', color: '#607D8B', shape: 'arrow' },
-    { id: 'arrow_right', name: '→', label: 'Flecha →', color: '#607D8B', shape: 'arrow' }
+    { id: 'operation', name: '○', label: tr.operation, color: '#4CAF50', shape: 'circle' },
+    { id: 'transport', name: '⇨', label: tr.transport, color: '#2196F3', shape: 'arrow' },
+    { id: 'storage', name: '▽', label: tr.storage, color: '#FF9800', shape: 'triangle' },
+    { id: 'inspection', name: '□', label: tr.inspection, color: '#9C27B0', shape: 'square' },
+    { id: 'decision', name: '◇', label: tr.decision, color: '#F44336', shape: 'diamond' },
+    { id: 'arrow_up', name: '↑', label: tr.arrowUp, color: '#607D8B', shape: 'arrow' },
+    { id: 'arrow_down', name: '↓', label: tr.arrowDown, color: '#607D8B', shape: 'arrow' },
+    { id: 'arrow_left', name: '←', label: tr.arrowLeft, color: '#607D8B', shape: 'arrow' },
+    { id: 'arrow_right', name: '→', label: tr.arrowRight, color: '#607D8B', shape: 'arrow' }
   ];
 
   // Convertir grid 2D a array plano para serialización
@@ -179,7 +232,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
       // Si es una decisión, preguntar etiqueta
       let label = '';
       if (cell && cell.symbolId === 'decision') {
-        label = prompt('Etiqueta (OK/NG):') || '';
+        label = prompt(tr.connectionLabel) || '';
       }
 
       addConnection(connectionStart.row, connectionStart.col, row, col, label);
@@ -209,8 +262,8 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
     const hasContent = lastRow.some(cell => cell !== null);
 
     if (hasContent) {
-      const confirm = window.confirm('La última fila tiene contenido. ¿Deseas eliminarla de todos modos?');
-      if (!confirm) return;
+      const confirmDelete = window.confirm(tr.rowHasContent);
+      if (!confirmDelete) return;
     }
 
     const newGrid = grid.slice(0, -1);
@@ -466,14 +519,14 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
     <div style={styles.container}>
       {/* Sidebar con símbolos */}
       <div style={styles.sidebar}>
-        <div style={styles.sidebarTitle}>Símbolos ANSI</div>
+        <div style={styles.sidebarTitle}>{tr.ansiSymbols}</div>
 
         <button
           style={styles.addRowButton}
           onClick={addRow}
-          title="Agregar fila al grid"
+          title={tr.addRow}
         >
-          + Agregar Fila ({gridRows})
+          {tr.addRow} ({gridRows})
         </button>
 
         <button
@@ -483,9 +536,9 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
           }}
           onClick={removeRow}
           disabled={gridRows <= INITIAL_ROWS}
-          title={gridRows <= INITIAL_ROWS ? 'Mínimo 4 filas' : 'Quitar última fila'}
+          title={gridRows <= INITIAL_ROWS ? tr.minRows : tr.removeLastRow}
         >
-          - Quitar Fila
+          {tr.removeRow}
         </button>
 
         {processSymbols.map((symbol) => (
@@ -506,11 +559,11 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
         ))}
 
         <div style={styles.instructions}>
-          <b>Instrucciones:</b><br />
-          1. Arrastra símbolos<br />
-          2. Escribe descripciones<br />
-          3. Conecta flujo<br />
-          4. Marca problema
+          <b>{tr.instructions}</b><br />
+          {tr.instr1}<br />
+          {tr.instr2}<br />
+          {tr.instr3}<br />
+          {tr.instr4}
         </div>
       </div>
 
@@ -604,7 +657,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
                           <button
                             style={styles.btn}
                             onClick={(e) => removeCell(rowIdx, colIdx, e)}
-                            title="Eliminar"
+                            title={tr.removeRow || 'Delete'}
                           >
                             
                           </button>
@@ -653,7 +706,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
             boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
             zIndex: 1000
           }}>
-             Modo conexión activo - Haz clic en celda destino
+             {tr.connectionMode}
           </div>
         )}
       </div>

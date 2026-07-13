@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // ─── Color palette ────────────────────────────────────────────────────────────
 const C = {
@@ -1579,17 +1580,26 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
 };
 
 // Tamaño de columnas según el widget
-const widgetColSpan = (size) => {
-  if (size === 'lg') return 'span 2';
-  if (size === 'md') return 'span 1';
-  return 'span 1'; // sm
+const SIZE_COLS = { sm: 1, md: 2, lg: 2, xl: 4 };
+const WIDGET_SIZES = [
+  { key: 'sm', label: 'Pequeño',      cols: 1, desc: '1/4 pantalla' },
+  { key: 'md', label: 'Mediano',      cols: 2, desc: '2/4 pantalla' },
+  { key: 'lg', label: 'Medio grande', cols: 2, desc: '2/4 pantalla' },
+  { key: 'xl', label: 'Grande',       cols: 4, desc: 'Pantalla completa' },
+];
+
+const migrateSelected = (raw) => {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  if (typeof raw[0] === 'string') return raw.map(id => ({ id, size: WIDGET_CATALOG.find(c => c.id === id)?.size || 'sm' }));
+  return raw;
 };
 
 // ─── Widget sortable wrapper (DnD) ───────────────────────────────────────────
-const SortableWidget = ({ id, data, editMode, onRemove, onEditSLA }) => {
+const SortableWidget = ({ id, size, data, editMode, onRemove, onEditSLA }) => {
   const { theme: t } = useTheme();
   const meta = WIDGET_CATALOG.find(w => w.id === id);
-  const isKpi = meta?.size === 'sm';
+  const resolvedSize = size || meta?.size || 'sm';
+  const isKpi = resolvedSize === 'sm';
 
   const {
     attributes, listeners, setNodeRef, setActivatorNodeRef,
@@ -1597,7 +1607,7 @@ const SortableWidget = ({ id, data, editMode, onRemove, onEditSLA }) => {
   } = useSortable({ id });
 
   const style = {
-    gridColumn: isKpi ? 'span 1' : widgetColSpan(meta?.size),
+    gridColumn: `span ${SIZE_COLS[resolvedSize] || 1}`,
     backgroundColor: t.bgCard,
     border: `1px solid ${isDragging ? C.blue : t.border}`,
     borderRadius: '8px',
@@ -1693,43 +1703,39 @@ const DragGhost = ({ id, data }) => {
 const TabPersonalizado = ({ data, onEditSLA }) => {
   const { theme: t } = useTheme();
 
-  // Estado: lista ordenada de IDs seleccionados
   const [selected, setSelected] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_WIDGETS;
-    } catch { return DEFAULT_WIDGETS; }
+    try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? migrateSelected(JSON.parse(raw)) : DEFAULT_WIDGETS.map(id => ({ id, size: WIDGET_CATALOG.find(c => c.id === id)?.size || 'sm' })); }
+    catch { return DEFAULT_WIDGETS.map(id => ({ id, size: WIDGET_CATALOG.find(c => c.id === id)?.size || 'sm' })); }
   });
+  const [editMode,      setEditMode]      = useState(false);
+  const [activeId,      setActiveId]      = useState(null);
+  const [showModal,     setShowModal]     = useState(false);
+  const [pendingWidget, setPendingWidget] = useState(null);
 
-  const [editMode, setEditMode] = useState(false);
-  const [activeId, setActiveId] = useState(null); // ID del widget que se está arrastrando
-
-  const save = (next) => {
-    setSelected(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  };
-
-  const toggle = (id) => {
-    save(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
-  };
-
-  const reset   = () => save(DEFAULT_WIDGETS);
+  const save     = (next) => { setSelected(next); localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); };
+  const reset    = () => save(DEFAULT_WIDGETS.map(id => ({ id, size: WIDGET_CATALOG.find(c => c.id === id)?.size || 'sm' })));
   const clearAll = () => save([]);
+  const remove   = (id) => save(selected.filter(s => s.id !== id));
 
-  // DnD sensors — distancia mínima de 5px para evitar clicks accidentales
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
+  const toggleWidget = (w) => {
+    if (selected.some(s => s.id === w.id)) { save(selected.filter(s => s.id !== w.id)); }
+    else { setPendingWidget(w); }
+  };
+  const addWithSize = (size) => {
+    if (!pendingWidget) return;
+    save([...selected, { id: pendingWidget.id, size }]);
+    setPendingWidget(null);
+  };
+  const closeModal = () => { setShowModal(false); setPendingWidget(null); };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const handleDragStart = ({ active }) => setActiveId(active.id);
-
   const handleDragEnd = ({ active, over }) => {
     setActiveId(null);
     if (!over || active.id === over.id) return;
-    const oldIndex = selected.indexOf(active.id);
-    const newIndex = selected.indexOf(over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    save(arrayMove(selected, oldIndex, newIndex));
+    const oi = selected.findIndex(s => s.id === active.id), ni = selected.findIndex(s => s.id === over.id);
+    if (oi === -1 || ni === -1) return;
+    save(arrayMove(selected, oi, ni));
   };
 
   const cats = [...new Set(WIDGET_CATALOG.map(w => w.cat))];
@@ -1737,132 +1743,186 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
   return (
     <div>
       {/* Toolbar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '16px', padding: '10px 16px',
-        backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px',
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '10px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>
-            ⚙️ Mi Dashboard personalizado
-          </div>
+          <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>⚙️ Mi Dashboard personalizado</div>
           <div style={{ fontSize: '11px', color: t.textMuted }}>
             {selected.length} widget{selected.length !== 1 ? 's' : ''} activo{selected.length !== 1 ? 's' : ''}
-            {!editMode && selected.length > 0 && (
-              <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>
-            )}
+            {!editMode && selected.length > 0 && <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {editMode && (
-            <>
-              <button onClick={reset} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, color: t.textMuted, cursor: 'pointer' }}>
-                Restablecer
-              </button>
-              <button onClick={clearAll} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${C.red}44`, backgroundColor: C.red + '12', color: C.red, cursor: 'pointer' }}>
-                Limpiar todo
-              </button>
-            </>
-          )}
-          <button
-            onClick={() => setEditMode(e => !e)}
-            style={{
-              padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px',
-              border: editMode ? `2px solid ${C.blue}` : `1px solid ${t.border}`,
-              backgroundColor: editMode ? C.blue + '18' : t.bgPanel,
-              color: editMode ? C.blue : t.text,
-              cursor: 'pointer',
-            }}
-          >
+          {editMode && <>
+            <button onClick={() => setShowModal(true)} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${C.blue}`, backgroundColor: C.blue + '12', color: C.blue, cursor: 'pointer', fontWeight: '600' }}>＋ Widgets</button>
+            <button onClick={reset}    style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, color: t.textMuted, cursor: 'pointer' }}>Restablecer</button>
+            <button onClick={clearAll} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${C.red}44`, backgroundColor: C.red + '12', color: C.red, cursor: 'pointer' }}>Limpiar</button>
+          </>}
+          <button onClick={() => setEditMode(e => !e)} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: editMode ? `2px solid ${C.blue}` : `1px solid ${t.border}`, backgroundColor: editMode ? C.blue + '18' : t.bgPanel, color: editMode ? C.blue : t.text, cursor: 'pointer' }}>
             {editMode ? '✓ Listo' : '✏️ Personalizar'}
           </button>
         </div>
       </div>
 
-      {/* Picker de widgets (solo en edit mode) */}
-      {editMode && (
-        <div style={{
-          marginBottom: '20px', padding: '16px',
-          backgroundColor: t.bgCard, border: `2px dashed ${C.blue}44`, borderRadius: '8px',
-        }}>
-          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>
-            Selecciona los widgets que deseas ver — luego arrástralos para ordenarlos:
-          </div>
-          {cats.map(cat => (
-            <div key={cat} style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{cat}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {WIDGET_CATALOG.filter(w => w.cat === cat).map(w => {
-                  const active = selected.includes(w.id);
-                  return (
-                    <button
-                      key={w.id}
-                      onClick={() => toggle(w.id)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                        padding: '5px 12px', fontSize: '11px', fontWeight: active ? '700' : '400',
-                        borderRadius: '20px', cursor: 'pointer',
-                        border: active ? `2px solid ${C.blue}` : `1px solid ${t.border}`,
-                        backgroundColor: active ? C.blue + '18' : t.bgPanel,
-                        color: active ? C.blue : t.textMuted,
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <span>{w.icon}</span>
-                      <span>{w.label}</span>
-                      {active && <span style={{ marginLeft: '2px', fontWeight: '900' }}>✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Grid con DnD */}
+      {/* Grid */}
       {selected.length === 0 ? (
-        <div style={{
-          textAlign: 'center', padding: '60px 20px',
-          backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px',
-          color: t.textMuted,
-        }}>
+        <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.textMuted }}>
           <div style={{ fontSize: '32px', marginBottom: '10px' }}>📊</div>
           <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>Tu dashboard está vacío</div>
-          <div style={{ fontSize: '12px', marginTop: '6px' }}>Haz clic en <strong>✏️ Personalizar</strong> y elige los widgets que quieres ver</div>
+          <div style={{ fontSize: '12px', marginTop: '6px' }}>Haz clic en <strong>✏️ Personalizar</strong> para agregar widgets</div>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={selected} strategy={rectSortingStrategy}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '14px',
-              alignItems: 'start',
-            }}>
-              {selected.map(id => (
-                <SortableWidget
-                  key={id}
-                  id={id}
-                  data={data}
-                  editMode={editMode}
-                  onRemove={toggle}
-                  onEditSLA={onEditSLA}
-                />
-              ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <SortableContext items={selected.map(s => s.id)} strategy={rectSortingStrategy}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', alignItems: 'start' }}>
+              {selected.map(item => <SortableWidget key={item.id} id={item.id} size={item.size} data={data} editMode={editMode} onRemove={remove} onEditSLA={onEditSLA} />)}
             </div>
           </SortableContext>
-
-          {/* Ghost flotante mientras se arrastra */}
           <DragOverlay dropAnimation={{ duration: 180, easing: 'ease' }}>
             {activeId ? <DragGhost id={activeId} data={data} /> : null}
           </DragOverlay>
         </DndContext>
+      )}
+
+      {/* Modal */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={closeModal}>
+          <div style={{ backgroundColor: t.bgCard, borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '92%', maxHeight: '82vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: t.text }}>{pendingWidget ? `Tamaño — ${pendingWidget.label}` : 'Widgets del Dashboard'}</h2>
+                {pendingWidget && <button onClick={() => setPendingWidget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.blue, fontSize: '12px', padding: 0, marginTop: '4px' }}>← Volver al catálogo</button>}
+              </div>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, fontSize: '20px', lineHeight: 1 }}>✕</button>
+            </div>
+            {!pendingWidget && (
+              <>
+                <p style={{ margin: '0 0 16px', fontSize: '12px', color: t.textMuted }}>{selected.length} activo{selected.length !== 1 ? 's' : ''} — click en activo para quitar, en inactivo para agregar con tamaño</p>
+                {cats.map(cat => (
+                  <div key={cat} style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingBottom: '4px', borderBottom: `1px solid ${t.border}` }}>{cat}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {WIDGET_CATALOG.filter(w => w.cat === cat).map(item => {
+                        const active = selected.some(s => s.id === item.id);
+                        return (
+                          <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? C.blue : t.border}`, backgroundColor: active ? C.blue + '18' : t.bgPanel, color: active ? C.blue : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '700' : '500' }}>
+                            <span style={{ fontSize: '14px' }}>{item.icon}</span><span>{item.label}</span>{active && <span style={{ fontSize: '11px', fontWeight: '900' }}>✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+            {pendingWidget && (
+              <div>
+                <p style={{ fontSize: '13px', color: t.textMuted, marginBottom: '20px' }}>Selecciona qué espacio ocupará en el grid (4 columnas total):</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {WIDGET_SIZES.map(sz => {
+                    const isRec = sz.key === (pendingWidget.size || 'sm');
+                    return (
+                      <button key={sz.key} onClick={() => addWithSize(sz.key)} style={{ padding: '18px 16px', borderRadius: '10px', border: `2px solid ${isRec ? C.blue : t.border}`, backgroundColor: isRec ? C.blue + '15' : t.bgPanel, cursor: 'pointer', textAlign: 'left' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.backgroundColor = C.blue + '15'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = isRec ? C.blue : t.border; e.currentTarget.style.backgroundColor = isRec ? C.blue + '15' : t.bgPanel; }}>
+                        <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                          {[1,2,3,4].map(i => <div key={i} style={{ height: '10px', flex: 1, borderRadius: '3px', backgroundColor: i <= sz.cols ? C.blue : t.border }} />)}
+                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>{sz.label}</div>
+                        <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>{sz.desc}</div>
+                        {isRec && <div style={{ fontSize: '10px', color: C.blue, fontWeight: '600', marginTop: '4px' }}>Recomendado</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── TAB 0: Resumen ───────────────────────────────────────────────────────────
+const TabResumen = ({ data }) => {
+  const { theme: t } = useTheme();
+  const bySev      = data.bySeverity || [];
+  const bySt       = data.byStatus   || [];
+  const volByMonth = data.volByMonth  || [];
+  const byDept     = (data.byDept    || []).slice(0, 6);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <Card>
+          <SectionTitle title="Distribución por Severidad" />
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={bySev} dataKey="count" nameKey="severity" cx="50%" cy="50%" outerRadius={85}
+                label={({ severity, percent }) => `${severity} ${(percent * 100).toFixed(0)}%`}
+                labelLine={false}>
+                {bySev.map((e, i) => <Cell key={i} fill={SEV_COLORS[e.severity] || C.gray} />)}
+              </Pie>
+              <Tooltip formatter={(v, n) => [v, n]} />
+              <Legend iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </Card>
+        <Card>
+          <SectionTitle title="Distribución por Estado" />
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={bySt} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={85}
+                label={({ status, percent }) => `${status} ${(percent * 100).toFixed(0)}%`}
+                labelLine={false}>
+                {bySt.map((e, i) => <Cell key={i} fill={STATUS_COLORS[e.status] || C.gray} />)}
+              </Pie>
+              <Tooltip />
+              <Legend iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+
+      <Card>
+        <SectionTitle title="Tendencia Mensual" sub="Total emitidas, cerradas y alta severidad" />
+        <ResponsiveContainer width="100%" height={200}>
+          <ComposedChart data={volByMonth} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
+            <XAxis dataKey="month" tickFormatter={formatMonth} tick={{ fontSize: 11, fill: t.textMuted }} />
+            <YAxis tick={{ fontSize: 11, fill: t.textMuted }} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="total"    name="Total"     fill={C.blue}   radius={[3,3,0,0]} />
+            <Bar dataKey="cerrados" name="Cerradas"  fill={C.green}  radius={[3,3,0,0]} />
+            <Line type="monotone" dataKey="altaSev"  name="Alta Sev" stroke={C.red} strokeWidth={2} dot={false} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {byDept.length > 0 && (
+        <Card>
+          <SectionTitle title="Top Departamentos" />
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <thead>
+              <tr>
+                {['Departamento', 'Total', 'Cerradas', 'Alta Sev', 'Prom. Respuesta'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '6px 8px', color: t.textMuted, borderBottom: `1px solid ${t.border}`, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {byDept.map((d, i) => (
+                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel + '44' }}>
+                  <td style={{ padding: '7px 8px', color: t.text, borderBottom: `1px solid ${t.border}` }}>{d.department}</td>
+                  <td style={{ padding: '7px 8px', color: t.text, borderBottom: `1px solid ${t.border}`, fontWeight: '700' }}>{d.total}</td>
+                  <td style={{ padding: '7px 8px', color: C.green, borderBottom: `1px solid ${t.border}` }}>{d.cerrados}</td>
+                  <td style={{ padding: '7px 8px', color: d.altaSev > 0 ? C.red : t.textMuted, borderBottom: `1px solid ${t.border}` }}>{d.altaSev}</td>
+                  <td style={{ padding: '7px 8px', color: t.textMuted, borderBottom: `1px solid ${t.border}` }}>{formatHours(d.avgResponseH)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
       )}
     </div>
   );
@@ -1870,7 +1930,8 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const QARDashboardComponent = ({ data, onRefresh }) => {
-  const [tab, setTab] = useState(() => localStorage.getItem('qar-dashboard-tab') || 'volumen');
+  const { t: tr, language, changeLanguage } = useLanguage();
+  const [tab, setTab] = useState(() => localStorage.getItem('qar-dashboard-tab') || 'resumen');
   const [showSlaModal, setShowSlaModal] = useState(false);
 
   const handleTabChange = useCallback((newTab) => {
@@ -1889,7 +1950,8 @@ const QARDashboardComponent = ({ data, onRefresh }) => {
   const tb = data.topBar || {};
 
   const TABS = [
-    { id: 'volumen',       label: 'Volumen & Flujo',       icon: '📊' },
+    { id: 'resumen',       label: 'Resumen',                icon: '📋' },
+    { id: 'volumen',       label: 'Volumen & Flujo',        icon: '📊' },
     { id: 'tiempo',        label: 'Tiempo & Respuesta',     icon: '⏱️' },
     { id: 'calidad',       label: 'Calidad de Respuesta',   icon: '✅' },
     { id: 'operacion',     label: 'Operación Interna',      icon: '🏭' },
@@ -1919,6 +1981,7 @@ const QARDashboardComponent = ({ data, onRefresh }) => {
       <TabBar tabs={TABS} active={tab} onSelect={handleTabChange} />
 
       {/* Tab content */}
+      {tab === 'resumen'       && <TabResumen      data={data} />}
       {tab === 'volumen'       && <TabVolumen      data={data} />}
       {tab === 'tiempo'        && <TabTiempo       data={data} onEditSLA={handleEditSLA} />}
       {tab === 'calidad'       && <TabCalidad      data={data} />}

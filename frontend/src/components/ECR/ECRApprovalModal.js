@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ECRApprovalModal = ({
   isOpen,
   onClose,
   ecrId,
   level,
-  onSuccess
+  onSuccess,
+  language = 'es'
 }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language: lang, changeLanguage } = useLanguage();
   const { showSuccess, showError } = useToast();
   const [action, setAction] = useState(null); // 'approve' or 'reject'
   const [comments, setComments] = useState('');
@@ -27,6 +30,62 @@ const ECRApprovalModal = ({
     setAction('reject');
   };
 
+  const generateMailto = (mailtoData, actionType) => {
+    if (!mailtoData) return;
+
+    let toEmails = [];
+    let ccEmails = [];
+    let subject = '';
+    let body = '';
+
+    if (actionType === 'approve') {
+      // If there's a next approver, notify them; otherwise notify all (creator + board + approvers)
+      if (mailtoData.nextApproverEmail) {
+        toEmails = [mailtoData.nextApproverEmail];
+        subject = encodeURIComponent(`ECR ${mailtoData.ecrNumber} - Pendiente de tu Aprobación`);
+        body = encodeURIComponent(
+          `Hola ${mailtoData.nextApproverName || ''},\n\n` +
+          `El ECR "${mailtoData.ecrNumber} - ${mailtoData.changeTitle}" ha sido aprobado en el nivel anterior y ahora está pendiente de tu aprobación.\n\n` +
+          `Por favor revisa y toma acción en el sistema.\n\n` +
+          `Saludos`
+        );
+      } else {
+        // Fully approved - notify creator + Review Board + all approvers
+        toEmails = mailtoData.allRecipientsEmails || [];
+        if (mailtoData.creatorEmail && !toEmails.includes(mailtoData.creatorEmail)) {
+          toEmails.push(mailtoData.creatorEmail);
+        }
+        subject = encodeURIComponent(`ECR ${mailtoData.ecrNumber} - Aprobado Completamente`);
+        body = encodeURIComponent(
+          `Equipo,\n\n` +
+          `El ECR "${mailtoData.ecrNumber} - ${mailtoData.changeTitle}" ha sido APROBADO completamente.\n\n` +
+          `Se puede proceder con la implementación del cambio.\n\n` +
+          `Saludos`
+        );
+      }
+    } else {
+      // Rejected - notify creator AND Review Board
+      toEmails = mailtoData.creatorEmail ? [mailtoData.creatorEmail] : [];
+      ccEmails = mailtoData.reviewBoardEmails || [];
+      subject = encodeURIComponent(`ECR ${mailtoData.ecrNumber} - Devuelto para Correcciones`);
+      body = encodeURIComponent(
+        `Hola ${mailtoData.creatorName || ''},\n\n` +
+        `El ECR "${mailtoData.ecrNumber} - ${mailtoData.changeTitle}" ha sido devuelto para correcciones.\n\n` +
+        `Motivo:\n${mailtoData.rejectionComments || comments}\n\n` +
+        `Por favor realiza las correcciones necesarias y vuelve a enviar a aprobación.\n\n` +
+        `Saludos`
+      );
+    }
+
+    if (toEmails.length > 0) {
+      let mailtoLink = `mailto:${toEmails.join(',')}?subject=${subject}&body=${body}`;
+      if (ccEmails.length > 0) {
+        mailtoLink = `mailto:${toEmails.join(',')}?cc=${ccEmails.join(',')}&subject=${subject}&body=${body}`;
+      }
+      window.open(mailtoLink, '_blank');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -34,7 +93,7 @@ const ECRApprovalModal = ({
     if (loading) return;
 
     if (action === 'reject' && !comments.trim()) {
-      setError('Los comentarios son obligatorios al rechazar');
+      setError(language === 'es' ? 'Los comentarios son obligatorios al rechazar' : 'Comments are required when rejecting');
       return;
     }
 
@@ -45,18 +104,24 @@ const ECRApprovalModal = ({
       const token = localStorage.getItem('token');
       const endpoint = action === 'approve' ? 'approve' : 'reject';
 
-      await axios.post(
+      const response = await axios.post(
         `http://localhost:5000/ecr/${ecrId}/${endpoint}`,
         { level, comments },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      showSuccess(` ${action === 'approve' ? 'Aprobado' : 'Rechazado'} exitosamente`);
+      showSuccess(language === 'es' ? ` ${action === 'approve' ? 'Aprobado' : 'Devuelto'} exitosamente` : ` ${action === 'approve' ? 'Approved' : 'Rejected'} successfully`);
+
+      // Generate mailto link
+      if (response.data?.mailtoData) {
+        generateMailto(response.data.mailtoData, action);
+      }
+
       onSuccess();
       handleClose();
     } catch (err) {
       console.error(' Error en aprobación/rechazo:', err);
-      setError(err.response?.data?.message || 'Error al procesar la acción');
+      setError(err.response?.data?.message || (language === 'es' ? 'Error al procesar la acción' : 'Error processing action'));
     } finally {
       setLoading(false);
     }
@@ -74,11 +139,11 @@ const ECRApprovalModal = ({
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        <h2 style={styles.title}>Revisar Aprobación de ECR</h2>
+        <h2 style={styles.title}>{language === 'es' ? 'Revisar Aprobación de ECR' : 'Review ECR Approval'}</h2>
 
         <div style={styles.infoSection}>
-          <p style={styles.infoLabel}>Nivel de Aprobador</p>
-          <p style={styles.infoValue}>Aprobador {level}</p>
+          <p style={styles.infoLabel}>{language === 'es' ? 'Nivel de Aprobador' : 'Approver Level'}</p>
+          <p style={styles.infoValue}>{language === 'es' ? 'Aprobador' : 'Approver'} {level}</p>
         </div>
 
         {!action && (
@@ -87,19 +152,19 @@ const ECRApprovalModal = ({
               onClick={handleApprove}
               style={{...styles.actionButton, ...styles.approveButton}}
             >
-               Aprobar
+               {language === 'es' ? 'Aprobar' : 'Approve'}
             </button>
             <button
               onClick={handleReject}
               style={{...styles.actionButton, ...styles.rejectButton}}
             >
-               Rechazar
+               {language === 'es' ? 'Rechazar' : 'Reject'}
             </button>
             <button
               onClick={handleClose}
               style={{...styles.actionButton, ...styles.cancelButton}}
             >
-              Cancelar
+              {language === 'es' ? 'Cancelar' : 'Cancel'}
             </button>
           </div>
         )}
@@ -108,19 +173,21 @@ const ECRApprovalModal = ({
           <form onSubmit={handleSubmit}>
             <div style={styles.formField}>
               <label style={styles.formLabel}>
-                Comentarios {action === 'reject' && <span style={styles.required}>*</span>}
+                {language === 'es' ? 'Comentarios' : 'Comments'} {action === 'reject' && <span style={styles.required}>*</span>}
               </label>
               <textarea
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
                 rows="4"
                 style={styles.textarea}
-                placeholder={action === 'reject' ? 'Explica la razón del rechazo...' : 'Comentarios adicionales (opcional)'}
+                placeholder={action === 'reject'
+                  ? (language === 'es' ? 'Explica la razón del rechazo...' : 'Explain the reason for rejection...')
+                  : (language === 'es' ? 'Comentarios adicionales (opcional)' : 'Additional comments (optional)')}
                 required={action === 'reject'}
               />
               {action === 'reject' && (
                 <p style={styles.requirementText}>
-                  Debes proporcionar una razón para rechazar
+                  {language === 'es' ? 'Debes proporcionar una razón para rechazar' : 'You must provide a reason for rejection'}
                 </p>
               )}
             </div>
@@ -141,7 +208,9 @@ const ECRApprovalModal = ({
                   opacity: loading ? 0.5 : 1
                 }}
               >
-                {loading ? 'Procesando...' : `Confirmar ${action === 'approve' ? 'Aprobación' : 'Rechazo'}`}
+                {loading
+                  ? (language === 'es' ? 'Procesando...' : 'Processing...')
+                  : (language === 'es' ? `Confirmar ${action === 'approve' ? 'Aprobación' : 'Rechazo'}` : `Confirm ${action === 'approve' ? 'Approval' : 'Rejection'}`)}
               </button>
               <button
                 type="button"
@@ -149,7 +218,7 @@ const ECRApprovalModal = ({
                 disabled={loading}
                 style={styles.backButton}
               >
-                Atrás
+                {language === 'es' ? 'Atrás' : 'Back'}
               </button>
             </div>
           </form>

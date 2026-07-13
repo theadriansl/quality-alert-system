@@ -72,6 +72,26 @@ const generateNCNumber = async () => {
   return `NC-AUD-${currentYear}-${String(nextSeq).padStart(3, '0')}`;
 };
 
+// Get frozen user name by ID
+const getUserFrozenName = async (userId) => {
+  if (!userId) return null;
+  const result = await query(
+    `SELECT first_name || ' ' || last_name as full_name FROM users WHERE id = $1`,
+    [userId]
+  );
+  return result.rows[0]?.full_name || null;
+};
+
+// Get frozen names for array of user IDs
+const getUsersFrozenNames = async (userIds) => {
+  if (!userIds || userIds.length === 0) return [];
+  const result = await query(
+    `SELECT id, first_name || ' ' || last_name as full_name FROM users WHERE id = ANY($1)`,
+    [userIds]
+  );
+  return result.rows.map(r => ({ id: r.id, name: r.full_name }));
+};
+
 // ============================================================================
 // DASHBOARD ENDPOINTS
 // ============================================================================
@@ -408,8 +428,14 @@ router.get('/schedules/gantt', authenticateToken, async (req, res) => {
         s.frequency,
         s.frequency_details,
         s.lead_auditor_id,
+        s.co_auditors,
+        s.daily_progress,
         u.first_name || ' ' || u.last_name as lead_auditor_name,
-        p.name as program_name
+        p.name as program_name,
+        COALESCE((
+          SELECT string_agg(cu.first_name || ' ' || cu.last_name, ', ' ORDER BY cu.first_name)
+          FROM users cu WHERE cu.id = ANY(s.co_auditors)
+        ), '') as co_auditor_names
       FROM audit_schedules s
       LEFT JOIN users u ON s.lead_auditor_id = u.id
       LEFT JOIN audit_programs p ON s.program_id = p.id
@@ -440,6 +466,7 @@ router.get('/schedules/gantt', authenticateToken, async (req, res) => {
       area: s.department || 'General',
       responsible: s.lead_auditor_id,
       responsibleName: s.lead_auditor_name,
+      coAuditorNames: s.co_auditor_names || '',
       startDate: s.planned_start_date,
       endDate: s.planned_end_date,
       actualStartDate: s.actual_start_date,
@@ -452,6 +479,7 @@ router.get('/schedules/gantt', authenticateToken, async (req, res) => {
       frequencyDetails: s.frequency_details,
       programName: s.program_name,
       auditNumber: s.audit_number,
+      dailyProgress: s.daily_progress || [],
       sourceType: 'scheduled'
     }));
 
@@ -459,6 +487,7 @@ router.get('/schedules/gantt', authenticateToken, async (req, res) => {
     let requestsSql = `
       SELECT
         ar.id,
+        ar.audit_number,
         ar.source_type,
         ar.source_id,
         ar.source_number,
@@ -477,12 +506,14 @@ router.get('/schedules/gantt', authenticateToken, async (req, res) => {
           WHEN ar.source_type = 'ECR' THEN ecr.change_title
           ELSE ar.item_name
         END as display_title,
-        (SELECT string_agg(u.first_name || ' ' || u.last_name, ', ')
-         FROM users u WHERE u.id = ANY(ar.assigned_auditors)) as auditor_names
+        (SELECT u.first_name || ' ' || u.last_name
+         FROM users u WHERE u.id = (ar.assigned_auditors)[1] LIMIT 1) as lead_auditor_name,
+        (SELECT string_agg(u.first_name || ' ' || u.last_name, ', ' ORDER BY u.first_name)
+         FROM users u WHERE u.id = ANY(ar.assigned_auditors[2:]) ) as co_auditor_names
       FROM audit_requests ar
       LEFT JOIN eightd_reports r ON ar.source_id = r.id AND ar.source_type = '8D'
       LEFT JOIN ecr_reports ecr ON ar.source_id = ecr.id AND ar.source_type = 'ECR'
-      WHERE 1=1
+      WHERE ar.source_type = '8D'
     `;
     const requestParams = [];
 
@@ -499,11 +530,13 @@ router.get('/schedules/gantt', authenticateToken, async (req, res) => {
     const requestTasks = requestsResult.rows.map(r => ({
       id: `request-${r.id}`,
       requestId: r.id,
+      auditNumber: r.audit_number,
       action: `[${r.source_type}] ${r.display_number || r.source_number}`,
       result: r.item_name || r.display_title,
       area: r.source_type,
       responsible: r.assigned_auditors?.[0] || null,
-      responsibleName: r.auditor_names || 'Sin asignar',
+      responsibleName: r.lead_auditor_name || 'Sin asignar',
+      coAuditorNames: r.co_auditor_names || '',
       startDate: r.due_date || r.created_at,
       endDate: r.due_date || r.created_at,
       status: mapRequestStatusToGantt(r.audit_status),
@@ -590,9 +623,52 @@ router.get('/schedules/:id', authenticateToken, async (req, res) => {
       linkedEcr = ecrResult.rows[0] || null;
     }
 
+    // Get auditees from normalized table
+    const auditeesResult = await query(`
+      SELECT
+        aa.id,
+        aa.user_id,
+        aa.department_id,
+        aa.stage_id,
+        aa.comments,
+        aa.performance_score,
+        aa.findings_count,
+        aa.conformities_count,
+        aa.non_conformities_count,
+        u.first_name || ' ' || u.last_name as user_name,
+        d.name as department_name,
+        s.name as stage_name
+      FROM audit_auditees aa
+      LEFT JOIN users u ON aa.user_id = u.id
+      LEFT JOIN departments d ON aa.department_id = d.id
+      LEFT JOIN inspection_stages s ON aa.stage_id = s.id
+      WHERE aa.schedule_id = $1
+      ORDER BY aa.id
+    `, [id]);
+
+    // Transform auditees to expected format for frontend
+    const auditees = auditeesResult.rows.map(a => ({
+      id: a.id,
+      userId: a.user_id ? String(a.user_id) : '',
+      departmentId: a.department_id ? String(a.department_id) : '',
+      stageId: a.stage_id ? String(a.stage_id) : '',
+      comments: a.comments || '',
+      userName: a.user_name,
+      departmentName: a.department_name,
+      stageName: a.stage_name,
+      performanceScore: a.performance_score,
+      findingsCount: a.findings_count,
+      conformitiesCount: a.conformities_count,
+      nonConformitiesCount: a.non_conformities_count
+    }));
+
+    // Override schedule.auditees with normalized data
+    const scheduleData = transformToCamelCase(schedule);
+    scheduleData.auditees = auditees.length > 0 ? auditees : schedule.auditees || [];
+
     res.json({
       success: true,
-      schedule: transformToCamelCase(schedule),
+      schedule: scheduleData,
       coAuditors: transformToCamelCase(coAuditorsInfo),
       linkedEcr: linkedEcr ? transformToCamelCase(linkedEcr) : null
     });
@@ -634,6 +710,24 @@ router.post('/schedules', authenticateToken, async (req, res) => {
 
     const schedule = result.rows[0];
 
+    // Insert auditees into normalized table
+    if (auditees && auditees.length > 0) {
+      for (const auditee of auditees) {
+        if (auditee.userId || auditee.departmentId || auditee.stageId) {
+          await query(`
+            INSERT INTO audit_auditees (schedule_id, user_id, department_id, stage_id, comments)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [
+            schedule.id,
+            auditee.userId || null,
+            auditee.departmentId || null,
+            auditee.stageId || null,
+            auditee.comments || null
+          ]);
+        }
+      }
+    }
+
     // Sync to Workload if requested
     let workloadActivityId = null;
     if (syncToWorkload) {
@@ -669,7 +763,7 @@ router.put('/schedules/:id', authenticateToken, async (req, res) => {
     isRecurring, frequency, frequencyDetails,
     leadAuditorId, coAuditors, auditees, checklistId,
     linkedEcrId, linked8dId, linkedQarId, status,
-    plannedHours, actualHours, syncToWorkload
+    plannedHours, actualHours, dailyProgress, syncToWorkload
   } = req.body;
 
   try {
@@ -696,8 +790,9 @@ router.put('/schedules/:id', authenticateToken, async (req, res) => {
         linked_qar_id = $19,
         status = COALESCE($20, status),
         planned_hours = COALESCE($21, planned_hours),
-        actual_hours = COALESCE($22, actual_hours)
-      WHERE id = $23
+        actual_hours = COALESCE($22, actual_hours),
+        daily_progress = COALESCE($23, daily_progress)
+      WHERE id = $24
       RETURNING *
     `, [
       programId, auditName, description, areaProcess, department,
@@ -705,7 +800,9 @@ router.put('/schedules/:id', authenticateToken, async (req, res) => {
       isRecurring, frequency || null, frequencyDetails ? JSON.stringify(frequencyDetails) : null,
       leadAuditorId || null, coAuditors, auditees, checklistId || null,
       linkedEcrId || null, linked8dId || null, linkedQarId || null, status,
-      plannedHours, actualHours, id
+      plannedHours, actualHours,
+      dailyProgress ? JSON.stringify(dailyProgress) : null,
+      id
     ]);
 
     if (result.rows.length === 0) {
@@ -713,6 +810,27 @@ router.put('/schedules/:id', authenticateToken, async (req, res) => {
     }
 
     const schedule = result.rows[0];
+
+    // Update auditees in normalized table (delete and re-insert)
+    if (auditees !== undefined) {
+      await query('DELETE FROM audit_auditees WHERE schedule_id = $1', [id]);
+      if (auditees && auditees.length > 0) {
+        for (const auditee of auditees) {
+          if (auditee.userId || auditee.departmentId || auditee.stageId) {
+            await query(`
+              INSERT INTO audit_auditees (schedule_id, user_id, department_id, stage_id, comments)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [
+              id,
+              auditee.userId || null,
+              auditee.departmentId || null,
+              auditee.stageId || null,
+              auditee.comments || null
+            ]);
+          }
+        }
+      }
+    }
 
     // Sync to Workload if requested or if already linked
     let workloadActivityId = schedule.workload_activity_id;
@@ -1278,23 +1396,32 @@ router.post('/audits', authenticateToken, async (req, res) => {
       totalItems = parseInt(itemsCount.rows[0].count);
     }
 
+    // Get frozen names
+    const leadAuditorName = await getUserFrozenName(schedule.lead_auditor_id);
+    const createdByName = await getUserFrozenName(req.user.id);
+    const coAuditorsNames = schedule.co_auditors ? await getUsersFrozenNames(schedule.co_auditors) : [];
+
     // Create audit execution
     const result = await query(`
       INSERT INTO audits (
-        schedule_id, audit_number, audit_date, lead_auditor_id, co_auditors,
-        auditees_present, area_process, total_items, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        schedule_id, audit_number, audit_date, lead_auditor_id, lead_auditor_name,
+        co_auditors, co_auditors_names, auditees_present, area_process, total_items,
+        created_by, created_by_name
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `, [
       scheduleId,
       schedule.audit_number,
       auditDate || new Date().toISOString().split('T')[0],
       schedule.lead_auditor_id,
+      leadAuditorName,
       schedule.co_auditors,
+      JSON.stringify(coAuditorsNames),
       auditeesPresent || schedule.auditees,
       schedule.area_process,
       totalItems,
-      req.user.id
+      req.user.id,
+      createdByName
     ]);
 
     // Update schedule status
@@ -1509,15 +1636,17 @@ router.post('/audits/:id/close', authenticateToken, async (req, res) => {
 
     const hasOpenNCs = parseInt(openNCs.rows[0].count) > 0;
     const newStatus = hasOpenNCs ? 'pending_actions' : 'closed';
+    const closedByName = await getUserFrozenName(req.user.id);
 
     const result = await query(`
       UPDATE audits SET
         status = $1,
         closed_by = $2,
+        closed_by_name = $3,
         closed_at = CURRENT_TIMESTAMP
-      WHERE id = $3
+      WHERE id = $4
       RETURNING *
-    `, [newStatus, req.user.id, id]);
+    `, [newStatus, req.user.id, closedByName, id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Audit not found' });
@@ -1940,20 +2069,19 @@ router.delete('/ncs/:id/evidence/:evidenceId', authenticateToken, async (req, re
 // AUDITORS ENDPOINTS (Simplified - uses users table)
 // ============================================================================
 
-// GET /audit/auditors - List auditors (manual + role-based)
+// GET /audit/auditors - List all active users who can be assigned as auditors
 router.get('/auditors', authenticateToken, async (req, res) => {
   try {
     const result = await query(`
-      SELECT DISTINCT
-        u.id, u.first_name, u.last_name, u.email, u.department, u.role,
-        u.is_auditor, u.auditor_areas, u.auditor_certifications,
-        CASE WHEN u.is_auditor = true THEN false
-             ELSE true END as from_role
+      SELECT u.id, u.first_name, u.last_name, u.email, u.department, u.role,
+             u.is_auditor, u.auditor_areas, u.auditor_certifications,
+             EXISTS(
+               SELECT 1 FROM user_roles ur
+               JOIN roles r ON ur.role_id = r.id
+               WHERE ur.user_id = u.id AND ur.is_active = true AND r.name ILIKE '%auditor%'
+             ) as has_auditor_role
       FROM users u
-      LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
-      LEFT JOIN roles r ON ur.role_id = r.id
-      WHERE u.is_auditor = true
-         OR r.name = 'Auditor'
+      WHERE u.is_active = true OR u.is_active IS NULL
       ORDER BY u.first_name, u.last_name
     `);
 
@@ -2376,7 +2504,7 @@ router.get('/requests', authenticateToken, async (req, res) => {
            WHERE p.report_id = ar.source_id LIMIT 1) as project_number
         FROM audit_requests ar
         LEFT JOIN eightd_reports r ON ar.source_id = r.id AND ar.source_type = '8D'
-        WHERE 1=1
+        WHERE ar.source_type = '8D'
         ${sourceType ? `AND ar.source_type = $1` : ''}
         GROUP BY ar.source_type, ar.source_id
       ),
@@ -2390,16 +2518,13 @@ router.get('/requests', authenticateToken, async (req, res) => {
           COUNT(CASE WHEN dai.auditor_judgment = 'OBS' THEN 1 END) as obs_items,
           COUNT(CASE WHEN dai.due_date < CURRENT_DATE AND dai.auditor_completed != true THEN 1 END) as overdue_items,
           MIN(CASE WHEN dai.auditor_completed != true AND dai.due_date IS NOT NULL THEN dai.due_date END) as next_due_date,
-          -- Total rejections (re-audits from history)
           (SELECT COUNT(*) FROM d7_audit_history dah
            WHERE dah.d7_audit_item_id IN (SELECT di2.id FROM d7_audit_items di2 WHERE di2.d7_validation_id = dv.id)
           ) as total_rejections,
-          -- Unique auditors assigned
           (SELECT json_agg(DISTINCT jsonb_build_object('id', u.id, 'name', u.first_name || ' ' || u.last_name))
            FROM d7_audit_items di
            LEFT JOIN users u ON u.id = ANY(di.assigned_auditors)
            WHERE di.d7_validation_id = dv.id AND u.id IS NOT NULL) as assigned_auditors,
-          -- Auditors who have responded
           (SELECT json_agg(DISTINCT jsonb_build_object('id', u.id, 'name', u.first_name || ' ' || u.last_name))
            FROM d7_audit_items di
            LEFT JOIN users u ON di.audited_by = u.id
@@ -2446,16 +2571,28 @@ router.post('/requests', authenticateToken, async (req, res) => {
   try {
     const createdIds = [];
 
+    // Generate next AUDREQ number for this year
+    const year = new Date().getFullYear();
+    const countRes = await query(
+      `SELECT COUNT(*) FROM audit_requests WHERE EXTRACT(YEAR FROM created_at) = $1`,
+      [year]
+    );
+    let nextSeq = parseInt(countRes.rows[0].count) + 1;
+
     for (const item of items) {
+      const auditNumber = `AUDREQ-${year}-${String(nextSeq).padStart(3, '0')}`;
+      nextSeq++;
+
       const result = await query(`
         INSERT INTO audit_requests (
-          source_type, source_id, source_number,
+          audit_number, source_type, source_id, source_number,
           item_name, item_comments, original_judgment,
           check_item, due_date, assigned_auditors, d7_audit_item_id, ecr_closure_audit_item_id,
           created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING id
       `, [
+        auditNumber,
         sourceType,
         sourceId,
         sourceNumber,
@@ -3012,5 +3149,6 @@ router.get('/d7-item/:itemId/history', authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: 'Error al obtener historial' });
   }
 });
+
 
 module.exports = router;

@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import wiPlantConfigService from '../../services/wiPlantConfigService';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const WIPlantConfig = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const [plants, setPlants] = useState([]);
   const [expandedPlant, setExpandedPlant] = useState(null);
   const [expandedArea, setExpandedArea] = useState(null);

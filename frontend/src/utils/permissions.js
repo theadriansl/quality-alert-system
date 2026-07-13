@@ -44,6 +44,38 @@ export const isSuperAdmin = (user = null) => {
 };
 
 /**
+ * Verifica si el usuario puede capturar defectos
+ * Considera sections.capture para acceso partial
+ * @param {Object} user - Usuario opcional
+ * @returns {boolean}
+ */
+export const canUserCaptureDefects = (user = null) => {
+  const u = user || getCurrentUser();
+
+  // Admin siempre puede
+  if (isUserAdmin(u)) return true;
+
+  // Super admin
+  if (u.permissions?.all_modules === 'full') return true;
+
+  const defectsPermission = u.permissions?.defects;
+  if (!defectsPermission) return false;
+
+  const access = defectsPermission.access || defectsPermission;
+
+  // full = puede capturar
+  if (access === 'full') return true;
+
+  // partial = verificar sections.capture
+  if (access === 'partial') {
+    return defectsPermission.sections?.capture === true;
+  }
+
+  // view/none = no puede
+  return false;
+};
+
+/**
  * Verifica si el usuario puede editar un módulo
  * @param {string} module - ID del módulo (8d, ecr, mrb, audits, clients, defects, workload, quality_alert)
  * @param {Object} user - Usuario opcional
@@ -237,6 +269,7 @@ export default {
   isUserAdmin,
   isSuperAdmin,
   canUserEdit,
+  canUserCaptureDefects,
   canUserApprove,
   hasModuleAccess,
   isReadOnly,

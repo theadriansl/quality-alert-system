@@ -8,6 +8,21 @@ const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
 
 // ============================================================================
+// HELPER: GET USER FROZEN NAME
+// Para congelar nombres de usuarios en registros históricos
+// ============================================================================
+const getUserFrozenName = (user) => {
+  if (!user) return 'Usuario Desconocido';
+  if (user.firstName && user.lastName) {
+    return `${user.firstName} ${user.lastName}`.trim();
+  }
+  if (user.first_name && user.last_name) {
+    return `${user.first_name} ${user.last_name}`.trim();
+  }
+  return user.name || user.email || `Usuario ${user.id}`;
+};
+
+// ============================================================================
 // MULTER CONFIGURATION FOR QAR PHOTOS
 // ============================================================================
 
@@ -179,8 +194,8 @@ router.get('/', authenticateToken, async (req, res) => {
              p.project_number, p.project_name,
              cp.part_number, cp.part_name,
              s.name as severity_name, s.code as severity_code, s.color as severity_color,
-             u1.first_name || ' ' || u1.last_name as assigned_to_name,
-             u2.first_name || ' ' || u2.last_name as reported_by_name,
+             COALESCE(qa.assigned_to_name, u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+             COALESCE(qa.reported_by_name, u2.first_name || ' ' || u2.last_name) as reported_by_name,
              (SELECT COUNT(*) FROM qar_defects WHERE qar_id = qa.id) as defect_count
       FROM quality_alerts qa
       LEFT JOIN clients c ON qa.client_id = c.id
@@ -276,7 +291,7 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE status = 'EMITIDO' AND created_at < NOW() - INTERVAL '1 day') as vencidos
       FROM quality_alerts qa
-      WHERE 1=1 ${dateFilter}
+      WHERE 1=1 ${baseFilter}
     `, params);
 
     // Average response time (in hours)
@@ -671,10 +686,14 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
 // ============================================================================
 router.get('/dashboard', async (req, res) => {
   try {
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, deptId, clientId, severityId } = req.query;
     const dateFilter = start_date && end_date
       ? `AND qa.created_at BETWEEN '${start_date}' AND '${end_date}'`
       : `AND qa.created_at >= NOW() - INTERVAL '90 days'`;
+    const deptFilter   = deptId     ? `AND qa.department_id = ${parseInt(deptId)}`   : '';
+    const clientFilter = clientId   ? `AND qa.client_id = ${parseInt(clientId)}`     : '';
+    const sevFilter    = severityId ? `AND qa.severity_id = ${parseInt(severityId)}` : '';
+    const baseFilter = `${dateFilter} ${deptFilter} ${clientFilter} ${sevFilter}`;
 
     const topBarResult = await query(`
       SELECT
@@ -705,7 +724,7 @@ router.get('/dashboard', async (req, res) => {
       FROM quality_alerts qa
       JOIN inspection_severities is2 ON qa.severity_id = is2.id
       LEFT JOIN qar_sla_config sla ON sla.severity_id = qa.severity_id
-      WHERE 1=1 ${dateFilter}
+      WHERE 1=1 ${baseFilter}
     `);
     const tb = topBarResult.rows[0];
     const slaResponsePct = tb.total_responded > 0 ? Math.round((tb.sla_response_ok / tb.total_responded) * 100) : null;
@@ -719,24 +738,24 @@ router.get('/dashboard', async (req, res) => {
         COUNT(*) FILTER (WHERE is2.name IN ('Crítico','ALTA')) AS alta_sev
       FROM quality_alerts qa
       JOIN inspection_severities is2 ON qa.severity_id = is2.id
-      WHERE qa.created_at >= NOW() - INTERVAL '6 months'
+      WHERE 1=1 ${baseFilter}
       GROUP BY month ORDER BY month
     `);
 
     const byStatusResult = await query(`
       SELECT status, COUNT(*) AS count FROM quality_alerts qa
-      WHERE 1=1 ${dateFilter} GROUP BY status
+      WHERE 1=1 ${baseFilter} GROUP BY status
     `);
 
     const bySeverityResult = await query(`
       SELECT is2.name AS severity, COUNT(*) AS count
       FROM quality_alerts qa JOIN inspection_severities is2 ON qa.severity_id = is2.id
-      WHERE 1=1 ${dateFilter} GROUP BY is2.name, is2.id ORDER BY is2.id DESC
+      WHERE 1=1 ${baseFilter} GROUP BY is2.name, is2.id ORDER BY is2.id DESC
     `);
 
     const byTriggerResult = await query(`
       SELECT trigger_type, COUNT(*) AS count FROM quality_alerts qa
-      WHERE 1=1 ${dateFilter} GROUP BY trigger_type
+      WHERE 1=1 ${baseFilter} GROUP BY trigger_type
     `);
 
     const responseDistResult = await query(`
@@ -747,7 +766,7 @@ router.get('/dashboard', async (req, res) => {
         COUNT(*) FILTER (WHERE qa.response_date IS NOT NULL) AS total_resp
       FROM quality_alerts qa JOIN inspection_severities is2 ON qa.severity_id = is2.id
       LEFT JOIN qar_sla_config sla ON sla.severity_id = qa.severity_id
-      WHERE 1=1 ${dateFilter}
+      WHERE 1=1 ${baseFilter}
       GROUP BY is2.name, is2.id, sla.response_hours, sla.closure_hours ORDER BY is2.id DESC
     `);
 
@@ -764,7 +783,7 @@ router.get('/dashboard', async (req, res) => {
         sla.response_hours, sla.closure_hours
       FROM quality_alerts qa JOIN inspection_severities is2 ON qa.severity_id = is2.id
       LEFT JOIN qar_sla_config sla ON sla.severity_id = qa.severity_id
-      WHERE 1=1 ${dateFilter}
+      WHERE 1=1 ${baseFilter}
       GROUP BY is2.name, is2.id, sla.response_hours, sla.closure_hours ORDER BY is2.id DESC
     `);
 
@@ -776,7 +795,7 @@ router.get('/dashboard', async (req, res) => {
         COUNT(*) FILTER (WHERE root_cause IS NOT NULL AND root_cause != '') AS with_root_cause,
         COUNT(*) FILTER (WHERE corrective_action IS NOT NULL AND corrective_action != '') AS with_ca,
         COUNT(*) AS total
-      FROM quality_alerts qa WHERE 1=1 ${dateFilter}
+      FROM quality_alerts qa WHERE 1=1 ${baseFilter}
     `);
 
     const byDeptResult = await query(`
@@ -790,7 +809,7 @@ router.get('/dashboard', async (req, res) => {
           FILTER (WHERE qa.response_date IS NOT NULL)::numeric,1) AS avg_response_h
       FROM quality_alerts qa LEFT JOIN departments d ON qa.department_id = d.id
       JOIN inspection_severities is2 ON qa.severity_id = is2.id
-      WHERE 1=1 ${dateFilter} GROUP BY d.name ORDER BY total DESC
+      WHERE 1=1 ${baseFilter} GROUP BY d.name ORDER BY total DESC
     `);
 
     const byResponsableResult = await query(`
@@ -804,7 +823,7 @@ router.get('/dashboard', async (req, res) => {
           FILTER (WHERE qa.response_date IS NOT NULL)::numeric,1) AS avg_response_h
       FROM quality_alerts qa LEFT JOIN users u ON qa.assigned_to = u.id
       LEFT JOIN qar_sla_config sla ON sla.severity_id = qa.severity_id
-      WHERE 1=1 ${dateFilter} GROUP BY u.first_name, u.last_name ORDER BY total DESC LIMIT 10
+      WHERE 1=1 ${baseFilter} GROUP BY u.first_name, u.last_name ORDER BY total DESC LIMIT 10
     `);
 
     const byClientResult = await query(`
@@ -816,7 +835,7 @@ router.get('/dashboard', async (req, res) => {
           FILTER (WHERE qa.closed_at IS NOT NULL)::numeric,1) AS avg_closure_h
       FROM quality_alerts qa LEFT JOIN clients c ON qa.client_id = c.id
       JOIN inspection_severities is2 ON qa.severity_id = is2.id
-      WHERE 1=1 ${dateFilter} GROUP BY c.name ORDER BY total DESC
+      WHERE 1=1 ${baseFilter} GROUP BY c.name ORDER BY total DESC
     `);
 
     const riskResult = await query(`
@@ -993,10 +1012,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
              p.project_number, p.project_name,
              cp.part_number, cp.part_name, cp.capture_display_name,
              s.name as severity_name, s.code as severity_code, s.color as severity_color,
-             u1.first_name || ' ' || u1.last_name as assigned_to_name,
-             u2.first_name || ' ' || u2.last_name as reported_by_name,
-             u3.first_name || ' ' || u3.last_name as responded_by_name,
-             u4.first_name || ' ' || u4.last_name as validated_by_name
+             COALESCE(qa.assigned_to_name, u1.first_name || ' ' || u1.last_name) as assigned_to_name,
+             COALESCE(qa.reported_by_name, u2.first_name || ' ' || u2.last_name) as reported_by_name,
+             COALESCE(qa.responded_by_name, u3.first_name || ' ' || u3.last_name) as responded_by_name,
+             COALESCE(qa.validated_by_name, u4.first_name || ' ' || u4.last_name) as validated_by_name
       FROM quality_alerts qa
       LEFT JOIN clients c ON qa.client_id = c.id
       LEFT JOIN projects p ON qa.project_id = p.id
@@ -1030,20 +1049,23 @@ router.get('/:id', authenticateToken, async (req, res) => {
       ORDER BY de.created_at DESC
     `, [id]);
 
-    // Get recipients with type
+    // Get recipients with type (use frozen name or fallback to JOIN)
     const recipientsResult = await query(`
-      SELECT qr.*, u.first_name, u.last_name, u.email, u.role
+      SELECT qr.*,
+             COALESCE(qr.user_name, u.first_name || ' ' || u.last_name) as user_name,
+             u.first_name, u.last_name, u.email, u.role
       FROM qar_recipients qr
-      JOIN users u ON qr.user_id = u.id
+      LEFT JOIN users u ON qr.user_id = u.id
       WHERE qr.qar_id = $1
-      ORDER BY qr.recipient_type, u.first_name
+      ORDER BY qr.recipient_type, COALESCE(qr.user_name, u.first_name)
     `, [id]);
 
-    // Get comments (oldest first for timeline)
+    // Get comments (oldest first for timeline) - use frozen name or fallback to JOIN
     const commentsResult = await query(`
-      SELECT qc.*, u.first_name || ' ' || u.last_name as user_name
+      SELECT qc.*,
+             COALESCE(qc.user_name, u.first_name || ' ' || u.last_name) as user_name
       FROM qar_comments qc
-      JOIN users u ON qc.user_id = u.id
+      LEFT JOIN users u ON qc.user_id = u.id
       WHERE qc.qar_id = $1
       ORDER BY qc.created_at ASC
     `, [id]);
@@ -1088,23 +1110,45 @@ router.post('/', authenticateToken, async (req, res) => {
     const numberResult = await query('SELECT generate_qar_number() as alert_number');
     const alertNumber = numberResult.rows[0].alert_number;
 
-    // Create QAR
+    // CONGELAMIENTO DE USUARIOS: Obtener nombres para guardar
+    const reportedByName = req.user.firstName && req.user.lastName
+      ? `${req.user.firstName} ${req.user.lastName}`.trim()
+      : req.user.name || req.user.email || `Usuario ${req.user.id}`;
+
+    let assignedToName = null;
+    if (assignedTo) {
+      const assignedUserResult = await query(
+        'SELECT first_name, last_name, email FROM users WHERE id = $1',
+        [assignedTo]
+      );
+      if (assignedUserResult.rows.length > 0) {
+        const u = assignedUserResult.rows[0];
+        assignedToName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || `Usuario ${assignedTo}`;
+      }
+    }
+
+    // Create QAR with frozen names
     const result = await query(`
       INSERT INTO quality_alerts (
         alert_number, client_id, project_id, part_id, title, description,
         severity_id, department_id, trigger_type, trigger_defect_count, trigger_period_hours,
-        assigned_to, reported_by, photo_ok_path, photo_nok_path, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        assigned_to, assigned_to_name, reported_by, reported_by_name,
+        photo_ok_path, photo_nok_path, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *
     `, [
       alertNumber, clientId, projectId, partId, title, description,
       severityId, departmentId, triggerType, triggerDefectCount, triggerPeriodHours,
-      assignedTo, req.user.id, photoOkPath, photoNokPath, status
+      assignedTo, assignedToName, req.user.id, reportedByName,
+      photoOkPath, photoNokPath, status
     ]);
 
     const qarId = result.rows[0].id;
 
     // Link defects and update defect_entries with qar_id
+    // Also collect unit_ids for traceability
+    const affectedUnitIds = new Set();
+
     for (const defectId of defectIds) {
       await query(
         'INSERT INTO qar_defects (qar_id, defect_entry_id) VALUES ($1, $2)',
@@ -1115,6 +1159,27 @@ router.post('/', authenticateToken, async (req, res) => {
         'UPDATE defect_entries_v2 SET qar_id = $1 WHERE id = $2',
         [qarId, defectId]
       );
+
+      // Get unit_id from defect for traceability
+      const defectUnit = await query('SELECT unit_id FROM defect_entries_v2 WHERE id = $1', [defectId]);
+      if (defectUnit.rows.length > 0 && defectUnit.rows[0].unit_id) {
+        affectedUnitIds.add(defectUnit.rows[0].unit_id);
+      }
+    }
+
+    // === TRAZABILIDAD: Registrar QAR_CREATED en unit_history ===
+    for (const unitId of affectedUnitIds) {
+      await query(`
+        INSERT INTO unit_history (
+          unit_id, event_type, source_table, source_id, description, performed_by, metadata
+        ) VALUES ($1, 'QAR_CREATED', 'quality_alerts', $2, $3, $4, $5)
+      `, [
+        unitId,
+        qarId,
+        `QAR ${alertNumber} emitido`,
+        req.user.id,
+        JSON.stringify({ qarId, alertNumber, defectCount: defectIds.length })
+      ]);
     }
 
     // Mark any declined history as now having a QAR
@@ -1127,26 +1192,34 @@ router.post('/', authenticateToken, async (req, res) => {
       `, [qarId, defectIds.map(String)]);
     }
 
-    // Add response recipients
+    // Add response recipients with frozen names
     for (const userId of responseRecipientIds) {
+      const userResult = await query('SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]);
+      const userName = userResult.rows.length > 0
+        ? `${userResult.rows[0].first_name || ''} ${userResult.rows[0].last_name || ''}`.trim() || userResult.rows[0].email
+        : `Usuario ${userId}`;
       await query(
-        "INSERT INTO qar_recipients (qar_id, user_id, recipient_type) VALUES ($1, $2, 'response')",
-        [qarId, userId]
+        "INSERT INTO qar_recipients (qar_id, user_id, user_name, recipient_type) VALUES ($1, $2, $3, 'response')",
+        [qarId, userId, userName]
       );
     }
 
-    // Add validation recipients
+    // Add validation recipients with frozen names
     for (const userId of validationRecipientIds) {
+      const userResult = await query('SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]);
+      const userName = userResult.rows.length > 0
+        ? `${userResult.rows[0].first_name || ''} ${userResult.rows[0].last_name || ''}`.trim() || userResult.rows[0].email
+        : `Usuario ${userId}`;
       await query(
-        "INSERT INTO qar_recipients (qar_id, user_id, recipient_type) VALUES ($1, $2, 'validation')",
-        [qarId, userId]
+        "INSERT INTO qar_recipients (qar_id, user_id, user_name, recipient_type) VALUES ($1, $2, $3, 'validation')",
+        [qarId, userId, userName]
       );
     }
 
-    // Add creation comment
+    // Add creation comment with frozen name
     await query(
-      'INSERT INTO qar_comments (qar_id, user_id, comment, comment_type) VALUES ($1, $2, $3, $4)',
-      [qarId, req.user.id, 'QAR emitido', 'status_change']
+      'INSERT INTO qar_comments (qar_id, user_id, user_name, comment, comment_type) VALUES ($1, $2, $3, $4, $5)',
+      [qarId, req.user.id, reportedByName, 'QAR emitido', 'status_change']
     );
 
     res.json({
@@ -1210,11 +1283,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Log status change
+    // Log status change with frozen name
     if (status && status !== oldStatus) {
+      const userName = getUserFrozenName(req.user);
       await query(
-        'INSERT INTO qar_comments (qar_id, user_id, comment, comment_type) VALUES ($1, $2, $3, $4)',
-        [id, req.user.id, `Estado cambiado de ${oldStatus} a ${status}`, 'status_change']
+        'INSERT INTO qar_comments (qar_id, user_id, user_name, comment, comment_type) VALUES ($1, $2, $3, $4, $5)',
+        [id, req.user.id, userName, `Estado cambiado de ${oldStatus} a ${status}`, 'status_change']
       );
     }
 
@@ -1234,11 +1308,12 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
   const { comment, commentType = 'note' } = req.body;
 
   try {
+    const userName = getUserFrozenName(req.user);
     const result = await query(`
-      INSERT INTO qar_comments (qar_id, user_id, comment, comment_type)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO qar_comments (qar_id, user_id, user_name, comment, comment_type)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `, [id, req.user.id, comment, commentType]);
+    `, [id, req.user.id, userName, comment, commentType]);
 
     res.json({
       success: true,
@@ -1287,10 +1362,11 @@ router.post('/:id/respond', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'QAR not found' });
     }
 
-    // Add response comment
+    // Add response comment with frozen name
+    const responderName = getUserFrozenName(req.user);
     await query(
-      'INSERT INTO qar_comments (qar_id, user_id, comment, comment_type) VALUES ($1, $2, $3, $4)',
-      [id, req.user.id, 'Respuesta enviada - Pendiente de validación', 'response']
+      'INSERT INTO qar_comments (qar_id, user_id, user_name, comment, comment_type) VALUES ($1, $2, $3, $4, $5)',
+      [id, req.user.id, responderName, 'Respuesta enviada - Pendiente de validación', 'response']
     );
 
     // Update recipient acknowledged time
@@ -1339,23 +1415,25 @@ router.post('/:id/validate', authenticateToken, async (req, res) => {
     }
 
     if (approved) {
-      // Approve and close QAR
+      // Approve and close QAR with frozen name
+      const validatorName = getUserFrozenName(req.user);
       const result = await query(`
         UPDATE quality_alerts SET
           validated_by = $1,
+          validated_by_name = $2,
           validation_date = CURRENT_TIMESTAMP,
           validation_status = 'approved',
           status = 'CERRADO',
           closed_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2
+        WHERE id = $3
         RETURNING *
-      `, [req.user.id, id]);
+      `, [req.user.id, validatorName, id]);
 
-      // Add approval comment
+      // Add approval comment with frozen name
       await query(
-        'INSERT INTO qar_comments (qar_id, user_id, comment, comment_type) VALUES ($1, $2, $3, $4)',
-        [id, req.user.id, 'QAR validado y cerrado', 'validation']
+        'INSERT INTO qar_comments (qar_id, user_id, user_name, comment, comment_type) VALUES ($1, $2, $3, $4, $5)',
+        [id, req.user.id, validatorName, 'QAR validado y cerrado', 'validation']
       );
 
       res.json({
@@ -1364,22 +1442,24 @@ router.post('/:id/validate', authenticateToken, async (req, res) => {
         message: 'QAR validado y cerrado exitosamente'
       });
     } else {
-      // Reject - send back to response recipients
+      // Reject - send back to response recipients with frozen name
+      const validatorName = getUserFrozenName(req.user);
       const result = await query(`
         UPDATE quality_alerts SET
           validated_by = $1,
+          validated_by_name = $2,
           validation_date = CURRENT_TIMESTAMP,
           validation_status = 'rejected',
           status = 'RECHAZADO',
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2
+        WHERE id = $3
         RETURNING *
-      `, [req.user.id, id]);
+      `, [req.user.id, validatorName, id]);
 
-      // Add rejection comment
+      // Add rejection comment with frozen name
       await query(
-        'INSERT INTO qar_comments (qar_id, user_id, comment, comment_type) VALUES ($1, $2, $3, $4)',
-        [id, req.user.id, `Rechazado: ${rejectionReason || 'Sin motivo especificado'}`, 'rejection']
+        'INSERT INTO qar_comments (qar_id, user_id, user_name, comment, comment_type) VALUES ($1, $2, $3, $4, $5)',
+        [id, req.user.id, validatorName, `Rechazado: ${rejectionReason || 'Sin motivo especificado'}`, 'rejection']
       );
 
       res.json({

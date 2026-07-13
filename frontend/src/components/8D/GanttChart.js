@@ -4,13 +4,19 @@ import { useTheme } from '../../context/ThemeContext';
 // Helper para calcular días hábiles entre dos fechas
 const countBusinessDays = (startDate, endDate) => {
   if (!startDate || !endDate) return 0;
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse en zona horaria local (evita UTC offset que cambia el día)
+  const toLocal = (d) => {
+    const s = typeof d === 'string' ? d : new Date(d).toISOString();
+    const [y, m, day] = s.split('T')[0].split('-').map(Number);
+    return new Date(y, m - 1, day);
+  };
+  const start = toLocal(startDate);
+  const end = toLocal(endDate);
   let count = 0;
   const current = new Date(start);
   while (current <= end) {
     const dayOfWeek = current.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // No sábado ni domingo
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
       count++;
     }
     current.setDate(current.getDate() + 1);
@@ -156,20 +162,77 @@ const getStyles = (t) => ({
   }
 });
 
+// Contar ocurrencias REALES de una tarea recurrente según frequencyDetails
+const countRealOccurrences = (startDate, endDate, frequency, frequencyDetails) => {
+  if (!startDate || !endDate) return 0;
+
+  const toLocal = (d) => {
+    const s = typeof d === 'string' ? d : new Date(d).toISOString();
+    const [y, m, day] = s.split('T')[0].split('-').map(Number);
+    return new Date(y, m - 1, day);
+  };
+
+  const start = toLocal(startDate);
+  const end = toLocal(endDate);
+
+  // Parsear frequencyDetails si es string
+  let details = frequencyDetails || {};
+  if (typeof details === 'string') {
+    try { details = JSON.parse(details); } catch (e) { details = {}; }
+  }
+
+  const recurringDays = details.recurring_days || [];
+
+  // Si no hay días seleccionados, usar el día de inicio
+  const daysToUse = recurringDays.length > 0 ? recurringDays : [start.getDay()];
+
+  // Intervalo de semanas según frecuencia
+  const weekInterval = {
+    'weekly': 1,
+    'biweekly': 2,
+    'monthly': 4,
+    'quarterly': 13
+  }[frequency] || 1;
+
+  // Contar ocurrencias reales
+  let count = 0;
+  let currentWeekStart = new Date(start);
+  currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Ir al domingo
+
+  let weekCount = 0;
+
+  while (currentWeekStart <= end) {
+    if (weekCount % weekInterval === 0) {
+      for (const dayOfWeek of daysToUse) {
+        const occurrenceDate = new Date(currentWeekStart);
+        occurrenceDate.setDate(occurrenceDate.getDate() + dayOfWeek);
+
+        if (occurrenceDate >= start && occurrenceDate <= end) {
+          count++;
+        }
+      }
+    }
+    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+    weekCount++;
+  }
+
+  return Math.max(1, count);
+};
+
 // Componente separado para el popup de edición - evita re-renders del grid completo
-const EditDayPopup = memo(({ date, existingEntry, onSave, onCancel, formatDate, priorityColor, isRecurring, taskStartDate, taskEndDate }) => {
+const EditDayPopup = memo(({ date, existingEntry, onSave, onCancel, formatDate, priorityColor, isRecurring, frequency, frequencyDetails, taskStartDate, taskEndDate }) => {
   const { theme: t } = useTheme();
   const [progressInput, setProgressInput] = useState(existingEntry?.progress?.toString() || '');
   const [activitiesInput, setActivitiesInput] = useState(existingEntry?.activities || '');
   const [hoursInput, setHoursInput] = useState(existingEntry?.hours?.toString() || '');
 
-  // Calcular límite diario para actividades recurrentes
+  // Calcular límite por ocurrencia para actividades recurrentes (usando ocurrencias REALES)
   const dailyLimit = useMemo(() => {
-    if (!isRecurring) return null;
-    const businessDays = countBusinessDays(taskStartDate, taskEndDate);
-    if (businessDays <= 0) return null;
-    return Math.round((100 / businessDays) * 100) / 100; // Redondear a 2 decimales
-  }, [isRecurring, taskStartDate, taskEndDate]);
+    if (!isRecurring || !frequency) return null;
+    const occurrences = countRealOccurrences(taskStartDate, taskEndDate, frequency, frequencyDetails);
+    if (occurrences <= 0) return null;
+    return Math.round((100 / occurrences) * 100) / 100;
+  }, [isRecurring, frequency, frequencyDetails, taskStartDate, taskEndDate]);
 
   // Sincronizar estado cuando cambia existingEntry (al abrir diferente día)
   useEffect(() => {
@@ -187,11 +250,12 @@ const EditDayPopup = memo(({ date, existingEntry, onSave, onCancel, formatDate, 
 
     // Verificar límite diario en actividades recurrentes
     if (dailyLimit && progress > dailyLimit) {
+      const realOccurrences = countRealOccurrences(taskStartDate, taskEndDate, frequency, frequencyDetails);
       const confirmExceed = window.confirm(
         ` ACTIVIDAD RECURRENTE\n\n` +
-        `El progreso ingresado (${progress}%) excede el límite diario sugerido (${dailyLimit}%).\n\n` +
-        `Esta actividad tiene ${countBusinessDays(taskStartDate, taskEndDate)} días hábiles, ` +
-        `por lo que el avance máximo recomendado por día es ${dailyLimit}%.\n\n` +
+        `El progreso ingresado (${progress}%) excede el límite sugerido (${dailyLimit}%).\n\n` +
+        `Esta actividad tiene ${realOccurrences} ocurrencias programadas, ` +
+        `por lo que el avance máximo recomendado por ocurrencia es ${dailyLimit}%.\n\n` +
         `¿Deseas continuar de todos modos?`
       );
       if (!confirmExceed) return;
@@ -397,8 +461,10 @@ const GanttRow = memo(({
 }) => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
-  const user = users.find(u => u.id === task.responsible);
-  const userName = user ? `${user.firstName} ${user.lastName}` : 'Sin asignar';
+  const user = task.responsible ? users.find(u => Number(u.id) === Number(task.responsible)) : null;
+  const userName = user
+    ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || 'Sin nombre'
+    : 'Sin asignar';
   const position = calculateBarPosition(task, columns, cellWidth);
 
   // Memoizar ocurrencias para tareas recurrentes
@@ -510,6 +576,8 @@ const GanttRow = memo(({
                   formatDate={formatDate}
                   priorityColor={getPriorityColor(task.priority)}
                   isRecurring={task.isRecurring}
+                  frequency={task.frequency}
+                  frequencyDetails={task.frequencyDetails}
                   taskStartDate={task.startDate}
                   taskEndDate={task.endDate}
                 />
@@ -800,9 +868,9 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
     const dates = [];
 
     tasks.forEach(t => {
-      // Fechas planificadas
-      if (t.startDate) dates.push(new Date(t.startDate));
-      if (t.endDate) dates.push(new Date(t.endDate));
+      // Fechas planificadas (parse local para evitar UTC offset)
+      if (t.startDate) dates.push(parseLocalDate(t.startDate.split('T')[0]));
+      if (t.endDate) dates.push(parseLocalDate(t.endDate.split('T')[0]));
 
       // Fechas de progreso real (dailyProgress)
       if (t.dailyProgress && Array.isArray(t.dailyProgress)) {
@@ -838,8 +906,8 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
     const cols = [];
     const current = new Date(start);
 
-    // Limitar a máximo 180 días para evitar render de miles de celdas
-    const maxDays = 180;
+    // Limitar a máximo 400 días para soportar actividades de un año
+    const maxDays = 400;
     let dayCount = 0;
 
     while (current <= end && dayCount < maxDays) {
@@ -853,8 +921,8 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
 
   // Calcular posición de la barra (en píxeles basado en cellWidth)
   const calculateBarPosition = (task, columns, cw) => {
-    const startDate = new Date(task.startDate || Date.now());
-    const endDate = new Date(task.endDate || Date.now());
+    const startDate = task.startDate ? parseLocalDate(task.startDate.split('T')[0]) : new Date();
+    const endDate = task.endDate ? parseLocalDate(task.endDate.split('T')[0]) : new Date();
 
     const startIndex = columns.findIndex(col =>
       col.toDateString() === startDate.toDateString()

@@ -97,6 +97,7 @@ const ecrService = {
       if (filters.clientId) params.append('clientId', filters.clientId);
       if (filters.department) params.append('department', filters.department);
       if (filters.changeType) params.append('changeType', filters.changeType);
+      if (filters.riskLevel) params.append('riskLevel', filters.riskLevel);
 
       const url = `${API_URL}/dashboard-stats${params.toString() ? '?' + params.toString() : ''}`;
       const response = await axios.get(url, getAuthHeader());

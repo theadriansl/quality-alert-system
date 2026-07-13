@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Edit2, Trash2, X, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import bomFieldService from '../services/bomFieldService';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Texto' },
@@ -18,6 +20,28 @@ const FIELD_TYPES = [
 
 const BomFieldConfigPanel = ({ onClose, isAdmin }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+  const { showError, showSuccess } = useToast();
+
+  const translations = {
+    en: {
+      nameKeyRequired: 'Name and Key are required',
+      errorCreating: 'Error creating field',
+      errorUpdating: 'Error updating field',
+      errorDeleting: 'Error deleting field',
+      errorChangingStatus: 'Error changing status'
+    },
+    es: {
+      nameKeyRequired: 'Nombre y Clave son requeridos',
+      errorCreating: 'Error al crear campo',
+      errorUpdating: 'Error al actualizar campo',
+      errorDeleting: 'Error al eliminar campo',
+      errorChangingStatus: 'Error al cambiar estado'
+    }
+  };
+
+  const tr = (key) => translations[language]?.[key] || key;
+
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -65,7 +89,7 @@ const BomFieldConfigPanel = ({ onClose, isAdmin }) => {
 
   const handleAddField = async () => {
     if (!newField.fieldName || !newField.fieldKey) {
-      alert('Nombre y Clave son requeridos');
+      showError(tr('nameKeyRequired'));
       return;
     }
 
@@ -84,7 +108,7 @@ const BomFieldConfigPanel = ({ onClose, isAdmin }) => {
       setShowAddForm(false);
       resetNewField();
     } catch (err) {
-      alert('Error al crear campo: ' + err.message);
+      showError(`${tr('errorCreating')}: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -92,7 +116,7 @@ const BomFieldConfigPanel = ({ onClose, isAdmin }) => {
 
   const handleUpdateField = async () => {
     if (!editingField.fieldName || !editingField.fieldKey) {
-      alert('Nombre y Clave son requeridos');
+      showError(tr('nameKeyRequired'));
       return;
     }
 
@@ -110,7 +134,7 @@ const BomFieldConfigPanel = ({ onClose, isAdmin }) => {
       await loadFields();
       setEditingField(null);
     } catch (err) {
-      alert('Error al actualizar campo: ' + err.message);
+      showError(`${tr('errorUpdating')}: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -125,7 +149,7 @@ const BomFieldConfigPanel = ({ onClose, isAdmin }) => {
       await bomFieldService.deleteFieldConfig(id);
       await loadFields();
     } catch (err) {
-      alert('Error al eliminar campo: ' + err.message);
+      showError(`${tr('errorDeleting')}: ${err.message}`);
     }
   };
 
@@ -134,7 +158,7 @@ const BomFieldConfigPanel = ({ onClose, isAdmin }) => {
       await bomFieldService.updateFieldConfig(field.id, { isActive: !field.isActive });
       await loadFields();
     } catch (err) {
-      alert('Error al cambiar estado: ' + err.message);
+      showError(`${tr('errorChangingStatus')}: ${err.message}`);
     }
   };
 

@@ -1,0 +1,179 @@
+  CHECKLIST TESTING - HOSPITAL DE DEFECTOS
+
+  1. ACCESO Y NAVEGACIÓN
+
+  [ ] Acceder desde Home → Tarjeta "Hospital de Defectos"
+  [ ] URL directa /defect-hospital funciona
+  [ ] URL directa /hospital-dashboard funciona
+  [ ] Botón "Dashboard" navega correctamente
+  [ ] Botón "Volver" funciona
+  [ ] Cambio de idioma (ES/EN) funciona
+
+  2. DASHBOARD (/hospital-dashboard)
+
+  [ ] Tab RESUMEN
+      [ ] KPIs cargan correctamente (WIP, Reparados, Liberados, etc.)
+      [ ] Gráficas renderizan sin errores
+      [ ] Datos de aging (verde/amarillo/rojo) muestran correctamente
+
+  [ ] Tab OPERATIVO
+      [ ] Throughput por período
+      [ ] WIP por ubicación
+      [ ] Tiempos promedio de reparación
+
+  [ ] Tab CALIDAD
+      [ ] Top defectos
+      [ ] Defectos repetitivos
+      [ ] % de rechazo
+
+  [ ] Tab COSTOS
+      [ ] Costo de reparación
+      [ ] Costo de scrap
+      [ ] Tendencia mensual
+
+  [ ] Tab PERSONAL
+      [ ] Stats de reparadores
+      [ ] Stats de liberadores
+      [ ] Productividad
+
+  [ ] Tab MI DASHBOARD
+      [ ] Widgets personalizables (si aplica)
+
+  3. HOSPITAL OPERATIVO (/defect-hospital)
+
+  3.1 Tab REPARACIONES
+
+  [ ] Sub-tab "Sin Ubicación"
+      [ ] Lista piezas sin ubicación asignada
+      [ ] Cards agrupadas por serial
+      [ ] Expandir/colapsar cards funciona
+
+  [ ] Sub-tab "En Cola"
+      [ ] Lista piezas con ubicación, pendientes de reparar
+      [ ] Filtro de búsqueda funciona
+
+  3.2 ASIGNAR UBICACIÓN
+
+  [ ] Botón "Asignar Ubicación" abre modal
+  [ ] Escanear/escribir código de ubicación
+  [ ] Validación de código existente
+  [ ] Escanear/escribir seriales
+  [ ] Lista de seriales se acumula
+  [ ] Asignar múltiples seriales a ubicación
+  [ ] Mensaje de éxito/error
+  [ ] Pieza se mueve a "En Cola"
+
+  3.3 INICIAR REPARACIÓN
+
+  [ ] Seleccionar estación de reparación (primera vez)
+  [ ] Estación persiste en sesión
+  [ ] Botón "Iniciar Reparación" abre modal
+  [ ] Campos requeridos:
+      [ ] Tipo de reparación (catálogo)
+      [ ] Tiempo estimado (minutos)
+      [ ] Notas (opcional)
+  [ ] Guardar → pieza pasa a "En Reparación"
+  [ ] Mensaje de confirmación
+
+  3.4 Tab EN REPARACIÓN
+
+  [ ] Lista piezas actualmente en reparación
+  [ ] Muestra tiempo transcurrido
+  [ ] Color coding por aging
+  [ ] Doble-click para acción rápida
+
+  3.5 COMPLETAR REPARACIÓN
+
+  [ ] Botón "Completar Reparación" abre modal
+  [ ] Campos:
+      [ ] Confirmar tipo de reparación
+      [ ] Tiempo real (minutos)
+      [ ] Notas de reparación
+  [ ] Guardar → pieza pasa a "Liberaciones"
+  [ ] Mensaje de confirmación
+
+  3.6 ENTREGAR A QA
+
+  [ ] Botón "Entregar a QA" abre modal
+  [ ] Escanear ubicación de entrega (estación QA)
+  [ ] Escanear seriales a entregar
+  [ ] Confirmar entrega
+  [ ] Mensaje: "X piezas entregadas a QA en [ubicación]"
+
+  3.7 Tab LIBERACIONES
+
+  [ ] Lista piezas pendientes de liberar
+  [ ] Filtrar por estación de liberación
+  [ ] Cards muestran info de reparación previa
+
+  3.8 LIBERAR DEFECTO
+
+  [ ] Seleccionar estación de liberación (primera vez)
+  [ ] Botón "Liberar" abre modal
+  [ ] Campos:
+      [ ] Razón de liberación (catálogo)
+      [ ] Tiempo de liberación (minutos)
+      [ ] Notas (opcional)
+  [ ] Guardar → pieza sale del hospital
+  [ ] Mensaje de confirmación
+
+  3.9 RECHAZAR DEFECTO
+
+  [ ] Botón "Rechazar" abre modal
+  [ ] Campos:
+      [ ] Causa raíz (catálogo)
+      [ ] Notas de rechazo
+      [ ] Reasignar a departamento (opcional)
+  [ ] Si reasigna departamento, comentario obligatorio
+  [ ] Guardar → pieza regresa a "Reparaciones"
+  [ ] Mensaje de confirmación
+
+  3.10 CUARENTENA
+
+  [ ] Botón "Cuarentena" disponible
+  [ ] Confirmar acción
+  [ ] Pieza se mueve a cuarentena
+  [ ] Mensaje de confirmación
+
+  3.11 SCRAP
+
+  [ ] Botón "Scrap" disponible
+  [ ] Confirmar acción (destructiva)
+  [ ] Pieza se marca como scrap
+  [ ] Mensaje de confirmación
+
+  4. CATÁLOGOS Y CONFIGURACIÓN
+
+  [ ] Tipos de reparación cargan
+  [ ] Razones de liberación cargan
+  [ ] Causas raíz cargan
+  [ ] Departamentos cargan
+  [ ] Estaciones de reparación cargan
+  [ ] Estaciones de liberación cargan
+
+  5. PERSISTENCIA Y SESIÓN
+
+  [ ] Estación de reparación persiste en sesión
+  [ ] Estación de liberación persiste en sesión
+  [ ] Cambiar estación funciona
+  [ ] Limpiar estación funciona
+  [ ] Refresh de página mantiene estación
+
+  6. MANEJO DE ERRORES
+
+  [ ] Error de conexión muestra mensaje
+  [ ] Código de ubicación inválido muestra error
+  [ ] Serial no encontrado muestra error
+  [ ] Campos requeridos vacíos muestra validación
+
+  7. FLUJO COMPLETO (E2E)
+
+  [ ] Pieza llega sin ubicación
+  [ ] Asignar ubicación → pasa a "En Cola"
+  [ ] Iniciar reparación → pasa a "En Reparación"
+  [ ] Completar reparación → pasa a "Liberaciones"
+  [ ] Entregar a QA → actualiza ubicación
+  [ ] Liberar → sale del hospital
+
+  ---
+  ¿Quieres que lo exporte a un archivo .md o empezamos a testear directamente?

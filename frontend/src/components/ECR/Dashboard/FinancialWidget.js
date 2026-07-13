@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
+import { useLanguage } from '../../../context/LanguageContext';
 
 /**
  * Financial Impact Widget
@@ -12,6 +13,46 @@ import { useTheme } from '../../../context/ThemeContext';
  */
 const FinancialWidget = ({ data = {} }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: {
+      noFinancialData: 'No financial impact data',
+      addCostsSavings: 'Add costs/savings in ECR-4 (Closure)',
+      totalBalance: 'Total Balance',
+      netSavings: 'Net savings',
+      netCost: 'Net cost',
+      inECRs: 'in',
+      breakdownByType: 'Breakdown by Type',
+      scrap: 'Scrap',
+      investment: 'Investment',
+      overtime: 'Overtime',
+      other: 'Other',
+      savings: 'Savings',
+      totalCosts: 'Total Costs',
+      totalSavings: 'Total Savings',
+      costs: 'Costs',
+      savingsLabel: 'Savings'
+    },
+    es: {
+      noFinancialData: 'No hay datos de impacto financiero',
+      addCostsSavings: 'Agrega costos/ahorros en ECR-4 (Cierre)',
+      totalBalance: 'Balance Total',
+      netSavings: 'Ahorro neto',
+      netCost: 'Costo neto',
+      inECRs: 'en',
+      breakdownByType: 'Desglose por Tipo',
+      scrap: 'Scrap',
+      investment: 'Inversión',
+      overtime: 'Tiempo Extra',
+      other: 'Otros',
+      savings: 'Ahorros',
+      totalCosts: 'Total Costos',
+      totalSavings: 'Total Ahorros',
+      costs: 'Costos',
+      savingsLabel: 'Ahorros'
+    }
+  }[language] || {};
   const {
     totalCost = 0,
     totalSavings = 0,
@@ -33,11 +74,11 @@ const FinancialWidget = ({ data = {} }) => {
 
   // Tipos de impacto con sus configuraciones
   const impactTypes = [
-    { key: 'scrap', label: 'Scrap', icon: '', isExpense: true },
-    { key: 'investment', label: 'Inversion', icon: '', isExpense: true },
-    { key: 'overtime', label: 'Tiempo Extra', icon: '', isExpense: true },
-    { key: 'other', label: 'Otros', icon: '', isExpense: true },
-    { key: 'savings', label: 'Ahorros', icon: '', isExpense: false }
+    { key: 'scrap', label: tr.scrap, icon: '', isExpense: true },
+    { key: 'investment', label: tr.investment, icon: '', isExpense: true },
+    { key: 'overtime', label: tr.overtime, icon: '', isExpense: true },
+    { key: 'other', label: tr.other, icon: '', isExpense: true },
+    { key: 'savings', label: tr.savings, icon: '', isExpense: false }
   ];
 
   const styles = {
@@ -132,9 +173,9 @@ const FinancialWidget = ({ data = {} }) => {
     return (
       <div style={styles.emptyState}>
         <DollarSign size={32} color="#d1d5db" style={{ marginBottom: '8px' }} />
-        <div>No hay datos de impacto financiero</div>
+        <div>{tr.noFinancialData}</div>
         <div style={{ fontSize: '11px', marginTop: '4px' }}>
-          Agrega costos/ahorros en ECR-4 (Cierre)
+          {tr.addCostsSavings}
         </div>
       </div>
     );
@@ -149,19 +190,19 @@ const FinancialWidget = ({ data = {} }) => {
     <div style={styles.container}>
       {/* Balance Total */}
       <div style={styles.mainValue}>
-        <div style={styles.balanceLabel}>Balance Total</div>
+        <div style={styles.balanceLabel}>{tr.totalBalance}</div>
         <div style={{ ...styles.balanceValue, color: balanceColor }}>
           {isPositiveBalance ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
           {netImpact < 0 ? '-' : ''}{formatCurrency(netImpact)}
         </div>
         <div style={styles.balanceSubtext}>
-          {isPositiveBalance ? 'Ahorro neto' : 'Costo neto'} en {withData} ECRs
+          {isPositiveBalance ? tr.netSavings : tr.netCost} {tr.inECRs} {withData} ECRs
         </div>
       </div>
 
       {/* Desglose por tipo */}
       <div style={styles.breakdownSection}>
-        <div style={styles.breakdownTitle}>Desglose por Tipo</div>
+        <div style={styles.breakdownTitle}>{tr.breakdownByType}</div>
         <div style={styles.breakdownList}>
           {impactTypes.map(type => {
             const value = byType[type.key] || 0;
@@ -190,7 +231,7 @@ const FinancialWidget = ({ data = {} }) => {
                 <div style={styles.breakdownItem}>
                   <div style={styles.breakdownLeft}>
                     <span style={styles.breakdownIcon}></span>
-                    <span style={styles.breakdownLabel}>Total Costos</span>
+                    <span style={styles.breakdownLabel}>{tr.totalCosts}</span>
                   </div>
                   <span style={{ ...styles.breakdownValue, color: '#ef4444' }}>
                     {formatCurrency(totalCost)}
@@ -201,7 +242,7 @@ const FinancialWidget = ({ data = {} }) => {
                 <div style={styles.breakdownItem}>
                   <div style={styles.breakdownLeft}>
                     <span style={styles.breakdownIcon}></span>
-                    <span style={styles.breakdownLabel}>Total Ahorros</span>
+                    <span style={styles.breakdownLabel}>{tr.totalSavings}</span>
                   </div>
                   <span style={{ ...styles.breakdownValue, color: '#2E7D32' }}>
                     -{formatCurrency(totalSavings)}
@@ -215,7 +256,7 @@ const FinancialWidget = ({ data = {} }) => {
 
       {/* Footer */}
       <div style={styles.footer}>
-        Costos: {formatCurrency(totalCost)} | Ahorros: {formatCurrency(totalSavings)}
+        {tr.costs}: {formatCurrency(totalCost)} | {tr.savingsLabel}: {formatCurrency(totalSavings)}
       </div>
     </div>
   );

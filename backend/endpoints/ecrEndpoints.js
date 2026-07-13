@@ -153,6 +153,8 @@ async function getECRById(req, res) {
       impactVerifications: rawRow.impact_verifications,
       impactAnalysis: rawRow.impact_analysis,
       validationEvidence: rawRow.validation_evidence,
+      validationTeams: rawRow.validation_teams || {},
+      reviewBoard: rawRow.review_board || { members: [], primary: null },
       closureSignatures: rawRow.closure_signatures,
       closureApprovalHistory: rawRow.closure_approval_history || [],
       closureApprovalStatus: rawRow.closure_approval_status || 'draft',
@@ -890,10 +892,7 @@ async function updateECRReport(req, res) {
       updates.push(`rejection_signatures = $${paramIndex++}`);
       values.push(JSON.stringify(req.body.rejectionSignatures));
     }
-    if (req.body.rejectionReason !== undefined) {
-      updates.push(`rejection_reason = $${paramIndex++}`);
-      values.push(req.body.rejectionReason);
-    }
+    // rejection_reason already handled above (line ~704)
     if (req.body.stageCompletionStatus !== undefined) {
       updates.push(`stage_completion_status = $${paramIndex++}`);
       values.push(JSON.stringify(req.body.stageCompletionStatus));
@@ -1573,7 +1572,35 @@ async function saveClosureAuditItems(req, res) {
     const saverName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
     logECRAction({ ecrId: parseInt(id), actionType: 'closure_items_saved', actionCategory: 'closure', sectionName: 'ecr-4', userId: req.user?.id, userName: saverName, description: `Items de auditoría ECR-4 guardados (${items?.length || 0} items)` });
 
-    res.json({ success: true, message: 'Closure audit items saved' });
+    // Fetch and return the updated items with real IDs
+    const itemsResult = await query(`
+      SELECT * FROM ecr_closure_audit_items
+      WHERE ecr_id = $1
+      ORDER BY display_order, id
+    `, [id]);
+
+    const itemIds = itemsResult.rows.map(i => i.id);
+    let files = [];
+    if (itemIds.length > 0) {
+      const filesResult = await query(`
+        SELECT * FROM ecr_closure_audit_item_files
+        WHERE ecr_closure_audit_item_id = ANY($1)
+        ORDER BY uploaded_at DESC
+      `, [itemIds]);
+      files = filesResult.rows;
+    }
+
+    const savedItems = itemsResult.rows.map(item => {
+      const itemFiles = files
+        .filter(f => f.ecr_closure_audit_item_id === item.id)
+        .map(f => transformToCamelCase(f));
+      return {
+        ...transformToCamelCase(item),
+        files: itemFiles
+      };
+    });
+
+    res.json({ success: true, message: 'Closure audit items saved', items: savedItems });
   } catch (error) {
     console.error('Error saving closure audit items:', error);
     res.status(500).json({ success: false, message: 'Error saving items' });

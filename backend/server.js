@@ -46,7 +46,17 @@ const departmentsEndpoints = require('./endpoints/departmentsEndpoints');
 const workInstructionsEndpoints = require('./endpoints/workInstructionsEndpoints');
 const wiPlantConfigEndpoints = require('./endpoints/wiPlantConfigEndpoints');
 const managementReviewEndpoints = require('./endpoints/managementReviewEndpoints');
-const statisticalEndpoints = require('./endpoints/statisticalEndpoints');
+const stationConfigEndpoints = require('./endpoints/stationConfigEndpoints');
+const specCatalogEndpoints = require('./endpoints/specCatalogEndpoints');
+const unitRegistryEndpoints = require('./endpoints/unitRegistryEndpoints');
+const specInspectionEndpoints = require('./endpoints/specInspectionEndpoints');
+const locationCodesEndpoints = require('./endpoints/locationCodesEndpoints');
+const hospitalDashboardEndpoints = require('./endpoints/hospitalDashboardEndpoints');
+const hospitalRolesEndpoints = require('./endpoints/hospitalRolesEndpoints');
+const deviationEndpoints = require('./endpoints/deviationEndpoints');
+const skillsEndpoints = require('./endpoints/skillsEndpoints');
+const productionEndpoints = require('./endpoints/productionEndpoints');
+const webhookEndpoints = require('./endpoints/webhookEndpoints');
 const { auditEightDChanges } = require('./middleware/auditMiddleware');
 const authenticateToken = require('./middleware/auth');
 const { checkWritePermission, attachUserPermissions } = require('./middleware/permissionMiddleware');
@@ -62,6 +72,12 @@ app.use(cors({
 // Increase payload limit for base64 images
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Force UTF-8 charset for all responses (Spanish characters)
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -151,10 +167,12 @@ app.get('/auth/me', authEndpoints.verifyToken, authEndpoints.getCurrentUser);
 // ============================================================================
 app.get('/users/list', usersEndpoints.getUsersList);
 app.get('/users/qar-validators', authEndpoints.verifyToken, usersEndpoints.getQarValidators);
+app.get('/users/mrb-validators', authEndpoints.verifyToken, usersEndpoints.getMrbValidators);
 app.post('/users', authEndpoints.verifyToken, usersEndpoints.requireAdmin, usersEndpoints.createUser);
 app.get('/users/:id', usersEndpoints.getUserById);
 app.put('/users/:id', authEndpoints.verifyToken, usersEndpoints.requireAdmin, usersEndpoints.updateUser);
 app.put('/users/:id/qar-validator', authEndpoints.verifyToken, usersEndpoints.requireAdmin, usersEndpoints.toggleQarValidator);
+app.put('/users/:id/mrb-validator', authEndpoints.verifyToken, usersEndpoints.requireAdmin, usersEndpoints.toggleMrbValidator);
 
 // ============================================================================
 // ROLES & PERMISSIONS ENDPOINTS
@@ -805,6 +823,21 @@ app.use('/workload', workloadEndpoints);
 // ============================================================================
 app.use('/defects', defectEndpoints);
 app.use('/defects-v2', defectAdminEndpoints);
+app.use('/location-codes', locationCodesEndpoints);
+app.use('/hospital-dashboard', hospitalDashboardEndpoints);
+
+// Hospital User Roles - CRUD para roles secundarios de Hospital
+app.get('/hospital-roles', authEndpoints.verifyToken, hospitalRolesEndpoints.getHospitalUsers);
+app.get('/hospital-roles/user/:userId', authEndpoints.verifyToken, hospitalRolesEndpoints.getUserHospitalRoles);
+app.get('/hospital-roles/check/:userId', authEndpoints.verifyToken, hospitalRolesEndpoints.checkUserHospitalPermissions);
+app.post('/hospital-roles', authEndpoints.verifyToken, usersEndpoints.requireAdmin, hospitalRolesEndpoints.assignHospitalRole);
+app.put('/hospital-roles/:id', authEndpoints.verifyToken, usersEndpoints.requireAdmin, hospitalRolesEndpoints.updateHospitalRole);
+app.delete('/hospital-roles/:id', authEndpoints.verifyToken, usersEndpoints.requireAdmin, hospitalRolesEndpoints.deleteHospitalRole);
+app.delete('/hospital-roles/user/:userId/role/:role', authEndpoints.verifyToken, usersEndpoints.requireAdmin, hospitalRolesEndpoints.removeUserHospitalRole);
+
+app.use('/skills', skillsEndpoints);
+app.use('/deviations', deviationEndpoints);
+console.log('✅ Deviations endpoints registered');
 app.use('/qar', qarEndpoints);
 app.use('/mrb', mrbEndpoints);
 
@@ -817,6 +850,42 @@ app.use('/audit', auditEndpoints);
 // INSPECTION CATALOG ROUTES (per-client configuration)
 // ============================================================================
 app.use('/inspection-catalogs', inspectionCatalogEndpoints(pool));
+
+// ============================================================================
+// STATION CONFIGURATION ROUTES (specs/defects per station)
+// ============================================================================
+app.use('/station-config', stationConfigEndpoints);
+console.log('✅ Station Configuration endpoints registered');
+
+// ============================================================================
+// SPEC CATALOG ROUTES (part specifications)
+// ============================================================================
+app.use('/spec-catalog', specCatalogEndpoints);
+console.log('✅ Spec Catalog endpoints registered');
+
+// ============================================================================
+// UNIT REGISTRY ROUTES (serial/lot traceability)
+// ============================================================================
+app.use('/unit-registry', unitRegistryEndpoints);
+console.log('✅ Unit Registry endpoints registered');
+
+// ============================================================================
+// PRODUCTION ENTRIES ROUTES (production data from external systems)
+// ============================================================================
+app.use('/production', authEndpoints.verifyToken, productionEndpoints);
+console.log('✅ Production Entries endpoints registered');
+
+// ============================================================================
+// WEBHOOK ROUTES (external systems integration - SAP, MES, EPICOR, etc.)
+// ============================================================================
+app.use('/webhook', webhookEndpoints);  // Auth manejada internamente por API key
+console.log('✅ Webhook endpoints registered');
+
+// ============================================================================
+// SPEC INSPECTION ROUTES (spec inspection capture)
+// ============================================================================
+app.use('/spec-inspection', specInspectionEndpoints);
+console.log('✅ Spec Inspection endpoints registered');
 
 // ============================================================================
 // TEAM TEMPLATES ROUTES
@@ -850,36 +919,6 @@ console.log('✅ WI Plant Configuration endpoints registered');
 // ============================================================================
 managementReviewEndpoints(app);
 
-// ============================================================================
-// STATISTICAL TOOLS ENDPOINTS
-// ============================================================================
-const multerMemory = require('multer')({ storage: require('multer').memoryStorage() });
-
-// Datasets
-app.get('/api/stat/datasets', authEndpoints.verifyToken, statisticalEndpoints.getDatasets);
-app.get('/api/stat/datasets/:id', authEndpoints.verifyToken, statisticalEndpoints.getDataset);
-app.post('/api/stat/datasets', authEndpoints.verifyToken, statisticalEndpoints.createDataset);
-app.put('/api/stat/datasets/:id', authEndpoints.verifyToken, statisticalEndpoints.updateDataset);
-app.delete('/api/stat/datasets/:id', authEndpoints.verifyToken, statisticalEndpoints.deleteDataset);
-app.post('/api/stat/datasets/upload-csv', authEndpoints.verifyToken, multerMemory.single('file'), statisticalEndpoints.uploadCSV);
-
-// Analysis endpoints
-app.post('/api/stat/histogram', authEndpoints.verifyToken, statisticalEndpoints.analyzeHistogram);
-app.post('/api/stat/pareto', authEndpoints.verifyToken, statisticalEndpoints.analyzePareto);
-app.post('/api/stat/capability', authEndpoints.verifyToken, statisticalEndpoints.analyzeCapability);
-app.post('/api/stat/control-charts', authEndpoints.verifyToken, statisticalEndpoints.analyzeControlCharts);
-app.post('/api/stat/regression', authEndpoints.verifyToken, statisticalEndpoints.analyzeRegression);
-app.post('/api/stat/gage-rr', authEndpoints.verifyToken, statisticalEndpoints.analyzeGageRR);
-app.get('/api/stat/taguchi/:arrayType', authEndpoints.verifyToken, statisticalEndpoints.getTaguchiArray);
-app.post('/api/stat/taguchi', authEndpoints.verifyToken, statisticalEndpoints.analyzeTaguchi);
-
-// Analysis history
-app.post('/api/stat/history', authEndpoints.verifyToken, statisticalEndpoints.saveAnalysis);
-app.get('/api/stat/history', authEndpoints.verifyToken, statisticalEndpoints.getAnalysisHistory);
-app.get('/api/stat/history/:id', authEndpoints.verifyToken, statisticalEndpoints.getAnalysis);
-app.delete('/api/stat/history/:id', authEndpoints.verifyToken, statisticalEndpoints.deleteAnalysis);
-
-console.log('✅ Statistical Tools endpoints registered');
 
 // ============================================================================
 // START SERVER

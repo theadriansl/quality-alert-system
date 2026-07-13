@@ -12,6 +12,8 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // Force UTF-8 encoding for Spanish characters
+  client_encoding: 'UTF8',
 });
 
 // Test connection on startup

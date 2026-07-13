@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_URL = 'http://localhost:5000';
 
@@ -23,6 +24,7 @@ const UserFormModal = ({
   theme = 'dark'
 }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const isEditing = !!user;
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,14 +71,23 @@ const UserFormModal = ({
       });
       const data = await response.json();
       if (data.success) {
-        setDepartments(data.departments || []);
+        const depts = data.departments || [];
+        setDepartments(depts);
+
+        // Sincronizar nombre de departamento si tiene departmentId pero no department
+        if (user?.departmentId && !user?.department) {
+          const dept = depts.find(d => d.id === user.departmentId);
+          if (dept) {
+            setFormData(prev => ({ ...prev, department: dept.name }));
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading departments:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.departmentId, user?.department]);
 
   useEffect(() => {
     loadDepartments();

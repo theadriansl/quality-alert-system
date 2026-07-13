@@ -7,7 +7,9 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import ActionBar from '../components/ActionBar';
@@ -141,8 +143,38 @@ const DebouncedInput = React.memo(({ value, onChange, ...props }) => {
 const DefectHospital = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { theme: t } = useTheme();
   const { language, changeLanguage } = useLanguage();
+
+  // Check if redirected from DefectCapture due to access denied (via URL param)
+  const accessDeniedParam = searchParams.get('accessDenied');
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
+  const [accessDeniedReason, setAccessDeniedReason] = useState('');
+
+  // Update banner when accessDenied param is present
+  useEffect(() => {
+    if (accessDeniedParam) {
+      setShowAccessDenied(true);
+      setAccessDeniedReason(
+        accessDeniedParam === 'system'
+          ? 'No tienes permiso de sistema para capturar defectos.'
+          : accessDeniedParam === 'hospital'
+          ? 'No tienes rol de Hospital asignado para capturar defectos. Contacta a tu administrador.'
+          : 'No tienes permisos para capturar defectos.'
+      );
+    }
+  }, [accessDeniedParam]);
+
+  // Clear URL param when user closes the banner
+  const handleCloseAccessDenied = () => {
+    setShowAccessDenied(false);
+    setAccessDeniedReason('');
+    // Remove the accessDenied param from URL without refresh
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('accessDenied');
+    navigate({ search: newParams.toString() }, { replace: true });
+  };
 
   // Modo de operación: 'repair' | 'release' | 'admin' (default)
   const mode = searchParams.get('mode') || 'admin';
@@ -643,8 +675,14 @@ const DefectHospital = () => {
     rootCauseId: '',
     rejectNotes: '',
     newDepartmentId: '',      // Reasignar área responsable
-    deviationId: ''           // Liberación por desviación
+    deviationId: '',          // Liberación por desviación
+    reverificationResult: '', // OK | NOK for spec re-verification
+    reverificationValue: ''   // New measured value during re-verification
   });
+
+  // Spec info for re-verification during release
+  const [specInfo, setSpecInfo] = useState(null);
+  const [loadingSpecInfo, setLoadingSpecInfo] = useState(false);
 
   // Desviaciones disponibles para el defecto seleccionado
   const [availableDeviations, setAvailableDeviations] = useState([]);
@@ -659,19 +697,19 @@ const DefectHospital = () => {
       const savedRepair = getSavedStation('repair');
       if (savedRepair) {
         setSessionRepairStation(savedRepair);
-        // También guardar en sessionStorage para consistencia
-        sessionStorage.setItem('hospitalRepairStation', JSON.stringify(savedRepair));
+        // También guardar en localStorage para consistencia
+        localStorage.setItem('hospital_repair_station', JSON.stringify(savedRepair));
       }
     } else if (isReleaseMode) {
       const savedRelease = getSavedStation('release');
       if (savedRelease) {
         setSessionReleaseStation(savedRelease);
-        sessionStorage.setItem('hospitalReleaseStation', JSON.stringify(savedRelease));
+        localStorage.setItem('hospital_release_station', JSON.stringify(savedRelease));
       }
     } else {
-      // Modo admin: cargar desde sessionStorage (comportamiento original)
-      const savedRepairStation = sessionStorage.getItem('hospitalRepairStation');
-      const savedReleaseStation = sessionStorage.getItem('hospitalReleaseStation');
+      // Modo admin: cargar desde localStorage (guardado en HospitalDashboard)
+      const savedRepairStation = localStorage.getItem('hospital_repair_station');
+      const savedReleaseStation = localStorage.getItem('hospital_release_station');
       if (savedRepairStation) {
         try {
           setSessionRepairStation(JSON.parse(savedRepairStation));
@@ -694,7 +732,7 @@ const DefectHospital = () => {
   const selectSessionStation = (type, station) => {
     if (type === 'REPAIR') {
       setSessionRepairStation(station);
-      sessionStorage.setItem('hospitalRepairStation', JSON.stringify(station));
+      localStorage.setItem('hospital_repair_station', JSON.stringify(station));
       // Si había una acción pendiente (start), continuar con el modal
       if (modalAction === 'start' && selectedDefect) {
         setFormData(prev => ({
@@ -714,7 +752,7 @@ const DefectHospital = () => {
       }
     } else if (type === 'RELEASE') {
       setSessionReleaseStation(station);
-      sessionStorage.setItem('hospitalReleaseStation', JSON.stringify(station));
+      localStorage.setItem('hospital_release_station', JSON.stringify(station));
       // Si había una acción pendiente (release), continuar con el modal
       if (modalAction === 'release' && selectedDefect) {
         setFormData(prev => ({
@@ -747,10 +785,10 @@ const DefectHospital = () => {
   const clearSessionStation = (type) => {
     if (type === 'REPAIR') {
       setSessionRepairStation(null);
-      sessionStorage.removeItem('hospitalRepairStation');
+      localStorage.removeItem('hospital_repair_station');
     } else if (type === 'RELEASE') {
       setSessionReleaseStation(null);
-      sessionStorage.removeItem('hospitalReleaseStation');
+      localStorage.removeItem('hospital_release_station');
     }
   };
 
@@ -981,6 +1019,7 @@ const DefectHospital = () => {
           partNumber: defect.partNumber || defect.part_number || '-',
           partName: defect.partName || defect.part_name || '-',
           clientName: defect.clientName || defect.client_name || '-',
+          workOrder: defect.workOrder || defect.work_order || null,
           locationCode: defect.locationCode || defect.location_code || null,
           locationDescription: defect.locationDescription || defect.location_description || null,
           defects: []
@@ -1061,14 +1100,16 @@ const DefectHospital = () => {
         data = pendingRepairs;
     }
 
-    // Filtrar por búsqueda de texto
+    // Filtrar por búsqueda de texto (incluye work_order)
     let filtered = searchFilter.trim()
       ? data.filter(d => {
+          const entry = (d.entryNumber || d.entry_number || '').toLowerCase();
           const serial = (d.serialNumber || d.serial_number || d.lotNumber || d.lot_number || '').toLowerCase();
           const part = (d.partNumber || d.part_number || '').toLowerCase();
           const partName = (d.partName || d.part_name || '').toLowerCase();
+          const workOrder = (d.workOrder || d.work_order || '').toLowerCase();
           const search = searchFilter.toLowerCase();
-          return serial.includes(search) || part.includes(search) || partName.includes(search);
+          return entry.includes(search) || serial.includes(search) || part.includes(search) || partName.includes(search) || workOrder.includes(search);
         })
       : data;
 
@@ -1267,11 +1308,14 @@ const DefectHospital = () => {
       rootCauseId: '',
       rejectNotes: '',
       newDepartmentId: '',  // Sin reasignación por defecto
-      deviationId: ''       // Sin desviación por defecto
+      deviationId: '',      // Sin desviación por defecto
+      reverificationResult: '',
+      reverificationValue: ''
     });
 
-    // Resetear desviaciones disponibles antes de cargar nuevas
+    // Resetear desviaciones y spec info antes de cargar nuevas
     setAvailableDeviations([]);
+    setSpecInfo(null);
 
     // Cargar desviaciones disponibles si es acción de release o complete
     if (action === 'release' || action === 'complete') {
@@ -1287,6 +1331,24 @@ const DefectHospital = () => {
           }
         })
         .catch(err => console.error('[openActionModal] Error loading deviations:', err));
+    }
+
+    // Cargar info de spec para re-verificación si es acción de release
+    if (action === 'release') {
+      setLoadingSpecInfo(true);
+      const defectId = defect.id;
+      fetch(`${API_URL}/defects-v2/entries/${defectId}/spec-info`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log('[openActionModal] Spec info response:', data);
+          if (data.success && data.hasSpec) {
+            setSpecInfo(data);
+          }
+        })
+        .catch(err => console.error('[openActionModal] Error loading spec info:', err))
+        .finally(() => setLoadingSpecInfo(false));
     }
 
     setModalOpen(true);
@@ -1374,7 +1436,9 @@ const DefectHospital = () => {
             notes: formData.releaseNotes,
             releaseStationId: formData.releaseStationId || null,
             newDepartmentId: formData.newDepartmentId || null,
-            deviationId: formData.deviationId || null
+            deviationId: formData.deviationId || null,
+            reverificationResult: formData.reverificationResult || null,
+            reverificationValue: formData.reverificationValue ? parseFloat(formData.reverificationValue) : null
           });
           setSuccess(formData.deviationId
             ? (language === 'es' ? 'Defecto liberado con desviación vinculada' : 'Defect released with linked deviation')
@@ -1964,6 +2028,216 @@ const DefectHospital = () => {
     }
   };
 
+  // Exportar trazabilidad a PDF
+  const exportTraceabilityPDF = async () => {
+    if (traceDefects.length === 0) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 20;
+
+    // Título
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(language === 'es' ? 'Reporte de Trazabilidad' : 'Traceability Report', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+
+    // Fecha del reporte
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${language === 'es' ? 'Fecha' : 'Date'}: ${new Date().toLocaleString('es-MX')}`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 15;
+
+    // Info del producto
+    const defect = traceDefects[0];
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(language === 'es' ? 'Información del Producto' : 'Product Information', 14, yPos);
+    yPos += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const productInfo = [
+      [`${language === 'es' ? 'Serial/Lote' : 'Serial/Lot'}:`, defect.serialNumber || defect.serial_number || defect.lotNumber || defect.lot_number || '-'],
+      [`${language === 'es' ? 'Número de Parte' : 'Part Number'}:`, `${defect.partNumber || defect.part_number || '-'} - ${defect.partName || defect.part_name || ''}`],
+      [`${language === 'es' ? 'Cliente' : 'Client'}:`, defect.clientName || defect.client_name || '-'],
+      [`${language === 'es' ? 'Proveedor' : 'Supplier'}:`, defect.supplierName || defect.supplier_name || '-']
+    ];
+    productInfo.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, 14, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, 50, yPos);
+      yPos += 6;
+    });
+    yPos += 5;
+
+    // Tabla de defectos
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(language === 'es' ? 'Defectos Asociados' : 'Associated Defects', 14, yPos);
+    yPos += 5;
+
+    const defectRows = traceDefects.map(d => [
+      d.entryNumber || d.entry_number || '-',
+      d.defectTypeName || d.defect_type_name || '-',
+      d.repairStatus || d.repair_status || '-',
+      d.departmentName || d.department_name || '-',
+      d.notes || d.defectNotes || d.defect_notes || '-',
+      new Date(d.capturedAt || d.captured_at).toLocaleString('es-MX')
+    ]);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [[
+        'Entry',
+        language === 'es' ? 'Tipo' : 'Type',
+        language === 'es' ? 'Estado' : 'Status',
+        language === 'es' ? 'Área' : 'Area',
+        language === 'es' ? 'Comentarios' : 'Comments',
+        language === 'es' ? 'Fecha' : 'Date'
+      ]],
+      body: defectRows,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [0, 114, 206], textColor: 255 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        4: { cellWidth: 40 }
+      }
+    });
+
+    yPos = doc.lastAutoTable?.finalY + 10 || yPos + 50;
+
+    // Timeline de eventos
+    if (traceEvents.length > 0) {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(language === 'es' ? 'Historial de Eventos' : 'Event History', 14, yPos);
+      yPos += 5;
+
+      const eventRows = traceEvents.map(e => [
+        e.entryNumber || '-',
+        formatEventType(e.eventType || e.event_type).label,
+        e.performedByName || e.performed_by_name || '-',
+        e.comments || '-',
+        new Date(e.eventAt || e.event_at || e.createdAt || e.created_at).toLocaleString('es-MX')
+      ]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [[
+          'Entry',
+          language === 'es' ? 'Evento' : 'Event',
+          language === 'es' ? 'Realizado por' : 'Performed by',
+          language === 'es' ? 'Comentarios' : 'Comments',
+          language === 'es' ? 'Fecha/Hora' : 'Date/Time'
+        ]],
+        body: eventRows,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [0, 114, 206], textColor: 255 },
+        columnStyles: {
+          3: { cellWidth: 45 }
+        }
+      });
+
+      yPos = doc.lastAutoTable?.finalY + 10 || yPos + 50;
+    }
+
+    // Cargar fotos de cada defecto
+    const token = localStorage.getItem('token');
+    for (const defect of traceDefects) {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/defects-v2/entries/${defect.id}/attachments`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const result = await response.json();
+
+        if (result.success && result.attachments?.length > 0) {
+          // Filtrar solo imágenes
+          const images = result.attachments.filter(a =>
+            a.mimeType?.startsWith('image/') || a.mime_type?.startsWith('image/')
+          );
+
+          if (images.length > 0) {
+            if (yPos > 200) {
+              doc.addPage();
+              yPos = 20;
+            }
+
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${language === 'es' ? 'Fotos de' : 'Photos of'} ${defect.entryNumber || defect.entry_number}`, 14, yPos);
+            yPos += 8;
+
+            for (const img of images) {
+              try {
+                const imgPath = img.filePath || img.file_path;
+                const imgResponse = await fetch(
+                  `http://localhost:5000/${imgPath}`,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                if (imgResponse.ok) {
+                  const blob = await imgResponse.blob();
+                  const reader = new FileReader();
+
+                  await new Promise((resolve) => {
+                    reader.onloadend = () => {
+                      try {
+                        if (yPos > 220) {
+                          doc.addPage();
+                          yPos = 20;
+                        }
+                        const imgData = reader.result;
+                        doc.addImage(imgData, 'JPEG', 14, yPos, 60, 45);
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(img.originalName || img.original_name || 'image', 14, yPos + 48);
+                        yPos += 55;
+                      } catch (imgErr) {
+                        console.warn('Error adding image to PDF:', imgErr);
+                      }
+                      resolve();
+                    };
+                    reader.readAsDataURL(blob);
+                  });
+                }
+              } catch (imgErr) {
+                console.warn('Error loading image:', imgErr);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading attachments for defect:', defect.id, err);
+      }
+    }
+
+    // Pie de página
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `${language === 'es' ? 'Página' : 'Page'} ${i} ${language === 'es' ? 'de' : 'of'} ${pageCount}`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Guardar PDF
+    const fileName = `Traceability_${traceSerial}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   const formatEventType = (eventType) => {
     const types = {
       'CREATED': {
@@ -2065,6 +2339,19 @@ const DefectHospital = () => {
     switch (actionId) {
       // WORKFLOW ACTIONS
       case 'START_REPAIR':
+        // Validar que todos los defectos tengan ubicación
+        const defectsWithoutLocation = defects.filter(d => !d.currentLocationId && !d.current_location_id);
+        if (defectsWithoutLocation.length > 0) {
+          setError(language === 'es'
+            ? `${defectsWithoutLocation.length} defecto(s) sin ubicación asignada. Asigna ubicación primero.`
+            : `${defectsWithoutLocation.length} defect(s) without location. Assign location first.`);
+          // Abrir modal de asignar ubicación para el primero sin ubicación
+          if (defectsWithoutLocation.length === 1) {
+            setShowAssignLocation(true);
+            setAssignSerialsList([defectsWithoutLocation[0].serialNumber || defectsWithoutLocation[0].serial_number || defectsWithoutLocation[0].lotNumber || defectsWithoutLocation[0].lot_number].filter(Boolean));
+          }
+          return;
+        }
         // Para cada defecto, iniciar reparación
         for (const defect of defects) {
           await quickStartRepair(defect);
@@ -2155,37 +2442,58 @@ const DefectHospital = () => {
 
       // MANAGEMENT ACTIONS
       case 'ASSIGN_LOCATION':
+        // Limpiar estado anterior
+        setAssignLocationCode('');
+        setAssignLocationData(null);
+        setAssignSerialInput('');
+        setAssignResults(null);
+        setAssignSingleDefect(null);
+        // Establecer seriales de los defectos seleccionados (sin duplicados)
+        const serialsToAssign = [...new Set(
+          defects.map(d => d.serialNumber || d.serial_number || d.lotNumber || d.lot_number).filter(Boolean)
+        )];
+        setAssignSerialsList(serialsToAssign);
         setShowAssignLocation(true);
-        setAssignSerialsList(defects.map(d => d.serialNumber || d.serial_number || d.lotNumber || d.lot_number).filter(Boolean));
         break;
 
-      case 'ADD_COMMENT':
-        // TODO: Implementar modal de comentarios
-        setSuccess(language === 'es' ? 'Función en desarrollo' : 'Feature in development');
+      case 'CHANGE_RESPONSIBLE':
+        // Abrir modal con selector de departamento
+        setBulkDepartmentId('');
+        setBulkNotes('');
+        setShowBulkModal(true);
+        break;
+
+      case 'ASSIGN_DEVIATION':
+        // Abrir modal de desviaciones con los defectos seleccionados
+        openDeviationModal(null);
         break;
 
       case 'PRINT_LABELS':
-        // TODO: Implementar impresión de etiquetas
+        // TODO: Implementar impresión de etiquetas tipo Kanban
         setSuccess(language === 'es' ? 'Función en desarrollo' : 'Feature in development');
         break;
 
       // TOOLS ACTIONS
       case 'VIEW_TRACEABILITY':
+        if (defects.length > 1) {
+          setError(language === 'es'
+            ? 'Selecciona solo un defecto para ver trazabilidad'
+            : 'Select only one defect to view traceability');
+          return;
+        }
         if (defects.length === 1) {
-          const serial = defects[0].serialNumber || defects[0].serial_number;
+          const serial = defects[0].serialNumber || defects[0].serial_number || defects[0].lotNumber || defects[0].lot_number;
           if (serial) {
-            // Cambiar a tab de trazabilidad (la búsqueda se maneja internamente)
+            // Establecer serial y cambiar a tab de trazabilidad
+            setTraceSerial(serial.toUpperCase());
             setActiveTab('traceability');
-            setSuccess(language === 'es' ? `Buscar serial: ${serial}` : `Search serial: ${serial}`);
+            // Disparar búsqueda después de cambiar de tab
+            setTimeout(() => {
+              handleTraceSearch({ key: 'Enter' });
+            }, 200);
           }
         }
-        break;
-
-      case 'VIEW_HISTORY':
-        if (defects.length === 1) {
-          // Abrir historial del defecto - por ahora solo muestra mensaje
-          setSuccess(language === 'es' ? 'Ver historial del defecto #' + defects[0].id : 'View history for defect #' + defects[0].id);
-        }
+        clearSelection();
         break;
 
       case 'EXPORT_EXCEL':
@@ -3408,6 +3716,19 @@ const DefectHospital = () => {
             <div style={styles.partInfo}>
               <span style={styles.partNumber}>{group.partNumber}</span>
               {group.partName !== '-' && <span> - {group.partName}</span>}
+              {group.workOrder && (
+                <span style={{
+                  marginLeft: '8px',
+                  padding: '2px 6px',
+                  backgroundColor: '#dbeafe',
+                  color: '#1e40af',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: '500'
+                }}>
+                  OT: {group.workOrder}
+                </span>
+              )}
               {group.locationCode && (
                 <span style={{
                   marginLeft: '8px',
@@ -4347,6 +4668,162 @@ const DefectHospital = () => {
                 )}
               </div>
 
+              {/* Re-verificación de Spec (solo si el defecto vino de una spec NOK) */}
+              {loadingSpecInfo && (
+                <div style={{ textAlign: 'center', padding: '16px', color: t.textMuted }}>
+                  {language === 'es' ? 'Cargando información de spec...' : 'Loading spec info...'}
+                </div>
+              )}
+
+              {specInfo && specInfo.hasSpec && (
+                <div style={{
+                  marginBottom: '16px',
+                  padding: '16px',
+                  backgroundColor: t.danger + '15',
+                  borderRadius: '8px',
+                  border: `2px solid ${t.danger}`
+                }}>
+                  <div style={{
+                    fontWeight: '700',
+                    color: t.danger,
+                    marginBottom: '12px',
+                    fontSize: '15px'
+                  }}>
+                    ⚠️ {language === 'es' ? 'RE-VERIFICACIÓN REQUERIDA' : 'RE-VERIFICATION REQUIRED'}
+                  </div>
+
+                  {/* Info de la spec original */}
+                  <div style={{
+                    backgroundColor: t.bgCard,
+                    borderRadius: '6px',
+                    padding: '12px',
+                    marginBottom: '12px'
+                  }}>
+                    <div style={{ fontWeight: '600', marginBottom: '8px' }}>
+                      {specInfo.spec.specNumber} - {specInfo.spec.specName}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
+                      <div>
+                        <span style={{ color: t.textMuted }}>{language === 'es' ? 'Límites:' : 'Limits:'}</span>{' '}
+                        <span style={{ fontWeight: '500' }}>
+                          {specInfo.spec.lowerLimit} - {specInfo.spec.upperLimit} {specInfo.spec.unit || ''}
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: t.textMuted }}>{language === 'es' ? 'Nominal:' : 'Nominal:'}</span>{' '}
+                        <span style={{ fontWeight: '500' }}>{specInfo.spec.nominalValue} {specInfo.spec.unit || ''}</span>
+                      </div>
+                    </div>
+                    {specInfo.spec.originalMeasuredValue && (
+                      <div style={{
+                        marginTop: '8px',
+                        padding: '8px',
+                        backgroundColor: t.danger + '20',
+                        borderRadius: '4px',
+                        color: t.danger,
+                        fontWeight: '600'
+                      }}>
+                        {language === 'es' ? 'Valor Original NOK:' : 'Original NOK Value:'}{' '}
+                        {specInfo.spec.originalMeasuredValue} {specInfo.spec.unit || ''}
+                      </div>
+                    )}
+                    {specInfo.spec.isCritical && (
+                      <div style={{
+                        marginTop: '8px',
+                        display: 'inline-block',
+                        padding: '4px 8px',
+                        backgroundColor: t.danger,
+                        color: '#fff',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        {language === 'es' ? 'CARACTERÍSTICA CRÍTICA' : 'CRITICAL CHARACTERISTIC'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resultado de re-verificación */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ ...styles.label, color: t.text }}>
+                      {language === 'es' ? 'Resultado de Re-verificación *' : 'Re-verification Result *'}
+                    </label>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, reverificationResult: 'OK' })}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: `2px solid ${formData.reverificationResult === 'OK' ? t.success : t.border}`,
+                          borderRadius: '8px',
+                          backgroundColor: formData.reverificationResult === 'OK' ? t.success + '20' : t.bgCard,
+                          color: formData.reverificationResult === 'OK' ? t.success : t.text,
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontSize: '16px'
+                        }}
+                      >
+                        ✓ OK
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, reverificationResult: 'NOK' })}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: `2px solid ${formData.reverificationResult === 'NOK' ? t.danger : t.border}`,
+                          borderRadius: '8px',
+                          backgroundColor: formData.reverificationResult === 'NOK' ? t.danger + '20' : t.bgCard,
+                          color: formData.reverificationResult === 'NOK' ? t.danger : t.text,
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontSize: '16px'
+                        }}
+                      >
+                        ✗ NOK
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Valor medido en re-verificación */}
+                  <div>
+                    <label style={{ ...styles.label, color: t.text }}>
+                      {language === 'es' ? 'Valor Medido en Re-verificación' : 'Measured Value in Re-verification'}
+                      {specInfo.spec.unit && <span style={{ fontWeight: 'normal' }}> ({specInfo.spec.unit})</span>}
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      style={{
+                        ...styles.input,
+                        backgroundColor: t.bgCard
+                      }}
+                      value={formData.reverificationValue}
+                      onChange={(e) => setFormData({ ...formData, reverificationValue: e.target.value })}
+                      placeholder={specInfo.spec.nominalValue ? `Nominal: ${specInfo.spec.nominalValue}` : ''}
+                    />
+                  </div>
+
+                  {/* Warning si NOK */}
+                  {formData.reverificationResult === 'NOK' && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '10px',
+                      backgroundColor: t.danger + '20',
+                      border: `1px solid ${t.danger}`,
+                      borderRadius: '6px',
+                      color: t.danger,
+                      fontSize: '13px'
+                    }}>
+                      ⚠️ {language === 'es'
+                        ? 'No se puede liberar si la re-verificación es NOK. El defecto debe volver a reparación.'
+                        : 'Cannot release if re-verification is NOK. Defect must return to repair.'}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={styles.formGroup}>
                 <label style={styles.label}>{language === 'es' ? 'Estación de Liberación' : 'Release Station'}</label>
                 <select
@@ -4693,6 +5170,43 @@ const DefectHospital = () => {
 
   return (
     <div style={styles.container}>
+      {/* Access Denied Banner */}
+      {showAccessDenied && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          borderBottom: '2px solid #ef4444',
+          padding: '16px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '24px' }}>🚫</span>
+            <div>
+              <div style={{ color: '#991b1b', fontWeight: '600', fontSize: '16px' }}>
+                Acceso a Captura de Defectos Denegado
+              </div>
+              <div style={{ color: '#b91c1c', fontSize: '14px' }}>
+                {accessDeniedReason}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleCloseAccessDenied}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '20px',
+              color: '#991b1b'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div style={styles.header}>
         <h1 style={styles.title}>
           {L.title || 'Hospital de Defectos'}
@@ -5448,10 +5962,12 @@ const DefectHospital = () => {
               <span style={{ fontSize: '24px' }}>🔍</span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', color: t.text }}>
-                  Consulta de Trazabilidad
+                  {language === 'es' ? 'Consulta de Trazabilidad' : 'Traceability Query'}
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: t.textMuted }}>
-                  Busca un serial/lote para ver todo su historial de defectos, reparaciones y liberaciones
+                  {language === 'es'
+                    ? 'Busca por serial, lote o entry para ver historial de defectos, reparaciones y liberaciones'
+                    : 'Search by serial, lot or entry to see defects, repairs and releases history'}
                 </p>
               </div>
             </div>
@@ -5471,7 +5987,7 @@ const DefectHospital = () => {
                   fontFamily: 'monospace',
                   letterSpacing: '1px'
                 }}
-                placeholder="Escanea o escribe el serial/lote..."
+                placeholder={language === 'es' ? 'Escanea serial, lote o entry...' : 'Scan serial, lot or entry...'}
                 value={traceSerial}
                 onChange={(e) => setTraceSerial(e.target.value.toUpperCase())}
                 onKeyDown={handleTraceSearch}
@@ -5531,7 +6047,78 @@ const DefectHospital = () => {
                     {traceEvents.length} evento{traceEvents.length !== 1 ? 's' : ''} en historial
                   </div>
                 </div>
+                <button
+                  onClick={exportTraceabilityPDF}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#dc2626',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  title={language === 'es' ? 'Exportar a PDF' : 'Export to PDF'}
+                >
+                  📄 {language === 'es' ? 'Exportar PDF' : 'Export PDF'}
+                </button>
               </div>
+
+              {/* Detalle del Serial/Parte */}
+              {traceDefects.length > 0 && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: t.bgCard,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`,
+                  marginBottom: '16px'
+                }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: t.text }}>
+                    {language === 'es' ? 'Información del Producto' : 'Product Information'}
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    <div style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px' }}>
+                        {language === 'es' ? 'Número de Parte' : 'Part Number'}
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>
+                        {traceDefects[0].partNumber || traceDefects[0].part_number || '-'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: t.textMuted }}>
+                        {traceDefects[0].partName || traceDefects[0].part_name || ''}
+                      </div>
+                    </div>
+                    <div style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px' }}>
+                        Serial / Lote
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: t.text, fontFamily: 'monospace' }}>
+                        {traceDefects[0].serialNumber || traceDefects[0].serial_number || traceDefects[0].lotNumber || traceDefects[0].lot_number || '-'}
+                      </div>
+                    </div>
+                    <div style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px' }}>
+                        {language === 'es' ? 'Cliente' : 'Client'}
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>
+                        {traceDefects[0].clientName || traceDefects[0].client_name || '-'}
+                      </div>
+                    </div>
+                    <div style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
+                      <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px' }}>
+                        {language === 'es' ? 'Proveedor' : 'Supplier'}
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>
+                        {traceDefects[0].supplierName || traceDefects[0].supplier_name || '-'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Tabla de defectos */}
               <div style={{
@@ -5542,16 +6129,17 @@ const DefectHospital = () => {
                 marginBottom: '16px'
               }}>
                 <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: t.text }}>
-                  Defectos Asociados
+                  {language === 'es' ? 'Defectos Asociados' : 'Associated Defects'}
                 </h4>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ backgroundColor: t.bgPanel }}>
                       <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Entry</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Tipo Defecto</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Estado</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Área Resp.</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Fecha Captura</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>{language === 'es' ? 'Tipo Defecto' : 'Defect Type'}</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>{language === 'es' ? 'Estado' : 'Status'}</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>{language === 'es' ? 'Área Resp.' : 'Resp. Area'}</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>{language === 'es' ? 'Comentarios' : 'Comments'}</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>{language === 'es' ? 'Fecha Captura' : 'Capture Date'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -5564,8 +6152,7 @@ const DefectHospital = () => {
                           </td>
                           <td style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}` }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              {defect.defectTypeName || defect.defect_type_name}
-                              {(defect.notes || defect.defectNotes) && <span title={language === 'es' ? 'Comentarios' : 'Comments'}>💬</span>}
+                              {defect.defectTypeName || defect.defect_type_name || '-'}
                               {defect.photos?.length > 0 && <span>📷</span>}
                             </span>
                           </td>
@@ -5583,6 +6170,9 @@ const DefectHospital = () => {
                           </td>
                           <td style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}` }}>
                             {defect.departmentName || defect.department_name || '-'}
+                          </td>
+                          <td style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}`, color: t.textMuted, maxWidth: '200px', fontSize: '12px' }}>
+                            {defect.notes || defect.defectNotes || defect.defect_notes || '-'}
                           </td>
                           <td style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}`, color: t.textMuted }}>
                             {new Date(defect.capturedAt || defect.captured_at).toLocaleString('es-MX')}
@@ -5674,22 +6264,43 @@ const DefectHospital = () => {
                               </span>
                             </div>
                             <span style={{ fontSize: '12px', color: t.textMuted }}>
-                              {new Date(event.createdAt || event.created_at).toLocaleString('es-MX')}
+                              {new Date(event.eventAt || event.event_at || event.createdAt || event.created_at).toLocaleString('es-MX')}
                             </span>
                           </div>
 
                           {/* Detalles del evento */}
                           <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                            {/* Estado inicial para CREATED */}
+                            {(event.eventType === 'CREATED' || event.event_type === 'CREATED') && (event.newStatus || event.new_status) && (
+                              <div style={{ color: t.textMuted }}>
+                                {language === 'es' ? 'Estado inicial' : 'Initial status'}: <span style={{ fontWeight: '600', color: t.text }}>{event.newStatus || event.new_status}</span>
+                              </div>
+                            )}
+                            {/* Cambio de estado */}
                             {(event.oldStatus || event.old_status) && (
                               <div style={{ color: t.textMuted }}>
-                                Estado: <span style={{ textDecoration: 'line-through' }}>{event.oldStatus || event.old_status}</span>
+                                {language === 'es' ? 'Estado' : 'Status'}: <span style={{ textDecoration: 'line-through' }}>{event.oldStatus || event.old_status}</span>
                                 {' → '}
                                 <span style={{ fontWeight: '600', color: t.text }}>{event.newStatus || event.new_status}</span>
                               </div>
                             )}
+                            {/* Departamento inicial para CREATED */}
+                            {(event.eventType === 'CREATED' || event.event_type === 'CREATED') && (event.newDepartmentName || event.new_department_name) && (
+                              <div style={{ color: t.textMuted, marginTop: '4px' }}>
+                                {language === 'es' ? 'Área responsable' : 'Responsible area'}: <span style={{ fontWeight: '600', color: t.text }}>{event.newDepartmentName || event.new_department_name}</span>
+                              </div>
+                            )}
+                            {/* Cambio de departamento */}
+                            {(event.oldDepartmentName || event.old_department_name) && (
+                              <div style={{ color: t.textMuted, marginTop: '4px' }}>
+                                {language === 'es' ? 'Área' : 'Area'}: <span style={{ textDecoration: 'line-through' }}>{event.oldDepartmentName || event.old_department_name}</span>
+                                {' → '}
+                                <span style={{ fontWeight: '600', color: t.text }}>{event.newDepartmentName || event.new_department_name}</span>
+                              </div>
+                            )}
                             {(event.performedByName || event.performed_by_name) && (
                               <div style={{ color: t.textMuted, marginTop: '4px' }}>
-                                Por: <span style={{ color: t.text }}>{event.performedByName || event.performed_by_name}</span>
+                                {language === 'es' ? 'Por' : 'By'}: <span style={{ color: t.text }}>{event.performedByName || event.performed_by_name}</span>
                               </div>
                             )}
                             {event.comments && (
@@ -5932,7 +6543,7 @@ const DefectHospital = () => {
               ref={searchInputRef}
               type="text"
               style={styles.filterInput}
-              placeholder={language === 'es' ? 'Buscar por serial, número de parte o nombre...' : 'Search by serial, part number or name...'}
+              placeholder={language === 'es' ? 'Buscar por entry, serial, parte...' : 'Search by entry, serial, part...'}
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
             />
@@ -6446,8 +7057,8 @@ const DefectHospital = () => {
                 : (language === 'es' ? 'Asignar Ubicación (Batch)' : 'Assign Location (Batch)')}
             </h3>
 
-            {/* Lista de defectos sin ubicación (solo en modo batch) */}
-            {!assignSingleDefect && pendingWithoutLocation.length > 0 && (
+            {/* Lista de defectos sin ubicación (solo en modo batch y cuando no hay seriales pre-seleccionados) */}
+            {!assignSingleDefect && pendingWithoutLocation.length > 0 && assignSerialsList.length === 0 && (
               <div style={{
                 marginBottom: '16px',
                 padding: '12px',

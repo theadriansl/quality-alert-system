@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 /**
  * Tabla estilo Excel para ingresar inventario de partes afectadas
@@ -8,6 +9,62 @@ import { useTheme } from '../../context/ThemeContext';
  */
 const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCustomColumnsUpdate }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: {
+      noPartsSelected: 'No parts selected. Please select parts first.',
+      addCustomColumn: 'Add Custom Column',
+      newCustomColumn: 'New Custom Column',
+      columnName: 'Column Name',
+      dataType: 'Data Type',
+      text: 'Text',
+      number: 'Number',
+      date: 'Date',
+      add: 'Add',
+      cancel: 'Cancel',
+      deleteColumnConfirm: 'Delete this custom column? Data will be lost.',
+      partNumber: 'Part Number',
+      description: 'Description',
+      affectedQtyByLocation: 'Affected Quantities by Location',
+      totalAffected: 'Total Affected',
+      unitCost: 'Unit Cost',
+      totalImpact: 'Total Impact (USD)',
+      warehouse: 'Warehouse',
+      inProcess: 'In Process',
+      transit: 'Transit',
+      customer: 'Customer',
+      noDescription: 'No description',
+      totals: 'TOTALS',
+      deleteColumn: 'Delete column'
+    },
+    es: {
+      noPartsSelected: 'No hay partes seleccionadas. Por favor selecciona partes primero.',
+      addCustomColumn: 'Agregar Columna Personalizada',
+      newCustomColumn: 'Nueva Columna Personalizada',
+      columnName: 'Nombre de Columna',
+      dataType: 'Tipo de Dato',
+      text: 'Texto',
+      number: 'Número',
+      date: 'Fecha',
+      add: 'Agregar',
+      cancel: 'Cancelar',
+      deleteColumnConfirm: '¿Eliminar esta columna personalizada? Los datos se perderán.',
+      partNumber: 'Número de Parte',
+      description: 'Descripción',
+      affectedQtyByLocation: 'Cantidades Afectadas por Ubicación',
+      totalAffected: 'Total Afectado',
+      unitCost: 'Costo Unitario',
+      totalImpact: 'Impacto Total (USD)',
+      warehouse: 'Almacén',
+      inProcess: 'En Proceso',
+      transit: 'Tránsito',
+      customer: 'Cliente',
+      noDescription: 'Sin descripción',
+      totals: 'TOTALES',
+      deleteColumn: 'Eliminar columna'
+    }
+  }[language] || {};
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [newColumnType, setNewColumnType] = useState('text');
@@ -73,7 +130,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
 
   // Eliminar columna personalizada
   const handleDeleteColumn = (columnId) => {
-    if (!window.confirm('¿Eliminar esta columna personalizada? Los datos se perderán.')) return;
+    if (!window.confirm(tr.deleteColumnConfirm)) return;
 
     const updatedColumns = customColumns.filter(col => col.id !== columnId);
     if (onCustomColumnsUpdate) {
@@ -117,7 +174,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
   if (!parts || parts.length === 0) {
     return (
       <div className="rounded p-4 text-center" style={{ backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, color: t.textMuted }}>
-        No hay partes seleccionadas. Por favor selecciona partes primero.
+        {tr.noPartsSelected}
       </div>
     );
   }
@@ -132,7 +189,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
           style={{ backgroundColor: t.success, color: 'white' }}
         >
           <span></span>
-          Agregar Columna Personalizada
+          {tr.addCustomColumn}
         </button>
       </div>
 
@@ -140,12 +197,12 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
       {showAddColumnModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="rounded-lg p-6 max-w-md w-full mx-4" style={{ backgroundColor: t.bgCard }}>
-            <h3 className="text-lg font-semibold mb-4" style={{ color: t.text }}>Nueva Columna Personalizada</h3>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: t.text }}>{tr.newCustomColumn}</h3>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: t.textMuted }}>
-                  Nombre de Columna
+                  {tr.columnName}
                 </label>
                 <input
                   type="text"
@@ -160,7 +217,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: t.textMuted }}>
-                  Tipo de Dato
+                  {tr.dataType}
                 </label>
                 <select
                   value={newColumnType}
@@ -168,9 +225,9 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                   className="w-full px-3 py-2 rounded focus:outline-none focus:ring-2"
                   style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, color: t.text }}
                 >
-                  <option value="text">Texto</option>
-                  <option value="number">Número</option>
-                  <option value="date">Fecha</option>
+                  <option value="text">{tr.text}</option>
+                  <option value="number">{tr.number}</option>
+                  <option value="date">{tr.date}</option>
                 </select>
               </div>
 
@@ -181,7 +238,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                   className="flex-1 px-4 py-2 rounded font-medium disabled:cursor-not-allowed"
                   style={{ backgroundColor: !newColumnName.trim() ? t.bgPanel : t.accent, color: !newColumnName.trim() ? t.textMuted : 'white' }}
                 >
-                  Agregar
+                  {tr.add}
                 </button>
                 <button
                   onClick={() => {
@@ -192,7 +249,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                   className="flex-1 px-4 py-2 rounded font-medium"
                   style={{ backgroundColor: t.bgPanel, color: t.text }}
                 >
-                  Cancelar
+                  {tr.cancel}
                 </button>
               </div>
             </div>
@@ -227,22 +284,22 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                   #
                 </th>
                 <th className="border border-gray-300 px-2 py-2 text-left text-sm font-semibold" style={{color:'white'}} rowSpan="2">
-                  Número de Parte
+                  {tr.partNumber}
                 </th>
                 <th className="border border-gray-300 px-2 py-2 text-left text-sm font-semibold" style={{color:'white'}} rowSpan="2">
-                  Descripción
+                  {tr.description}
                 </th>
                 <th className="border border-gray-300 px-1 py-2 text-center text-sm font-semibold" style={{color:'white'}} colSpan="4">
-                  Cantidades Afectadas por Ubicación
+                  {tr.affectedQtyByLocation}
                 </th>
                 <th className="border border-gray-300 px-1 py-2 text-center text-xs font-semibold" style={{color:'white'}} rowSpan="2">
-                  Total<br/>Afectado
+                  {tr.totalAffected}
                 </th>
                 <th className="border border-gray-300 px-1 py-2 text-center text-xs font-semibold" style={{color:'white'}} rowSpan="2">
-                  Costo<br/>Unitario
+                  {tr.unitCost}
                 </th>
                 <th className="border border-gray-300 px-1 py-2 text-center text-xs font-semibold" style={{color:'white'}} rowSpan="2">
-                  Impacto Total<br/>(USD)
+                  {tr.totalImpact}
                 </th>
                 {/* Headers de columnas personalizadas */}
                 {customColumns.map(col => (
@@ -256,7 +313,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                       <button
                         onClick={() => handleDeleteColumn(col.id)}
                         className="text-xs px-2 py-0.5 bg-red-500 hover:bg-red-600 rounded"
-                        title="Eliminar columna"
+                        title={tr.deleteColumn}
                       >
                         
                       </button>
@@ -265,10 +322,10 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                 ))}
               </tr>
               <tr className="bg-blue-600 text-white">
-                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>Almacén</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>En Proceso</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>Tránsito</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>Cliente</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>{tr.warehouse}</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>{tr.inProcess}</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>{tr.transit}</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-xs font-medium" style={{color:'white'}}>{tr.customer}</th>
               </tr>
             </thead>
 
@@ -285,7 +342,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                     {part.partNumber || part.part_number || 'N/A'}
                   </td>
                   <td className="border border-gray-300 px-2 py-2 text-xs text-gray-700">
-                    {part.partName || part.part_name || 'Sin descripción'}
+                    {part.partName || part.part_name || tr.noDescription}
                   </td>
 
                   {/* Input: Almacén */}

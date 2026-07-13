@@ -5,24 +5,28 @@ import { useTheme } from '../../context/ThemeContext';
 import ECRApprovalAssignment from './ECRApprovalAssignment';
 import impactAreasService from '../../services/impactAreasService';
 
-const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
+const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t: translate }) => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
   const { showSuccess, showError } = useToast();
+
+  // Translation helper with fallback
+  const tr = (key) => translate ? translate(key) : key;
 
   // Impact areas loaded from database configuration
   const [impactAreas, setImpactAreas] = useState([]);
   const [loadingAreas, setLoadingAreas] = useState(true);
 
   const [impactAnalysis, setImpactAnalysis] = useState(data.impactAnalysis || []);
-  const [customerImpact, setCustomerImpact] = useState(data.customerImpact || {
+  const [customerImpact, setCustomerImpact] = useState({
     affectsCustomer: false,
     requiresNotification: false,
     impactDescription: '',
     notificationMethod: 'none',
     evidenceFiles: [],
     customerApprovalRequired: false,
-    customerApprovalStatus: 'not_required'
+    customerApprovalStatus: 'not_required',
+    ...(data.customerImpact || {})
   });
   const [users, setUsers] = useState([]);
   const [uploadingEvidence, setUploadingEvidence] = useState(null);
@@ -32,6 +36,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
 
   // Track if we've already pre-selected areas from ECR-1
   const [hasPreselected, setHasPreselected] = useState(false);
+
 
   // Load impact areas from database configuration
   useEffect(() => {
@@ -58,7 +63,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
         }
       } catch (error) {
         console.error('Error loading impact areas:', error);
-        showError('Error al cargar áreas de impacto');
+        showError(language === 'es' ? 'Error al cargar TFT de impacto' : 'Error loading impact TFT');
         // Fallback to empty array
         setImpactAreas([]);
       } finally {
@@ -68,45 +73,52 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
     fetchImpactAreas();
   }, []);
 
-  // Pre-select areas from ECR-1 (involvedAreas) when areas are loaded
+  // Sync areas from ECR-1 (involvedAreas) when areas are loaded
+  // This runs whenever involvedAreas changes to keep ECR-2B in sync
   useEffect(() => {
-    // Only run once, when areas are loaded and we have involvedAreas from ECR-1
-    if (!hasPreselected && !loadingAreas && impactAreas.length > 0 && data.involvedAreas?.length > 0) {
-      // Only pre-select if impactAnalysis is empty (new ECR or first time in ECR-2B)
-      if (impactAnalysis.length === 0) {
-        const preselectedAreas = data.involvedAreas
-          .map(areaKey => {
-            const areaConfig = impactAreas.find(a => a.key === areaKey);
-            if (!areaConfig) return null;
+    if (loadingAreas || impactAreas.length === 0 || !data.involvedAreas?.length) return;
 
-            // Get the assigned validator from ECR-1 validationTeams
-            const assignedValidators = data.validationTeams?.[areaKey] || [];
-            const responsibleUserId = assignedValidators.length > 0 ? assignedValidators[0] : null;
+    // Get existing area keys
+    const existingAreaKeys = impactAnalysis.map(a => a.areaKey);
 
-            return {
-              areaName: areaConfig.name,
-              areaKey: areaConfig.key,
-              icon: areaConfig.icon,
-              color: areaConfig.color,
-              responsibleUserId: responsibleUserId,
-              impactDescription: '',
-              evidenceFiles: [],
-              selectedSubsections: [],
-              severity: null,
-              occurrence: null,
-              riskLevel: null,
-              status: 'pending'
-            };
-          })
-          .filter(Boolean); // Remove nulls
+    // Find new areas from ECR-1 that are not in impactAnalysis
+    const newAreas = data.involvedAreas
+      .filter(areaKey => !existingAreaKeys.includes(areaKey))
+      .map(areaKey => {
+        const areaConfig = impactAreas.find(a => a.key === areaKey);
+        if (!areaConfig) return null;
 
-        if (preselectedAreas.length > 0) {
-          setImpactAnalysis(preselectedAreas);
-        }
-      }
-      setHasPreselected(true);
+        // Get the assigned validator from ECR-1 validationTeams
+        const assignedValidators = data.validationTeams?.[areaKey] || [];
+        const responsibleUserId = assignedValidators.length > 0 ? assignedValidators[0] : null;
+
+        return {
+          areaName: areaConfig.name,
+          areaKey: areaConfig.key,
+          icon: areaConfig.icon,
+          color: areaConfig.color,
+          responsibleUserId: responsibleUserId,
+          impactDescription: '',
+          evidenceFiles: [],
+          selectedSubsections: [],
+          severity: null,
+          occurrence: null,
+          riskLevel: null,
+          status: 'pending'
+        };
+      })
+      .filter(Boolean);
+
+    // Also remove areas that are no longer in involvedAreas
+    const validAreas = impactAnalysis.filter(a => data.involvedAreas.includes(a.areaKey));
+
+    // Only update if there are changes
+    if (newAreas.length > 0 || validAreas.length !== impactAnalysis.length) {
+      setImpactAnalysis([...validAreas, ...newAreas]);
     }
-  }, [loadingAreas, impactAreas, data.involvedAreas, data.validationTeams, hasPreselected, impactAnalysis.length]);
+
+    if (!hasPreselected) setHasPreselected(true);
+  }, [loadingAreas, impactAreas, data.involvedAreas, data.validationTeams]);
 
   // Load users
   useEffect(() => {
@@ -311,11 +323,11 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
             : item
         ));
 
-        showSuccess(`${uploadedFiles.length} archivo(s) subido(s) exitosamente`);
+        showSuccess(language === 'es' ? `${uploadedFiles.length} archivo(s) subido(s) exitosamente` : `${uploadedFiles.length} file(s) uploaded successfully`);
       }
     } catch (error) {
       console.error('Error uploading evidence:', error);
-      showError('Error al subir evidencia');
+      showError(language === 'es' ? 'Error al subir evidencia' : 'Error uploading evidence');
     } finally {
       setUploadingEvidence(null);
     }
@@ -377,11 +389,11 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
           evidenceFiles: [...(prev.evidenceFiles || []), ...uploadedFiles]
         }));
 
-        showSuccess(`${uploadedFiles.length} archivo(s) subido(s) exitosamente`);
+        showSuccess(language === 'es' ? `${uploadedFiles.length} archivo(s) subido(s) exitosamente` : `${uploadedFiles.length} file(s) uploaded successfully`);
       }
     } catch (error) {
       console.error('Error uploading customer evidence:', error);
-      showError('Error al subir evidencia');
+      showError(language === 'es' ? 'Error al subir evidencia' : 'Error uploading evidence');
     } finally {
       setUploadingEvidence(null);
     }
@@ -414,10 +426,33 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            {tr('ecr.messages.readOnlyMode')}
+          </span>
+        </div>
+      )}
+
+      <div style={{
+        pointerEvents: isReadOnly ? 'none' : 'auto',
+        opacity: isReadOnly ? 0.7 : 1
+      }}>
       <div style={styles.header}>
-        <h2 style={styles.title}> Análisis de Impacto (IATF 8.5.6.1)</h2>
+        <h2 style={styles.title}> {tr('ecr.impactAnalysis.title')}</h2>
         <p style={styles.subtitle}>
-          Selecciona las áreas afectadas por este cambio y proporciona el análisis correspondiente
+          {language === 'es' ? 'Selecciona las TFT afectadas por este cambio y proporciona el análisis correspondiente' : 'Select the TFTs affected by this change and provide the corresponding analysis'}
         </p>
       </div>
 
@@ -425,8 +460,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
       {/* Legal Disclaimer */}
       <div style={styles.disclaimer}>
         <p style={styles.disclaimerText}>
-           <strong>IMPORTANTE:</strong> Selecciona únicamente las áreas que son afectadas por este cambio.
-          Para cada área seleccionada, asigna un responsable, describe el impacto y proporciona evidencia de soporte.
+           <strong>{language === 'es' ? 'IMPORTANTE:' : 'IMPORTANT:'}</strong> {language === 'es' ? 'Selecciona únicamente las TFT que son afectadas por este cambio. Para cada TFT seleccionada, asigna un responsable, describe el impacto y proporciona evidencia de soporte.' : 'Select only the TFTs that are affected by this change. For each selected TFT, assign a responsible person, describe the impact and provide supporting evidence.'}
         </p>
       </div>
 
@@ -448,7 +482,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                 fontWeight: '700',
                 color: '#B00020'
               }}>
-                Error: Evaluación de Riesgo Incompleta
+                {language === 'es' ? 'Error: Evaluación de Riesgo Incompleta' : 'Error: Incomplete Risk Assessment'}
               </h3>
               <p style={{
                 margin: '0 0 12px 0',
@@ -456,8 +490,10 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                 color: '#991b1b',
                 lineHeight: '1.5'
               }}>
-                Las siguientes áreas de impacto no tienen evaluación de riesgo completa.
-                Debes seleccionar tanto <strong>Severidad</strong> como <strong>Ocurrencia</strong> para cada área:
+                {language === 'es'
+                  ? <>Las siguientes TFT de impacto no tienen evaluación de riesgo completa. Debes seleccionar tanto <strong>Severidad</strong> como <strong>Ocurrencia</strong> para cada TFT:</>
+                  : <>The following impact TFTs do not have a complete risk assessment. You must select both <strong>Severity</strong> and <strong>Occurrence</strong> for each TFT:</>
+                }
               </p>
               <ul style={{
                 margin: '0',
@@ -467,7 +503,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
               }}>
                 {getAreasMissingRisk().map((area, idx) => (
                   <li key={idx} style={{ marginBottom: '4px' }}>
-                    <strong>{area.icon} {area.areaName}</strong>
+                    <strong>{area.areaName}</strong>
                   </li>
                 ))}
               </ul>
@@ -480,13 +516,13 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
       <div style={styles.areasList}>
         {loadingAreas ? (
           <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
-            <p>Cargando áreas de impacto...</p>
+            <p>{language === 'es' ? 'Cargando TFT de impacto...' : 'Loading impact TFTs...'}</p>
           </div>
         ) : impactAnalysis.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
-            <p>No hay áreas involucradas seleccionadas en ECR-1.</p>
+            <p>{language === 'es' ? 'No hay TFT involucradas seleccionadas en ECR-1.' : 'No involved TFTs selected in ECR-1.'}</p>
             <p style={{ fontSize: '13px', marginTop: '8px' }}>
-              Regresa a ECR-1 y selecciona las áreas involucradas en este cambio.
+              {language === 'es' ? 'Regresa a ECR-1 y selecciona las TFT involucradas en este cambio.' : 'Go back to ECR-1 and select the TFTs involved in this change.'}
             </p>
           </div>
         ) : null}
@@ -519,7 +555,6 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                 }}>
                    Asignada
                 </span>
-                <span style={styles.areaIcon}>{area.icon}</span>
                 <div style={styles.areaHeader}>
                   <span style={styles.areaName}>{area.name}</span>
                   <span style={styles.areaDescription}>{area.description}</span>
@@ -532,146 +567,17 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                   ...styles.areaDetails,
                   borderLeftColor: area.color
                 }}>
-                  {/* Special fields for Customer Impact area */}
-                  {area.isCustomerImpact ? (
-                    <>
-                      {/* Affects Customer Checkbox */}
+                  {/* Standard fields for ALL areas including Customer */}
+                  <>
+                    {/* Responsible User - filtered by area's team members */}
                       <div style={styles.field}>
-                        <label style={styles.checkboxLabel}>
-                          <input
-                            type="checkbox"
-                            checked={customerImpact.affectsCustomer}
-                            onChange={(e) => updateCustomerImpact('affectsCustomer', e.target.checked)}
-                            style={styles.checkbox}
-                          />
-                          <span style={{fontWeight: '600', fontSize: '14px'}}>
-                            ¿Este cambio afecta al cliente o al producto/servicio entregado al cliente?
-                          </span>
-                        </label>
-                      </div>
-
-                      {customerImpact.affectsCustomer && (
-                        <>
-                          {/* Impact Description */}
-                          <div style={styles.field}>
-                            <label style={styles.label}>Descripción del Impacto al Cliente *</label>
-                            <textarea
-                              style={styles.textarea}
-                              value={customerImpact.impactDescription || ''}
-                              onChange={(e) => updateCustomerImpact('impactDescription', e.target.value)}
-                              placeholder="Describe cómo este cambio afecta al cliente (dimensiones, especificaciones, calidad, empaque, etc.)..."
-                              rows={3}
-                            />
-                          </div>
-
-                          {/* Requires Notification */}
-                          <div style={styles.field}>
-                            <label style={styles.checkboxLabel}>
-                              <input
-                                type="checkbox"
-                                checked={customerImpact.requiresNotification}
-                                onChange={(e) => updateCustomerImpact('requiresNotification', e.target.checked)}
-                                style={styles.checkbox}
-                              />
-                              <span>¿Se requiere notificar al cliente sobre este cambio?</span>
-                            </label>
-                          </div>
-
-                          {customerImpact.requiresNotification && (
-                            <>
-                              {/* Notification Method */}
-                              <div style={styles.field}>
-                                <label style={styles.label}>Método de Notificación *</label>
-                                <select
-                                  style={styles.select}
-                                  value={customerImpact.notificationMethod || 'none'}
-                                  onChange={(e) => updateCustomerImpact('notificationMethod', e.target.value)}
-                                >
-                                  <option value="none">Seleccionar método...</option>
-                                  <option value="email">Email / Correo Electrónico</option>
-                                  <option value="formal_letter">Carta Formal / Official Letter</option>
-                                  <option value="meeting">Reunión / Meeting</option>
-                                  <option value="portal">Portal del Cliente</option>
-                                  <option value="other">Otro</option>
-                                </select>
-                              </div>
-
-                              {/* Customer Approval Required */}
-                              <div style={styles.field}>
-                                <label style={styles.checkboxLabel}>
-                                  <input
-                                    type="checkbox"
-                                    checked={customerImpact.customerApprovalRequired}
-                                    onChange={(e) => updateCustomerImpact('customerApprovalRequired', e.target.checked)}
-                                    style={styles.checkbox}
-                                  />
-                                  <span>¿Se requiere aprobación formal del cliente?</span>
-                                </label>
-                              </div>
-
-                              {/* Evidence Upload */}
-                              <div style={styles.field}>
-                                <label style={styles.label}>Evidencia de Notificación / Aprobación del Cliente</label>
-                                <input
-                                  type="file"
-                                  multiple
-                                  accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png,.msg,.eml"
-                                  onChange={(e) => handleCustomerEvidenceUpload(e.target.files)}
-                                  style={styles.fileInput}
-                                  disabled={uploadingEvidence === 'customer' || !data.id}
-                                />
-                                {!data.id && (
-                                  <p style={styles.helpText}>
-                                     Guarda el ECR primero para poder subir evidencia
-                                  </p>
-                                )}
-                                {uploadingEvidence === 'customer' && (
-                                  <p style={styles.uploadingText}>Subiendo archivos...</p>
-                                )}
-
-                                {/* Uploaded Files */}
-                                {customerImpact.evidenceFiles && customerImpact.evidenceFiles.length > 0 && (
-                                  <div style={styles.filesContainer}>
-                                    <p style={styles.filesLabel}>Archivos adjuntos:</p>
-                                    {customerImpact.evidenceFiles.map((file, index) => (
-                                      <div key={index} style={styles.fileItem}>
-                                        <a
-                                          href={`http://localhost:5000${file.url}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          style={styles.fileLink}
-                                        >
-                                           {file.name}
-                                        </a>
-                                        <button
-                                          onClick={() => removeCustomerEvidenceFile(index)}
-                                          style={styles.removeFileButton}
-                                          title="Eliminar archivo"
-                                        >
-                                          ×
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {/* Standard fields for all other areas */}
-                      {/* Responsible User - filtered by area's team members */}
-                      <div style={styles.field}>
-                        <label style={styles.label}>Responsable del Análisis *</label>
+                        <label style={styles.label}>{language === 'es' ? 'Responsable del Análisis' : 'Analysis Responsible'} *</label>
                         <select
                           style={styles.select}
                           value={areaData.responsibleUserId || ''}
                           onChange={(e) => updateAreaData(area.key, 'responsibleUserId', parseInt(e.target.value))}
                         >
-                          <option value="">Seleccionar responsable...</option>
+                          <option value="">{language === 'es' ? 'Seleccionar responsable...' : 'Select responsible...'}</option>
                           {(() => {
                             // Get team members for this area
                             const teamMemberIds = area.defaultValidators || [];
@@ -691,7 +597,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                       {/* Subsections Checkboxes (if area has subsections) */}
                       {area.subsections && area.subsections.length > 0 && (
                         <div style={styles.field}>
-                          <label style={styles.label}>Aspectos Afectados</label>
+                          <label style={styles.label}>{language === 'es' ? 'Aspectos Afectados' : 'Affected Aspects'}</label>
                           <div style={styles.subsectionsGrid}>
                             {area.subsections.map(subsection => (
                               <label key={subsection.key} style={styles.subsectionCheckbox}>
@@ -718,7 +624,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                           <label style={{...styles.label, color: '#ef4444', fontWeight: '600', minWidth: '140px', margin: 0}}>
-                            Evaluación de Riesgo
+                            {tr('ecr.impactAnalysis.riskAssessment')}
                           </label>
 
                           {/* Severity Dropdown */}
@@ -728,11 +634,11 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                               value={areaData.severity || ''}
                               onChange={(e) => updateSeverity(area.key, parseInt(e.target.value))}
                             >
-                              <option value="">Severidad...</option>
-                              <option value="1">Menor (1-3)</option>
-                              <option value="2">Moderado (4-6)</option>
-                              <option value="3">Severo (7-8)</option>
-                              <option value="4">Crítico (9-10)</option>
+                              <option value="">{language === 'es' ? 'Severidad...' : 'Severity...'}</option>
+                              <option value="1">{language === 'es' ? 'Menor (1-3)' : 'Minor (1-3)'}</option>
+                              <option value="2">{language === 'es' ? 'Moderado (4-6)' : 'Moderate (4-6)'}</option>
+                              <option value="3">{language === 'es' ? 'Severo (7-8)' : 'Severe (7-8)'}</option>
+                              <option value="4">{language === 'es' ? 'Crítico (9-10)' : 'Critical (9-10)'}</option>
                             </select>
                           </div>
 
@@ -743,11 +649,11 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                               value={areaData.occurrence || ''}
                               onChange={(e) => updateOccurrence(area.key, parseInt(e.target.value))}
                             >
-                              <option value="">Ocurrencia...</option>
-                              <option value="1">Raro (1-3)</option>
-                              <option value="2">Ocasional (4-6)</option>
-                              <option value="3">Frecuente (7-8)</option>
-                              <option value="4">Muy Frecuente (9-10)</option>
+                              <option value="">{language === 'es' ? 'Ocurrencia...' : 'Occurrence...'}</option>
+                              <option value="1">{language === 'es' ? 'Raro (1-3)' : 'Rare (1-3)'}</option>
+                              <option value="2">{language === 'es' ? 'Ocasional (4-6)' : 'Occasional (4-6)'}</option>
+                              <option value="3">{language === 'es' ? 'Frecuente (7-8)' : 'Frequent (7-8)'}</option>
+                              <option value="4">{language === 'es' ? 'Muy Frecuente (9-10)' : 'Very Frequent (9-10)'}</option>
                             </select>
                           </div>
 
@@ -780,19 +686,19 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
 
                       {/* Impact Description */}
                       <div style={styles.field}>
-                        <label style={styles.label}>Descripción del Impacto *</label>
+                        <label style={styles.label}>{language === 'es' ? 'Descripción del Impacto' : 'Impact Description'} *</label>
                         <textarea
                           style={styles.textarea}
                           value={areaData.impactDescription || ''}
                           onChange={(e) => updateAreaData(area.key, 'impactDescription', e.target.value)}
-                          placeholder={`Describe cómo este cambio afecta el área de ${area.name}...`}
+                          placeholder={language === 'es' ? `Describe cómo este cambio afecta el TFT de ${area.name}...` : `Describe how this change affects the ${area.name} TFT...`}
                           rows={4}
                         />
                       </div>
 
                       {/* Evidence Upload */}
                       <div style={styles.field}>
-                        <label style={styles.label}>Evidencia de Soporte</label>
+                        <label style={styles.label}>{language === 'es' ? 'Evidencia de Soporte' : 'Supporting Evidence'}</label>
                         <input
                           type="file"
                           multiple
@@ -827,7 +733,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                                 <button
                                   onClick={() => removeEvidenceFile(area.key, index)}
                                   style={styles.removeFileButton}
-                                  title="Eliminar archivo"
+                                  title={language === 'es' ? 'Eliminar archivo' : 'Delete file'}
                                 >
                                   ×
                                 </button>
@@ -836,14 +742,159 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                           </div>
                         )}
                       </div>
+
                     </>
-                  )}
                 </div>
               )}
             </div>
           );
         })}
 
+      </div>
+
+      {/* ============================================================ */}
+      {/* CUSTOMER NOTIFICATION SECTION - Always visible */}
+      {/* ============================================================ */}
+      <div style={{
+        marginTop: '24px',
+        padding: '20px',
+        backgroundColor: '#fffbeb',
+        borderRadius: '8px',
+        border: '2px solid #f59e0b'
+      }}>
+        <h3 style={{
+          margin: '0 0 16px 0',
+          fontSize: '18px',
+          fontWeight: '700',
+          color: '#92400e'
+        }}>
+          Notificación al Cliente
+        </h3>
+
+        {/* Affects Customer */}
+        <div style={styles.field}>
+          <label style={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={customerImpact.affectsCustomer || false}
+              onChange={(e) => updateCustomerImpact('affectsCustomer', e.target.checked)}
+              style={styles.checkbox}
+            />
+            <span style={{fontWeight: '600', fontSize: '14px'}}>
+              ¿Este cambio afecta al cliente o al producto/servicio entregado al cliente?
+            </span>
+          </label>
+        </div>
+
+        {customerImpact.affectsCustomer && (
+          <>
+            {/* Impact Description */}
+            <div style={styles.field}>
+              <label style={styles.label}>{language === 'es' ? 'Descripción del Impacto al Cliente *' : 'Customer Impact Description *'}</label>
+              <textarea
+                style={styles.textarea}
+                value={customerImpact.impactDescription || ''}
+                onChange={(e) => updateCustomerImpact('impactDescription', e.target.value)}
+                placeholder={language === 'es' ? 'Describe cómo este cambio afecta al cliente (dimensiones, especificaciones, calidad, empaque, etc.)...' : 'Describe how this change affects the customer (dimensions, specifications, quality, packaging, etc.)...'}
+                rows={3}
+              />
+            </div>
+
+            {/* Requires Notification */}
+            <div style={styles.field}>
+              <label style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={customerImpact.requiresNotification}
+                  onChange={(e) => updateCustomerImpact('requiresNotification', e.target.checked)}
+                  style={styles.checkbox}
+                />
+                <span style={{fontWeight: '500'}}>¿Se requiere notificar al cliente sobre este cambio?</span>
+              </label>
+            </div>
+
+            {customerImpact.requiresNotification && (
+              <>
+                {/* Notification Method */}
+                <div style={styles.field}>
+                  <label style={styles.label}>Método de Notificación *</label>
+                  <select
+                    style={styles.select}
+                    value={customerImpact.notificationMethod || 'none'}
+                    onChange={(e) => updateCustomerImpact('notificationMethod', e.target.value)}
+                  >
+                    <option value="none">Seleccionar método...</option>
+                    <option value="email">Email / Correo Electrónico</option>
+                    <option value="formal_letter">Carta Formal / Official Letter</option>
+                    <option value="meeting">Reunión / Meeting</option>
+                    <option value="portal">Portal del Cliente</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </div>
+
+                {/* Customer Approval Required */}
+                <div style={styles.field}>
+                  <label style={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={customerImpact.customerApprovalRequired}
+                      onChange={(e) => updateCustomerImpact('customerApprovalRequired', e.target.checked)}
+                      style={styles.checkbox}
+                    />
+                    <span>¿Se requiere aprobación formal del cliente?</span>
+                  </label>
+                </div>
+
+                {/* Customer Evidence Upload */}
+                <div style={styles.field}>
+                  <label style={styles.label}>Evidencia de Notificación / Aprobación del Cliente</label>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png,.msg,.eml"
+                    onChange={(e) => handleCustomerEvidenceUpload(e.target.files)}
+                    style={styles.fileInput}
+                    disabled={uploadingEvidence === 'customer' || !data.id}
+                  />
+                  {!data.id && (
+                    <p style={styles.helpText}>
+                      Guarda el ECR primero para poder subir evidencia
+                    </p>
+                  )}
+                  {uploadingEvidence === 'customer' && (
+                    <p style={styles.uploadingText}>Subiendo archivos...</p>
+                  )}
+
+                  {/* Uploaded Customer Files */}
+                  {customerImpact.evidenceFiles && customerImpact.evidenceFiles.length > 0 && (
+                    <div style={styles.filesContainer}>
+                      <p style={styles.filesLabel}>Archivos de notificación adjuntos:</p>
+                      {customerImpact.evidenceFiles.map((file, index) => (
+                        <div key={index} style={styles.fileItem}>
+                          <a
+                            href={`http://localhost:5000${file.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={styles.fileLink}
+                          >
+                            {file.name}
+                          </a>
+                          <button
+                            onClick={() => removeCustomerEvidenceFile(index)}
+                            style={styles.removeFileButton}
+                            title={language === 'es' ? 'Eliminar archivo' : 'Delete file'}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       {/* Summary */}
@@ -869,7 +920,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
           <div style={styles.summary}>
             <h3 style={styles.summaryTitle}>Resumen del Análisis</h3>
             <p style={styles.summaryText}>
-              {impactAnalysis.length} área(s) afectada(s)
+              {impactAnalysis.length} TFT(s) afectada(s)
             </p>
             <div style={styles.summaryAreas}>
               {impactAnalysis.map(item => (
@@ -877,7 +928,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                   ...styles.summaryBadge,
                   backgroundColor: item.color
                 }}>
-                  {item.icon} {item.areaName}
+                  {item.areaName}
                 </span>
               ))}
             </div>
@@ -907,11 +958,11 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
                     </>
                   ) : (
                     <>
-                      Las siguientes áreas tienen una evaluación de riesgo <strong>{getRiskDisplay(maxRiskLevel).label}</strong>:{' '}
+                      Las siguientes TFT tienen una evaluación de riesgo <strong>{getRiskDisplay(maxRiskLevel).label}</strong>:{' '}
                       <strong>
                         {areasWithMaxRisk.map((area, idx) => (
                           <span key={area.areaKey}>
-                            {area.icon} {area.areaName}
+                            {area.areaName}
                             {idx < areasWithMaxRisk.length - 1 ? ', ' : ''}
                           </span>
                         ))}
@@ -959,6 +1010,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate }) => {
 
       {/* Approval Assignment Section */}
       <ECRApprovalAssignment data={data} onDataUpdate={onDataUpdate} />
+      </div>{/* End of read-only wrapper */}
     </div>
   );
 };

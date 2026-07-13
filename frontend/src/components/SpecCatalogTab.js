@@ -32,6 +32,13 @@ const SpecCatalogTab = ({ theme: t }) => {
   const [bomPhotoUrl, setBomPhotoUrl] = useState('');
   const [bomNotes, setBomNotes] = useState('');
 
+  // Stations state
+  const [allStations, setAllStations] = useState([]);
+  const [selectedStationIds, setSelectedStationIds] = useState([]);
+
+  // Departments state
+  const [departments, setDepartments] = useState([]);
+
   // Form state
   const [formData, setFormData] = useState({
     specNumber: '',
@@ -47,7 +54,8 @@ const SpecCatalogTab = ({ theme: t }) => {
     inspectionMethod: '',
     referencePhotoUrl: '',
     drawingRef: '',
-    notes: ''
+    notes: '',
+    defaultDepartmentId: ''
   });
 
   // Load data on mount
@@ -55,7 +63,31 @@ const SpecCatalogTab = ({ theme: t }) => {
     loadParts();
     loadUnits();
     loadClients();
+    loadStations();
+    loadDepartments();
   }, []);
+
+  const loadStations = async () => {
+    try {
+      const stations = await specCatalogService.getAllStations();
+      setAllStations(stations);
+    } catch (err) {
+      console.error('Error loading stations:', err);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/departments', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setDepartments(data.departments || []);
+    } catch (err) {
+      console.error('Error loading departments:', err);
+    }
+  };
 
   // Load specs when part changes
   useEffect(() => {
@@ -125,7 +157,7 @@ const SpecCatalogTab = ({ theme: t }) => {
   const loadSpecs = async (partId) => {
     try {
       setLoading(true);
-      const data = await specCatalogService.getPartSpecs(partId);
+      const data = await specCatalogService.getPartSpecsWithStations(partId);
       setSpecs(data.specs);
       setSpecsByType(data.specsByType);
       setCounts(data.counts);
@@ -152,8 +184,10 @@ const SpecCatalogTab = ({ theme: t }) => {
       inspectionMethod: '',
       referencePhotoUrl: '',
       drawingRef: '',
-      notes: ''
+      notes: '',
+      defaultDepartmentId: ''
     });
+    setSelectedStationIds([]);
     setEditingSpec(null);
     setShowModal(true);
   };
@@ -174,8 +208,11 @@ const SpecCatalogTab = ({ theme: t }) => {
       inspectionMethod: spec.inspectionMethod || '',
       referencePhotoUrl: spec.referencePhotoUrl || '',
       drawingRef: spec.drawingRef || '',
-      notes: spec.notes || ''
+      notes: spec.notes || '',
+      defaultDepartmentId: spec.defaultDepartmentId || ''
     });
+    // Load current stations from spec data
+    setSelectedStationIds(spec.stations ? spec.stations.map(s => s.id) : []);
     setEditingSpec(spec);
     setShowModal(true);
   };
@@ -190,13 +227,22 @@ const SpecCatalogTab = ({ theme: t }) => {
         lowerLimit: formData.lowerLimit ? parseFloat(formData.lowerLimit) : null,
         nominalValue: formData.nominalValue ? parseFloat(formData.nominalValue) : null,
         upperLimit: formData.upperLimit ? parseFloat(formData.upperLimit) : null,
-        unitId: formData.unitId ? parseInt(formData.unitId) : null
+        unitId: formData.unitId ? parseInt(formData.unitId) : null,
+        defaultDepartmentId: formData.defaultDepartmentId ? parseInt(formData.defaultDepartmentId) : null
       };
 
+      let specId;
       if (modalMode === 'create') {
-        await specCatalogService.createSpec(selectedPart.id, payload);
+        const newSpec = await specCatalogService.createSpec(selectedPart.id, payload);
+        specId = newSpec.id;
       } else {
         await specCatalogService.updateSpec(editingSpec.id, payload);
+        specId = editingSpec.id;
+      }
+
+      // Save station assignments
+      if (specId) {
+        await specCatalogService.updateSpecStations(specId, selectedStationIds);
       }
 
       setShowModal(false);
@@ -595,9 +641,9 @@ const SpecCatalogTab = ({ theme: t }) => {
     return (
       <div style={styles.section}>
         <div style={styles.sectionTitle}>
-          {type === 'dimensional' && '📐 Dimensionales'}
-          {type === 'qualitative' && '👁️ Cualitativas'}
-          {type === 'bomComponent' && '🔧 Componentes BOM'}
+          {type === 'dimensional' && 'Dimensionales'}
+          {type === 'qualitative' && 'Cualitativas'}
+          {type === 'bomComponent' && 'Componentes BOM'}
           <span style={{ ...styles.badge, backgroundColor: t.bgPanel, color: t.text }}>
             {specList.length}
           </span>
@@ -617,6 +663,8 @@ const SpecCatalogTab = ({ theme: t }) => {
               )}
               {type === 'qualitative' && <th style={styles.th}>Valores Aceptables</th>}
               {type === 'bomComponent' && <th style={styles.th}>Componente</th>}
+              <th style={styles.th}>Estaciones</th>
+              <th style={styles.th}>Responsable</th>
               <th style={styles.th}>Crítico</th>
               <th style={styles.th}>Acciones</th>
             </tr>
@@ -653,6 +701,54 @@ const SpecCatalogTab = ({ theme: t }) => {
                     ) : '-'}
                   </td>
                 )}
+                <td style={styles.td}>
+                  {spec.stations && spec.stations.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {spec.stations.map(st => (
+                        <span
+                          key={st.id}
+                          style={{
+                            padding: '2px 8px',
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          {st.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{
+                      padding: '2px 8px',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: '500'
+                    }}>
+                      Sin estación
+                    </span>
+                  )}
+                </td>
+                <td style={styles.td}>
+                  {spec.defaultDepartmentName ? (
+                    <span style={{
+                      padding: '2px 8px',
+                      backgroundColor: '#dbeafe',
+                      color: '#1e40af',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: '500'
+                    }}>
+                      {spec.defaultDepartmentName}
+                    </span>
+                  ) : (
+                    <span style={{ color: t.textMuted, fontSize: '11px' }}>—</span>
+                  )}
+                </td>
                 <td style={styles.td}>
                   {spec.isCritical && <span style={styles.criticalBadge}>CTQ</span>}
                 </td>
@@ -771,6 +867,11 @@ const SpecCatalogTab = ({ theme: t }) => {
                     {counts.critical > 0 && (
                       <span style={{ ...styles.badge, backgroundColor: '#fecaca', color: '#991b1b' }}>
                         {counts.critical} Críticas
+                      </span>
+                    )}
+                    {counts.withoutStation > 0 && (
+                      <span style={{ ...styles.badge, backgroundColor: '#fef3c7', color: '#92400e' }}>
+                        {counts.withoutStation} Sin estación
                       </span>
                     )}
                   </div>
@@ -1006,6 +1107,21 @@ const SpecCatalogTab = ({ theme: t }) => {
                     style={styles.photoPreview}
                   />
                 )}
+              </div>
+
+              {/* Default Department */}
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Departamento Responsable (Default)</label>
+                <select
+                  value={formData.defaultDepartmentId}
+                  onChange={(e) => setFormData({ ...formData, defaultDepartmentId: e.target.value ? parseInt(e.target.value) : '' })}
+                  style={styles.input}
+                >
+                  <option value="">Sin asignar</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Notes */}

@@ -1,13 +1,7 @@
 import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, X, Settings } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
-/**
- * Wrapper component for dashboard widgets
- * Provides drag-and-drop functionality and common styling
- */
 const DashboardWidget = ({
   id,
   title,
@@ -17,24 +11,12 @@ const DashboardWidget = ({
   onRemove,
   onConfigure,
   style = {},
-  className = ''
+  className = '',
+  dragHandleProps = {},
+  isDragging = false,
+  language = 'es',
 }) => {
   const { theme: t } = useTheme();
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id, disabled: !isEditMode });
-
-  const dragStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 1000 : 1
-  };
 
   const styles = {
     widget: {
@@ -46,6 +28,7 @@ const DashboardWidget = ({
       flexDirection: 'column',
       height: '100%',
       border: isEditMode ? `2px dashed ${t.accent}` : `1px solid ${t.border}`,
+      opacity: isDragging ? 0.4 : 1,
       ...style
     },
     header: {
@@ -62,8 +45,8 @@ const DashboardWidget = ({
       gap: '8px'
     },
     dragHandle: {
-      cursor: isEditMode ? 'grab' : 'default',
-      color: isEditMode ? t.accent : t.border,
+      cursor: 'grab',
+      color: isEditMode ? t.accent : t.textMuted,
       display: 'flex',
       alignItems: 'center'
     },
@@ -100,22 +83,16 @@ const DashboardWidget = ({
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{ ...styles.widget, ...dragStyle }}
-      className={className}
-    >
+    <div style={{ ...styles.widget }} className={className}>
       <div style={styles.header}>
         <div style={styles.headerLeft}>
-          {isEditMode && (
-            <div
-              style={styles.dragHandle}
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical size={18} />
-            </div>
-          )}
+          <div
+            style={{ ...styles.dragHandle, opacity: isEditMode ? 1 : 0.25 }}
+            title={language === 'es' ? 'Arrastra para reordenar' : 'Drag to reorder'}
+            {...dragHandleProps}
+          >
+            <GripVertical size={18} />
+          </div>
           {icon && <span style={styles.icon}>{icon}</span>}
           <h3 style={styles.title}>{title}</h3>
         </div>
@@ -126,19 +103,16 @@ const DashboardWidget = ({
               <button
                 style={styles.actionButton}
                 onClick={() => onConfigure(id)}
-                title="Configurar"
+                title={language === 'es' ? 'Configurar' : 'Configure'}
               >
                 <Settings size={16} />
               </button>
             )}
             {onRemove && (
               <button
-                style={{
-                  ...styles.actionButton,
-                  color: '#ef4444'
-                }}
+                style={{ ...styles.actionButton, color: '#ef4444' }}
                 onClick={() => onRemove(id)}
-                title="Eliminar"
+                title={language === 'es' ? 'Eliminar' : 'Delete'}
               >
                 <X size={16} />
               </button>

@@ -6,6 +6,7 @@ import {
   ResponsiveContainer, Legend
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import CustomDashboard from './CustomDashboard';
 
 const API_URL = 'http://localhost:5000';
@@ -1037,6 +1038,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
 // ─── Main WorkloadDashboard ───────────────────────────────────────────────────
 const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('workload-dashboard-tab') || 'carga');

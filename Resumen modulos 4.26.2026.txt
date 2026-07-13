@@ -1,0 +1,1946 @@
+
+● Tengo la información del módulo 8D. Aquí está la documentación:
+
+  ---
+  [MODULO: 8D PROBLEM SOLVING]
+
+  ├── OBJETIVO
+  │   └── Metodología estructurada para resolución de problemas en 8 disciplinas
+  │       con sistema de aprobación en cascada y trazabilidad completa
+
+  ├── INPUTS (Datos que se capturan)
+  │   ├── report_id          | String   | Auto-generado (8D-YYYY-XXXX)
+  │   ├── title              | String   | Usuario
+  │   ├── description        | Text     | Usuario
+  │   ├── supplier_name      | String   | Catálogo/Usuario
+  │   ├── client_id          | FK       | Catálogo Clientes
+  │   ├── project_id         | FK       | Catálogo Proyectos
+  │   ├── selected_parts[]   | Array    | Catálogo BOM
+  │   ├── severity           | Enum     | Usuario (High/Medium/Low)
+  │   ├── problem_type       | String   | Usuario
+  │   ├── tipo_issue         | String   | Usuario
+  │   ├── tipo_resp          | String   | Usuario
+  │   ├── timing_occurrence  | String   | Usuario
+  │   ├── estimated_cost     | Decimal  | Calculado/Usuario
+  │   ├── issue_date         | Date     | Usuario
+  │   ├── target_closure_date| Date     | Usuario
+  │   ├── process_flow[]     | Array    | Usuario (Diagrama)
+  │   ├── escalation_path    | JSONB    | Usuario (issue/countermeasure/confirmation users)
+  │   ├── department_id      | FK       | Catálogo Departamentos
+  │   └── customer_impact    | String   | Usuario
+
+  ├── PROCESO
+  │   ├── D1-D2: Formación de Equipo + Descripción del Problema
+  │   │   ├── Asignación de responsables por sección
+  │   │   ├── Definición del equipo
+  │   │   └── Aprobación → D3
+  │   │
+  │   ├── D3: Acciones de Contención Interinas
+  │   │   ├── Captura de acciones MFG
+  │   │   ├── Flujo de aprobación multinivel
+  │   │   └── Aprobación → D4
+  │   │
+  │   ├── D4: Análisis de Causa Raíz
+  │   │   ├── Análisis 4M (Mano de obra, Maquinaria, Método, Material)
+  │   │   ├── Acciones de contención
+  │   │   └── Aprobación → D5
+  │   │
+  │   ├── D5: Acciones Correctivas Permanentes
+  │   │   ├── Definición de contramedidas
+  │   │   ├── Verificación de efectividad
+  │   │   └── Aprobación → D6
+  │   │
+  │   ├── D6: Implementación de Acciones Correctivas
+  │   │   ├── Evidencia de implementación
+  │   │   ├── Carga de archivos/fotos
+  │   │   └── Aprobación → D7
+  │   │
+  │   ├── D7: Prevención de Recurrencia
+  │   │   ├── Validación por auditor
+  │   │   ├── Items de checklist (OK/NOK)
+  │   │   └── Aprobación → D8
+  │   │
+  │   └── D8: Reconocimiento del Equipo + Cierre
+  │       ├── Documentación final
+  │       ├── Lecciones aprendidas
+  │       └── Cierre del reporte
+
+  ├── OUTPUTS
+  │   ├── Reporte 8D completo (PDF exportable)
+  │   ├── Historial de aprobaciones
+  │   ├── Log de auditoría
+  │   ├── KPI: Tiempo de cierre
+  │   ├── KPI: Costo estimado vs real
+  │   ├── KPI: Reportes por severidad
+  │   └── KPI: Reportes por estado
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── status = 'draft' → Editable sin restricciones
+  │   ├── D(n) no aprobado → D(n+1) bloqueado
+  │   ├── Rechazo en cualquier D → Regresa al responsable
+  │   ├── Solo asignados pueden aprobar su sección
+  │   ├── severity = 'High' → Notificación a dirección
+  │   └── Cierre requiere todas las D aprobadas
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── → QAR (puede generar QAR desde 8D)
+  │   ├── → Auditorías (vinculación linked_8d_id)
+  │   ├── → Workload (sincronización de actividades)
+  │   ├── → Lecciones Aprendidas (D8)
+  │   ├── ← Defectos (origen de 8D)
+  │   ├── ← ECR (linked_ecr_id)
+  │   └── ↔ Clientes/Partes (BOM)
+
+  └── NOTAS
+      ├── Sistema de aprobación en cascada (D3→D4→D5→D6→D7→D8)
+      ├── Cada D tiene su propio flujo de aprobación multinivel
+      ├── Audit log automático en cada cambio
+      └── Attachments manejados en tabla separada (eightd_attachments)
+
+  ---
+  ¿Continúo con el siguiente módulo (QAR)?
+
+✻ Baked for 1m 30s
+
+> si, muy bien asi continua con todos sin preguntar por favor
+
+✻ Compacting conversation… (58s · ↑ 0 tokens)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+> 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ accept edits on · 2 bashes · esc to interrupt · ctrl+t to hide tasks          Context left until auto-compact: 0%
+                                                                                Update available! Run: winget upgrade
+                                                                                Anthropic.ClaudeCode
+
+ ▐▛███▜▌   Claude Code v2.1.29
+▝▜█████▛▘  Opus 4.5 · Claude Pro
+  ▘▘ ▝▝    C:\Users\The Eidrian
+
+✻ Conversation compacted (ctrl+o for history)
+
+  ⎿  Referenced file quality-alert-system\frontend\src\pages\AuditScheduleCreate.js
+  ⎿  Referenced file quality-alert-system\backend\endpoints\auditEndpoints.js
+  ⎿  Read quality-alert-system\backend\migrations\068_audit_auditees_table.sql (55 lines)
+  ⎿  Referenced file quality-alert-system\frontend\src\pages\DefectConfig.js
+  ⎿  Read quality-alert-system\backend\endpoints\inspectionCatalogEndpoints.js (391 lines)
+
+● Continuando con la documentación de módulos QMS. Procedo con QAR.
+
+● Explore(Explore QAR module structure)
+  ⎿  Done (28 tool uses · 87.3k tokens · 2m 40s)
+
+● ================================================================================
+  [MÓDULO: QAR - QUALITY ACTION REQUEST]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Gestión integral del ciclo de vida de alertas de calidad con:
+  │   - Disparo automático por umbrales de defectos
+  │   - Seguimiento de respuestas y validaciones
+  │   - Análisis de efectividad (IE-QAR)
+  │   - Cumplimiento SLA por severidad
+
+  ├── INPUTS
+  │   ├── Defectos capturados (defect_entries_v2)
+  │   ├── Umbrales de severidad (qar_threshold_count, qar_threshold_hours)
+  │   ├── Configuración SLA por severidad
+  │   ├── Fotos NOK/OK
+  │   ├── Usuarios (destinatarios respuesta/validación)
+  │   └── Cliente/Proyecto/Parte
+
+  ├── PROCESO (Flujo de Estados)
+  │   │
+  │   ├── [DISPARO]
+  │   │   ├── Manual: Usuario crea QAR seleccionando cliente/parte/defectos
+  │   │   └── Automático: Umbral alcanzado durante inspección
+  │   │       └── POST /qar/check-threshold → Modal "¿Crear QAR?"
+  │   │           ├── Aceptar → QARCreate pre-llenado
+  │   │           └── Declinar → qar_declined_history (trazabilidad)
+  │   │
+  │   ├── [EMITIDO]
+  │   │   ├── QAR creado con número automático (QAR-YYYY-NNNN)
+  │   │   ├── Defectos vinculados (qar_defects)
+  │   │   ├── Destinatarios asignados (response/validation)
+  │   │   └── Timer SLA iniciado
+  │   │
+  │   ├── [RESPONDIDO]
+  │   │   ├── POST /qar/:id/respond
+  │   │   ├── Campos: rootCause, correctiveAction, resolutionNotes
+  │   │   ├── Archivos adjuntos (evidencia)
+  │   │   └── Pasa a validación
+  │   │
+  │   └── [CIERRE]
+  │       ├── POST /qar/:id/validate
+  │       ├── approved=true → CERRADO (validation_status='approved')
+  │       └── approved=false → RECHAZADO → Vuelve a RESPONDIDO
+  │
+  ├── OUTPUTS
+  │   ├── QAR cerrados con root cause documentado
+  │   ├── IE-QAR (Índice de Efectividad): defectos pre vs post QAR
+  │   ├── Métricas SLA (tiempo respuesta/cierre)
+  │   ├── Historial de acciones (qar_comments)
+  │   └── Dashboard ejecutivo con KPIs
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Umbrales default:
+  │   │   ├── CRITICAL/ALTA: 1 defecto en 1 hora
+  │   │   ├── MAJOR: 3 defectos en 4 horas
+  │   │   └── MINOR: 5 defectos en 8 horas
+  │   ├── SLA default (horas):
+  │   │   ├── Crítico: 4h respuesta / 24h cierre
+  │   │   ├── Alta: 8h respuesta / 48h cierre
+  │   │   ├── Mayor: 24h respuesta / 72h cierre
+  │   │   └── Menor: 48h respuesta / 120h cierre
+  │   ├── Solo usuarios con can_validate_qar pueden aprobar/rechazar
+  │   └── Defectos marcados con qar_id al vincularse
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ← DEFECTOS: Disparo automático por umbral
+  │   ├── ← CONFIGURACIÓN: Umbrales y SLA por severidad
+  │   ├── → 8D: QAR puede escalar a 8D (trigger_type='escalation')
+  │   ├── → DASHBOARD: Métricas IE-QAR, SLA, tendencias
+  │   └── ↔ USUARIOS: Destinatarios, validadores, responsables
+
+  ├── TABLAS PRINCIPALES
+  │   ├── quality_alerts (core)
+  │   ├── qar_defects (vínculos)
+  │   ├── qar_recipients (destinatarios)
+  │   ├── qar_comments (timeline)
+  │   ├── qar_sla_config (configuración)
+  │   ├── qar_response_files (archivos)
+  │   └── qar_declined_history (rechazos)
+
+  └── NOTAS
+      ├── IE-QAR negativo = efectivo (menos defectos post-QAR)
+      ├── Dashboard identifica QARs en riesgo (vencidos sin validación)
+      └── Fotos NOK/OK para evidencia visual
+
+  Continuando con MRB...
+
+● Explore(Explore MRB module structure)
+  ⎿  Done (29 tool uses · 93.6k tokens · 1m 51s)
+
+● ================================================================================
+  [MÓDULO: MRB - MATERIAL REVIEW BOARD]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Gestión integral de campañas de revisión de material con:
+  │   - Inspección 100% con captura de defectos
+  │   - Disposiciones (Use As Is, Rework, Scrap, Return, Hold)
+  │   - Seguimiento de cuarentena por ubicación
+  │   - Análisis de costos (scrap, labor)
+  │   - Capacidad de detección por inspector
+
+  ├── INPUTS
+  │   ├── Origen: QAR escalado, 8D Report, o INCOMING (manual)
+  │   ├── Cliente/Proyecto/Parte(s)
+  │   ├── Criterios de inspección
+  │   ├── Fotos NOK/OK
+  │   ├── Costos unitarios (inspector, supervisor, scrap)
+  │   └── Destinatarios respuesta/validación
+
+  ├── PROCESO (Flujo de Estados)
+  │   │
+  │   ├── [CREACIÓN]
+  │   │   ├── Seleccionar fuente (8D/QAR/INCOMING)
+  │   │   ├── Heredar datos automáticamente si aplica
+  │   │   ├── Definir partes afectadas (multi-parte JSONB)
+  │   │   ├── Asignar responsables y validadores
+  │   │   └── Estado: BORRADOR o ABIERTA
+  │   │
+  │   ├── [CAPTURA DE DEFECTOS]
+  │   │   ├── Estación de inspección (MRBDefectCapture)
+  │   │   ├── Modo individual o bulk (tally sheet)
+  │   │   ├── Registro de piezas OK (capacidad detección)
+  │   │   ├── Registro de piezas NOK con:
+  │   │   │   ├── Tipo de defecto
+  │   │   │   ├── Severidad
+  │   │   │   ├── Disposición
+  │   │   │   └── Tiempo muerto (downtime)
+  │   │   └── Actualización automática de contadores
+  │   │
+  │   ├── [REGISTRO DE TURNOS]
+  │   │   ├── Horas trabajadas
+  │   │   ├── Conteo de inspectores/supervisores
+  │   │   └── Cálculo de costo laboral
+  │   │
+  │   ├── [RESPUESTA/VALIDACIÓN]
+  │   │   ├── Responsable: root cause + corrective action
+  │   │   └── Validador: aprueba o rechaza
+  │   │
+  │   └── [CIERRE]
+  │       ├── Estado: CERRADA o CANCELADA
+  │       └── Métricas finales consolidadas
+  │
+  ├── OUTPUTS
+  │   ├── Contadores: qty_inspected, qty_ok, qty_nok
+  │   ├── Disposiciones: use_as_is, rework, scrap, return, hold
+  │   ├── Cuarentena: warehouse, process, transit, customer
+  │   ├── Costos: scrap_cost, labor_cost
+  │   ├── Capacidad detección por inspector (%)
+  │   └── Dashboard con 40+ widgets (6 categorías)
+
+  ├── DASHBOARD CATEGORÍAS
+  │   ├── SUMMARY: KPIs principales, totales
+  │   ├── MATERIAL: Disposiciones, cuarentena
+  │   ├── TIMING: Tiempos de respuesta/cierre
+  │   ├── COST: Impacto financiero
+  │   ├── DEFECTS: Tendencias, Pareto
+  │   └── OPERATIONS: Performance, turnos
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Disposiciones → Severidad automática:
+  │   │   ├── SCRAP → CRITICAL
+  │   │   ├── REWORK/RETURN → MAJOR
+  │   │   └── USE_AS_IS/HOLD → MINOR
+  │   ├── Multi-parte: parts_list (JSONB array)
+  │   ├── Sincronización D5/D6 desde 8D origen
+  │   ├── Cuarentena sincronizable desde D2 del 8D
+  │   └── Límite adjuntos: 50MB
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ← QAR: Origen por escalamiento
+  │   ├── ← 8D: Origen con sync de D2/D5/D6
+  │   ├── → DEFECTOS: defect_entries_v2.mrb_campaign_id
+  │   ├── → DASHBOARD: Analytics consolidados
+  │   ├── ↔ SHIFTS: mrb_shift_hours, mrb_downtime_entries
+  │   └── ↔ USUARIOS: Inspectores, responsables, validadores
+
+  ├── TABLAS PRINCIPALES
+  │   ├── mrb_campaigns (core - 50+ campos)
+  │   ├── mrb_attachments (adjuntos)
+  │   ├── mrb_ok_entries (piezas OK por inspector)
+  │   ├── mrb_downtime_entries (tiempo muerto)
+  │   ├── mrb_shift_hours (horas por turno)
+  │   ├── mrb_recipients (destinatarios)
+  │   └── defect_entries_v2 (defectos vinculados)
+
+  └── NOTAS
+      ├── 3600+ líneas en mrbEndpoints.js
+      ├── Capacidad detección: OK_piezas / Total_inspeccionadas
+      └── Costo laboral = horas × inspectores × tarifa
+
+  Continuando con ECR...
+
+● Explore(Explore ECR module structure)
+  ⎿  Done (27 tool uses · 88.1k tokens · 1m 53s)
+
+● ================================================================================
+  [MÓDULO: ECR - ENGINEERING CHANGE REQUEST]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Gestión de solicitudes de cambio de ingeniería conforme a IATF 8.5.6.1:
+  │   - Proceso de 5 etapas con aprobación multinivel
+  │   - Análisis de impacto configurable
+  │   - Validación con evidencia before/after
+  │   - Auditoría de cierre (estilo D7)
+  │   - Trail de auditoría completo
+
+  ├── INPUTS
+  │   ├── Solicitante (usuario, departamento, contacto)
+  │   ├── Cliente(s) y Proyecto(s) afectados
+  │   ├── Partes afectadas con mapeo de reemplazo
+  │   ├── Fotos before/after
+  │   ├── Documentos adjuntos
+  │   ├── Evaluación de riesgo (severidad × ocurrencia)
+  │   └── Aprobadores por nivel (1, 2, 3)
+
+  ├── PROCESO (5 Etapas)
+  │   │
+  │   ├── [ECR-1: CHANGE REQUEST BOARD]
+  │   │   ├── Información del solicitante
+  │   │   ├── Asignación de equipo de revisión
+  │   │   ├── Equipos de validación por área
+  │   │   └── Evaluación de riesgo inicial
+  │   │
+  │   ├── [ECR-2: CHANGE DESCRIPTION]
+  │   │   ├── Título y descripción del cambio
+  │   │   ├── Categoría: emergency, planned, continuous_improvement
+  │   │   ├── Tipo: Design, Process, Material, Safety, Admin, Layout
+  │   │   ├── Condición before/after con fotos
+  │   │   ├── Documentos afectados
+  │   │   └── Partes afectadas con reemplazo
+  │   │
+  │   ├── [ECR-2B: IMPACT ANALYSIS] (IATF 8.5.6.1)
+  │   │   ├── Áreas de impacto configurables
+  │   │   ├── Evaluación de riesgo por área
+  │   │   ├── Impacto al cliente (notificación/aprobación)
+  │   │   └── Asignación de aprobadores multinivel
+  │   │
+  │   ├── [ECR-3: VALIDATION & IMPLEMENTATION]
+  │   │   ├── Acciones de validación con responsable/fecha
+  │   │   ├── Plan de prueba
+  │   │   ├── Plan de implementación
+  │   │   ├── Evidencia de validación (before/after)
+  │   │   ├── Plan de comunicación (customer, supplier, plant, etc.)
+  │   │   └── Aprobación del cliente
+  │   │
+  │   └── [ECR-4: CLOSURE & CONFIRMATION]
+  │       ├── ISIR/First Article
+  │       ├── Scrap inicial
+  │       ├── Estabilidad de proceso (Cp, Cpk)
+  │       ├── Estado PPAP (nivel, fecha, evidencia)
+  │       ├── Verificación por área de impacto
+  │       ├── Impacto financiero (costos vs ahorros)
+  │       ├── Auditoría de cierre (estilo D7)
+  │       └── Lecciones aprendidas
+
+  ├── FLUJO DE ESTADOS
+  │   │
+  │   │  draft → submitted → under_validation → ready_for_trial
+  │   │           ↓
+  │   │     pending_approval → approved/rejected
+  │   │           ↓
+  │   │  trial_in_progress → trial_passed/failed
+  │   │           ↓
+  │   │     production → monitoring → closed
+  │   │
+  │   └── NIVELES DE APROBACIÓN
+  │       ├── Level 1: Department Manager
+  │       ├── Level 2: Director/Head
+  │       └── Level 3: Executive/Plant Manager
+
+  ├── OUTPUTS
+  │   ├── ECR cerrado con documentación completa
+  │   ├── Trail de auditoría (ecr_audit_log)
+  │   ├── Métricas de proceso (tiempo aprobación, tasa cierre)
+  │   ├── Lecciones aprendidas documentadas
+  │   └── Dashboard con KPIs configurables
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Etapas secuenciales (stage_completion_status JSONB)
+  │   ├── Aprobación multinivel requerida antes de trial
+  │   ├── Rechazo requiere comentarios
+  │   ├── Auditoría de cierre opcional (requires_closure_audit)
+  │   ├── Rondas de re-auditoría soportadas
+  │   └── Límite archivos: 10MB por archivo
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ↔ CLIENTES/PROYECTOS: Multi-selección
+  │   ├── ↔ PARTES: Afectadas con mapeo reemplazo
+  │   ├── ↔ USUARIOS: Solicitante, aprobadores, auditores
+  │   ├── ← RISK MATRIX: Configuración severidad/ocurrencia
+  │   ├── ← IMPACT AREAS: Áreas configurables
+  │   ├── → AUDIT REQUESTS: Auditoría de cierre (D7-style)
+  │   └── → DASHBOARD: KPIs y tendencias
+
+  ├── TABLAS PRINCIPALES
+  │   ├── ecr_reports (core - 80+ campos)
+  │   ├── ecr_validations (validación por área)
+  │   ├── ecr_closure_audit_items (checklist cierre)
+  │   ├── ecr_closure_audit_item_files (evidencia)
+  │   ├── ecr_closure_audit_history (rondas)
+  │   ├── ecr_audit_log (trail de actividad)
+  │   ├── ecr_quality_targets (métricas objetivo)
+  │   └── user_dashboard_configs (layouts personalizados)
+
+  └── NOTAS
+      ├── Proceso 5 etapas compliant IATF 8.5.6.1
+      ├── JSONB extensivo para flexibilidad
+      └── Dashboard 100% personalizable por usuario
+
+  Continuando con Defectos...
+
+● Explore(Explore Defects module structure)
+  ⎿  Done (15 tool uses · 101.0k tokens · 2m 2s)
+
+● ================================================================================
+  [MÓDULO: DEFECTOS - DEFECT CAPTURE & QUERY]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Captura y consulta de defectos con:
+  │   - Interfaz optimizada para tablet (captura secuencial)
+  │   - Clasificación jerárquica multinivel
+  │   - Disparo automático de QAR por umbrales
+  │   - Analytics (Pareto, tendencias, severidad)
+  │   - Exportación a Excel
+
+  ├── INPUTS
+  │   ├── Contexto producto: Cliente → Proyecto → Parte
+  │   ├── Clasificación V1 (legacy):
+  │   │   └── Main Item → Sub-Part → Location1 → Location2 → Rank → Defect Type
+  │   ├── Clasificación V2 (actual):
+  │   │   ├── Category → Defect Type
+  │   │   ├── Severity (inspection_severities)
+  │   │   ├── Station (inspection_stations)
+  │   │   ├── Shift (inspection_shifts)
+  │   │   ├── Stage (inspection_stages)
+  │   │   ├── Disposition (inspection_dispositions)
+  │   │   └── Department
+  │   ├── Inspector (auto-lock desde JWT)
+  │   ├── Fotos (hasta 5, 10MB c/u)
+  │   └── Metadatos: lot_number, downtime_minutes, quantity
+
+  ├── PROCESO
+  │   │
+  │   ├── [CAPTURA - DefectCapture.js]
+  │   │   ├── Layout dos paneles (25% form / 75% defectos)
+  │   │   ├── Header: estación, inspector, turno, contadores OK/NG
+  │   │   ├── Contexto: cliente → proyecto → parte
+  │   │   ├── Campos: stage, downtime, disposition, department, lot, severity
+  │   │   ├── Grid de defectos por categoría (búsqueda filtrada)
+  │   │   ├── Tap único para registrar defecto
+  │   │   └── Check automático umbral QAR en cada captura
+  │   │
+  │   ├── [CONSULTA - DefectQuery.js]
+  │   │   ├── Filtros cascada: cliente → proyecto → parte
+  │   │   ├── Filtros adicionales: categoría, tipo, severidad, estación, turno, departamento, fechas
+  │   │   ├── Tabla paginada (20/50/100/all) con sort por columna
+  │   │   ├── Filas expandibles con detalle completo
+  │   │   ├── Charts en tiempo real:
+  │   │   │   ├── Pareto top 10 + línea 80%
+  │   │   │   ├── Pie severidad
+  │   │   │   └── Tendencia diaria
+  │   │   └── Exportación Excel
+  │   │
+  │   └── [ADMINISTRACIÓN - DefectAdminV2.js]
+  │       ├── CRUD Categorías (8 default)
+  │       ├── CRUD Tipos de defecto por categoría
+  │       ├── Configuración defectos por parte
+  │       ├── Copia configuración entre partes
+  │       └── Import bulk desde Excel
+
+  ├── OUTPUTS
+  │   ├── Defectos registrados con folio auto (DEF-YYYY-#####)
+  │   ├── Descripción auto-generada
+  │   ├── QAR triggered si umbral alcanzado
+  │   ├── Dashboard stats (totales, por tipo, por parte, tendencia)
+  │   └── Exportaciones Excel
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Umbral QAR V2:
+  │   │   ├── Configurable por severidad (qar_threshold_count, qar_threshold_hours)
+  │   │   ├── Default CRITICAL: 1 defecto en 1 hora
+  │   │   ├── Default MAJOR: 3 defectos en 4 horas
+  │   │   └── Default MINOR: 5 defectos en 8 horas
+  │   ├── Umbral QA V1 (legacy):
+  │   │   └── qa_auto_threshold: {count, period_days, group_by}
+  │   ├── Ciclo de vida: open → acknowledged → resolved → closed
+  │   ├── Fotos: 5 max, 10MB, JPEG/PNG/WebP/GIF
+  │   └── Auto-lock inspector desde JWT
+
+  ├── CATEGORÍAS DEFAULT (8)
+  │   ├── APPEARANCE (Apariencia) - Defectos visuales
+  │   ├── FUNCTIONAL (Funcional) - Impacto operación
+  │   ├── CLIPS_FASTENERS (Clips/Sujetadores)
+  │   ├── ELECTRICAL (Eléctrico)
+  │   ├── ASSEMBLY (Ensamble)
+  │   ├── NVH (Ruido/Vibraciones)
+  │   ├── SEALING (Sellado/Fugas)
+  │   └── OTHER (Otros)
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── → QAR: Disparo automático por umbral
+  │   ├── → 8D: Vínculo quality_alert_id → eightd_reports
+  │   ├── → MRB: MRBDefectCapture para campañas
+  │   ├── ↔ CLIENTES/PARTES: Contexto producto
+  │   ├── ← INSPECTION CATALOGS: Severities, stations, shifts, stages, dispositions
+  │   ├── ← DEPARTMENTS: Departamento responsable
+  │   └── ↔ USERS: Inspector, captured_by, feedback_to
+
+  ├── TABLAS PRINCIPALES
+  │   ├── defect_entries_v2 (core actual)
+  │   ├── defect_entries (legacy V1)
+  │   ├── defect_types (tipos por categoría)
+  │   ├── defect_categories (8 categorías)
+  │   ├── defect_catalog_types (tipos catálogo legacy)
+  │   ├── defect_catalog_items (items catálogo legacy)
+  │   ├── defect_config (configuración JSONB)
+  │   ├── part_defect_config (defectos por parte)
+  │   └── inspection_ok_counts (piezas OK para ratio)
+
+  └── NOTAS
+      ├── Optimizado para tablet (fullscreen, botones grandes)
+      ├── V1 legacy con jerarquía 7 niveles
+      ├── V2 simplificado con categorías + inspection fields
+      └── OK/NG counters para capacidad detección
+
+  Continuando con Auditorías...
+
+● Explore(Explore Auditorías module structure)
+  ⎿  Done (41 tool uses · 67.1k tokens · 2m 51s)
+
+● ================================================================================
+  [MÓDULO: AUDITORÍAS - AUDIT MANAGEMENT]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Sistema completo de gestión de auditorías internas/externas:
+  │   - Programas anuales de auditoría
+  │   - Calendarización (Gantt) con recurrencia
+  │   - Ejecución con checklist y atajos de teclado
+  │   - Gestión de No Conformidades con verificación
+  │   - Integración D7/ECR para validación
+  │   - Tracking de recurrencia y riesgo sistémico
+
+  ├── INPUTS
+  │   ├── Programa anual (año, tipo, alcance, criterios, frecuencia)
+  │   ├── Checklist reusables (cláusulas ISO/IATF/VDA)
+  │   ├── Auditor líder y co-auditores
+  │   ├── Auditados (personas, departamento, etapa)
+  │   ├── Vínculos: ECR, 8D, QAR
+  │   └── Evidencia (fotos, documentos)
+
+  ├── PROCESO
+  │   │
+  │   ├── [PROGRAMA]
+  │   │   ├── Estados: draft → approved → in_progress → completed
+  │   │   ├── Tipo: interna/proveedor/proceso/producto/sistema
+  │   │   ├── Criterios: ISO 9001/IATF 16949/VDA 6.3
+  │   │   └── Frecuencia: riesgo/trimestral/semestral/anual
+  │   │
+  │   ├── [PROGRAMACIÓN - AuditScheduleCreate]
+  │   │   ├── Número auto: AUD-YYYY-NNN
+  │   │   ├── Fechas planificadas/reales
+  │   │   ├── Recurrencia configurable
+  │   │   ├── Asignación de auditores
+  │   │   ├── Personas auditadas (audit_auditees)
+  │   │   ├── Selección de checklist
+  │   │   └── Estados: planned → in_progress → completed/cancelled/postponed
+  │   │
+  │   ├── [EJECUCIÓN - AuditExecute]
+  │   │   ├── Atajos teclado: 1=C, 2=NC Mayor, 3=NC Menor, 4=Obs, 5=Opp, 0=NA
+  │   │   ├── Hallazgos por ítem de checklist
+  │   │   ├── Evidencia objetiva por hallazgo
+  │   │   ├── Cálculo automático de score (%)
+  │   │   └── Estados: in_progress → pending_actions → closed
+  │   │
+  │   ├── [NO CONFORMIDADES - AuditNCDetail]
+  │   │   ├── Número auto: NC-AUD-YYYY-NNN
+  │   │   ├── Tipo: major/minor
+  │   │   ├── Responsable y fecha límite
+  │   │   ├── Acciones: inmediata, correctiva, preventiva
+  │   │   ├── Análisis causa raíz
+  │   │   ├── Verificación efectividad
+  │   │   ├── Link a 8D si aplica
+  │   │   └── Estados: open → in_progress → pending_verification → closed
+  │   │
+  │   └── [AUDIT REQUESTS - D7/ECR]
+  │       ├── Tabs: 8D | ECR
+  │       ├── 7 ítems base (SPC, AMEF, Dimensional, etc.)
+  │       ├── Multi-auditor por ítem
+  │       ├── Juicio: OK/NOK/OBS/NA
+  │       ├── Evaluación líder: EFFECTIVE/PARTIALLY/NOT_EFFECTIVE
+  │       └── Historial de rondas
+
+  ├── OUTPUTS
+  │   ├── Auditorías cerradas con score (%)
+  │   ├── NCs con verificación de efectividad
+  │   ├── Detección de recurrencia (is_repeat, is_systemic)
+  │   ├── Dashboard KPIs
+  │   ├── Calendario Gantt
+  │   └── Audit trail completo
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Recurrencia: mismo hallazgo en 12 meses = is_repeat
+  │   ├── Sistémico: 3+ hallazgos idénticos = system failure
+  │   ├── NC Mayor: impacto crítico seguridad/calidad
+  │   ├── NC Menor: gap menor
+  │   ├── Verificación efectividad: effective/not_effective/pending
+  │   └── Archivos: 10MB max, JPEG/PNG/PDF/DOC/XLS
+
+  ├── CHECKLISTS (20 ítems sample ISO 9001:2015)
+  │   ├── Cláusula (4.1, 5.2, 8.5.1, etc.)
+  │   ├── Pregunta
+  │   ├── Guía
+  │   ├── Evidencia requerida
+  │   ├── Categoría
+  │   ├── Es crítico (flag)
+  │   └── Peso de riesgo (1-5)
+
+  ├── PERFIL AUDITOR
+  │   ├── is_auditor (boolean)
+  │   ├── Áreas: proceso/sistema/producto/proveedor
+  │   └── Certificaciones: ISO 9001/IATF 16949/VDA 6.3/ISO 14001/ISO 45001
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ↔ 8D: linked_8d_id en schedule, NC → 8D conversion
+  │   ├── ↔ ECR: linked_ecr_id, ecr_closure_audit_items
+  │   ├── ↔ QAR: linked_qar_id
+  │   ├── → WORKLOAD: sync bidireccional (horas plan/real)
+  │   ├── ← D7: d7_audit_items, audit_requests
+  │   ├── ↔ USUARIOS: auditores, auditados
+  │   └── ← INSPECTION: stages, departments
+
+  ├── TABLAS PRINCIPALES
+  │   ├── audit_programs (programas anuales)
+  │   ├── audit_schedules (calendario)
+  │   ├── audit_checklists (plantillas)
+  │   ├── audit_checklist_items (preguntas)
+  │   ├── audits (ejecución)
+  │   ├── audit_findings (hallazgos)
+  │   ├── audit_non_conformities (NCs)
+  │   ├── audit_auditees (personas auditadas normalizado)
+  │   ├── audit_requests (solicitudes D7/ECR)
+  │   ├── d7_audit_items (checklist D7 dinámico)
+  │   └── ecr_closure_audit_items (cierre ECR)
+
+  └── NOTAS
+      ├── 3,123 líneas en auditEndpoints.js
+      ├── Middleware automático para audit trail 8D
+      ├── Keyboard shortcuts para captura rápida
+      └── Gantt view para visualización calendario
+
+  Continuando con Workload...
+
+● Explore(Explore Workload module structure)
+  ⎿  Done (5 tool uses · 0 tokens · 13s)
+  ⎿  You've hit your limit · resets 2:40pm (America/Mexico_City)
+
+✻ Sautéed for 15m 13s
+
+> prosigue
+
+● Continuando con la exploración del módulo Workload.
+
+● Explore(Explore Workload module structure)
+  ⎿  Done (41 tool uses · 75.8k tokens · 2m 33s)
+
+● ================================================================================
+  [MÓDULO: WORKLOAD - GESTIÓN DE CARGA DE TRABAJO]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Sistema integral de gestión de actividades y desempeño:
+  │   - Actividades planificadas, asignadas, no planificadas, recurrentes
+  │   - Seguimiento de tiempo (time entries)
+  │   - KPIs QCTSP (Quality, Cost, Time, Safety, People)
+  │   - Objetivos organizacionales en cascada
+  │   - Evaluaciones de desempeño trimestrales
+  │   - Cobertura/delegación vacacional
+
+  ├── INPUTS
+  │   ├── Configuración usuario (horas/semana, días laborales, umbral overtime)
+  │   ├── Proyectos (nombre, cliente, responsable, fechas, color)
+  │   ├── KPIs QCTSP (código, peso, color, icono)
+  │   ├── Plantillas recurrentes (frecuencia, horas estimadas)
+  │   ├── Actividades manuales o sincronizadas (8D, Audit)
+  │   └── Evidencia (PDF, Word, Excel, imágenes - 25MB max)
+
+  ├── PROCESO
+  │   │
+  │   ├── [ACTIVIDADES]
+  │   │   ├── Tipos: planned/assigned/unplanned/recurring
+  │   │   ├── Asignación: usuario, KPI, proyecto
+  │   │   ├── Fechas: inicio, fin, fecha límite
+  │   │   ├── Tiempo: horas estimadas vs reales
+  │   │   ├── Progreso: 0-100%, daily_progress (JSONB)
+  │   │   ├── Estados: pending → in_progress → completed/cancelled/blocked
+  │   │   └── Evidencia: archivos adjuntos con metadata
+  │   │
+  │   ├── [TIME ENTRIES]
+  │   │   ├── Tipos: work/overtime/training/meeting/other
+  │   │   ├── Por actividad y usuario
+  │   │   └── Agregación automática en actual_hours
+  │   │
+  │   ├── [OBJETIVOS EN CASCADA]
+  │   │   ├── Código QCTSP
+  │   │   ├── Valor objetivo vs actual vs baseline
+  │   │   ├── Año/trimestre fiscal
+  │   │   ├── Owner por nivel jerárquico (0-3)
+  │   │   ├── Departamento
+  │   │   ├── Objetivo padre (parent_objective_id)
+  │   │   └── Contribución % al padre
+  │   │
+  │   ├── [EVALUACIONES TRIMESTRALES - Feedback]
+  │   │   ├── FACTORES (inputs):
+  │   │   │   └── activities planned/completed/unplanned, horas, completion_rate
+  │   │   ├── RESULTADOS (outputs):
+  │   │   │   └── kpi_scores (JSONB), objectives_progress, overall_score
+  │   │   ├── FEEDBACK (cualitativo):
+  │   │   │   └── fortalezas, áreas de mejora, reconocimientos
+  │   │   ├── COMPROMISOS:
+  │   │   │   └── commitments (JSONB), training_needs, kpi_adjustments
+  │   │   ├── FIRMAS:
+  │   │   │   └── empleado → revisor → completado
+  │   │   └── Estados: draft → in_review → pending_signature → completed/disputed
+  │   │
+  │   └── [COBERTURA/DELEGACIÓN]
+  │       ├── Usuario original → Sustituto
+  │       ├── Fechas vigencia
+  │       └── Aprobación requerida
+
+  ├── OUTPUTS
+  │   ├── Dashboard utilización por persona (bar charts)
+  │   ├── Distribución KPI (pie charts)
+  │   ├── Gauge de riesgo (sobre/sub carga)
+  │   ├── Weekly summaries (cached)
+  │   ├── Team view (jerarquía subordinados)
+  │   └── Exportación actividades (CSV)
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Utilización % = horas_actual / horas_disponibles × 100
+  │   ├── Completion rate = completadas / total × 100
+  │   ├── Overtime umbral configurable por usuario
+  │   ├── Recurrentes auto-generados por frecuencia
+  │   └── Sync bidireccional con 8D (D5/D6/D7 actions)
+
+  ├── KPIs QCTSP
+  │   ├── Q - Quality (Calidad)
+  │   ├── C - Cost (Costo)
+  │   ├── T - Time (Tiempo)
+  │   ├── S - Safety (Seguridad)
+  │   └── P - People (Gente)
+
+  ├── FRECUENCIAS RECURRENTES
+  │   ├── daily
+  │   ├── weekly
+  │   ├── biweekly
+  │   ├── monthly
+  │   ├── quarterly
+  │   └── yearly
+
+  ├── SOURCE TRACKING (Cross-Module)
+  │   ├── source_type: 8D/AUDIT/ECR/MRB/etc.
+  │   ├── source_id: ID referencia
+  │   └── source_discipline: D5/D6/D7/NC/etc.
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ↔ 8D: Sync bidireccional D5/D6/D7 actions
+  │   │   └── Proyecto default: 8D_EXECUTION (#dc2626)
+  │   ├── ↔ AUDITORÍAS: schedules + NCs
+  │   │   └── Proyecto default: AUDIT_SYSTEM (#8b5cf6)
+  │   ├── ↔ ECR: source_type disponible
+  │   ├── ↔ MRB: source_type disponible
+  │   ├── → MANAGEMENT REVIEW: métricas desempeño
+  │   └── ↔ USUARIOS: jerarquía, subordinados, reviewers
+
+  ├── TABLAS PRINCIPALES
+  │   ├── workload_activities (core - 25+ campos)
+  │   ├── workload_time_entries (registro tiempo)
+  │   ├── workload_kpis (5 QCTSP)
+  │   ├── workload_projects (proyectos)
+  │   ├── workload_user_config (config usuario)
+  │   ├── workload_recurring_activities (plantillas)
+  │   ├── workload_weekly_summaries (cache métricas)
+  │   ├── workload_objectives (objetivos cascada)
+  │   ├── workload_feedback (evaluaciones)
+  │   ├── workload_coverage (cobertura/delegación)
+  │   └── workload_hierarchy_levels (niveles org)
+
+  └── NOTAS
+      ├── 3,398 líneas en workloadEndpoints.js
+      ├── 50+ endpoints REST
+      ├── Evidencia: 25MB max, múltiples formatos
+      └── Weekly summaries cacheados para performance
+
+● ================================================================================
+  [MÓDULO: CONFIGURACIÓN - SYSTEM CONFIGURATION]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Administración centralizada del sistema:
+  │   - Usuarios, roles y permisos
+  │   - Departamentos y organizaciones
+  │   - Catálogos de inspección
+  │   - Campos personalizados BOM
+  │   - Jerarquía de planta (Work Instructions)
+  │   - Matriz de riesgo
+  │   - Multi-tenant (organizaciones)
+
+  ├── INPUTS
+  │   ├── Datos de usuarios (email, nombre, departamento, manager)
+  │   ├── Definición de roles con permisos por módulo
+  │   ├── Estructura departamental jerárquica
+  │   ├── Catálogos (severidades, estaciones, etapas, turnos, disposiciones)
+  │   ├── Configuración de campos BOM
+  │   └── Jerarquía planta (plantas → áreas → líneas → estaciones)
+
+  ├── COMPONENTES
+  │   │
+  │   ├── [USUARIOS - ConfigurationPage#users]
+  │   │   ├── CRUD usuarios
+  │   │   ├── Asignación de roles
+  │   │   ├── Departamento y manager
+  │   │   ├── Jerarquía (hierarchy_level: 0=Director, 1=Gerente, 2+=Staff)
+  │   │   ├── QAR/MRB validator toggle
+  │   │   └── Contacto (phone, extension, location)
+  │   │
+  │   ├── [ROLES - ConfigurationPage#roles]
+  │   │   ├── CRUD roles
+  │   │   ├── Permisos por módulo (Full/Partial/View/None):
+  │   │   │   ├── 8D Problem Solving
+  │   │   │   ├── Quality Alert/Defects
+  │   │   │   ├── QAR, MRB
+  │   │   │   ├── Lessons Learned
+  │   │   │   ├── ECR/ECO
+  │   │   │   ├── Risk Matrix
+  │   │   │   ├── Work Instructions
+  │   │   │   ├── Statistical Tools
+  │   │   │   ├── Audits (ISO)
+  │   │   │   ├── Workload Management
+  │   │   │   ├── Management Review
+  │   │   │   ├── Clients
+  │   │   │   ├── System Configuration
+  │   │   │   └── Dashboard/Reports
+  │   │   └── Clearance levels (1=Public → 4=Executive)
+  │   │
+  │   ├── [DEPARTAMENTOS - ConfigurationPage#departments]
+  │   │   ├── CRUD departamentos
+  │   │   ├── Jerarquía padre-hijo
+  │   │   ├── Manager asignado
+  │   │   └── Código único por organización
+  │   │
+  │   ├── [ORGANIZACIONES - Multi-tenant]
+  │   │   ├── Múltiples organizaciones
+  │   │   ├── Módulos habilitados (JSONB)
+  │   │   └── Settings personalizados
+  │   │
+  │   ├── [CATÁLOGOS INSPECCIÓN - DefectConfig]
+  │   │   ├── Severidades (Minor, Moderate, Severe, Critical)
+  │   │   ├── Estaciones de inspección
+  │   │   ├── Etapas de proceso
+  │   │   ├── Turnos (día, noche, etc.)
+  │   │   ├── Disposiciones (Accept, Rework, Scrap, Return)
+  │   │   └── QAR Validators
+  │   │
+  │   ├── [CAMPOS BOM - bom_field_config]
+  │   │   ├── Campos personalizados
+  │   │   ├── Tipos: text, number, date, select, boolean
+  │   │   ├── Validación: required, min/max, max_length
+  │   │   ├── Display: show_in_table/form/template
+  │   │   └── Orden y valores default
+  │   │
+  │   ├── [JERARQUÍA PLANTA - Work Instructions]
+  │   │   ├── wi_plants (plantas)
+  │   │   ├── wi_areas (áreas por planta)
+  │   │   ├── wi_lines (líneas por área)
+  │   │   └── wi_stations (estaciones por línea)
+  │   │       ├── station_type (assembly, inspection, packaging, testing)
+  │   │       ├── cycle_time_seconds
+  │   │       └── capacity_per_hour
+  │   │
+  │   └── [MATRIZ RIESGO - RiskMatrixConfig]
+  │       ├── Niveles de severidad
+  │       ├── Niveles de ocurrencia
+  │       ├── Reglas 5x5
+  │       └── Sugerencias de validación
+
+  ├── OUTPUTS
+  │   ├── Usuarios configurados con permisos efectivos
+  │   ├── Roles aplicables a módulos
+  │   ├── Catálogos disponibles en todo el sistema
+  │   ├── Audit trail de cambios (permission_audit_log)
+  │   └── Scope por departamento (data access control)
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── validate_role_assignment(): No asignar roles superiores al propio
+  │   ├── get_user_department_scope(): Acceso basado en departamento
+  │   ├── check_self_approval(): No auto-aprobaciones
+  │   ├── Código departamento único por organización
+  │   ├── Jerarquía sin ciclos (parent-child)
+  │   └── Roles de sistema no eliminables (is_system=true)
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── → TODOS LOS MÓDULOS: Permisos aplicados globalmente
+  │   ├── → USUARIOS: Base para asignaciones en todos los módulos
+  │   ├── → DEPARTAMENTOS: Scope de datos
+  │   ├── → DEFECTOS: Catálogos de inspección
+  │   ├── → ECR: Matriz de riesgo, áreas de impacto
+  │   ├── → WORK INSTRUCTIONS: Jerarquía de planta
+  │   └── → BOM/PARTES: Campos personalizados
+
+  ├── TABLAS PRINCIPALES
+  │   ├── users (usuarios)
+  │   ├── roles (roles)
+  │   ├── user_roles (asignación usuario-rol)
+  │   ├── departments (departamentos)
+  │   ├── organizations (organizaciones multi-tenant)
+  │   ├── inspection_catalogs (catálogos inspección)
+  │   ├── bom_field_config (campos BOM)
+  │   ├── wi_plants/areas/lines/stations (jerarquía planta)
+  │   └── permission_audit_log (trail de cambios)
+
+  └── NOTAS
+      ├── Multi-tenant via organizations
+      ├── Clearance levels para seguridad granular
+      ├── JSONB extensivo para flexibilidad
+      └── Triggers de validación en PostgreSQL
+
+● ================================================================================
+  [MÓDULO: CLIENTES - CLIENT MANAGEMENT]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Gestión integral de clientes, proyectos y BOM:
+  │   - CRUD de clientes con información corporativa
+  │   - Gestión de proyectos por cliente
+  │   - BOM (Bill of Materials) jerárquico
+  │   - Contactos y documentos
+  │   - Timeline de actividades
+  │   - Campos personalizados extensibles
+
+  ├── INPUTS
+  │   ├── Datos cliente (nombre, alias, vendor_number, direcciones)
+  │   ├── Contactos (nombre, título, email, teléfono)
+  │   ├── Documentos (PDF, Word, Excel, PPT, imágenes - 50MB max)
+  │   ├── Proyectos (número, nombre, fechas, status)
+  │   ├── Partes/BOM:
+  │   │   ├── part_number (único por cliente)
+  │   │   ├── Jerarquía (parent_part_id)
+  │   │   ├── Peso, SNP, costo unitario
+  │   │   └── custom_fields (JSONB extensible)
+  │   └── Configuración SLA (D4, D5 response times)
+
+  ├── PROCESO
+  │   │
+  │   ├── [CLIENTES - ClientsList/ClientDetail]
+  │   │   ├── Lista con búsqueda y filtros
+  │   │   ├── Stats (total, activos, inactivos)
+  │   │   ├── Import/Export Excel
+  │   │   ├── CRUD completo
+  │   │   └── Toggle active/inactive
+  │   │
+  │   ├── [PROYECTOS]
+  │   │   ├── Vinculados a cliente (client_id FK)
+  │   │   ├── Número único de proyecto
+  │   │   ├── Fechas inicio/fin objetivo
+  │   │   └── Status (Active, On Hold, Completed)
+  │   │
+  │   ├── [BOM - Bill of Materials]
+  │   │   ├── Global BOM view (todos los clientes)
+  │   │   ├── BOM por cliente
+  │   │   ├── Jerarquía multinivel (parent-child)
+  │   │   ├── Agrupación por proyecto
+  │   │   ├── Columnas arrastrables
+  │   │   ├── Export Excel con custom fields
+  │   │   └── Validación referencias circulares
+  │   │
+  │   ├── [CONTACTOS]
+  │   │   ├── CRUD inline
+  │   │   ├── Título, email, teléfono
+  │   │   └── Timeline tracking
+  │   │
+  │   ├── [DOCUMENTOS]
+  │   │   ├── Upload multipart (50MB)
+  │   │   ├── Tipos: PDF, Word, Excel, PPT, Images, CSV, ZIP
+  │   │   ├── Metadata: título, descripción
+  │   │   └── Sanitización automática de nombres
+  │   │
+  │   └── [TIMELINE]
+  │       ├── Audit trail de todos los cambios
+  │       ├── Categorías: client, project, contact, document, part
+  │       ├── Tipos: created, updated, deleted
+  │       └── Paginación y filtros
+
+  ├── OUTPUTS
+  │   ├── Clientes configurados con SLA
+  │   ├── BOM jerárquico navegable
+  │   ├── Historial completo de actividades
+  │   ├── Documentos organizados
+  │   └── Export Excel
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Nombre cliente: requerido
+  │   ├── part_number: único por cliente
+  │   ├── Email contacto: requerido
+  │   ├── Documento: 50MB max, MIME types específicos
+  │   ├── Jerarquía BOM: sin auto-referencias ni ciclos
+  │   ├── SLA defaults: D4=24h, D5=48h
+  │   └── Cascade delete: cliente → contactos, docs, timeline, partes
+
+  ├── CAMPOS PERSONALIZADOS (bom_field_config)
+  │   ├── Tipos: text, number, date, select, boolean
+  │   ├── Validación: required, min/max, max_length
+  │   ├── Visibilidad: table, form, template
+  │   └── Almacenado en custom_fields JSONB
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── → AUDITORÍAS: client_id en schedules
+  │   ├── → QAR: client_id en quality_alerts
+  │   ├── → ECR: client_id, impacto partes
+  │   ├── → MRB: client_id en campañas
+  │   ├── → 8D: client_id en reportes
+  │   ├── → DEFECTOS: client_id + partes
+  │   ├── → WORK INSTRUCTIONS: por cliente/departamento
+  │   └── → APROBACIONES: response times SLA
+
+  ├── TABLAS PRINCIPALES
+  │   ├── clients (clientes)
+  │   ├── projects (proyectos)
+  │   ├── client_parts (BOM)
+  │   ├── client_contacts (contactos)
+  │   ├── client_documents (documentos)
+  │   ├── client_timeline (audit trail)
+  │   └── bom_field_config (campos custom)
+
+  └── NOTAS
+      ├── Transformación camelCase ↔ snake_case
+      ├── Transacciones con rollback
+      ├── JSONB para flexibilidad (custom_fields, details)
+      └── 10+ módulos referencian client_id
+
+● ================================================================================
+  [MÓDULO: LECCIONES APRENDIDAS - LESSONS LEARNED]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Base de datos centralizada de lecciones aprendidas:
+  │   - Captura de conocimiento desde 8D
+  │   - Búsqueda y filtrado cruzado
+  │   - Trazabilidad por reporte, cliente, severidad
+  │   - Requisito obligatorio para cierre D8
+
+  ├── INPUTS
+  │   ├── Texto de lección (lesson_text - requerido)
+  │   ├── Categoría (opcional)
+  │   ├── report_id (vinculado a 8D)
+  │   └── Usuario creador (automático desde JWT)
+
+  ├── PROCESO
+  │   │
+  │   ├── [CAPTURA EN D8 - D8FollowUpEvidence]
+  │   │   ├── Modal para agregar lección
+  │   │   ├── Lista de lecciones existentes
+  │   │   ├── Edit/Delete inline
+  │   │   ├── Bloqueado hasta completar D7
+  │   │   └── Validación: ≥1 lección requerida para cerrar D8
+  │   │
+  │   └── [CONSULTA - LessonsLearned page]
+  │       ├── Vista global de todas las lecciones
+  │       ├── Búsqueda: texto, título reporte, ID, cliente
+  │       ├── Filtro por severidad (High/Medium/Low)
+  │       ├── Stats: total, reportes únicos, alta severidad
+  │       ├── Cards con metadata completa
+  │       └── Click-through a 8D workflow
+
+  ├── OUTPUTS
+  │   ├── Base de conocimiento consultable
+  │   ├── Lecciones vinculadas a 8D reports
+  │   ├── Métricas: días desde issue, severidad
+  │   └── Audit trail en middleware
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── report_id: FK requerido a eightd_reports
+  │   ├── lesson_text: no vacío
+  │   ├── D8 no puede cerrarse sin ≥1 lección
+  │   ├── Admins pueden bypass bloqueo D7
+  │   └── CASCADE DELETE: eliminar 8D elimina lecciones
+
+  ├── MODELO DE ALMACENAMIENTO DUAL
+  │   ├── lessons_learned table:
+  │   │   └── Registros individuales con tracking granular
+  │   └── eightd_reports.d8_lessons_learned:
+  │       └── Campo texto para resumen (legacy/quick access)
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ↔ 8D: Componente D8FollowUpEvidence
+  │   │   └── FK: report_id → eightd_reports.report_id
+  │   ├── → AUDIT: auditMiddleware detecta cambios D8
+  │   ├── → CONFIGURACIÓN: Menú registrado
+  │   └── ← USUARIOS: created_by → users.id
+
+  ├── ENDPOINTS
+  │   ├── GET  /lessons-learned              → Todas las lecciones + metadata 8D
+  │   ├── GET  /lessons-learned/report/:id   → Lecciones de un reporte
+  │   ├── POST /lessons-learned              → Crear lección
+  │   ├── PUT  /lessons-learned/:id          → Actualizar lección
+  │   └── DELETE /lessons-learned/:id        → Eliminar lección
+
+  ├── CAMPOS RESPONSE
+  │   ├── Lección: id, reportId, lessonText, category, createdBy, createdAt
+  │   ├── Reporte: reportTitle, severity, issueDate, clientName, partNumber
+  │   ├── Calculado: daysSinceIssue
+  │   └── Usuario: createdByName
+
+  ├── TABLAS PRINCIPALES
+  │   └── lessons_learned
+  │       ├── id SERIAL PRIMARY KEY
+  │       ├── report_id VARCHAR FK → eightd_reports
+  │       ├── lesson_text TEXT NOT NULL
+  │       ├── category VARCHAR(100)
+  │       ├── created_by INTEGER FK → users
+  │       ├── created_at TIMESTAMP
+  │       └── updated_at TIMESTAMP
+
+  └── NOTAS
+      ├── Bilingüe (ES/EN)
+      ├── Theme-aware (light/dark)
+      ├── No RBAC específico (cualquier usuario autenticado)
+      └── Índices: report_id, created_at DESC, category
+
+  Continuando con Risk Matrix...
+
+● Explore(Explore Risk Matrix module)
+  ⎿  Done (31 tool uses · 66.1k tokens · 42m 12s)
+
+● ================================================================================
+  [MÓDULO: RISK MATRIX - MATRIZ DE RIESGO]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Framework configurable de evaluación de riesgo:
+  │   - Matriz Severidad × Ocurrencia (4×4)
+  │   - Mapeo automático Categoría + Tipo → Nivel de Riesgo
+  │   - Sugerencias de validación por nivel
+  │   - Integración con ECR y Auditorías
+
+  ├── INPUTS
+  │   ├── Categoría de cambio:
+  │   │   ├── emergency (urgente/reactivo)
+  │   │   ├── planned (planificado)
+  │   │   └── continuous_improvement (KAIZEN)
+  │   ├── Tipo de cambio:
+  │   │   ├── design, process, material, safety
+  │   │   ├── administrative, layout, other
+  │   └── Configuración admin (niveles, reglas, sugerencias)
+
+  ├── PROCESO
+  │   │
+  │   ├── [CONFIGURACIÓN - RiskMatrixConfig]
+  │   │   ├── Niveles de severidad (1-4):
+  │   │   │   ├── Menor: Impacto mínimo
+  │   │   │   ├── Moderado: Requiere atención
+  │   │   │   ├── Severo: Impacto significativo
+  │   │   │   └── Crítico: Acción inmediata
+  │   │   ├── Niveles de ocurrencia (1-4):
+  │   │   │   ├── Raro, Ocasional, Frecuente, Muy Frecuente
+  │   │   ├── Reglas de mapeo (categoría + tipo → nivel)
+  │   │   └── Sugerencias de validación por nivel
+  │   │
+  │   ├── [CÁLCULO - POST /risk-matrix/calculate]
+  │   │   ├── Input: category + type
+  │   │   ├── Busca regla en risk_matrix_rules
+  │   │   ├── Default: MEDIUM si no hay regla
+  │   │   └── Output: riskLevel + suggestedAreas + reasoning
+  │   │
+  │   └── [VISUALIZACIÓN - RiskHeatmapWidget]
+  │       ├── Matriz 4×4 con colores
+  │       ├── Conteo de cambios por nivel
+  │       └── Leyenda: Verde/Amarillo/Naranja/Rojo
+
+  ├── OUTPUTS
+  │   ├── riskAssessment (JSONB):
+  │   │   ├── riskLevel: low/medium/high
+  │   │   ├── suggestedAreas: [áreas afectadas]
+  │   │   ├── reasoning: explicación
+  │   │   ├── riskLevelInfo: {label, color, icon, description}
+  │   │   └── legalDisclaimer: aviso legal
+  │   └── Validaciones sugeridas por nivel
+
+  ├── MATRIZ DE RIESGO (Severity × Occurrence)
+  │   │
+  │   │         Raro    Ocasional  Frecuente  Muy Frecuente
+  │   │ Menor    LOW      LOW       MEDIUM      MEDIUM
+  │   │ Moderado LOW      MEDIUM    MEDIUM      HIGH
+  │   │ Severo   MEDIUM   MEDIUM    HIGH        HIGH
+  │   │ Crítico  MEDIUM   HIGH      HIGH        HIGH
+
+  ├── VALIDACIONES SUGERIDAS
+  │   ├── LOW:
+  │   │   └── Revisión documental, aprobación supervisor
+  │   ├── MEDIUM:
+  │   │   └── PFMEA, Control Plan, PPAP básico
+  │   └── HIGH:
+  │       └── PPAP completo, Run@Rate, validación cliente,
+  │           auditoría proceso, capacitación
+
+  ├── REGLAS DEFAULT (12)
+  │   ├── emergency + design → HIGH
+  │   ├── emergency + safety → HIGH
+  │   ├── emergency + process → HIGH
+  │   ├── planned + design → MEDIUM
+  │   ├── planned + process → MEDIUM
+  │   ├── planned + material → MEDIUM
+  │   ├── planned + safety → HIGH
+  │   ├── continuous_improvement + process → LOW
+  │   ├── continuous_improvement + layout → LOW
+  │   ├── continuous_improvement + admin → LOW
+  │   └── planned + admin → LOW
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── → ECR: risk_assessment en ecr_reports
+  │   │   └── Áreas sugeridas → equipos validación
+  │   ├── → ECR DASHBOARD: filtro por riskLevel
+  │   ├── → AUDITORÍAS: risk_signal_level en findings
+  │   │   └── Detección recurrencia → escalamiento riesgo
+  │   └── ← CONFIGURACIÓN: Admin modifica reglas
+
+  ├── ENDPOINTS
+  │   ├── GET  /risk-matrix/config    → Config activa
+  │   ├── POST /risk-matrix/calculate → Calcular riesgo
+  │   └── PUT  /risk-matrix/config    → Actualizar (admin)
+
+  ├── TABLAS PRINCIPALES
+  │   ├── risk_matrix_config:
+  │   │   ├── config_name VARCHAR
+  │   │   ├── is_active BOOLEAN
+  │   │   ├── change_categories JSONB
+  │   │   ├── change_types JSONB
+  │   │   ├── risk_levels JSONB
+  │   │   ├── risk_matrix_rules JSONB
+  │   │   └── legal_disclaimer TEXT
+  │   └── ecr_reports (augmented):
+  │       ├── change_category VARCHAR
+  │       └── risk_assessment JSONB
+
+  └── NOTAS
+      ├── JSONB para flexibilidad total
+      ├── Determinístico: mismos inputs → mismo output
+      ├── Default MEDIUM si no hay regla
+      └── Admin-only para modificar config
+● ================================================================================
+  [MÓDULO: STATISTICAL TOOLS - HERRAMIENTAS ESTADÍSTICAS]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Suite completa de análisis estadístico para calidad:
+  │   - 8 herramientas en interfaz de tabs
+  │   - Datasets flexibles con CSV import
+  │   - Historial de análisis persistente
+  │   - Visualizaciones interactivas (Chart.js)
+
+  ├── HERRAMIENTAS (8 Tabs)
+  │   │
+  │   ├── [1. DATASETS]
+  │   │   ├── Crear/importar desde CSV
+  │   │   ├── Edición inline de filas/columnas
+  │   │   ├── Stats: row count, columns, created_at
+  │   │   └── CRUD completo
+  │   │
+  │   ├── [2. HISTOGRAM]
+  │   │   ├── Distribución de frecuencias
+  │   │   ├── Bins configurables
+  │   │   ├── Test normalidad Anderson-Darling
+  │   │   ├── Overlay curva normal
+  │   │   └── Stats: mean, std, min, max, median, skewness, kurtosis
+  │   │
+  │   ├── [3. PARETO]
+  │   │   ├── Análisis 80/20
+  │   │   ├── Frecuencia por categoría
+  │   │   ├── Porcentaje acumulado
+  │   │   └── Gráfico barras + línea
+  │   │
+  │   ├── [4. CAPABILITY]
+  │   │   ├── Índices: Cp, Cpk, Pp, Ppk, Cpm
+  │   │   ├── Inputs: LSL, USL, Target
+  │   │   ├── Color-coded: Verde/Amarillo/Rojo
+  │   │   └── Interpretación según umbrales Cpk
+  │   │
+  │   ├── [5. CONTROL CHARTS - SPC]
+  │   │   ├── X̄-R Chart (datos agrupados)
+  │   │   ├── I-MR Chart (valores individuales)
+  │   │   ├── CL, UCL, LCL calculados
+  │   │   ├── Constantes A₂, D₃, D₄
+  │   │   └── Detección causas especiales (Nelson rules)
+  │   │
+  │   ├── [6. REGRESSION]
+  │   │   ├── Regresión lineal (X vs Y)
+  │   │   ├── Outputs: slope, intercept, R, R²
+  │   │   ├── Scatter plot + trend line
+  │   │   └── Capacidad de predicción
+  │   │
+  │   ├── [7. GAGE R&R - MSA]
+  │   │   ├── Wizard 4 pasos
+  │   │   ├── Método ANOVA
+  │   │   ├── Varianza: Repeatability, Reproducibility, Interaction
+  │   │   ├── %GRR: <10% Accept, 10-30% Marginal, >30% Unacceptable
+  │   │   └── Part × Operator decomposition
+  │   │
+  │   └── [8. TAGUCHI DOE]
+  │       ├── Arrays ortogonales: L4, L8, L9, L16
+  │       ├── 2-15 factores, 2-3 niveles
+  │       ├── S/N Ratios:
+  │       │   ├── Smaller is Better
+  │       │   ├── Larger is Better
+  │       │   └── Nominal is Best
+  │       ├── Main effects analysis
+  │       └── Optimal level recommendation
+
+  ├── PROCESO
+  │   │
+  │   ├── [CREAR DATASET]
+  │   │   ├── Manual o CSV upload
+  │   │   ├── Columns como JSONB array
+  │   │   ├── Rows en tabla separada (stat_dataset_rows)
+  │   │   └── row_count actualizado
+  │   │
+  │   ├── [EJECUTAR ANÁLISIS]
+  │   │   ├── POST con parameters
+  │   │   ├── Cálculos en statistics.js
+  │   │   ├── Return results
+  │   │   └── Visualización Chart.js
+  │   │
+  │   └── [GUARDAR HISTORIAL]
+  │       ├── Parameters + Results preservados
+  │       ├── Filtrable por analysis_type
+  │       └── Vinculado a dataset_id
+
+  ├── OUTPUTS
+  │   ├── Historial de análisis persistente
+  │   ├── Gráficos interactivos
+  │   ├── Métricas exportables
+  │   └── Interpretaciones automáticas
+
+  ├── FÓRMULAS CLAVE
+  │   ├── Cp = (USL - LSL) / (6σ)
+  │   ├── Cpk = min((USL - μ)/(3σ), (μ - LSL)/(3σ))
+  │   ├── X̄ Chart: X̄ ± A₂ × R̄
+  │   ├── R Chart: R̄ with D₃, D₄ limits
+  │   ├── I-MR: X̄ ± 3σ where σ = R̄/d₂
+  │   ├── S/N Smaller: -10×log₁₀(Σy²/n)
+  │   ├── S/N Larger: -10×log₁₀(Σ(1/y²)/n)
+  │   └── S/N Nominal: 10×log₁₀(μ²/σ²)
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ← USUARIOS: created_by FK
+  │   ├── → POTENCIAL: Defectos (Pareto)
+  │   ├── → POTENCIAL: MRB (Capability por lote)
+  │   ├── → POTENCIAL: Auditorías (Pareto findings)
+  │   └── → POTENCIAL: ECR (Impact analysis)
+
+  ├── ENDPOINTS
+  │   ├── Datasets:
+  │   │   ├── GET/POST/PUT/DELETE /api/stat/datasets
+  │   │   └── POST /api/stat/datasets/upload-csv
+  │   ├── Análisis:
+  │   │   ├── POST /api/stat/histogram
+  │   │   ├── POST /api/stat/pareto
+  │   │   ├── POST /api/stat/capability
+  │   │   ├── POST /api/stat/control-charts
+  │   │   ├── POST /api/stat/regression
+  │   │   ├── POST /api/stat/gage-rr
+  │   │   ├── GET  /api/stat/taguchi/:arrayType
+  │   │   └── POST /api/stat/taguchi
+  │   └── Historial:
+  │       └── GET/POST/DELETE /api/stat/history
+
+  ├── TABLAS PRINCIPALES
+  │   ├── stat_datasets:
+  │   │   ├── name, description
+  │   │   ├── columns JSONB
+  │   │   ├── row_count
+  │   │   └── created_by FK
+  │   ├── stat_dataset_rows:
+  │   │   ├── dataset_id FK CASCADE
+  │   │   ├── row_index
+  │   │   └── row_data JSONB
+  │   └── stat_analysis_history:
+  │       ├── analysis_type VARCHAR
+  │       ├── parameters JSONB
+  │       ├── results JSONB
+  │       └── dataset_id FK SET NULL
+
+  ├── DATASETS SEED (5)
+  │   ├── Measurement Data - Diameter (50 rows)
+  │   ├── Defect Categories - Production Line (24 rows)
+  │   ├── Temperature vs Yield (15 rows)
+  │   ├── Gage R&R Study - Caliper (60 rows)
+  │   └── SPC Data - Weight (100 rows)
+
+  └── NOTAS
+      ├── 8 herramientas completas
+      ├── JSONB para flexibilidad de schema
+      ├── Chart.js para visualizaciones
+      ├── Wizard pattern para GageRR
+      └── Theme-aware (dark/light)
+
+  Continuando con Management Review...
+
+● Explore(Explore Management Review module)
+  ⎿  Done (26 tool uses · 62.9k tokens · 1m 43s)
+
+● ================================================================================
+  [MÓDULO: MANAGEMENT REVIEW - REVISIÓN POR LA DIRECCIÓN]
+  ================================================================================
+
+  ├── OBJETIVO
+  │   Cumplimiento ISO 9001:2015 / IATF 16949:2016 cláusula 9.3:
+  │   - Revisión gerencial trimestral
+  │   - Agregación KPIs de todos los módulos
+  │   - Checklist 25 ítems (inputs 9.3.2 + outputs 9.3.3)
+  │   - Seguimiento de acciones previas
+  │   - Firmas digitales y gobernanza
+
+  ├── INPUTS (ISO 9.3.2)
+  │   ├── KPIs de 6 módulos:
+  │   │   ├── 8D: openCount, closedCount, avgDaysToClose, onTimeRate, totalSavings
+  │   │   ├── QAR: totalQars, openCount, criticalCount, majorCount, totalDefects
+  │   │   ├── MRB: totalCampaigns, activeCampaigns, totalScrapCost, totalInspectionHours
+  │   │   ├── ECR: totalChanges, approvedCount, highRiskCount, avgCycleDays
+  │   │   ├── AUDIT: completedAudits, pendingAudits, totalNCs, ncClosureRate
+  │   │   └── WORKLOAD: totalActivities, completedCount, completionRate
+  │   ├── Acciones previas (status follow-up)
+  │   ├── Checklist responses (25 ítems)
+  │   └── Asistentes con firma
+
+  ├── PROCESO (5 Tabs)
+  │   │
+  │   ├── [1. KPIs DEL PERÍODO]
+  │   │   ├── Seleccionar período (default: quarter anterior)
+  │   │   ├── Botón "Cargar KPIs"
+  │   │   ├── Snapshot guardado en kpi_snapshot JSONB
+  │   │   └── Display de 18 KPIs configurados
+  │   │
+  │   ├── [2. ACCIONES PREVIAS (9.3.2.a)]
+  │   │   ├── Lista de acciones abiertas de revisiones anteriores
+  │   │   ├── Status: pending → in_progress → completed
+  │   │   ├── Due date tracking
+  │   │   └── Responsable y notas de cierre
+  │   │
+  │   ├── [3. CHECKLIST 9.3]
+  │   │   ├── 12 inputs ISO 9001:2015
+  │   │   ├── 10 inputs IATF 16949:2016
+  │   │   ├── 3 outputs (9.3.3)
+  │   │   ├── Response: ok/partial/nok/n/a
+  │   │   └── Comments + evidence links
+  │   │
+  │   ├── [4. DECISIONES]
+  │   │   ├── Executive summary (texto libre)
+  │   │   ├── Decisions array (description, responsible, dueDate, priority)
+  │   │   └── Next review date
+  │   │
+  │   └── [5. ASISTENTES Y FIRMAS]
+  │       ├── User selector (multi-select)
+  │       ├── Presence toggle
+  │       ├── Digital signature
+  │       └── Auto-complete cuando todos firman
+
+  ├── OUTPUTS (ISO 9.3.3)
+  │   ├── Acta número: MR-YYYY-Qn-NNN
+  │   ├── KPI snapshot congelado
+  │   ├── Checklist responses completo
+  │   ├── Acciones generadas (items nok/partial)
+  │   ├── Decisiones documentadas
+  │   └── Firmas digitales
+
+  ├── WORKFLOW
+  │   │
+  │   │  draft → in_progress → pending_signatures → completed
+  │   │                  ↓
+  │   │            cancelled (if needed)
+  │   │
+  │   └── Acciones auto-crean workload activities
+
+  ├── REGLAS DE NEGOCIO
+  │   ├── Acta number auto-generado con sequence
+  │   ├── KPI snapshot inmutable una vez guardado
+  │   ├── Items nok/partial generan acciones obligatorias
+  │   ├── Acciones crean workload activities automáticamente
+  │   ├── Status → completed cuando todos firman
+  │   └── Frequency: quarterly (recommended)
+
+  ├── INTEGRACIONES / RELACIONES
+  │   ├── ← 8D: KPIs (open, closed, savings, on-time rate)
+  │   ├── ← QAR: KPIs (count, severity, defects)
+  │   ├── ← MRB: KPIs (campaigns, scrap cost, hours)
+  │   ├── ← ECR: KPIs (changes, risk, cycle time)
+  │   ├── ← AUDITORÍAS: KPIs (audits, NCs, closure rate)
+  │   ├── ↔ WORKLOAD:
+  │   │   ├── Recurring activity "Revisión por la Dirección"
+  │   │   ├── Actions → auto-create workload activities
+  │   │   ├── source_type = 'MANAGEMENT_REVIEW'
+  │   │   └── Bidirectional status sync
+  │   └── ← USUARIOS: Attendees, signatures, audit trail
+
+  ├── ENDPOINTS
+  │   ├── GET  /management-review/checklist-template
+  │   ├── GET  /management-review/kpis?periodStart&periodEnd
+  │   ├── GET  /management-review/actas
+  │   ├── GET  /management-review/actas/:id
+  │   ├── POST /management-review/actas
+  │   ├── PUT  /management-review/actas/:id
+  │   ├── POST /management-review/actas/:id/sign
+  │   ├── POST /management-review/actas/:id/actions
+  │   ├── PUT  /management-review/actions/:id
+  │   ├── GET  /management-review/previous-actions
+  │   └── POST /management-review/schedule
+
+  ├── TABLAS PRINCIPALES
+  │   ├── management_review_checklist_items (25 items)
+  │   ├── management_review_actas (main record)
+  │   │   ├── acta_number UNIQUE
+  │   │   ├── attendees JSONB
+  │   │   ├── kpi_snapshot JSONB
+  │   │   ├── checklist_responses JSONB
+  │   │   └── decisions JSONB
+  │   ├── management_review_actions
+  │   │   ├── source_clause (ISO ref)
+  │   │   └── workload_activity_id FK
+  │   └── management_review_kpi_sources (18 KPIs)
+
+  └── NOTAS
+      ├── ISO 9001:2015 + IATF 16949:2016 compliant
+      ├── 6 módulos agregados para KPIs
+      ├── Signature flow digital
+      └── Quarterly recommended frequency
+
+  ---
+  Ahora el DIAGRAMA GLOBAL mostrando el flujo entre todos los módulos:
+
+  ================================================================================
+                      DIAGRAMA GLOBAL - QMS (QUALITY MANAGEMENT SYSTEM)
+  ================================================================================
+
+                                ┌─────────────────────┐
+                                │   MANAGEMENT REVIEW │
+                                │      (9.3 ISO)      │
+                                │  KPIs Aggregation   │
+                                └──────────┬──────────┘
+                                           │
+              ┌────────────────────────────┼────────────────────────────┐
+              │                            │                            │
+              ▼                            ▼                            ▼
+    ┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+    │    AUDITORÍAS   │         │    WORKLOAD     │         │  CONFIGURACIÓN  │
+    │   (Internal/    │◄───────►│   (Activities   │         │   (Users/Roles  │
+    │   External)     │  Sync   │    & Time)      │         │   Departments)  │
+    └────────┬────────┘         └────────┬────────┘         └────────┬────────┘
+             │                           │                           │
+             │ D7 Audit                  │ Actions                   │ Permisos
+             │ Requests                  │ Sync                      │ Catálogos
+             ▼                           ▼                           ▼
+    ┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+    │       8D        │◄───────►│       ECR       │◄───────►│   RISK MATRIX   │
+    │ Problem Solving │ D8→ECR  │  (Engineering   │  Risk   │   (Severity ×   │
+    │   (D1-D8)       │         │   Changes)      │ Assess  │   Occurrence)   │
+    └────────┬────────┘         └─────────────────┘         └─────────────────┘
+             │
+             │ Escalation
+             │ Threshold
+             ▼
+    ┌─────────────────┐
+    │      QAR        │
+    │ Quality Action  │
+    │    Request      │
+    └────────┬────────┘
+             │
+             │ Threshold
+             │ Trigger
+             ▼
+    ┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+    │    DEFECTOS     │◄───────►│      MRB        │◄───────►│   STATISTICAL   │
+    │  (Capture &     │  Link   │ Material Review │ Analysis│     TOOLS       │
+    │   Query)        │         │     Board       │         │  (SPC, Cpk...)  │
+    └────────┬────────┘         └─────────────────┘         └─────────────────┘
+             │
+             │ Part Context
+             ▼
+    ┌─────────────────┐         ┌─────────────────┐
+    │    CLIENTES     │◄───────►│    LECCIONES    │
+    │  (Projects &    │  8D     │   APRENDIDAS    │
+    │   BOM/Parts)    │ Link    │  (Knowledge DB) │
+    └─────────────────┘         └─────────────────┘
+
+
+  ================================================================================
+                             FLUJOS PRINCIPALES
+  ================================================================================
+
+  [FLUJO DEFECTO → CIERRE]
+  Defecto Capturado → Umbral QAR → QAR Emitido → 8D Iniciado → D1-D8 →
+  → Lecciones Aprendidas → Auditoría D7 → Cierre
+
+  [FLUJO CAMBIO INGENIERÍA]
+  ECR Solicitado → Risk Matrix → Impact Analysis → Validation Plan →
+  → Trial → PPAP → Closure Audit → Cierre
+
+  [FLUJO MRB]
+  QAR/8D Origen → MRB Campaign → Defect Capture → Dispositions →
+  → Scrap/Rework/Use As Is → Cost Analysis → Cierre
+
+  [FLUJO AUDITORÍA]
+  Programa Anual → Schedule → Checklist → Ejecución → Findings →
+  → NCs → 8D Link (opcional) → Verification → Cierre
+
+  [FLUJO MANAGEMENT REVIEW]
+  Quarterly Trigger → KPIs 6 Módulos → Checklist 9.3 → Decisions →
+  → Actions → Workload → Follow-up Next Review
+
+
+  ================================================================================
+                           INTEGRACIONES CLAVE
+  ================================================================================
+
+  ┌──────────────────┬─────────────────────────────────────────────────────────┐
+  │ Módulo Origen    │ Módulos Destino / Relación                             │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ DEFECTOS         │ → QAR (threshold trigger)                              │
+  │                  │ → MRB (inspection capture)                             │
+  │                  │ → 8D (quality_alert_id)                                │
+  │                  │ ← CLIENTES (parts context)                             │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ QAR              │ → 8D (escalation)                                      │
+  │                  │ → MRB (source_qar_id)                                  │
+  │                  │ ← DEFECTOS (threshold check)                           │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ 8D               │ → LECCIONES APRENDIDAS (D8)                            │
+  │                  │ → AUDITORÍAS (D7 validation)                           │
+  │                  │ → WORKLOAD (D5/D6/D7 actions sync)                     │
+  │                  │ ← QAR (trigger)                                        │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ MRB              │ ← QAR/8D (source origin)                               │
+  │                  │ → DEFECTOS (capture link)                              │
+  │                  │ → WORKLOAD (shift hours)                               │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ ECR              │ ← RISK MATRIX (assessment)                             │
+  │                  │ → AUDITORÍAS (closure audit items)                     │
+  │                  │ ← CLIENTES (parts impact)                              │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ AUDITORÍAS       │ ↔ 8D (D7 validation, NC→8D)                            │
+  │                  │ ↔ ECR (closure audit)                                  │
+  │                  │ → WORKLOAD (sync bidirectional)                        │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ WORKLOAD         │ ↔ 8D (actions D5/D6/D7)                                │
+  │                  │ ↔ AUDITORÍAS (schedules, NCs)                          │
+  │                  │ ↔ MANAGEMENT REVIEW (actions)                          │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ MANAGEMENT       │ ← ALL MODULES (KPIs aggregation)                       │
+  │ REVIEW           │ → WORKLOAD (actions create activities)                 │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ CONFIGURACIÓN    │ → ALL MODULES (users, roles, permissions, catalogs)    │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ CLIENTES         │ → ALL MODULES (client_id, parts, projects)             │
+  ├──────────────────┼─────────────────────────────────────────────────────────┤
+  │ STATISTICAL      │ ← DEFECTOS (potential Pareto)                          │
+  │ TOOLS            │ ← MRB (potential Cpk analysis)                         │
+  └──────────────────┴─────────────────────────────────────────────────────────┘
+
+
+  ================================================================================
+                                RESUMEN MÓDULOS
+  ================================================================================
+
+  │ #  │ Módulo              │ Tablas │ Endpoints │ Integración Principal      │
+  ├────┼─────────────────────┼────────┼───────────┼────────────────────────────┤
+  │ 1  │ 8D Problem Solving  │ 10+    │ 50+       │ QAR, Audit, Workload       │
+  │ 2  │ QAR                 │ 7      │ 25+       │ Defects, 8D, MRB           │
+  │ 3  │ MRB                 │ 6      │ 40+       │ QAR, 8D, Defects           │
+  │ 4  │ ECR                 │ 8      │ 30+       │ Risk Matrix, Audit         │
+  │ 5  │ Defectos            │ 8      │ 30+       │ QAR, MRB, 8D               │
+  │ 6  │ Auditorías          │ 12     │ 50+       │ 8D, ECR, Workload          │
+  │ 7  │ Workload            │ 11     │ 50+       │ 8D, Audit, Mgmt Review     │
+  │ 8  │ Configuración       │ 10     │ 40+       │ All Modules                │
+  │ 9  │ Clientes            │ 6      │ 30+       │ All Modules                │
+  │ 10 │ Lecciones Aprendidas│ 1      │ 5         │ 8D                         │
+  │ 11 │ Risk Matrix         │ 1      │ 3         │ ECR                        │
+  │ 12 │ Statistical Tools   │ 3      │ 15+       │ Datasets (standalone)      │
+  │ 13 │ Management Review   │ 5      │ 12        │ All Modules (KPIs)         │
+  └────┴─────────────────────┴────────┴───────────┴────────────────────────────┘
+
+  ================================================================================
+                            FIN DOCUMENTACIÓN QMS
+  ================================================================================
+
+  Documentación completa de los 13 módulos del QMS.
+
+NEXT STEPS:
+
+> Hacer un modulo de confirmacion de especificacion de componentes, tipo checklist pero que sea por cliente y  que tenga su catalogo con fotos y
+  caracteristas  de partes y subpartes y en una inspeccion tipo el modulo que tenemos de Inspeccion de Defectos se pueda confirmar la especificacion de la
+  parte. Pienso que aportaria mucho y con la base que tenemos no seria tanto trabajo si reciclamos la aplicacion de inspeccion
+
+● Excelente idea. Tiene mucho sentido y reutiliza infraestructura existente.
+
+  ================================================================================
+  [ANÁLISIS] MÓDULO: CONFIRMACIÓN DE ESPECIFICACIONES
+  ================================================================================
+
+  1. SUPOSICIONES DETECTADAS:
+     ├── El módulo será por CLIENTE (catálogo de specs por cliente)
+     ├── Reutilizará UI similar a DefectCapture (tablet-optimized)
+     ├── Las specs se definirán a nivel de PARTE (client_parts)
+     ├── Incluirá FOTOS de referencia (OK/NOK visual)
+     └── Se usará en inspección de recepción o producción
+
+  2. INFORMACIÓN FALTANTE:
+     ├── ¿Es para inspección de RECEPCIÓN (incoming) o también PRODUCCIÓN?
+     ├── ¿Cada característica tiene TOLERANCIA numérica o solo visual (OK/NOK)?
+     ├── ¿Se requiere registro de MEDICIÓN real vs spec?
+     ├── ¿Frecuencia de inspección? (100%, muestreo, AQL)
+     └── ¿Genera QAR/8D automático si falla spec crítica?
+
+  3. RIESGOS TÉCNICOS:
+     ├── Definir bien la relación: client_parts ↔ specs ↔ características
+     ├── Volumen de fotos (storage)
+     └── Performance en catálogos grandes
+
+  4. PLAN CONCRETO (Propuesta):
+
+  ================================================================================
+                      PROPUESTA ARQUITECTURA: SPEC CONFIRMATION
+  ================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                              FLUJO GENERAL                                  │
+  ├─────────────────────────────────────────────────────────────────────────────┤
+  │                                                                             │
+  │  [1. CATÁLOGO]              [2. INSPECCIÓN]           [3. RESULTADOS]       │
+  │                                                                             │
+  │  Admin/Calidad define  →   Inspector confirma   →   Dashboard/Reportes     │
+  │  specs por parte           en tablet                                        │
+  │                                                                             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+  ================================================================================
+                           MODELO DE DATOS PROPUESTO
+  ================================================================================
+
+                      ┌─────────────────────────┐
+                      │      client_parts       │ (existente)
+                      │  ├── part_number        │
+                      │  ├── part_name          │
+                      │  └── client_id          │
+                      └───────────┬─────────────┘
+                                  │ 1:N
+                                  ▼
+                      ┌─────────────────────────┐
+                      │   part_specifications   │ (NUEVO - Catálogo)
+                      │  ├── id                 │
+                      │  ├── part_id FK         │
+                      │  ├── spec_number        │ "SPEC-001"
+                      │  ├── spec_name          │ "Diámetro exterior"
+                      │  ├── spec_type          │ dimensional | visual | funcional
+                      │  ├── nominal_value      │ "10.5"
+                      │  ├── tolerance_plus     │ 0.05
+                      │  ├── tolerance_minus    │ 0.05
+                      │  ├── unit              │ "mm"
+                      │  ├── is_critical        │ boolean (CTQ/CTC)
+                      │  ├── inspection_method  │ "Calibrador digital"
+                      │  ├── frequency          │ "100%" | "AQL" | "Muestreo"
+                      │  ├── photo_ok_url       │ Foto referencia OK
+                      │  ├── photo_nok_url      │ Foto referencia NOK
+                      │  ├── drawing_ref        │ "DWG-001 Det. A"
+                      │  ├── display_order      │
+                      │  └── is_active          │
+                      └───────────┬─────────────┘
+                                  │ 1:N
+                                  ▼
+                      ┌─────────────────────────┐
+                      │ spec_inspection_entries │ (NUEVO - Capturas)
+                      │  ├── id                 │
+                      │  ├── spec_id FK         │
+                      │  ├── part_id FK         │
+                      │  ├── client_id FK       │
+                      │  ├── lot_number         │
+                      │  ├── inspection_date    │
+                      │  ├── inspector_id FK    │
+                      │  ├── shift_id FK        │
+                      │  ├── station_id FK      │ (Incoming, Assembly, etc.)
+                      │  ├── result             │ OK | NOK | CONDITIONAL
+                      │  ├── measured_value     │ "10.48" (valor real medido)
+                      │  ├── deviation          │ Calculado automático
+                      │  ├── disposition_id FK  │ (si NOK: Scrap, Rework, etc.)
+                      │  ├── photo_evidence     │ Foto de evidencia
+                      │  ├── notes              │
+                      │  ├── qar_triggered      │ boolean
+                      │  └── created_at         │
+                      └─────────────────────────┘
+
+
+  ================================================================================
+                           UI PROPUESTA (Reutilizando DefectCapture)
+  ================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ ◀ Spec Confirmation          Station: Incoming    Inspector: Juan   T1     │
+  │─────────────────────────────────────────────────────────────────────────────│
+  │                                                                             │
+  │  Cliente: [Toyota ▼]    Proyecto: [Camry 2026 ▼]    Parte: [ASM-001 ▼]     │
+  │  Lote: [LOT-2026-0412]                                         OK: 5  NG: 1│
+  │─────────────────────────────────────────────────────────────────────────────│
+  │                                                                             │
+  │  ┌─────────────────────────────┐  ┌─────────────────────────────────────┐  │
+  │  │                             │  │                                     │  │
+  │  │  📋 SPECS DE LA PARTE       │  │  🔍 SPEC SELECCIONADA               │  │
+  │  │                             │  │                                     │  │
+  │  │  [Buscar spec...]           │  │  SPEC-001: Diámetro exterior        │  │
+  │  │                             │  │  ────────────────────────────────   │  │
+  │  │  ⚠️ CRÍTICAS (CTQ)          │  │                                     │  │
+  │  │  ├─ ● Diámetro ext.  ✓5 ✗1 │  │  Nominal: 10.50 mm                  │  │
+  │  │  ├─ ● Torque cierre  ✓5 ✗0 │  │  Tolerancia: ±0.05                  │  │
+  │  │  └─ ● Dureza         ✓5 ✗0 │  │  Rango: 10.45 - 10.55               │  │
+  │  │                             │  │                                     │  │
+  │  │  📐 DIMENSIONALES           │  │  ┌─────────────────────────────┐   │  │
+  │  │  ├─ ○ Largo total    ✓5 ✗0 │  │  │     [FOTO REFERENCIA OK]    │   │  │
+  │  │  ├─ ○ Ancho          ✓5 ✗0 │  │  │         📷 Imagen           │   │  │
+  │  │  └─ ○ Espesor        ✓5 ✗0 │  │  └─────────────────────────────┘   │  │
+  │  │                             │  │                                     │  │
+  │  │  👁️ VISUALES               │  │  Método: Calibrador digital         │  │
+  │  │  ├─ ○ Color          ✓5 ✗0 │  │  Frecuencia: 100%                   │  │
+  │  │  ├─ ○ Acabado        ✓5 ✗0 │  │  Ref. plano: DWG-001 Det. A         │  │
+  │  │  └─ ○ Marcaje        ✓5 ✗0 │  │                                     │  │
+  │  │                             │  │  ┌─────────────────────────────┐   │  │
+  │  │                             │  │  │  Valor medido: [10.48   ]   │   │  │
+  │  │                             │  │  │  Desviación: -0.02 ✓        │   │  │
+  │  │                             │  │  └─────────────────────────────┘   │  │
+  │  │                             │  │                                     │  │
+  │  │                             │  │   [ ✓ OK ]  [ ✗ NOK ]  [ ⚡ COND ]  │  │
+  │  │                             │  │                                     │  │
+  │  └─────────────────────────────┘  └─────────────────────────────────────┘  │
+  │                                                                             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+
+  ================================================================================
+                           CATÁLOGO (Admin/Calidad)
+  ================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ Catálogo de Especificaciones                                    [+ Nueva]   │
+  │─────────────────────────────────────────────────────────────────────────────│
+  │                                                                             │
+  │  Cliente: [Toyota ▼]    Parte: [ASM-001 - Ensamble Principal ▼]            │
+  │                                                                             │
+  │  ┌───────────────────────────────────────────────────────────────────────┐ │
+  │  │ #   │ Spec      │ Nombre          │ Tipo   │ Nominal │ Tol   │ CTQ │  │ │
+  │  │─────┼───────────┼─────────────────┼────────┼─────────┼───────┼─────┼──│ │
+  │  │ 1   │ SPEC-001  │ Diámetro ext.   │ DIM    │ 10.50mm │ ±0.05 │ ⚠️  │ ✏│ │
+  │  │ 2   │ SPEC-002  │ Torque cierre   │ FUNC   │ 5.0 Nm  │ ±0.3  │ ⚠️  │ ✏│ │
+  │  │ 3   │ SPEC-003  │ Dureza          │ DIM    │ 58 HRC  │ ±2    │ ⚠️  │ ✏│ │
+  │  │ 4   │ SPEC-004  │ Largo total     │ DIM    │ 150mm   │ ±0.5  │     │ ✏│ │
+  │  │ 5   │ SPEC-005  │ Color           │ VISUAL │ RAL7035 │ Ref   │     │ ✏│ │
+  │  │ 6   │ SPEC-006  │ Acabado superf. │ VISUAL │ Liso    │ Ref   │     │ ✏│ │
+  │  │ 7   │ SPEC-007  │ Marcaje         │ VISUAL │ Logo OK │ Ref   │     │ ✏│ │
+  │  └───────────────────────────────────────────────────────────────────────┘ │
+  │                                                                             │
+  │  [📋 Copiar specs de otra parte]  [📥 Importar Excel]  [📤 Exportar]       │
+  │                                                                             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+
+  ================================================================================
+                           REUTILIZACIÓN DE CÓDIGO
+  ================================================================================
+
+  │ Componente Existente        │ Reutilización                               │
+  ├─────────────────────────────┼─────────────────────────────────────────────┤
+  │ DefectCapture.js            │ Layout, cascada client→project→part        │
+  │ inspectionCatalogEndpoints  │ Stations, Shifts, Dispositions             │
+  │ client_parts                │ Ya tiene jerarquía padre-hijo              │
+  │ Photo upload (QAR/MRB)      │ Fotos OK/NOK referencia                    │
+  │ defect_entries_v2           │ Estructura similar para spec_entries       │
+  │ QAR threshold logic         │ Trigger QAR si spec crítica falla          │
+  └─────────────────────────────┴─────────────────────────────────────────────┘
+
+
+  ================================================================================
+                           ARCHIVOS A CREAR
+  ================================================================================
+
+  BACKEND:
+  ├── migrations/
+  │   └── 069_spec_confirmation_module.sql
+  ├── endpoints/
+  │   ├── specCatalogEndpoints.js      (CRUD specs por parte)
+  │   └── specInspectionEndpoints.js   (Captura inspección)
+
+  FRONTEND:
+  ├── pages/
+  │   ├── SpecCatalog.js               (Admin catálogo)
+  │   ├── SpecConfirmation.js          (Captura estilo DefectCapture)
+  │   └── SpecDashboard.js             (Reportes/KPIs)
+  └── services/
+      └── specService.js
+
+  ---
+  ¿CONFIRMACIÓN ESPERADA?
+
+  1. ¿El módulo es principalmente para RECEPCIÓN (incoming inspection) o también en línea?
+  2. ¿Las specs tienen valor numérico medido o solo OK/NOK visual?
+  3. ¿Generar QAR automático si falla spec crítica (CTQ)?
+  4. ¿Algo que agregarías o modificarías del plan?

@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import workInstructionsService from '../../services/workInstructionsService';
 import wiPlantConfigService from '../../services/wiPlantConfigService';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const WorkInstructionDetail = () => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
   const [workInstruction, setWorkInstruction] = useState(null);
@@ -45,6 +47,23 @@ const WorkInstructionDetail = () => {
   const [riskData, setRiskData] = useState(null);
   const [criteriaDefinitions, setCriteriaDefinitions] = useState([]);
 
+  // ILUO Certifications
+  const [certifications, setCertifications] = useState([]);
+  const [availableOperators, setAvailableOperators] = useState([]);
+  const [showCertModal, setShowCertModal] = useState(false);
+  const [certHistory, setCertHistory] = useState([]);
+  const [certScales, setCertScales] = useState([]);
+  const [selectedScale, setSelectedScale] = useState(null);
+  const [newCert, setNewCert] = useState({
+    operatorId: '',
+    level: 1,
+    scaleId: null,
+    trainingType: 'INTERNAL',
+    notes: '',
+    evidenceFile: null
+  });
+  const [uploadingEvidence, setUploadingEvidence] = useState(null);
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const fetchWorkInstruction = useCallback(async () => {
@@ -74,6 +93,9 @@ const WorkInstructionDetail = () => {
     if (activeTab === 'risk') {
       fetchRiskAssessment();
     }
+    if (activeTab === 'certifications') {
+      fetchCertifications();
+    }
   }, [activeTab, id]);
 
   const fetchRiskAssessment = async () => {
@@ -84,6 +106,166 @@ const WorkInstructionDetail = () => {
     } catch (error) {
       console.error('Error fetching risk assessment:', error);
     }
+  };
+
+  const fetchCertifications = async () => {
+    try {
+      const response = await workInstructionsService.getCertifications(id);
+      setCertifications(response.certifications || []);
+      // Also fetch history
+      const histResponse = await workInstructionsService.getCertificationHistory(id, 20);
+      setCertHistory(histResponse.history || []);
+    } catch (error) {
+      console.error('Error fetching certifications:', error);
+    }
+  };
+
+  const fetchCertificationScales = async () => {
+    try {
+      const response = await workInstructionsService.getCertificationScales();
+      const scales = response.scales || [];
+      setCertScales(scales);
+      // Set default scale
+      const defaultScale = scales.find(s => s.isDefault) || scales[0];
+      if (defaultScale) {
+        setSelectedScale(defaultScale);
+        setNewCert(prev => ({ ...prev, scaleId: defaultScale.id, level: defaultScale.minValue }));
+      }
+    } catch (error) {
+      console.error('Error fetching certification scales:', error);
+    }
+  };
+
+  const fetchAvailableOperatorsForCert = async () => {
+    try {
+      const response = await workInstructionsService.getAvailableOperators(id);
+      setAvailableOperators(response.operators || []);
+    } catch (error) {
+      console.error('Error fetching available operators:', error);
+    }
+  };
+
+  const handleSaveCertification = async () => {
+    if (!newCert.operatorId) {
+      alert('Selecciona un operador');
+      return;
+    }
+    try {
+      const result = await workInstructionsService.saveCertification(id, {
+        operatorId: parseInt(newCert.operatorId),
+        level: parseInt(newCert.level),
+        trainingType: newCert.trainingType,
+        notes: newCert.notes,
+        certifiedBy: user.id
+      });
+
+      // If there's an evidence file, upload it
+      if (newCert.evidenceFile && result.certification?.id) {
+        await workInstructionsService.uploadCertificationEvidence(id, result.certification.id, newCert.evidenceFile);
+      }
+
+      setShowCertModal(false);
+      setNewCert({ operatorId: '', level: 1, trainingType: 'INTERNAL', notes: '', evidenceFile: null });
+      fetchCertifications();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  const handleUploadEvidence = async (certId, file) => {
+    if (!file) return;
+    setUploadingEvidence(certId);
+    try {
+      await workInstructionsService.uploadCertificationEvidence(id, certId, file);
+      fetchCertifications();
+    } catch (error) {
+      alert('Error subiendo evidencia: ' + error.message);
+    } finally {
+      setUploadingEvidence(null);
+    }
+  };
+
+  const handleDownloadEvidence = async (certId, filename) => {
+    try {
+      const url = workInstructionsService.getCertificationEvidenceUrl(id, certId);
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename || 'evidencia';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+      } else {
+        alert('Error descargando evidencia');
+      }
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  const handleUpdateCertLevel = async (certId, newLevel) => {
+    try {
+      await workInstructionsService.updateCertification(id, certId, {
+        level: parseInt(newLevel),
+        certifiedBy: user.id
+      });
+      fetchCertifications();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  const handleRevokeCertification = async (certId) => {
+    const reason = prompt('Motivo de la revocación:');
+    if (reason === null) return;
+    try {
+      await workInstructionsService.revokeCertification(id, certId, user.id, reason);
+      fetchCertifications();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  // ILUO Scale: I(1), L(2), U(3), O(4) - de menor a mayor competencia
+  const getLevelBadge = (level, levelCode) => {
+    const levelStyles = {
+      'I': { bg: '#ef4444', label: 'I', desc: 'Observador' },
+      'L': { bg: '#f59e0b', label: 'L', desc: 'Bajo Supervisión' },
+      'U': { bg: '#22c55e', label: 'U', desc: 'Libre' },
+      'O': { bg: '#0ea5e9', label: 'O', desc: 'Instructor' }
+    };
+    const code = levelCode || ['', 'I', 'L', 'U', 'O'][level] || 'I';
+    const s = levelStyles[code] || levelStyles['I'];
+    return (
+      <span style={{
+        backgroundColor: s.bg, color: 'white', padding: '4px 12px',
+        borderRadius: '4px', fontSize: '13px', fontWeight: 'bold',
+        display: 'inline-flex', alignItems: 'center', gap: '6px'
+      }}>
+        {s.label} <span style={{ fontWeight: 'normal', fontSize: '11px' }}>({level})</span>
+      </span>
+    );
+  };
+
+  const getCertStatusBadge = (status) => {
+    const statusStyles = {
+      'ACTIVE': { bg: t.success, label: 'Activo' },
+      'EXPIRED': { bg: t.error, label: 'Vencido' },
+      'EXPIRING_SOON': { bg: t.warning, label: 'Por vencer' },
+      'REVOKED': { bg: t.textMuted, label: 'Revocado' }
+    };
+    const s = statusStyles[status] || statusStyles['ACTIVE'];
+    return (
+      <span style={{ backgroundColor: s.bg, color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '11px' }}>
+        {s.label}
+      </span>
+    );
   };
 
   const fetchAvailableProjects = async () => {
@@ -343,6 +525,7 @@ const WorkInstructionDetail = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: '' },
     { id: 'steps', label: 'Steps', icon: '', count: workInstruction.steps?.length || 0 },
+    { id: 'certifications', label: 'Certificaciones ILUO', icon: '', count: certifications.length },
     { id: 'risk', label: 'Risk Assessment', icon: '' },
     { id: 'revisions', label: 'Revisiones', icon: '', count: workInstruction.revisions?.length || 0 }
   ];
@@ -670,6 +853,179 @@ const WorkInstructionDetail = () => {
           </div>
         )}
 
+        {/* CERTIFICATIONS TAB */}
+        {activeTab === 'certifications' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: t.primary }}>Certificaciones ILUO de Operadores</h3>
+              <button
+                onClick={() => { fetchAvailableOperatorsForCert(); fetchCertificationScales(); setShowCertModal(true); }}
+                style={{ padding: '10px 20px', borderRadius: '6px', border: 'none', background: t.primary, color: 'white', cursor: 'pointer' }}
+              >
+                + Certificar Operador
+              </button>
+            </div>
+
+            {/* ILUO Legend - I(1), L(2), U(3), O(4) de menor a mayor */}
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>I</span>
+                <span style={{ color: t.textMuted, fontSize: '13px' }}>Observador (1)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ backgroundColor: '#f59e0b', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>L</span>
+                <span style={{ color: t.textMuted, fontSize: '13px' }}>Bajo Supervisión (2)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ backgroundColor: '#22c55e', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>U</span>
+                <span style={{ color: t.textMuted, fontSize: '13px' }}>Libre (3)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ backgroundColor: '#0ea5e9', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>O</span>
+                <span style={{ color: t.textMuted, fontSize: '13px' }}>Instructor (4)</span>
+              </div>
+            </div>
+
+            {/* Certifications List */}
+            {certifications.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: t.bgPanel }}>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.text }}>Operador</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, color: t.text }}>Nivel</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, color: t.text }}>Tipo</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, color: t.text }}>Fecha Cert.</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, color: t.text }}>Vence</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, color: t.text }}>Estado</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, width: '100px' }}>Evidencia</th>
+                    <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, width: '150px' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {certifications.map(cert => (
+                    <tr key={cert.id}>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, color: t.text }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{cert.operatorName}</span>
+                          <button
+                            onClick={() => navigate(`/work-instructions/operator/${cert.operatorId}`)}
+                            title="Ver perfil ILUO del operador"
+                            style={{
+                              background: 'none', border: `1px solid ${t.border}`, borderRadius: '4px',
+                              padding: '2px 6px', cursor: 'pointer', fontSize: '10px', color: t.primary
+                            }}
+                          >
+                            Ver Perfil
+                          </button>
+                        </div>
+                        <div style={{ fontSize: '12px', color: t.textMuted }}>{cert.position || ''}</div>
+                      </td>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, textAlign: 'center' }}>
+                        {getLevelBadge(cert.level, cert.levelCode)}
+                      </td>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, textAlign: 'center', color: t.text }}>
+                        {cert.trainingType === 'INTERNAL' ? 'Interno' : 'Externo'}
+                      </td>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, textAlign: 'center', color: t.text }}>
+                        {cert.certifiedDate ? new Date(cert.certifiedDate).toLocaleDateString() : '-'}
+                      </td>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, textAlign: 'center', color: t.text }}>
+                        {cert.expiresAt ? new Date(cert.expiresAt).toLocaleDateString() : 'Sin vencimiento'}
+                      </td>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, textAlign: 'center' }}>
+                        {getCertStatusBadge(cert.effectiveStatus)}
+                      </td>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, textAlign: 'center' }}>
+                        {cert.evidencePath ? (
+                          <button
+                            onClick={() => handleDownloadEvidence(cert.id, cert.evidenceFilename)}
+                            style={{ padding: '4px 8px', borderRadius: '4px', border: `1px solid ${t.border}`, background: t.bgPanel, color: t.text, cursor: 'pointer', fontSize: '11px' }}
+                            title={cert.evidenceFilename}
+                          >
+                            📎 Descargar
+                          </button>
+                        ) : (
+                          <label style={{ cursor: 'pointer' }}>
+                            <input
+                              type="file"
+                              style={{ display: 'none' }}
+                              onChange={(e) => handleUploadEvidence(cert.id, e.target.files[0])}
+                              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            />
+                            <span style={{ padding: '4px 8px', borderRadius: '4px', border: `1px dashed ${t.border}`, background: 'transparent', color: t.textMuted, fontSize: '11px' }}>
+                              {uploadingEvidence === cert.id ? 'Subiendo...' : '+ Subir'}
+                            </span>
+                          </label>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px', borderBottom: `1px solid ${t.border}`, textAlign: 'center' }}>
+                        {cert.status === 'ACTIVE' && (
+                          <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                            <select
+                              value={cert.level}
+                              onChange={(e) => handleUpdateCertLevel(cert.id, e.target.value)}
+                              style={{ padding: '4px', borderRadius: '4px', border: `1px solid ${t.border}`, backgroundColor: t.bgCard, color: t.text, fontSize: '12px' }}
+                            >
+                              <option value="1">1 - I</option>
+                              <option value="2">2 - I</option>
+                              <option value="3">3 - L</option>
+                              <option value="4">4 - L</option>
+                              <option value="5">5 - U</option>
+                            </select>
+                            <button
+                              onClick={() => handleRevokeCertification(cert.id)}
+                              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: t.error, color: 'white', cursor: 'pointer', fontSize: '11px' }}
+                            >
+                              Revocar
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+                <p>No hay operadores certificados en esta WI</p>
+                <p style={{ fontSize: '14px' }}>Haz clic en "Certificar Operador" para comenzar</p>
+              </div>
+            )}
+
+            {/* Certification History */}
+            {certHistory.length > 0 && (
+              <div style={{ marginTop: '30px' }}>
+                <h4 style={{ color: t.primary, marginBottom: '15px' }}>Historial de Cambios</h4>
+                <div style={{ maxHeight: '300px', overflow: 'auto' }}>
+                  {certHistory.map(h => (
+                    <div key={h.id} style={{
+                      padding: '10px 15px', borderLeft: `3px solid ${t.primary}`, marginBottom: '8px',
+                      backgroundColor: t.bgPanel, borderRadius: '0 6px 6px 0'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <strong style={{ color: t.text }}>{h.operatorName}</strong>
+                          <span style={{ marginLeft: '10px', color: t.textMuted, fontSize: '13px' }}>
+                            {h.changeReason === 'INITIAL' && 'Certificación inicial'}
+                            {h.changeReason === 'UPGRADE' && `Nivel ${h.previousLevel} → ${h.newLevel}`}
+                            {h.changeReason === 'DOWNGRADE' && `Nivel ${h.previousLevel} → ${h.newLevel}`}
+                            {h.changeReason === 'RECERTIFICATION' && 'Recertificación'}
+                            {h.changeReason === 'REVOKE' && 'Revocado'}
+                          </span>
+                        </div>
+                        <span style={{ color: t.textDim, fontSize: '12px' }}>
+                          {new Date(h.createdAt).toLocaleString()} • {h.changedByName || 'Sistema'}
+                        </span>
+                      </div>
+                      {h.notes && <p style={{ margin: '5px 0 0', color: t.textMuted, fontSize: '13px' }}>{h.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* RISK ASSESSMENT TAB */}
         {activeTab === 'risk' && (
           <div>
@@ -943,6 +1299,145 @@ const WorkInstructionDetail = () => {
               </button>
               <button onClick={handleAddStep} style={{ padding: '10px 20px', borderRadius: '6px', border: 'none', background: '#1e3a5f', color: 'white', cursor: 'pointer' }}>
                 Agregar Paso
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Certification Modal */}
+      {showCertModal && (
+        <Modal title="Certificar Operador" onClose={() => setShowCertModal(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Operador *</label>
+              <select
+                value={newCert.operatorId}
+                onChange={(e) => setNewCert({ ...newCert, operatorId: e.target.value })}
+                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
+              >
+                <option value="">Seleccionar operador...</option>
+                {availableOperators.map(op => (
+                  <option key={op.id} value={op.id}>
+                    {op.firstName} {op.lastName} {op.position ? `- ${op.position}` : ''}
+                  </option>
+                ))}
+              </select>
+              {availableOperators.length === 0 && (
+                <p style={{ fontSize: '12px', color: '#C77700', marginTop: '5px' }}>
+                  Todos los operadores ya estan certificados en esta WI
+                </p>
+              )}
+            </div>
+            {/* Scale selector */}
+            {certScales.length > 1 && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Escala de Evaluacion</label>
+                <select
+                  value={newCert.scaleId || ''}
+                  onChange={(e) => {
+                    const scaleId = parseInt(e.target.value);
+                    const scale = certScales.find(s => s.id === scaleId);
+                    setSelectedScale(scale);
+                    setNewCert({ ...newCert, scaleId, level: scale?.minValue || 1 });
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
+                >
+                  {certScales.map(scale => (
+                    <option key={scale.id} value={scale.id}>
+                      {scale.name} {scale.isDefault ? '(Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {selectedScale && (
+                  <p style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                    {selectedScale.description}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>
+                  Nivel {selectedScale?.code || 'ILUO'}
+                </label>
+                <select
+                  value={newCert.level}
+                  onChange={(e) => setNewCert({ ...newCert, level: parseInt(e.target.value) })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
+                >
+                  {selectedScale?.levels?.length > 0 ? (
+                    selectedScale.levels.map(lvl => (
+                      <option key={lvl.levelValue} value={lvl.levelValue}>
+                        {lvl.levelValue} - {lvl.code} ({lvl.label})
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="1">1 - I (Observador)</option>
+                      <option value="2">2 - L (Bajo Supervisión)</option>
+                      <option value="3">3 - U (Libre)</option>
+                      <option value="4">4 - O (Instructor)</option>
+                    </>
+                  )}
+                </select>
+                {selectedScale?.levels && (
+                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '11px' }}>
+                    {selectedScale.levels.find(l => l.levelValue === newCert.level)?.description || ''}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Tipo de Capacitacion</label>
+                <select
+                  value={newCert.trainingType}
+                  onChange={(e) => setNewCert({ ...newCert, trainingType: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}
+                >
+                  <option value="INTERNAL">Interna</option>
+                  <option value="EXTERNAL">Externa</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Notas</label>
+              <textarea
+                value={newCert.notes}
+                onChange={(e) => setNewCert({ ...newCert, notes: e.target.value })}
+                rows={2}
+                placeholder="Observaciones sobre la certificacion..."
+                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', resize: 'vertical' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Evidencia (opcional)</label>
+              <input
+                type="file"
+                onChange={(e) => setNewCert({ ...newCert, evidenceFile: e.target.files[0] })}
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ddd' }}
+              />
+              {newCert.evidenceFile && (
+                <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Archivo: {newCert.evidenceFile.name}
+                </p>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <button onClick={() => setShowCertModal(false)} style={{ padding: '10px 20px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveCertification}
+                disabled={!newCert.operatorId}
+                style={{
+                  padding: '10px 20px', borderRadius: '6px', border: 'none',
+                  background: newCert.operatorId ? '#1e3a5f' : '#ccc',
+                  color: 'white', cursor: newCert.operatorId ? 'pointer' : 'not-allowed'
+                }}
+              >
+                Certificar
               </button>
             </div>
           </div>

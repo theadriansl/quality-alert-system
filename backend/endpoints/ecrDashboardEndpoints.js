@@ -8,11 +8,11 @@ const { transformToCamelCase } = require('../utils/caseTransform');
 /**
  * GET /ecr/dashboard-stats
  * Obtiene estadisticas agregadas para el dashboard
- * Query params: startDate, endDate, clientId, department, changeType
+ * Query params: startDate, endDate, clientId, department, changeType, riskLevel
  */
 async function getDashboardStats(req, res) {
   try {
-    const { startDate, endDate, clientId, department, changeType } = req.query;
+    const { startDate, endDate, clientId, department, changeType, riskLevel } = req.query;
 
     // Construir filtros dinamicos
     let whereConditions = [];
@@ -20,11 +20,11 @@ async function getDashboardStats(req, res) {
     let paramIndex = 1;
 
     if (startDate) {
-      whereConditions.push(`created_at >= $${paramIndex++}`);
+      whereConditions.push(`ecr_reports.created_at >= $${paramIndex++}`);
       params.push(startDate);
     }
     if (endDate) {
-      whereConditions.push(`created_at <= $${paramIndex++}`);
+      whereConditions.push(`ecr_reports.created_at < $${paramIndex++}::date + interval '1 day'`);
       params.push(endDate);
     }
     if (clientId) {
@@ -39,10 +39,24 @@ async function getDashboardStats(req, res) {
       whereConditions.push(`change_type = $${paramIndex++}`);
       params.push(changeType);
     }
+    if (riskLevel) {
+      const s = `(risk_assessment->>'severity')::int`;
+      const o = `(risk_assessment->>'occurrence')::int`;
+      const riskConds = {
+        'bajo':    `risk_assessment IS NOT NULL AND GREATEST(${s},${o}) <= 3`,
+        'medio':   `risk_assessment IS NOT NULL AND GREATEST(${s},${o}) > 3 AND GREATEST(${s},${o}) <= 6`,
+        'alto':    `risk_assessment IS NOT NULL AND GREATEST(${s},${o}) > 6 AND NOT (${s} > 6 AND ${o} > 6)`,
+        'critico': `risk_assessment IS NOT NULL AND ${s} > 6 AND ${o} > 6`,
+      };
+      const cond = riskConds[riskLevel.toLowerCase()];
+      if (cond) whereConditions.push(cond);
+    }
 
     const whereClause = whereConditions.length > 0
       ? 'WHERE ' + whereConditions.join(' AND ')
       : '';
+    // For queries that alias ecr_reports as 'e' — replace table-qualified columns
+    const whereClauseE = whereClause.replace(/ecr_reports\./g, 'e.');
 
     // ========================================
     // KPIs Principales
@@ -53,19 +67,20 @@ async function getDashboardStats(req, res) {
         COUNT(*) FILTER (WHERE status = 'draft') as draft,
         COUNT(*) FILTER (WHERE status = 'submitted') as submitted,
         COUNT(*) FILTER (WHERE status = 'approved') as approved,
-        COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
+        COUNT(*) FILTER (WHERE status = 'rejected' OR status = 'closed_rejected') as rejected,
         COUNT(*) FILTER (WHERE status = 'closed') as closed,
-        COUNT(*) FILTER (WHERE status IN ('draft', 'submitted')) as open,
+        COUNT(*) FILTER (WHERE status = 'closed_rejected') as closed_rejected,
+        COUNT(*) FILTER (WHERE status NOT IN ('closed', 'closed_rejected', 'rejected')) as open,
         AVG(
-          CASE WHEN status = 'approved' AND closed_at IS NOT NULL
+          CASE WHEN status IN ('closed', 'closed_rejected') AND closed_at IS NOT NULL
           THEN EXTRACT(EPOCH FROM (closed_at - created_at)) / 86400
           END
         ) as avg_approval_days,
         CASE
-          WHEN COUNT(*) FILTER (WHERE status IN ('approved', 'rejected')) > 0
+          WHEN COUNT(*) FILTER (WHERE status IN ('closed', 'closed_rejected')) > 0
           THEN ROUND(
-            COUNT(*) FILTER (WHERE status = 'approved')::numeric /
-            COUNT(*) FILTER (WHERE status IN ('approved', 'rejected'))::numeric * 100,
+            COUNT(*) FILTER (WHERE status = 'closed')::numeric /
+            COUNT(*) FILTER (WHERE status IN ('closed', 'closed_rejected'))::numeric * 100,
             1
           )
           ELSE 0
@@ -149,6 +164,22 @@ async function getDashboardStats(req, res) {
     const byPriorityResult = await query(byPriorityQuery, params);
 
     // ========================================
+    // Por Departamento Solicitante
+    // ========================================
+    const byDepartmentQuery = `
+      SELECT
+        COALESCE(requestor_department, 'Sin departamento') as name,
+        COUNT(*) as value
+      FROM ecr_reports
+      ${whereClause}
+      GROUP BY requestor_department
+      ORDER BY value DESC
+      LIMIT 10
+    `;
+
+    const byDepartmentResult = await query(byDepartmentQuery, params);
+
+    // ========================================
     // Por Status
     // ========================================
     const byStatusQuery = `
@@ -202,7 +233,7 @@ async function getDashboardStats(req, res) {
         COUNT(*) FILTER (WHERE e.status = 'rejected') as rejected
       FROM ecr_reports e
       LEFT JOIN clients c ON e.client_id = c.id
-      ${whereClause}
+      ${whereClauseE}
       GROUP BY c.id, c.name
       ORDER BY count DESC
       LIMIT 5
@@ -219,7 +250,7 @@ async function getDashboardStats(req, res) {
         COUNT(*) as count
       FROM ecr_reports e,
            jsonb_array_elements(impact_analysis) as area
-      ${whereClause.replace('WHERE', whereClause ? 'WHERE' : '')}
+      ${whereClauseE}
       GROUP BY area->>'areaName'
       ORDER BY count DESC
       LIMIT 5
@@ -244,7 +275,7 @@ async function getDashboardStats(req, res) {
         COUNT(*) FILTER (WHERE e.status = 'approved') as approved
       FROM ecr_reports e
       LEFT JOIN users u ON e.created_by = u.id
-      ${whereClause}
+      ${whereClauseE}
       GROUP BY e.created_by, u.first_name, u.last_name, e.requestor_name
       ORDER BY count DESC
       LIMIT 5
@@ -253,27 +284,49 @@ async function getDashboardStats(req, res) {
     const topResponsiblesResult = await query(topResponsiblesQuery, params);
 
     // ========================================
-    // Matriz de Riesgo (Heat Map)
+    // Matriz de Riesgo (Heat Map) - Lee configuración dinámica
     // ========================================
+    // Primero obtener la configuración activa de la matriz de riesgo
+    let severityLevels = [
+      { label: 'Low', value: 1 },
+      { label: 'Medium', value: 2 },
+      { label: 'High', value: 3 }
+    ];
+    let occurrenceLevels = [
+      { label: 'Low', value: 1 },
+      { label: 'Medium', value: 2 },
+      { label: 'High', value: 3 }
+    ];
+
+    try {
+      const riskConfigResult = await query(`
+        SELECT severity_levels, occurrence_levels
+        FROM risk_matrix_config
+        WHERE is_active = TRUE
+        LIMIT 1
+      `);
+      if (riskConfigResult.rows.length > 0) {
+        severityLevels = riskConfigResult.rows[0].severity_levels || severityLevels;
+        occurrenceLevels = riskConfigResult.rows[0].occurrence_levels || occurrenceLevels;
+      }
+    } catch (e) {
+      console.log('Risk config query failed, using defaults:', e.message);
+    }
+
+    // Obtener datos crudos de severity/occurrence
     const riskMatrixQuery = `
       SELECT
-        CASE
-          WHEN (risk_assessment->>'severity')::int <= 3 THEN 'Low'
-          WHEN (risk_assessment->>'severity')::int <= 6 THEN 'Medium'
-          ELSE 'High'
-        END as severity,
-        CASE
-          WHEN (risk_assessment->>'occurrence')::int <= 3 THEN 'Low'
-          WHEN (risk_assessment->>'occurrence')::int <= 6 THEN 'Medium'
-          ELSE 'High'
-        END as occurrence,
+        (area->>'severity')::int as severity_val,
+        (area->>'occurrence')::int as occurrence_val,
         COUNT(*) as count
-      FROM ecr_reports
-      WHERE risk_assessment IS NOT NULL
-        AND risk_assessment->>'severity' IS NOT NULL
-        AND risk_assessment->>'occurrence' IS NOT NULL
+      FROM ecr_reports,
+           jsonb_array_elements(impact_analysis) as area
+      WHERE impact_analysis IS NOT NULL
+        AND jsonb_array_length(impact_analysis) > 0
+        AND (area->>'severity') IS NOT NULL
+        AND (area->>'occurrence') IS NOT NULL
       ${whereClause.replace('WHERE', 'AND')}
-      GROUP BY severity, occurrence
+      GROUP BY severity_val, occurrence_val
     `;
 
     let riskMatrixResult = { rows: [] };
@@ -283,18 +336,53 @@ async function getDashboardStats(req, res) {
       console.log('Risk matrix query failed, returning empty:', e.message);
     }
 
-    // Formatear matriz de riesgo
-    const riskMatrix = {
-      Low: { Low: 0, Medium: 0, High: 0 },
-      Medium: { Low: 0, Medium: 0, High: 0 },
-      High: { Low: 0, Medium: 0, High: 0 }
+    // Función para mapear valor a nivel configurado
+    const mapToLevel = (val, levels) => {
+      // Ordenar por value descendente para encontrar el nivel correcto
+      const sorted = [...levels].sort((a, b) => b.value - a.value);
+      for (const level of sorted) {
+        if (val >= level.value) return level.label;
+      }
+      return levels[0]?.label || 'Unknown';
     };
 
+    // Inicializar matriz con niveles configurados
+    const riskMatrix = {};
+    severityLevels.forEach(sev => {
+      riskMatrix[sev.label] = {};
+      occurrenceLevels.forEach(occ => {
+        riskMatrix[sev.label][occ.label] = 0;
+      });
+    });
+
+    // Poblar matriz con datos
     riskMatrixResult.rows.forEach(row => {
-      if (riskMatrix[row.severity] && riskMatrix[row.severity][row.occurrence] !== undefined) {
-        riskMatrix[row.severity][row.occurrence] = parseInt(row.count);
+      const sevLabel = mapToLevel(row.severity_val, severityLevels);
+      const occLabel = mapToLevel(row.occurrence_val, occurrenceLevels);
+      if (riskMatrix[sevLabel] && riskMatrix[sevLabel][occLabel] !== undefined) {
+        riskMatrix[sevLabel][occLabel] += parseInt(row.count);
       }
     });
+
+    // Obtener las reglas de riesgo configuradas
+    let riskRules = [];
+    try {
+      const rulesResult = await query(`
+        SELECT risk_rules FROM risk_matrix_config WHERE is_active = TRUE LIMIT 1
+      `);
+      if (rulesResult.rows.length > 0 && rulesResult.rows[0].risk_rules) {
+        riskRules = rulesResult.rows[0].risk_rules;
+      }
+    } catch (e) {
+      console.log('Risk rules query failed:', e.message);
+    }
+
+    // Incluir metadata de niveles para el frontend
+    const riskMatrixMeta = {
+      severityLevels: severityLevels.map(l => ({ label: l.label, value: l.value })),
+      occurrenceLevels: occurrenceLevels.map(l => ({ label: l.label, value: l.value })),
+      riskRules: riskRules // [{severity: 1, occurrence: 1, riskLevel: 'low'}, ...]
+    };
 
     // ========================================
     // Departamentos unicos (para filtro)
@@ -345,9 +433,11 @@ async function getDashboardStats(req, res) {
       withData: 0,
       byType: {
         scrap: 0,
+        rework: 0,
         investment: 0,
         overtime: 0,
-        other: 0,
+        logistics: 0,
+        other_expense: 0,
         savings: 0
       }
     };
@@ -378,6 +468,171 @@ async function getDashboardStats(req, res) {
     }
 
     // ========================================
+    // CP Post-Cambio (Capacidad Potencial)
+    // ========================================
+    let cpStats = { avg: null, capable: 0, marginal: 0, notCapable: 0, total: 0 };
+    try {
+      const cpResult = await query(`
+        SELECT
+          ROUND(AVG(cp_post_change), 3) as avg_cp,
+          COUNT(*) FILTER (WHERE cp_post_change >= 1.33) as capable,
+          COUNT(*) FILTER (WHERE cp_post_change >= 1.0 AND cp_post_change < 1.33) as marginal,
+          COUNT(*) FILTER (WHERE cp_post_change < 1.0) as not_capable,
+          COUNT(*) FILTER (WHERE cp_post_change IS NOT NULL) as total
+        FROM ecr_reports
+        ${whereClause}
+      `, params);
+      if (cpResult.rows.length > 0) {
+        const r = cpResult.rows[0];
+        cpStats = {
+          avg: r.avg_cp ? parseFloat(r.avg_cp) : null,
+          capable: parseInt(r.capable) || 0,
+          marginal: parseInt(r.marginal) || 0,
+          notCapable: parseInt(r.not_capable) || 0,
+          total: parseInt(r.total) || 0
+        };
+      }
+    } catch (e) { console.log('CP query failed:', e.message); }
+
+    // ========================================
+    // CPK Post-Cambio (Capacidad Real)
+    // ========================================
+    let cpkStats = { avg: null, capable: 0, marginal: 0, notCapable: 0, total: 0 };
+    try {
+      const cpkResult = await query(`
+        SELECT
+          ROUND(AVG(cpk_post_change), 3) as avg_cpk,
+          COUNT(*) FILTER (WHERE cpk_post_change >= 1.33) as capable,
+          COUNT(*) FILTER (WHERE cpk_post_change >= 1.0 AND cpk_post_change < 1.33) as marginal,
+          COUNT(*) FILTER (WHERE cpk_post_change < 1.0) as not_capable,
+          COUNT(*) FILTER (WHERE cpk_post_change IS NOT NULL) as total
+        FROM ecr_reports
+        ${whereClause}
+      `, params);
+      if (cpkResult.rows.length > 0) {
+        const r = cpkResult.rows[0];
+        cpkStats = {
+          avg: r.avg_cpk ? parseFloat(r.avg_cpk) : null,
+          capable: parseInt(r.capable) || 0,
+          marginal: parseInt(r.marginal) || 0,
+          notCapable: parseInt(r.not_capable) || 0,
+          total: parseInt(r.total) || 0
+        };
+      }
+    } catch (e) { console.log('CPK query failed:', e.message); }
+
+    // ========================================
+    // Scrap Inicial Promedio
+    // ========================================
+    let scrapStats = { avg: null, total: 0 };
+    try {
+      const scrapResult = await query(`
+        SELECT
+          ROUND(AVG(initial_scrap), 2) as avg_scrap,
+          COUNT(*) FILTER (WHERE initial_scrap IS NOT NULL) as total
+        FROM ecr_reports
+        ${whereClause}
+      `, params);
+      if (scrapResult.rows.length > 0) {
+        const r = scrapResult.rows[0];
+        scrapStats = {
+          avg: r.avg_scrap ? parseFloat(r.avg_scrap) : null,
+          total: parseInt(r.total) || 0
+        };
+      }
+    } catch (e) { console.log('Scrap query failed:', e.message); }
+
+    // ========================================
+    // Antigüedad de ECRs Abiertos (Días Abierto)
+    // ========================================
+    let agingStats = { avgDaysOpen: null, open07: 0, open830: 0, open3190: 0, open90plus: 0, openTotal: 0 };
+    try {
+      const agingResult = await query(`
+        SELECT
+          ROUND(AVG(EXTRACT(EPOCH FROM (NOW() - created_at))/86400), 1) as avg_days,
+          COUNT(*) FILTER (WHERE status IN ('draft','submitted') AND EXTRACT(EPOCH FROM (NOW() - created_at))/86400 <= 7)  as d0_7,
+          COUNT(*) FILTER (WHERE status IN ('draft','submitted') AND EXTRACT(EPOCH FROM (NOW() - created_at))/86400 BETWEEN 8 AND 30) as d8_30,
+          COUNT(*) FILTER (WHERE status IN ('draft','submitted') AND EXTRACT(EPOCH FROM (NOW() - created_at))/86400 BETWEEN 31 AND 90) as d31_90,
+          COUNT(*) FILTER (WHERE status IN ('draft','submitted') AND EXTRACT(EPOCH FROM (NOW() - created_at))/86400 > 90) as d90plus,
+          COUNT(*) FILTER (WHERE status IN ('draft','submitted')) as open_total
+        FROM ecr_reports
+        ${whereClause}
+      `, params);
+      if (agingResult.rows.length > 0) {
+        const r = agingResult.rows[0];
+        agingStats = {
+          avgDaysOpen: r.avg_days ? parseFloat(r.avg_days) : null,
+          open07:    parseInt(r.d0_7)    || 0,
+          open830:   parseInt(r.d8_30)   || 0,
+          open3190:  parseInt(r.d31_90)  || 0,
+          open90plus:parseInt(r.d90plus) || 0,
+          openTotal: parseInt(r.open_total) || 0
+        };
+      }
+    } catch (e) { console.log('Aging query failed:', e.message); }
+
+    // ========================================
+    // PPAP por Nivel
+    // ========================================
+    let ppapStats = { byLevel: [], notRequired: 0, pending: 0, withData: 0 };
+    try {
+      const ppapResult = await query(`
+        SELECT
+          ppap_status as level,
+          COUNT(*) as count
+        FROM ecr_reports
+        WHERE ppap_status IS NOT NULL
+        ${whereClause.replace('WHERE', 'AND')}
+        GROUP BY ppap_status
+        ORDER BY ppap_status
+      `, params);
+      ppapStats.byLevel = ppapResult.rows.map(r => ({ level: r.level, count: parseInt(r.count) }));
+      ppapStats.withData = ppapStats.byLevel.reduce((sum, r) => sum + r.count, 0);
+    } catch (e) { console.log('PPAP query failed:', e.message); }
+
+    // ========================================
+    // Auditoría de Cierre
+    // ========================================
+    let closureAuditStats = {
+      totalItems: 0, completed: 0, pending: 0,
+      byJudgment: { ok: 0, nok: 0, obs: 0, na: 0 },
+      avgRounds: null, ecrsWithAudit: 0
+    };
+    try {
+      const auditResult = await query(`
+        SELECT
+          COUNT(*) as total_items,
+          COUNT(*) FILTER (WHERE auditor_completed = true) as completed,
+          COUNT(*) FILTER (WHERE auditor_completed = false OR auditor_completed IS NULL) as pending,
+          COUNT(*) FILTER (WHERE UPPER(auditor_judgment) = 'OK') as ok,
+          COUNT(*) FILTER (WHERE UPPER(auditor_judgment) = 'NOK') as nok,
+          COUNT(*) FILTER (WHERE UPPER(auditor_judgment) = 'OBS') as obs,
+          COUNT(*) FILTER (WHERE UPPER(auditor_judgment) = 'N/A' OR UPPER(auditor_judgment) = 'NA') as na,
+          ROUND(AVG(audit_round), 1) as avg_rounds,
+          COUNT(DISTINCT ecr_id) as ecrs_with_audit
+        FROM ecr_closure_audit_items cai
+        JOIN ecr_reports er ON er.id = cai.ecr_id
+        ${whereClause.replace(/ecr_reports\./g, 'er.')}
+      `, params);
+      if (auditResult.rows.length > 0) {
+        const r = auditResult.rows[0];
+        closureAuditStats = {
+          totalItems: parseInt(r.total_items) || 0,
+          completed: parseInt(r.completed) || 0,
+          pending: parseInt(r.pending) || 0,
+          byJudgment: {
+            ok: parseInt(r.ok) || 0,
+            nok: parseInt(r.nok) || 0,
+            obs: parseInt(r.obs) || 0,
+            na: parseInt(r.na) || 0
+          },
+          avgRounds: r.avg_rounds ? parseFloat(r.avg_rounds) : null,
+          ecrsWithAudit: parseInt(r.ecrs_with_audit) || 0
+        };
+      }
+    } catch (e) { console.log('Closure audit query failed:', e.message); }
+
+    // ========================================
     // Respuesta
     // ========================================
     res.json({
@@ -390,6 +645,7 @@ async function getDashboardStats(req, res) {
           approved: parseInt(kpis.approved) || 0,
           rejected: parseInt(kpis.rejected) || 0,
           closed: parseInt(kpis.closed) || 0,
+          closedRejected: parseInt(kpis.closed_rejected) || 0,
           open: parseInt(kpis.open) || 0,
           avgApprovalDays: parseFloat(kpis.avg_approval_days) || 0,
           effectivenessRate: parseFloat(kpis.effectiveness_rate) || 0
@@ -398,10 +654,18 @@ async function getDashboardStats(req, res) {
         byType: transformToCamelCase(byTypeResult.rows),
         byCategory: transformToCamelCase(byCategoryResult.rows),
         byPriority: transformToCamelCase(byPriorityResult.rows),
+        byDepartment: transformToCamelCase(byDepartmentResult.rows),
         byStatus: transformToCamelCase(byStatusResult.rows),
         adoption,
         riskMatrix,
+        riskMatrixMeta,
         financialImpact,
+        cpStats,
+        cpkStats,
+        scrapStats,
+        agingStats,
+        ppapStats,
+        closureAuditStats,
         topClients: transformToCamelCase(topClientsResult.rows),
         topAreas: transformToCamelCase(topAreasResult.rows),
         topResponsibles: transformToCamelCase(topResponsiblesResult.rows),

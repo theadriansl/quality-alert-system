@@ -1,9 +1,42 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Login = () => {
   const { theme: t } = useTheme();
+  const { language, changeLanguage } = useLanguage();
+
+  const tr = {
+    en: {
+      systemName: 'Quality Management System',
+      signIn: 'Sign in to your account',
+      email: 'Email',
+      password: 'Password',
+      emailPlaceholder: 'Enter your email',
+      passwordPlaceholder: 'Enter your password',
+      show: 'SHOW',
+      hide: 'HIDE',
+      signingIn: 'Signing in...',
+      signInBtn: 'Sign In',
+      testCredentials: 'Test Credentials',
+      loginError: 'Login error'
+    },
+    es: {
+      systemName: 'Sistema de Gestión de Calidad',
+      signIn: 'Inicia sesión en tu cuenta',
+      email: 'Correo',
+      password: 'Contraseña',
+      emailPlaceholder: 'Ingresa tu correo',
+      passwordPlaceholder: 'Ingresa tu contraseña',
+      show: 'VER',
+      hide: 'OCULTAR',
+      signingIn: 'Iniciando sesión...',
+      signInBtn: 'Iniciar Sesión',
+      testCredentials: 'Credenciales de Prueba',
+      loginError: 'Error de login'
+    }
+  }[language] || {};
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -23,7 +56,7 @@ const Login = () => {
       await login(formData.email, formData.password);
       window.location.href = '/';
     } catch (error) {
-      setError(error.response?.data?.message || 'Login error');
+      setError(error.response?.data?.message || tr.loginError);
     } finally {
       setLoading(false);
     }
@@ -186,9 +219,17 @@ const Login = () => {
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.card}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+            <button
+              onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
+              style={{ padding: '4px 8px', fontSize: '11px', border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', backgroundColor: t.bgPanel, color: t.text }}
+            >
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
+          </div>
           <div style={styles.logo}>QMS</div>
-          <h1 style={styles.title}>Quality Management System</h1>
-          <p style={styles.subtitle}>Sign in to your account</p>
+          <h1 style={styles.title}>{tr.systemName}</h1>
+          <p style={styles.subtitle}>{tr.signIn}</p>
 
           {error && (
             <div style={styles.error}>{error}</div>
@@ -196,13 +237,13 @@ const Login = () => {
 
           <form onSubmit={handleSubmit}>
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Email</label>
+              <label style={styles.label}>{tr.email}</label>
               <input
                 name="email"
                 type="email"
                 required
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder={tr.emailPlaceholder}
                 value={formData.email}
                 onChange={handleChange}
                 onFocus={(e) => e.target.style.borderColor = t.primary}
@@ -211,14 +252,14 @@ const Login = () => {
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Password</label>
+              <label style={styles.label}>{tr.password}</label>
               <div style={styles.passwordWrapper}>
                 <input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   style={{ ...styles.input, paddingRight: '60px' }}
-                  placeholder="Enter your password"
+                  placeholder={tr.passwordPlaceholder}
                   value={formData.password}
                   onChange={handleChange}
                   onFocus={(e) => e.target.style.borderColor = t.primary}
@@ -229,7 +270,7 @@ const Login = () => {
                   onClick={togglePasswordVisibility}
                   style={styles.passwordToggle}
                 >
-                  {showPassword ? 'HIDE' : 'SHOW'}
+                  {showPassword ? tr.hide : tr.show}
                 </button>
               </div>
             </div>
@@ -242,13 +283,13 @@ const Login = () => {
                 ...(loading ? styles.submitBtnDisabled : {})
               }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? tr.signingIn : tr.signInBtn}
             </button>
           </form>
         </div>
 
         <div style={styles.footer}>
-          <p style={styles.footerTitle}>Test Credentials</p>
+          <p style={styles.footerTitle}>{tr.testCredentials}</p>
           <div style={styles.credential}>
             <span style={styles.credentialLabel}>Champion:</span> admin@8dsystem.com / password123
           </div>

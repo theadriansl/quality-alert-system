@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const HistoryTab = ({ data }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const styles = getStyles(t);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);

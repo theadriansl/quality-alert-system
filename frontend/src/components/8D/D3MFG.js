@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { getCurrentUser, isUserAdmin } from '../../utils/permissions';
 // UX Improvements (MEJORAS)
 import CollapsibleSection from './CollapsibleSection';
 import ApprovalStepper from './ApprovalStepper';
 import SectionProgressIndicator from './SectionProgressIndicator';
 
-const D3MFG = ({ data, onDataUpdate, language = 'es', isBlocked = false }) => {
+const D3MFG = ({ data, onDataUpdate, language = 'es', isBlocked = false, isReadOnly = false }) => {
   const { theme: themeColors } = useTheme();
+  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
   const { showSuccess, showError, showWarning } = useToast();
   const [formData, setFormData] = useState({
     d3MfgTemporaryControls: [],
@@ -841,30 +843,55 @@ const D3MFG = ({ data, onDataUpdate, language = 'es', isBlocked = false }) => {
   };
 
   // Handlers for responsible users
+  // CONGELAMIENTO DE USUARIOS: Guardar {id, name} para preservar datos históricos
   const addResponsibleUser = (userId) => {
-    if (!userId || formData.d3MfgResponsibleUserIds.includes(parseInt(userId))) {
-      return; // Don't add if already exists or empty
-    }
+    const userIdInt = parseInt(userId);
+    if (!userId) return;
+
+    // Verificar si ya existe (compatible con formato antiguo y nuevo)
+    const alreadyExists = formData.d3MfgResponsibleUserIds.some(item =>
+      typeof item === 'object' ? item.id === userIdInt : item === userIdInt
+    );
+    if (alreadyExists) return;
+
+    const user = users.find(u => u.id === userIdInt);
+    const userData = user
+      ? { id: userIdInt, name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || `Usuario ${userIdInt}` }
+      : { id: userIdInt, name: `Usuario ${userIdInt}` };
+
     setFormData({
       ...formData,
-      d3MfgResponsibleUserIds: [...formData.d3MfgResponsibleUserIds, parseInt(userId)]
+      d3MfgResponsibleUserIds: [...formData.d3MfgResponsibleUserIds, userData]
     });
   };
 
-  const removeResponsibleUser = (userId) => {
+  const removeResponsibleUser = (userIdOrItem) => {
+    const userId = typeof userIdOrItem === 'object' ? userIdOrItem.id : userIdOrItem;
     setFormData({
       ...formData,
-      d3MfgResponsibleUserIds: formData.d3MfgResponsibleUserIds.filter(id => id !== userId)
+      d3MfgResponsibleUserIds: formData.d3MfgResponsibleUserIds.filter(item =>
+        typeof item === 'object' ? item.id !== userId : item !== userId
+      )
     });
   };
+
+  // Helper para obtener ID de usuario (compatible con ambos formatos)
+  const getUserIdFromItem = (item) => typeof item === 'object' ? item.id : item;
 
   // Handlers for distribution lists
+  // CONGELAMIENTO: Convertir IDs a objetos {id, name} al cargar lista
   const loadDistributionList = (listId) => {
     const list = distributionLists.find(l => l.id === parseInt(listId));
     if (list && list.user_ids) {
+      const usersWithNames = list.user_ids.map(userId => {
+        const user = users.find(u => u.id === userId);
+        return user
+          ? { id: userId, name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || `Usuario ${userId}` }
+          : { id: userId, name: `Usuario ${userId}` };
+      });
       setFormData({
         ...formData,
-        d3MfgResponsibleUserIds: list.user_ids
+        d3MfgResponsibleUserIds: usersWithNames
       });
     }
   };
@@ -891,7 +918,10 @@ const D3MFG = ({ data, onDataUpdate, language = 'es', isBlocked = false }) => {
         body: JSON.stringify({
           name: newListName.trim(),
           description: newListDescription.trim() || null,
-          user_ids: formData.d3MfgResponsibleUserIds
+          // Extraer solo IDs para guardar en lista de distribución
+          user_ids: formData.d3MfgResponsibleUserIds.map(item =>
+            typeof item === 'object' ? item.id : item
+          )
         })
       });
 
@@ -919,9 +949,10 @@ const D3MFG = ({ data, onDataUpdate, language = 'es', isBlocked = false }) => {
       return;
     }
 
-    // Get emails from selected users
+    // Get emails from selected users (compatible con formato nuevo y antiguo)
     const emails = formData.d3MfgResponsibleUserIds
-      .map(userId => {
+      .map(item => {
+        const userId = typeof item === 'object' ? item.id : item;
         const user = users.find(u => u.id === userId);
         return user?.email;
       })
@@ -1280,6 +1311,26 @@ Por favor no responda a este correo.`;
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            Este 8D está cerrado y es de solo lectura
+          </span>
+        </div>
+      )}
+
+      <div style={{ pointerEvents: isReadOnly ? 'none' : 'auto', opacity: isReadOnly ? 0.7 : 1 }}>
       {/* Auto-save runs silently in background - no visual indicator */}
 
       <div style={styles.header}>
@@ -1397,9 +1448,20 @@ Por favor no responda a este correo.`;
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '8px'
               }}>
-                {formData.d3MfgResponsibleUserIds.map((userId) => {
+                {formData.d3MfgResponsibleUserIds.map((item) => {
+                  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
+                  const userId = typeof item === 'object' ? item.id : item;
                   const user = users.find(u => u.id === userId);
-                  if (!user) return null;
+
+                  // Si es formato nuevo con nombre congelado, usar ese nombre
+                  // Si no, buscar en la lista de usuarios actual
+                  const displayName = typeof item === 'object' && item.name
+                    ? item.name
+                    : user
+                      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+                      : `Usuario ${userId}`;
+                  const displayPosition = user?.position || user?.role || '';
+
                   return (
                     <div key={userId} style={{
                       backgroundColor: themeColors.bgCard,
@@ -1411,10 +1473,12 @@ Por favor no responda a este correo.`;
                       gap: '4px'
                     }}>
                       <div style={{ fontSize: '13px' }}>
-                        <strong>{user.firstName} {user.lastName}</strong>
-                        <div style={{ color: themeColors.textMuted, fontSize: '12px' }}>
-                          {user.position || user.role}
-                        </div>
+                        <strong>{displayName}</strong>
+                        {displayPosition && (
+                          <div style={{ color: themeColors.textMuted, fontSize: '12px' }}>
+                            {displayPosition}
+                          </div>
+                        )}
                       </div>
                       <button
                         style={{ ...styles.removeButton, fontSize: '12px', padding: '4px 8px' }}
@@ -1456,7 +1520,9 @@ Por favor no responda a este correo.`;
             >
               <option value="">{t('selectUser')}</option>
               {users
-                .filter(user => !formData.d3MfgResponsibleUserIds.includes(user.id))
+                .filter(user => !formData.d3MfgResponsibleUserIds.some(item =>
+                  typeof item === 'object' ? item.id === user.id : item === user.id
+                ))
                 .map(user => (
                   <option key={user.id} value={user.id}>
                     {user.firstName} {user.lastName} - {user.position || user.role}
@@ -2967,7 +3033,12 @@ Por favor no responda a este correo.`;
                 Usuarios seleccionados: {formData.d3MfgResponsibleUserIds.length}
               </p>
               <div style={{ fontSize: '12px', color: themeColors.textDim }}>
-                {formData.d3MfgResponsibleUserIds.map(userId => {
+                {formData.d3MfgResponsibleUserIds.map(item => {
+                  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
+                  if (typeof item === 'object' && item.name) {
+                    return item.name;
+                  }
+                  const userId = typeof item === 'object' ? item.id : item;
                   const user = users.find(u => u.id === userId);
                   return user ? `${user.firstName} ${user.lastName}` : '';
                 }).filter(Boolean).join(', ')}
@@ -3215,6 +3286,7 @@ Por favor no responda a este correo.`;
           </div>
         </div>
       )}
+      </div>{/* End of read-only wrapper */}
     </div>
   );
 };

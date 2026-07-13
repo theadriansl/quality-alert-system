@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useTheme } from '../../context/ThemeContext';
 import riskMatrixService from '../../services/riskMatrixService';
 import teamTemplateService from '../../services/teamTemplateService';
 import impactAreasService from '../../services/impactAreasService';
 
-const ECRTeamTab = ({ data, onDataUpdate }) => {
+const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t: translate }) => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
+
+  // Translation helper with fallback
+  const tr = (key) => translate ? translate(key) : key;
+  const isInitialMount = useRef(true);
   const [users, setUsers] = useState([]);
   const [reviewBoard, setReviewBoard] = useState({
     primary: data.reviewBoard?.primary || null,
@@ -83,6 +87,45 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
       setInvolvedAreas(data.involvedAreas);
     }
   }, [data.involvedAreas]);
+
+  // Sync changeInfo when data changes (loading existing ECR)
+  useEffect(() => {
+    // Only sync if we have a valid ECR ID (existing ECR loaded)
+    if (data.id) {
+      setChangeInfo({
+        changeTitle: data.changeTitle || '',
+        changeDescription: data.changeDescription || data.changeReason || '',
+        changeType: data.changeType || '',
+        priority: data.priority || 'medium',
+        plannedAdoptionDate: data.plannedAdoptionDate || ''
+      });
+    }
+  }, [data.id, data.changeTitle, data.changeDescription, data.changeReason, data.changeType, data.priority, data.plannedAdoptionDate]);
+
+  // Sync changeCategories when data changes (loading existing ECR)
+  useEffect(() => {
+    if (data.changeCategories && data.changeCategories.length > 0) {
+      setChangeCategories(data.changeCategories);
+    }
+  }, [data.changeCategories]);
+
+  // Sync reviewBoard and validationTeams when loading existing ECR (only on id change)
+  const lastLoadedId = useRef(null);
+  useEffect(() => {
+    if (data.id && data.id !== lastLoadedId.current) {
+      lastLoadedId.current = data.id;
+      if (data.reviewBoard) {
+        setReviewBoard({
+          primary: data.reviewBoard.primary || null,
+          members: data.reviewBoard.members || []
+        });
+      }
+      if (data.validationTeams) {
+        setValidationTeams(data.validationTeams);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.id]);
 
   // Load users
   useEffect(() => {
@@ -211,8 +254,12 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
 
   // Risk assessment removed - now done in ECR-3
 
-  // Update parent when data changes
+  // Update parent when data changes (skip initial mount to avoid infinite loop)
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     onDataUpdate({
       reviewBoard,
       validationTeams,
@@ -225,23 +272,45 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
   }, [reviewBoard, validationTeams, involvedAreas, validationAreas, changeCategories, changeInfo, requestorInfo]);
 
   const handlePrimaryChange = (userId) => {
-    setReviewBoard(prev => ({
-      ...prev,
-      primary: userId ? parseInt(userId) : null
-    }));
+    if (!userId) {
+      setReviewBoard(prev => ({ ...prev, primary: null }));
+      return;
+    }
+    const userIdInt = parseInt(userId);
+    const user = users.find(u => u.id === userIdInt);
+    const primaryData = user
+      ? { id: userIdInt, name: `${user.firstName} ${user.lastName}`.trim() }
+      : { id: userIdInt, name: `Usuario ${userIdInt}` };
+    setReviewBoard(prev => ({ ...prev, primary: primaryData }));
   };
 
   const handleMemberToggle = (userId) => {
     setReviewBoard(prev => {
       const userIdInt = parseInt(userId);
-      const isSelected = prev.members.includes(userIdInt);
+      // Check if already selected (handle both old ID format and new object format)
+      const isSelected = prev.members.some(member =>
+        typeof member === 'object' ? member.id === userIdInt : member === userIdInt
+      );
 
-      return {
-        ...prev,
-        members: isSelected
-          ? prev.members.filter(id => id !== userIdInt)
-          : [...prev.members, userIdInt]
-      };
+      if (isSelected) {
+        // Remove member
+        return {
+          ...prev,
+          members: prev.members.filter(member =>
+            typeof member === 'object' ? member.id !== userIdInt : member !== userIdInt
+          )
+        };
+      } else {
+        // Add member with name (frozen at save time)
+        const user = users.find(u => u.id === userIdInt);
+        const memberData = user
+          ? { id: userIdInt, name: `${user.firstName} ${user.lastName}`.trim() }
+          : { id: userIdInt, name: `Usuario ${userIdInt}` };
+        return {
+          ...prev,
+          members: [...prev.members, memberData]
+        };
+      }
     });
   };
 
@@ -274,11 +343,17 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
         setValidationTeams(newTeams);
         return newAreas;
       } else {
-        // Add area and pre-select default validators
+        // Add area and pre-select default validators with names
         if (defaultValidators.length > 0) {
+          const validatorsWithNames = defaultValidators.map(validatorId => {
+            const user = users.find(u => u.id === validatorId);
+            return user
+              ? { id: validatorId, name: `${user.firstName} ${user.lastName}`.trim() }
+              : { id: validatorId, name: `Usuario ${validatorId}` };
+          });
           setValidationTeams(prevTeams => ({
             ...prevTeams,
-            [areaKey]: [...defaultValidators]
+            [areaKey]: validatorsWithNames
           }));
         }
         return [...prev, areaKey];
@@ -290,21 +365,39 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
     setValidationTeams(prev => {
       const userIdInt = parseInt(userId);
       const currentTeam = prev[area] || [];
-      const isSelected = currentTeam.includes(userIdInt);
 
-      return {
-        ...prev,
-        [area]: isSelected
-          ? currentTeam.filter(id => id !== userIdInt)
-          : [...currentTeam, userIdInt]
-      };
+      // Check if already selected (handle both old ID format and new object format)
+      const isSelected = currentTeam.some(member =>
+        typeof member === 'object' ? member.id === userIdInt : member === userIdInt
+      );
+
+      if (isSelected) {
+        // Remove member
+        return {
+          ...prev,
+          [area]: currentTeam.filter(member =>
+            typeof member === 'object' ? member.id !== userIdInt : member !== userIdInt
+          )
+        };
+      } else {
+        // Add member with name (frozen at save time)
+        const user = users.find(u => u.id === userIdInt);
+        const memberData = user
+          ? { id: userIdInt, name: `${user.firstName} ${user.lastName}`.trim() }
+          : { id: userIdInt, name: `Usuario ${userIdInt}` };
+
+        return {
+          ...prev,
+          [area]: [...currentTeam, memberData]
+        };
+      }
     });
   };
 
   // Team Template handlers
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
-      alert('Por favor ingresa un nombre para la plantilla');
+      alert(language === 'es' ? 'Por favor ingresa un nombre para la plantilla' : 'Please enter a template name');
       return;
     }
 
@@ -326,10 +419,10 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
       setTemplateName('');
       setTemplateDescription('');
 
-      alert(' Plantilla guardada exitosamente');
+      alert(language === 'es' ? 'Plantilla guardada exitosamente' : 'Template saved successfully');
     } catch (error) {
       console.error('Error saving template:', error);
-      alert(' Error al guardar la plantilla');
+      alert(language === 'es' ? 'Error al guardar la plantilla' : 'Error saving template');
     }
   };
 
@@ -344,15 +437,15 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
       setInvolvedAreas(template.involvedAreas || []);
 
       setShowTemplateModal(false);
-      alert(' Plantilla cargada exitosamente');
+      alert(language === 'es' ? 'Plantilla cargada exitosamente' : 'Template loaded successfully');
     } catch (error) {
       console.error('Error loading template:', error);
-      alert(' Error al cargar la plantilla');
+      alert(language === 'es' ? 'Error al cargar la plantilla' : 'Error loading template');
     }
   };
 
   const handleDeleteTemplate = async (templateId) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta plantilla?')) {
+    if (!window.confirm(language === 'es' ? '¿Estás seguro de eliminar esta plantilla?' : 'Are you sure you want to delete this template?')) {
       return;
     }
 
@@ -363,10 +456,10 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
       const response = await teamTemplateService.getAllTemplates();
       setTemplates(response.templates || []);
 
-      alert(' Plantilla eliminada');
+      alert(language === 'es' ? 'Plantilla eliminada' : 'Template deleted');
     } catch (error) {
       console.error('Error deleting template:', error);
-      alert(' Error al eliminar la plantilla');
+      alert(language === 'es' ? 'Error al eliminar la plantilla' : 'Error deleting template');
     }
   };
 
@@ -375,66 +468,96 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
     return user ? `${user.firstName} ${user.lastName}` : 'Unknown';
   };
 
+  // Helper to check if a user is in reviewBoard.members (handles both old ID and new object formats)
+  const isReviewBoardMember = (userId) => {
+    return reviewBoard.members.some(member =>
+      typeof member === 'object' ? member.id === userId : member === userId
+    );
+  };
+
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            {tr('ecr.messages.readOnlyMode')}
+          </span>
+        </div>
+      )}
+
+      <div style={{
+        pointerEvents: isReadOnly ? 'none' : 'auto',
+        opacity: isReadOnly ? 0.7 : 1
+      }}>
       <div style={styles.header}>
-        <h2 style={styles.title}> ECR-1: Change Request Board</h2>
-        <p style={styles.subtitle}>Asignación de equipos de revisión y validación</p>
+        <h2 style={styles.title}> ECR-1: {language === 'es' ? 'Junta de Solicitud de Cambio' : 'Change Request Board'}</h2>
+        <p style={styles.subtitle}>{language === 'es' ? 'Asignación de equipos de revisión y validación' : 'Assignment of review and validation teams'}</p>
       </div>
 
       {/* Change Request Information */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Change Request Information</span>
+          <span style={styles.badge}>{tr('ecr.changeRequest.title')}</span>
         </h3>
 
         {/* Compact Grid Layout */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div style={styles.field}>
-            <label style={styles.label}>Change Title *</label>
+            <label style={styles.label}>{language === 'es' ? 'Título del Cambio' : 'Change Title'} *</label>
             <input
               type="text"
               style={styles.input}
               value={changeInfo.changeTitle}
               onChange={(e) => handleChangeInfoUpdate('changeTitle', e.target.value)}
-              placeholder="Título del cambio solicitado..."
+              placeholder={language === 'es' ? 'Título del cambio solicitado...' : 'Requested change title...'}
             />
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Change Type *</label>
+            <label style={styles.label}>{tr('ecr.changeRequest.changeType')} *</label>
             <select
               style={styles.select}
               value={changeInfo.changeType}
               onChange={(e) => handleChangeInfoUpdate('changeType', e.target.value)}
             >
-              <option value="">Seleccionar tipo...</option>
-              <option value="design">Design Change</option>
-              <option value="process">Process Change</option>
-              <option value="material">Material Change</option>
-              <option value="safety">Safety Change</option>
-              <option value="administrative">Administrative</option>
-              <option value="layout">Layout Change</option>
-              <option value="other">Other</option>
+              <option value="">{language === 'es' ? 'Seleccionar tipo...' : 'Select type...'}</option>
+              <option value="design">{tr('ecr.changeRequest.types.design')}</option>
+              <option value="process">{tr('ecr.changeRequest.types.process')}</option>
+              <option value="material">{tr('ecr.changeRequest.types.material')}</option>
+              <option value="safety">{language === 'es' ? 'Cambio de Seguridad' : 'Safety Change'}</option>
+              <option value="administrative">{language === 'es' ? 'Administrativo' : 'Administrative'}</option>
+              <option value="layout">{language === 'es' ? 'Cambio de Layout' : 'Layout Change'}</option>
+              <option value="other">{tr('ecr.changeRequest.types.other')}</option>
             </select>
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Priority *</label>
+            <label style={styles.label}>{tr('ecr.changeRequest.priority')} *</label>
             <select
               style={styles.select}
               value={changeInfo.priority}
               onChange={(e) => handleChangeInfoUpdate('priority', e.target.value)}
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
+              <option value="low">{tr('ecr.changeRequest.priorities.low')}</option>
+              <option value="medium">{tr('ecr.changeRequest.priorities.medium')}</option>
+              <option value="high">{tr('ecr.changeRequest.priorities.high')}</option>
+              <option value="critical">{tr('ecr.changeRequest.priorities.critical')}</option>
             </select>
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Fecha Planeada Adopción</label>
+            <label style={styles.label}>{language === 'es' ? 'Fecha Planeada Adopción' : 'Planned Adoption Date'}</label>
             <input
               type="date"
               style={styles.input}
@@ -446,17 +569,17 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
           <div style={styles.field}>
-            <label style={styles.label}>Change Description *</label>
+            <label style={styles.label}>{tr('ecr.changeRequest.changeDescription')} *</label>
             <textarea
               style={{ ...styles.input, minHeight: '120px', resize: 'vertical' }}
               value={changeInfo.changeDescription}
               onChange={(e) => handleChangeInfoUpdate('changeDescription', e.target.value)}
-              placeholder="Descripción del cambio solicitado..."
+              placeholder={language === 'es' ? 'Descripción del cambio solicitado...' : 'Description of the requested change...'}
             />
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Change Category *</label>
+            <label style={styles.label}>{language === 'es' ? 'Categoría del Cambio' : 'Change Category'} *</label>
             <div style={{
               display: 'flex',
               flexDirection: 'column',
@@ -486,25 +609,25 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
         {/* Requestor Information */}
         <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #E6EAEE' }}>
           <h4 style={{ fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>
-             Requestor Information
+             {language === 'es' ? 'Información del Solicitante' : 'Requestor Information'}
           </h4>
 
           {/* Requestor Name Row */}
           <div style={{ marginBottom: '12px' }}>
-            <label style={styles.label}>Nombre del Solicitante *</label>
+            <label style={styles.label}>{language === 'es' ? 'Nombre del Solicitante' : 'Requestor Name'} *</label>
             {!isCustomRequestor ? (
               <select
                 style={styles.select}
                 value={requestorInfo.requestorUserId || ''}
                 onChange={(e) => handleRequestorUserChange(e.target.value)}
               >
-                <option value="">Selecciona un usuario...</option>
+                <option value="">{language === 'es' ? 'Selecciona un usuario...' : 'Select a user...'}</option>
                 {users.map(user => (
                   <option key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName} - {user.department || 'Sin departamento'}
+                    {user.firstName} {user.lastName} - {user.department || (language === 'es' ? 'Sin departamento' : 'No department')}
                   </option>
                 ))}
-                <option value="other"> Otro (Especificar manualmente)</option>
+                <option value="other"> {language === 'es' ? 'Otro (Especificar manualmente)' : 'Other (Specify manually)'}</option>
               </select>
             ) : (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -513,7 +636,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                   style={{ ...styles.input, flex: 1 }}
                   value={requestorInfo.requestorName}
                   onChange={(e) => handleRequestorInfoUpdate('requestorName', e.target.value)}
-                  placeholder="Nombre completo del solicitante..."
+                  placeholder={language === 'es' ? 'Nombre completo del solicitante...' : 'Requestor full name...'}
                 />
                 <button
                   onClick={() => {
@@ -538,7 +661,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                     fontWeight: '500'
                   }}
                 >
-                  ← Volver a lista
+                  ← {language === 'es' ? 'Volver a lista' : 'Back to list'}
                 </button>
               </div>
             )}
@@ -547,13 +670,13 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
           {/* Contact Details Row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
             <div style={styles.field}>
-              <label style={styles.label}>Departamento *</label>
+              <label style={styles.label}>{language === 'es' ? 'Departamento' : 'Department'} *</label>
               <input
                 type="text"
                 style={styles.input}
                 value={requestorInfo.requestorDepartment}
                 onChange={(e) => handleRequestorInfoUpdate('requestorDepartment', e.target.value)}
-                placeholder="Departamento"
+                placeholder={language === 'es' ? 'Departamento' : 'Department'}
                 disabled={!isCustomRequestor && requestorInfo.requestorUserId}
               />
             </div>
@@ -571,7 +694,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
             </div>
 
             <div style={styles.field}>
-              <label style={styles.label}>Teléfono</label>
+              <label style={styles.label}>{language === 'es' ? 'Teléfono' : 'Phone'}</label>
               <input
                 type="tel"
                 style={styles.input}
@@ -583,7 +706,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
             </div>
 
             <div style={styles.field}>
-              <label style={styles.label}>Ext.</label>
+              <label style={styles.label}>{language === 'es' ? 'Ext.' : 'Ext.'}</label>
               <input
                 type="text"
                 style={styles.input}
@@ -625,7 +748,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
             gap: '8px'
           }}
         >
-           Cargar Plantilla
+           {language === 'es' ? 'Cargar Plantilla' : 'Load Template'}
         </button>
         <button
           onClick={() => setShowSaveModal(true)}
@@ -643,31 +766,31 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
             gap: '8px'
           }}
         >
-           Guardar como Plantilla
+           {language === 'es' ? 'Guardar como Plantilla' : 'Save as Template'}
         </button>
         <div style={{ flex: 1, fontSize: '13px', color: '#0369a1', display: 'flex', alignItems: 'center' }}>
-           Guarda configuraciones de equipos para reutilizarlas en otros ECRs
+           {language === 'es' ? 'Guarda configuraciones de equipos para reutilizarlas en otros ECRs' : 'Save team configurations to reuse in other ECRs'}
         </div>
       </div>
 
       {/* Review Board Section */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Review Board</span>
+          <span style={styles.badge}>{tr('ecr.team.reviewBoard')}</span>
         </h3>
         <p style={styles.sectionDescription}>
-          Junta de revisión de cambios - Responsables de aprobar o rechazar el ECR
+          {language === 'es' ? 'Junta de revisión de cambios - Responsables de aprobar o rechazar el ECR' : 'Change review board - Responsible for approving or rejecting the ECR'}
         </p>
 
         {/* Primary Member */}
         <div style={styles.field}>
-          <label style={styles.label}>Primary Member (Líder de la Junta) *</label>
+          <label style={styles.label}>{language === 'es' ? 'Primary Member (Líder de la Junta)' : 'Primary Member (Board Leader)'} *</label>
           <select
-            value={reviewBoard.primary || ''}
+            value={typeof reviewBoard.primary === 'object' ? reviewBoard.primary?.id || '' : reviewBoard.primary || ''}
             onChange={(e) => handlePrimaryChange(e.target.value)}
             style={styles.select}
           >
-            <option value="">Seleccionar líder...</option>
+            <option value="">{language === 'es' ? 'Seleccionar líder...' : 'Select leader...'}</option>
             {users.map(user => (
               <option key={user.id} value={user.id}>
                 {user.firstName} {user.lastName} - {user.position}
@@ -679,10 +802,10 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
         {/* Board Members - Compact Checkboxes */}
         <div style={styles.field}>
           <label style={styles.label}>
-            Board Members (Miembros de la junta)
+            {language === 'es' ? 'Board Members (Miembros de la junta)' : 'Board Members'}
             {reviewBoard.members.length > 0 && (
               <span style={{ marginLeft: '8px', color: '#0072CE', fontWeight: '600' }}>
-                ({reviewBoard.members.length} seleccionados)
+                ({reviewBoard.members.length} {language === 'es' ? 'seleccionados' : 'selected'})
               </span>
             )}
           </label>
@@ -700,65 +823,71 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
             backgroundColor: t.bgCard
           }}>
             {users
-              .filter(user => user.id !== reviewBoard.primary)
-              .map(user => (
-                <label
-                  key={user.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '6px 8px',
-                    cursor: 'pointer',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    backgroundColor: reviewBoard.members.includes(user.id) ? '#eff6ff' : 'transparent',
-                    border: reviewBoard.members.includes(user.id) ? '1px solid #0072CE' : '1px solid transparent',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!reviewBoard.members.includes(user.id)) {
-                      e.currentTarget.style.backgroundColor = '#FAFBFC';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!reviewBoard.members.includes(user.id)) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={reviewBoard.members.includes(user.id)}
-                    onChange={() => handleMemberToggle(user.id)}
-                    style={{ cursor: 'pointer', flexShrink: 0 }}
-                  />
-                  <span style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    color: t.text,
-                    fontWeight: reviewBoard.members.includes(user.id) ? '600' : '400'
-                  }}>
-                    {user.firstName} {user.lastName}
-                  </span>
-                </label>
-              ))}
+              .filter(user => {
+                const primaryId = typeof reviewBoard.primary === 'object' ? reviewBoard.primary?.id : reviewBoard.primary;
+                return user.id !== primaryId;
+              })
+              .map(user => {
+                const isMember = isReviewBoardMember(user.id);
+                return (
+                  <label
+                    key={user.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 8px',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      backgroundColor: isMember ? '#eff6ff' : 'transparent',
+                      border: isMember ? '1px solid #0072CE' : '1px solid transparent',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isMember) {
+                        e.currentTarget.style.backgroundColor = '#FAFBFC';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isMember) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isMember}
+                      onChange={() => handleMemberToggle(user.id)}
+                      style={{ cursor: 'pointer', flexShrink: 0 }}
+                    />
+                    <span style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: t.text,
+                      fontWeight: isMember ? '600' : '400'
+                    }}>
+                      {user.firstName} {user.lastName}
+                    </span>
+                  </label>
+                );
+              })}
           </div>
         </div>
       </div>
 
-      {/* Involved Areas Section */}
+      {/* Involved TFT Section */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Involved Areas</span>
+          <span style={styles.badge}>{language === 'es' ? 'TFT Involucradas' : 'Involved TFT'}</span>
         </h3>
         <p style={styles.sectionDescription}>
-          Selecciona las áreas impactadas por este cambio. Se usarán para el análisis de impacto en ECR-2B.
+          {language === 'es' ? 'Selecciona las TFT impactadas por este cambio. Se usarán para el análisis de impacto en ECR-2B.' : 'Select the TFTs impacted by this change. They will be used for impact analysis in ECR-2B.'}
         </p>
 
         {loadingAreas ? (
-          <p style={{ color: t.textMuted, fontSize: '14px' }}>Cargando áreas...</p>
+          <p style={{ color: t.textMuted, fontSize: '14px' }}>{language === 'es' ? 'Cargando TFT...' : 'Loading TFT...'}</p>
         ) : (
           <div style={styles.areasGrid}>
             {impactAreas.map(area => {
@@ -785,7 +914,6 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                       onChange={() => {}}
                       style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                     />
-                    <span style={{ fontSize: '20px' }}>{area.icon}</span>
                     <span style={{
                       fontWeight: isSelected ? '600' : '500',
                       color: isSelected ? '#1d4ed8' : '#374151'
@@ -796,13 +924,22 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
 
                   {/* Team Members */}
                   <div style={{ marginLeft: '26px' }}>
-                    <span style={{ fontSize: '11px', color: t.textMuted, fontWeight: '500' }}>Team Members:</span>
+                    <span style={{ fontSize: '11px', color: t.textMuted, fontWeight: '500' }}>{language === 'es' ? 'Miembros del Equipo:' : 'Team Members:'}</span>
                     {teamMembers.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                        {teamMembers.map(userId => {
-                          const user = users.find(u => u.id === userId);
-                          return user ? (
-                            <span key={userId} style={{
+                        {teamMembers.map((member, idx) => {
+                          // Handle both old format (just ID) and new format ({id, name})
+                          const isObject = typeof member === 'object';
+                          const memberId = isObject ? member.id : member;
+                          const memberName = isObject
+                            ? member.name
+                            : (() => {
+                                const user = users.find(u => u.id === memberId);
+                                return user ? `${user.firstName} ${user.lastName}` : `${language === 'es' ? 'Usuario' : 'User'} #${memberId}`;
+                              })();
+
+                          return (
+                            <span key={memberId || idx} style={{
                               backgroundColor: isSelected ? '#dbeafe' : t.bg,
                               color: isSelected ? '#0F3B5F' : '#374151',
                               padding: '2px 8px',
@@ -810,14 +947,14 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                               fontSize: '11px',
                               fontWeight: '500'
                             }}>
-                              {user.firstName} {user.lastName}
+                              {memberName}
                             </span>
-                          ) : null;
+                          );
                         })}
                       </div>
                     ) : (
                       <span style={{ fontSize: '11px', color: t.textDim, fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
-                        Sin equipo asignado
+                        {language === 'es' ? 'Sin equipo asignado' : 'No team assigned'}
                       </span>
                     )}
                   </div>
@@ -828,17 +965,17 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
         )}
       </div>
 
-      {/* Validation Areas Section - Same areas as Involved Areas with team members */}
+      {/* Validation TFT Section - Same areas as Involved TFT with team members */}
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>
-          <span style={styles.badge}>Áreas de Validación</span>
+          <span style={styles.badge}>{language === 'es' ? 'TFT de Validación' : 'Validation TFT'}</span>
         </h3>
         <p style={styles.sectionDescription}>
-          Selecciona las áreas que requieren validación. El equipo asignado realizará la validación en ECR-3.
+          {language === 'es' ? 'Selecciona las TFT que requieren validación. El equipo asignado realizará la validación en ECR-3.' : 'Select the TFTs that require validation. The assigned team will perform the validation in ECR-3.'}
         </p>
 
         {loadingAreas ? (
-          <p style={{ color: t.textMuted, fontSize: '14px' }}>Cargando áreas...</p>
+          <p style={{ color: t.textMuted, fontSize: '14px' }}>{language === 'es' ? 'Cargando TFT...' : 'Loading TFT...'}</p>
         ) : (
           <div style={styles.areasGrid}>
             {impactAreas.map(area => {
@@ -865,7 +1002,6 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                       onChange={() => {}}
                       style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                     />
-                    <span style={{ fontSize: '20px' }}>{area.icon}</span>
                     <span style={{
                       fontWeight: isSelected ? '600' : '500',
                       color: isSelected ? '#1d4ed8' : '#374151'
@@ -876,13 +1012,22 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
 
                   {/* Team Members */}
                   <div style={{ marginLeft: '26px' }}>
-                    <span style={{ fontSize: '11px', color: t.textMuted, fontWeight: '500' }}>Team Members:</span>
+                    <span style={{ fontSize: '11px', color: t.textMuted, fontWeight: '500' }}>{language === 'es' ? 'Miembros del Equipo:' : 'Team Members:'}</span>
                     {teamMembers.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                        {teamMembers.map(userId => {
-                          const user = users.find(u => u.id === userId);
-                          return user ? (
-                            <span key={userId} style={{
+                        {teamMembers.map((member, idx) => {
+                          // Handle both old format (just ID) and new format ({id, name})
+                          const isObject = typeof member === 'object';
+                          const memberId = isObject ? member.id : member;
+                          const memberName = isObject
+                            ? member.name
+                            : (() => {
+                                const user = users.find(u => u.id === memberId);
+                                return user ? `${user.firstName} ${user.lastName}` : `${language === 'es' ? 'Usuario' : 'User'} #${memberId}`;
+                              })();
+
+                          return (
+                            <span key={memberId || idx} style={{
                               backgroundColor: isSelected ? '#dbeafe' : t.bg,
                               color: isSelected ? '#0F3B5F' : '#374151',
                               padding: '2px 8px',
@@ -890,14 +1035,14 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                               fontSize: '11px',
                               fontWeight: '500'
                             }}>
-                              {user.firstName} {user.lastName}
+                              {memberName}
                             </span>
-                          ) : null;
+                          );
                         })}
                       </div>
                     ) : (
                       <span style={{ fontSize: '11px', color: t.textDim, fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
-                        Sin equipo asignado
+                        {language === 'es' ? 'Sin equipo asignado' : 'No team assigned'}
                       </span>
                     )}
                   </div>
@@ -907,18 +1052,19 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
           </div>
         )}
       </div>
+      </div>{/* End of read-only wrapper */}
 
       {/* Load Template Modal */}
       {showTemplateModal && (
         <div style={styles.modalOverlay} onClick={() => setShowTemplateModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700' }}>
-               Cargar Plantilla de Equipo
+               {language === 'es' ? 'Cargar Plantilla de Equipo' : 'Load Team Template'}
             </h3>
 
             {templates.length === 0 ? (
               <p style={{ color: t.textMuted, fontSize: '14px' }}>
-                No tienes plantillas guardadas. Configura un equipo y guárdalo como plantilla.
+                {language === 'es' ? 'No tienes plantillas guardadas. Configura un equipo y guárdalo como plantilla.' : 'You have no saved templates. Configure a team and save it as a template.'}
               </p>
             ) : (
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
@@ -944,8 +1090,8 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                           </div>
                         )}
                         <div style={{ fontSize: '12px', color: t.textMuted }}>
-                          Board: {template.reviewBoard?.members?.length || 0} miembros |
-                          Áreas: {template.involvedAreas?.length || 0}
+                          Board: {template.reviewBoard?.members?.length || 0} {language === 'es' ? 'miembros' : 'members'} |
+                          TFT: {template.involvedAreas?.length || 0}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -961,7 +1107,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                             fontSize: '13px'
                           }}
                         >
-                          Cargar
+                          {language === 'es' ? 'Cargar' : 'Load'}
                         </button>
                         <button
                           onClick={() => handleDeleteTemplate(template.id)}
@@ -975,7 +1121,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                             fontSize: '13px'
                           }}
                         >
-                          Eliminar
+                          {language === 'es' ? 'Eliminar' : 'Delete'}
                         </button>
                       </div>
                     </div>
@@ -997,7 +1143,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                   fontSize: '14px'
                 }}
               >
-                Cerrar
+                {language === 'es' ? 'Cerrar' : 'Close'}
               </button>
             </div>
           </div>
@@ -1009,18 +1155,18 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
         <div style={styles.modalOverlay} onClick={() => setShowSaveModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700' }}>
-               Guardar Plantilla de Equipo
+               {language === 'es' ? 'Guardar Plantilla de Equipo' : 'Save Team Template'}
             </h3>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                Nombre de la Plantilla *
+                {language === 'es' ? 'Nombre de la Plantilla' : 'Template Name'} *
               </label>
               <input
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="Ej: Equipo Calidad Estándar"
+                placeholder={language === 'es' ? 'Ej: Equipo Calidad Estándar' : 'Ex: Standard Quality Team'}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -1033,12 +1179,12 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                Descripción (opcional)
+                {language === 'es' ? 'Descripción (opcional)' : 'Description (optional)'}
               </label>
               <textarea
                 value={templateDescription}
                 onChange={(e) => setTemplateDescription(e.target.value)}
-                placeholder="Describe cuándo usar esta plantilla..."
+                placeholder={language === 'es' ? 'Describe cuándo usar esta plantilla...' : 'Describe when to use this template...'}
                 rows={3}
                 style={{
                   width: '100%',
@@ -1052,10 +1198,10 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
             </div>
 
             <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '6px', fontSize: '13px', color: '#0369a1' }}>
-              <strong>Se guardará:</strong><br/>
-              • Review Board: {reviewBoard.members.length} miembros<br/>
-              • Áreas involucradas: {involvedAreas.length}<br/>
-              • Validation Teams: {Object.keys(validationTeams).length} equipos
+              <strong>{language === 'es' ? 'Se guardará:' : 'Will be saved:'}</strong><br/>
+              • Review Board: {reviewBoard.members.length} {language === 'es' ? 'miembros' : 'members'}<br/>
+              • {language === 'es' ? 'TFT involucradas' : 'Involved TFT'}: {involvedAreas.length}<br/>
+              • Validation Teams: {Object.keys(validationTeams).length} {language === 'es' ? 'equipos' : 'teams'}
             </div>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -1071,7 +1217,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                   fontSize: '14px'
                 }}
               >
-                Cancelar
+                {tr('ecr.actions.cancel')}
               </button>
               <button
                 onClick={handleSaveTemplate}
@@ -1086,7 +1232,7 @@ const ECRTeamTab = ({ data, onDataUpdate }) => {
                   fontWeight: '600'
                 }}
               >
-                Guardar Plantilla
+                {language === 'es' ? 'Guardar Plantilla' : 'Save Template'}
               </button>
             </div>
           </div>

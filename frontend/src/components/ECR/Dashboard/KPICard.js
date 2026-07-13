@@ -2,6 +2,7 @@ import React from 'react';
 import CountUp from 'react-countup';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
+import { useLanguage } from '../../../context/LanguageContext';
 
 /**
  * KPI Card Widget
@@ -19,6 +20,12 @@ const KPICard = ({
   prefix = ''
 }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: { days: 'days', vsPrevMonth: 'vs previous month' },
+    es: { days: 'días', vsPrevMonth: 'vs mes anterior' }
+  }[language] || {};
   const styles = {
     container: {
       display: 'flex',
@@ -72,7 +79,7 @@ const KPICard = ({
 
   const formatValue = (val) => {
     if (format === 'percentage') return `${val}%`;
-    if (format === 'days') return `${val} dias`;
+    if (format === 'days') return `${val} ${tr.days}`;
     return val;
   };
 
@@ -107,7 +114,7 @@ const KPICard = ({
           separator=","
         />
         {format === 'percentage' && '%'}
-        {format === 'days' && <span style={{ fontSize: '16px', marginLeft: '4px' }}>dias</span>}
+        {format === 'days' && <span style={{ fontSize: '16px', marginLeft: '4px' }}>{tr.days}</span>}
         {suffix}
       </div>
 
@@ -116,7 +123,7 @@ const KPICard = ({
       {trend && (
         <div style={{ ...styles.trend, ...getTrendStyle() }}>
           {getTrendIcon()}
-          <span>{trend.value}% vs mes anterior</span>
+          <span>{trend.value}% {tr.vsPrevMonth}</span>
         </div>
       )}
     </div>

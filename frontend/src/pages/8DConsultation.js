@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { isUserAdmin } from '../utils/permissions';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -129,6 +130,44 @@ const EightDConsultation = () => {
   const inputStyle = { padding: '8px 12px', fontSize: '13px', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgCard, color: t.text };
   const hasFilters = search || fSev !== 'all' || fStatus !== 'all' || fStep !== 'all' || fDept !== 'all' || fSupplier !== 'all';
 
+  const [exportingExcel, setExportingExcel] = useState(false);
+
+  // Export to Excel function
+  const exportToExcel = useCallback(() => {
+    setExportingExcel(true);
+    try {
+      // Use filtered data for export
+      const dataToExport = filtered.map(r => ({
+        'Folio': r.reportId || '',
+        'Título': r.title || '',
+        'Estado': r.status || '',
+        'Paso Actual': r.currentStep || '',
+        'Severidad': r.severity || '',
+        'Departamento': r.createdByDepartment || '',
+        'Proveedor': r.supplierName || '',
+        'Costo Estimado': r.estimatedCost || 0,
+        'Piezas Afectadas': r.affectedQuantity || 0,
+        'Fecha Creación': r.createdAt ? new Date(r.createdAt).toLocaleDateString('es-MX') : '',
+        'Fecha Cierre': r.closedAt ? new Date(r.closedAt).toLocaleDateString('es-MX') : '',
+        'Días Abierto': r.daysOpen || '',
+        'Creado Por': r.createdByName || '',
+        'Descripción': r.description || ''
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      XLSX.utils.book_append_sheet(wb, ws, 'Reportes 8D');
+
+      const fileName = `Reportes_8D_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    } catch (err) {
+      console.error('Error exporting to Excel:', err);
+      alert('Error al exportar a Excel');
+    } finally {
+      setExportingExcel(false);
+    }
+  }, [filtered]);
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: t.bg }}>
       {/* Header */}
@@ -138,6 +177,15 @@ const EightDConsultation = () => {
           <div style={{ display: 'flex', gap: '12px' }}>
             <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
               {language === 'es' ? 'EN' : 'ES'}
+            </button>
+            {/* Exportar a Excel */}
+            <button
+              onClick={exportToExcel}
+              disabled={exportingExcel || filtered.length === 0}
+              style={{ padding: '10px 20px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: (exportingExcel || filtered.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingExcel || filtered.length === 0) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Exportar reportes filtrados a Excel"
+            >
+              📊 {exportingExcel ? '...' : 'Excel'}
             </button>
             <button
               onClick={() => navigate('/dashboard')}

@@ -42,7 +42,7 @@ module.exports = (pool) => {
     const extra = {
       severities: ', color, qar_threshold_count, qar_threshold_hours',
       stations: ', description',
-      stages: ', description',
+      stages: ', description, department_id',
       shifts: ', start_time, end_time',
       dispositions: ', description, color, requires_downtime'
     };
@@ -150,13 +150,21 @@ module.exports = (pool) => {
           break;
 
         case 'stations':
-        case 'stages':
           query = `
-            INSERT INTO ${table} (code, name, description, display_order)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO ${table} (code, name, description, display_order, station_type)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
           `;
-          values = [req.body.code, req.body.name, req.body.description || null, req.body.displayOrder || 0];
+          values = [req.body.code, req.body.name, req.body.description || null, req.body.displayOrder || 0, req.body.stationType || 'INSPECTION'];
+          break;
+
+        case 'stages':
+          query = `
+            INSERT INTO ${table} (code, name, description, display_order, department_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+          `;
+          values = [req.body.code, req.body.name, req.body.description || null, req.body.displayOrder || 0, req.body.departmentId || null];
           break;
 
         case 'shifts':
@@ -230,15 +238,25 @@ module.exports = (pool) => {
           break;
 
         case 'stations':
+          query = `
+            UPDATE ${table} SET
+              code = $1, name = $2, description = $3,
+              display_order = $4, is_active = $5, station_type = $6
+            WHERE id = $7
+            RETURNING *
+          `;
+          values = [req.body.code, req.body.name, req.body.description, req.body.displayOrder, req.body.isActive ?? true, req.body.stationType || 'INSPECTION', id];
+          break;
+
         case 'stages':
           query = `
             UPDATE ${table} SET
               code = $1, name = $2, description = $3,
-              display_order = $4, is_active = $5
-            WHERE id = $6
+              display_order = $4, is_active = $5, department_id = $6
+            WHERE id = $7
             RETURNING *
           `;
-          values = [req.body.code, req.body.name, req.body.description, req.body.displayOrder, req.body.isActive ?? true, id];
+          values = [req.body.code, req.body.name, req.body.description, req.body.displayOrder, req.body.isActive ?? true, req.body.departmentId || null, id];
           break;
 
         case 'shifts':

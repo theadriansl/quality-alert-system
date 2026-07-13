@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const XLSX = require('xlsx');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
@@ -17,6 +18,16 @@ async function isMrbAuthorized(userId, userRole, campaignId, recipientType = nul
     [campaignId, userId]
   );
   return result.rows.length > 0;
+}
+
+// Helper: Get frozen user name by ID
+async function getUserFrozenName(userId) {
+  if (!userId) return null;
+  const result = await query(
+    `SELECT first_name || ' ' || last_name as full_name FROM users WHERE id = $1`,
+    [userId]
+  );
+  return result.rows[0]?.full_name || null;
 }
 
 // ============================================================================
@@ -273,18 +284,37 @@ router.get('/active-campaigns', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /mrb/:id/parts - All parts of the MRB's project
+// GET /mrb/:id/parts - Parts linked to the MRB campaign only
 router.get('/:id/parts', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await query(`
-      SELECT cp.id, cp.part_number, cp.part_name, cp.capture_display_name
-      FROM client_parts cp
-      JOIN mrb_campaigns mc ON mc.id = $1
-      WHERE cp.project_id = mc.project_id
-        AND cp.active = true
-      ORDER BY cp.part_number
-    `, [id]);
+    const mcRes = await query(`SELECT part_id, parts_list FROM mrb_campaigns WHERE id = $1`, [id]);
+    if (!mcRes.rows.length) return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+
+    const { part_id, parts_list } = mcRes.rows[0];
+    const partIds = Array.isArray(parts_list) && parts_list.length > 0
+      ? parts_list.map(p => p.partId).filter(Boolean)
+      : part_id ? [part_id] : [];
+
+    let result;
+    if (partIds.length > 0) {
+      result = await query(`
+        SELECT cp.id, cp.part_number, cp.part_name, cp.capture_display_name
+        FROM client_parts cp
+        WHERE cp.id = ANY($1::int[]) AND cp.active = true
+        ORDER BY cp.part_number
+      `, [partIds]);
+    } else {
+      // Fallback: campaña sin partes vinculadas — mostrar todas del proyecto
+      result = await query(`
+        SELECT cp.id, cp.part_number, cp.part_name, cp.capture_display_name
+        FROM client_parts cp
+        JOIN mrb_campaigns mc ON mc.id = $1
+        WHERE cp.project_id = mc.project_id AND cp.active = true
+        ORDER BY cp.part_number
+      `, [id]);
+    }
+
     res.json({ success: true, parts: transformToCamelCase(result.rows) });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching MRB parts' });
@@ -331,7 +361,7 @@ router.patch('/:id/quarantine', authenticateToken, async (req, res) => {
       qCustomer  = parseInt(row.customer)  || 0;
     }
 
-    const total = qWarehouse + qProcess + qTransit + qCustomer;
+    const total = qWarehouse + qProcess; // Solo en planta — tránsito y cliente son informativos
 
     const result = await query(`
       UPDATE mrb_campaigns SET
@@ -362,9 +392,10 @@ router.patch('/:id/quarantine', authenticateToken, async (req, res) => {
 // POST /mrb/:id/capture-ok - Register OK piece for MRB campaign
 router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { quantity = 1, shiftId, partId, notes, lotNumber, inspectionDate } = req.body;
+  const { quantity = 1, shiftId, partId, notes, lotNumber, serialNumber, inspectionDate, downtimeMinutes = 0 } = req.body;
   const inspectorId = req.user.id;
   const today = inspectionDate || new Date().toLocaleDateString('en-CA');
+  const serial = serialNumber || lotNumber; // Usar serialNumber si existe, sino lotNumber
 
   try {
     // 1. Update MRB campaign counters
@@ -375,7 +406,8 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $2 AND status IN ('ABIERTA', 'EN_PROCESO')
       RETURNING id, campaign_number, qty_inspected, qty_ok, qty_nok,
-                qty_use_as_is, qty_rework, qty_scrap, qty_return, qty_hold
+                qty_use_as_is, qty_rework, qty_scrap, qty_return, qty_hold,
+                client_id, part_id, project_id
     `, [quantity, id]);
 
     if (result.rows.length === 0) {
@@ -385,16 +417,80 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
       });
     }
 
-    // 2. Insert into mrb_ok_entries for per-inspector tracking (detection capability)
+    const mrb = result.rows[0];
+    const effectivePartId = partId || mrb.part_id;
+
+    // === TRAZABILIDAD: Buscar unit_registry ===
+    let unitId = null;
+    if (serial && serial.trim()) {
+      const existingUnit = await query(
+        'SELECT id, current_status FROM unit_registry WHERE client_id = $1 AND part_id = $2 AND serial_number = $3',
+        [mrb.client_id, effectivePartId, serial.trim()]
+      );
+
+      if (existingUnit.rows.length > 0) {
+        unitId = existingUnit.rows[0].id;
+        const oldStatus = existingUnit.rows[0].current_status;
+
+        // Actualizar status a OK si estaba DEFECTIVE o PENDING_REINSPECTION
+        if (['DEFECTIVE', 'PENDING_REINSPECTION', 'INSPECTING'].includes(oldStatus)) {
+          await query(`
+            UPDATE unit_registry SET
+              current_status = 'OK',
+              open_defects = 0,
+              last_inspection_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+          `, [unitId]);
+        }
+      }
+    }
+
+    // 2. Insert into mrb_ok_entries with unit_id and serial_number
     await query(`
       INSERT INTO mrb_ok_entries
-        (mrb_campaign_id, part_id, shift_id, inspector_id, quantity, inspection_date, notes, lot_number)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [id, partId || null, shiftId || null, inspectorId, quantity, today, notes || null, lotNumber || null]);
+        (mrb_campaign_id, part_id, shift_id, inspector_id, quantity, inspection_date, notes, lot_number, unit_id, serial_number)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [id, effectivePartId, shiftId || null, inspectorId, quantity, today, notes || null, lotNumber || null, unitId, serial || null]);
+
+    // === TRAZABILIDAD: Registrar en unit_history ===
+    if (unitId) {
+      await query(`
+        INSERT INTO unit_history (
+          unit_id, event_type, source_table, source_id, description,
+          station_id, shift_id, performed_by, metadata
+        ) VALUES ($1, 'MRB_OK', 'mrb_campaigns', $2, $3, $4, $5, $6, $7)
+      `, [
+        unitId,
+        id,
+        `Pieza OK en MRB ${mrb.campaign_number}`,
+        null,
+        shiftId || null,
+        inspectorId,
+        JSON.stringify({ mrbCampaignId: id, campaignNumber: mrb.campaign_number, quantity })
+      ]);
+    }
+
+    // 3. Register downtime entry if applicable
+    if (parseInt(downtimeMinutes) > 0) {
+      await query(`
+        INSERT INTO mrb_downtime_entries
+          (mrb_campaign_id, shift_id, inspector_id, lot_number, downtime_minutes, source_type, notes)
+        VALUES ($1, $2, $3, $4, $5, 'OK', $6)
+      `, [id, shiftId || null, inspectorId, lotNumber || null, parseInt(downtimeMinutes), notes || null]);
+    }
+
+    const downtimeRes = await query(
+      `SELECT COALESCE(SUM(downtime_minutes),0) AS total FROM mrb_downtime_entries
+       WHERE mrb_campaign_id = $1 AND DATE(created_at) = CURRENT_DATE
+       ${shiftId ? 'AND shift_id = $2' : ''}`,
+      shiftId ? [id, shiftId] : [id]
+    );
 
     res.json({
       success: true,
       mrb: transformToCamelCase(result.rows[0]),
+      unitId,
+      downtimeTodayMin: parseInt(downtimeRes.rows[0].total) || 0,
       message: `${quantity} pieza(s) OK registrada(s)`
     });
   } catch (error) {
@@ -415,11 +511,18 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     shiftId,
     departmentId,
     lotNumber,
+    serialNumber,
     downtimeMinutes = 0,
     notes,
     quantity = 1,
     partId
   } = req.body;
+
+  const serial = serialNumber || lotNumber; // Usar serialNumber si existe, sino lotNumber
+
+  if (!serial || !String(serial).trim()) {
+    return res.status(400).json({ success: false, message: 'El número de serie / lote es requerido' });
+  }
 
   try {
     // Get MRB campaign info
@@ -438,6 +541,27 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     }
 
     const mrb = mrbResult.rows[0];
+    const effectivePartId = partId || mrb.part_id;
+
+    // === TRAZABILIDAD: Buscar unit_registry ===
+    let unitId = null;
+    const existingUnit = await query(
+      'SELECT id, current_status FROM unit_registry WHERE client_id = $1 AND part_id = $2 AND serial_number = $3',
+      [mrb.client_id, effectivePartId, serial.trim()]
+    );
+
+    if (existingUnit.rows.length > 0) {
+      unitId = existingUnit.rows[0].id;
+      // Incrementar contador de defectos
+      await query(`
+        UPDATE unit_registry SET
+          total_defects = total_defects + 1,
+          open_defects = open_defects + 1,
+          current_status = 'DEFECTIVE',
+          last_inspection_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [unitId]);
+    }
 
     // Default to HOLD if no disposition provided
     let resolvedDispositionId = dispositionId || null;
@@ -446,17 +570,17 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
       resolvedDispositionId = holdRes.rows[0]?.id || null;
     }
 
-    // Create defect entry linked to MRB
+    // Create defect entry linked to MRB with unit_id
     const defectResult = await query(`
       INSERT INTO defect_entries_v2 (
         part_id, defect_type_id, severity_id, stage_id, disposition_id,
         station_id, shift_id, inspector_id, captured_by_user_id, department_id,
-        lot_number, downtime_minutes, notes, quantity,
+        lot_number, serial_number, unit_id, downtime_minutes, notes, quantity,
         mrb_campaign_id, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12, $13, $14, 'OPEN')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'OPEN')
       RETURNING *
     `, [
-      partId || mrb.part_id,
+      effectivePartId,
       defectTypeId,
       severityId || mrb.severity_id,
       stageId,
@@ -465,12 +589,40 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
       shiftId,
       req.user.id,
       departmentId || mrb.department_id,
-      lotNumber,
+      lotNumber || null,
+      serial.trim(),
+      unitId,
       downtimeMinutes,
       notes,
       quantity,
       id
     ]);
+
+    const defectEntry = defectResult.rows[0];
+
+    // === TRAZABILIDAD: Registrar en unit_history ===
+    if (unitId) {
+      let defectName = 'Defecto';
+      if (defectTypeId) {
+        const dtResult = await query('SELECT name FROM defect_types WHERE id = $1', [defectTypeId]);
+        if (dtResult.rows.length > 0) defectName = dtResult.rows[0].name;
+      }
+
+      await query(`
+        INSERT INTO unit_history (
+          unit_id, event_type, source_table, source_id, description,
+          station_id, shift_id, performed_by, metadata
+        ) VALUES ($1, 'MRB_NOK', 'defect_entries_v2', $2, $3, $4, $5, $6, $7)
+      `, [
+        unitId,
+        defectEntry.id,
+        `NOK en MRB ${mrb.campaign_number}: ${defectName}`,
+        stationId || null,
+        shiftId || null,
+        req.user.id,
+        JSON.stringify({ mrbCampaignId: id, campaignNumber: mrb.campaign_number, defectTypeId, quantity })
+      ]);
+    }
 
     // Resolve disposition code to know which counter to increment
     let dispositionCode = null;
@@ -503,10 +655,28 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
                 qty_use_as_is, qty_rework, qty_scrap, qty_return, qty_hold
     `, [quantity, id]);
 
+    // Register downtime entry if applicable
+    if (parseInt(downtimeMinutes) > 0) {
+      await query(`
+        INSERT INTO mrb_downtime_entries
+          (mrb_campaign_id, shift_id, inspector_id, lot_number, downtime_minutes, source_type, defect_entry_id, notes)
+        VALUES ($1, $2, $3, $4, $5, 'NOK', $6, $7)
+      `, [id, shiftId || null, req.user.id, lotNumber, parseInt(downtimeMinutes), defectResult.rows[0].id, notes || null]);
+    }
+
+    const downtimeRes = await query(
+      `SELECT COALESCE(SUM(downtime_minutes),0) AS total FROM mrb_downtime_entries
+       WHERE mrb_campaign_id = $1 AND DATE(created_at) = CURRENT_DATE
+       ${shiftId ? 'AND shift_id = $2' : ''}`,
+      shiftId ? [id, shiftId] : [id]
+    );
+
     res.json({
       success: true,
       mrb: transformToCamelCase(updateResult.rows[0]),
       defect: transformToCamelCase(defectResult.rows[0]),
+      unitId,
+      downtimeTodayMin: parseInt(downtimeRes.rows[0].total) || 0,
       message: `Defecto registrado - ${quantity} pieza(s) NOK`
     });
   } catch (error) {
@@ -709,6 +879,386 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching MRB Campaigns:', error);
     res.status(500).json({ success: false, message: 'Error fetching MRB Campaigns' });
+  }
+});
+
+// ============================================================================
+// MRB DASHBOARD v2 — 6-section executive dashboard with dept breakdown
+// IMPORTANT: Must be before /:id routes
+// ============================================================================
+router.get('/dashboard', authenticateToken, async (req, res) => {
+  const { dateFrom, dateTo, departmentId, clientId, severityId } = req.query;
+
+  // Build parameterized filter for mrb_campaigns (alias mc)
+  const p = [];
+  const mcWhere = () => {
+    let w = 'WHERE 1=1';
+    if (dateFrom)      { p.push(dateFrom);       w += ` AND mc.created_at >= $${p.length}`; }
+    if (dateTo)        { p.push(dateTo + ' 23:59:59'); w += ` AND mc.created_at <= $${p.length}`; }
+    if (departmentId)  { p.push(departmentId);   w += ` AND mc.department_id = $${p.length}`; }
+    if (clientId)      { p.push(clientId);        w += ` AND mc.client_id = $${p.length}`; }
+    if (severityId)    { p.push(severityId);      w += ` AND mc.severity_id = $${p.length}`; }
+    return w;
+  };
+
+  try {
+    const f = mcWhere(); // build once, p[] populated
+
+    // Pre-compute real costs per campaign (scrap = qty*unit_cost, labor = hours*count*rate)
+    const realCostsRes = await query(`
+      SELECT mc.id,
+        COALESCE(d.name,'Sin depto') AS dept,
+        TO_CHAR(mc.created_at,'YYYY-MM') AS month,
+        mc.campaign_number, mc.title,
+        COALESCE(scrap_agg.scrap_cost,0)::numeric AS scrap_cost,
+        COALESCE(labor_agg.labor_cost,0)::numeric AS labor_cost
+      FROM mrb_campaigns mc
+      LEFT JOIN departments d ON mc.department_id = d.id
+      LEFT JOIN (
+        SELECT de.mrb_campaign_id,
+          SUM(de.quantity * COALESCE(cp.unit_cost,0)) AS scrap_cost
+        FROM defect_entries_v2 de
+        JOIN inspection_dispositions disp ON de.disposition_id = disp.id AND disp.code = 'SCRAP'
+        LEFT JOIN client_parts cp ON de.part_id = cp.id
+        GROUP BY de.mrb_campaign_id
+      ) scrap_agg ON scrap_agg.mrb_campaign_id = mc.id
+      LEFT JOIN (
+        SELECT sh.mrb_campaign_id,
+          SUM(sh.hours_worked * sh.inspector_count * mc2.inspector_unit_cost
+            + sh.hours_worked * sh.supervisor_count * mc2.supervisor_unit_cost) AS labor_cost
+        FROM mrb_shift_hours sh
+        JOIN mrb_campaigns mc2 ON mc2.id = sh.mrb_campaign_id
+        GROUP BY sh.mrb_campaign_id
+      ) labor_agg ON labor_agg.mrb_campaign_id = mc.id
+      ${f}
+    `, p);
+
+    // Costs for ALL open campaigns (no date filter)
+    const openCostsRes = await query(`
+      SELECT mc.id,
+        COALESCE(scrap_agg.scrap_cost,0)::numeric AS scrap_cost,
+        COALESCE(labor_agg.labor_cost,0)::numeric AS labor_cost
+      FROM mrb_campaigns mc
+      LEFT JOIN (
+        SELECT de.mrb_campaign_id,
+          SUM(de.quantity * COALESCE(cp.unit_cost,0)) AS scrap_cost
+        FROM defect_entries_v2 de
+        JOIN inspection_dispositions disp ON de.disposition_id = disp.id AND disp.code = 'SCRAP'
+        LEFT JOIN client_parts cp ON de.part_id = cp.id
+        GROUP BY de.mrb_campaign_id
+      ) scrap_agg ON scrap_agg.mrb_campaign_id = mc.id
+      LEFT JOIN (
+        SELECT sh.mrb_campaign_id,
+          SUM(sh.hours_worked * sh.inspector_count * mc2.inspector_unit_cost
+            + sh.hours_worked * sh.supervisor_count * mc2.supervisor_unit_cost) AS labor_cost
+        FROM mrb_shift_hours sh
+        JOIN mrb_campaigns mc2 ON mc2.id = sh.mrb_campaign_id
+        GROUP BY sh.mrb_campaign_id
+      ) labor_agg ON labor_agg.mrb_campaign_id = mc.id
+      WHERE mc.status IN ('ABIERTA','EN_PROCESO')
+    `, []);
+
+    const openCosts = {};
+    openCostsRes.rows.forEach(r => {
+      openCosts[r.id] = { scrap: parseFloat(r.scrap_cost)||0, labor: parseFloat(r.labor_cost)||0 };
+    });
+
+    // Build per-campaign cost lookup for JS aggregation
+    const realCosts = realCostsRes.rows.map(r => ({
+      id: r.id, dept: r.dept, month: r.month,
+      campaignNumber: r.campaign_number, title: r.title,
+      scrap: parseFloat(r.scrap_cost) || 0,
+      labor: parseFloat(r.labor_cost) || 0,
+      total: (parseFloat(r.scrap_cost) || 0) + (parseFloat(r.labor_cost) || 0)
+    }));
+
+    const [
+      summaryRes, byMonthDeptRes, deptSummaryRes,
+      dispositionRes, disposByDeptRes, disposByMonthRes,
+      timingRes, agingRes,
+      topDefectsRes, defectsByDeptRes, defectsBySeverityRes, defectsByStageRes,
+      downtimeByShiftRes, downtimeByDeptRes, opsRes, downtimeCommentsRes
+    ] = await Promise.all([
+
+      // 1a. Summary KPIs
+      query(`SELECT
+        COALESCE(SUM(mc.qty_inspected),0)::int AS total_insp,
+        COALESCE(SUM(mc.qty_ok),0)::int AS total_ok,
+        COALESCE(SUM(mc.qty_nok),0)::int AS total_nok,
+        COALESCE(SUM(mc.scrap_cost),0)::numeric AS scrap_cost,
+        COALESCE(SUM(mc.labor_cost),0)::numeric AS labor_cost,
+        COUNT(*) FILTER (WHERE mc.status IN ('ABIERTA','EN_PROCESO'))::int AS backlog,
+        COUNT(*) FILTER (WHERE mc.status = 'CERRADA')::int AS closed,
+        COUNT(*)::int AS total
+        FROM mrb_campaigns mc ${f}`, p),
+
+      // 1b. Campaigns by month + dept (for stacked bar)
+      query(`SELECT TO_CHAR(mc.created_at,'YYYY-MM') AS month,
+        COALESCE(d.name,'Sin depto') AS dept, COUNT(*)::int AS count
+        FROM mrb_campaigns mc LEFT JOIN departments d ON mc.department_id = d.id
+        ${f} GROUP BY month, d.name ORDER BY month, d.name`, p),
+
+      // 1c. Dept summary (backlog + closed)
+      query(`SELECT COALESCE(d.name,'Sin depto') AS dept,
+        COUNT(*) FILTER (WHERE mc.status IN ('ABIERTA','EN_PROCESO'))::int AS backlog,
+        COUNT(*) FILTER (WHERE mc.status = 'CERRADA')::int AS closed,
+        COUNT(*)::int AS total
+        FROM mrb_campaigns mc LEFT JOIN departments d ON mc.department_id = d.id
+        ${f} GROUP BY d.name ORDER BY total DESC`, p),
+
+      // 2a. Disposition totals
+      query(`SELECT
+        COALESCE(SUM(mc.qty_scrap),0)::int AS scrap,
+        COALESCE(SUM(mc.qty_rework),0)::int AS rework,
+        COALESCE(SUM(mc.qty_use_as_is),0)::int AS use_as_is,
+        COALESCE(SUM(mc.qty_return),0)::int AS return_sup,
+        COALESCE(SUM(mc.qty_hold),0)::int AS hold
+        FROM mrb_campaigns mc ${f}`, p),
+
+      // 2b. Disposition by dept
+      query(`SELECT COALESCE(d.name,'Sin depto') AS dept,
+        COALESCE(SUM(mc.qty_scrap),0)::int AS scrap,
+        COALESCE(SUM(mc.qty_rework),0)::int AS rework,
+        COALESCE(SUM(mc.qty_use_as_is),0)::int AS use_as_is,
+        COALESCE(SUM(mc.qty_return),0)::int AS return_sup,
+        COALESCE(SUM(mc.qty_hold),0)::int AS hold
+        FROM mrb_campaigns mc LEFT JOIN departments d ON mc.department_id = d.id
+        ${f} GROUP BY d.name ORDER BY scrap DESC`, p),
+
+      // 2c. Scrap trend by month
+      query(`SELECT TO_CHAR(mc.created_at,'YYYY-MM') AS month,
+        COALESCE(SUM(mc.qty_scrap),0)::int AS scrap,
+        COALESCE(SUM(mc.qty_rework),0)::int AS rework
+        FROM mrb_campaigns mc ${f} GROUP BY month ORDER BY month`, p),
+
+      // 3. Timing
+      query(`SELECT
+        ROUND(AVG(EXTRACT(EPOCH FROM (mc.response_date - mc.created_at))/86400)::numeric,1) AS avg_response_days,
+        ROUND(AVG(EXTRACT(EPOCH FROM (mc.closed_at - mc.created_at))/86400)::numeric,1) AS avg_close_days,
+        ROUND(AVG(CASE WHEN mc.status='CERRADA' THEN EXTRACT(EPOCH FROM (mc.closed_at - mc.created_at))/86400 END)::numeric,1) AS avg_lead_days,
+        COUNT(*) FILTER (WHERE mc.status IN ('ABIERTA','EN_PROCESO') AND mc.created_at < NOW() - INTERVAL '7 days')::int AS aging_7,
+        COUNT(*) FILTER (WHERE mc.status IN ('ABIERTA','EN_PROCESO') AND mc.created_at < NOW() - INTERVAL '14 days')::int AS aging_14,
+        COUNT(*) FILTER (WHERE mc.status IN ('ABIERTA','EN_PROCESO') AND mc.created_at < NOW() - INTERVAL '30 days')::int AS aging_30
+        FROM mrb_campaigns mc ${f}`, p),
+
+      // 3b. Aging detail (open campaigns)
+      query(`SELECT mc.id, mc.campaign_number, mc.title,
+        COALESCE(d.name,'Sin depto') AS dept,
+        mc.status,
+        ROUND(EXTRACT(EPOCH FROM (NOW() - mc.created_at))/86400)::int AS age_days
+        FROM mrb_campaigns mc LEFT JOIN departments d ON mc.department_id = d.id
+        WHERE mc.status IN ('ABIERTA','EN_PROCESO')
+        ORDER BY age_days DESC LIMIT 20`, []),
+
+      // 5a. Top defects
+      query(`SELECT dt.name AS defect, dt.code,
+        SUM(de.quantity)::int AS qty
+        FROM defect_entries_v2 de
+        JOIN mrb_campaigns mc ON de.mrb_campaign_id = mc.id
+        LEFT JOIN defect_types dt ON de.defect_type_id = dt.id
+        ${f.replace('WHERE','WHERE de.mrb_campaign_id IS NOT NULL AND')}
+        GROUP BY dt.name, dt.code ORDER BY qty DESC LIMIT 10`, p),
+
+      // 5b. Defects by dept
+      query(`SELECT COALESCE(d.name,'Sin depto') AS dept,
+        SUM(de.quantity)::int AS qty
+        FROM defect_entries_v2 de
+        JOIN mrb_campaigns mc ON de.mrb_campaign_id = mc.id
+        LEFT JOIN departments d ON mc.department_id = d.id
+        ${f.replace('WHERE','WHERE de.mrb_campaign_id IS NOT NULL AND')}
+        GROUP BY d.name ORDER BY qty DESC`, p),
+
+      // 5c. By severity (from defect entries)
+      query(`SELECT COALESCE(s.name,'Sin severidad') AS severity, s.color,
+        COALESCE(SUM(de.quantity),0)::int AS qty_nok
+        FROM defect_entries_v2 de
+        JOIN mrb_campaigns mc ON de.mrb_campaign_id = mc.id
+        LEFT JOIN inspection_severities s ON de.severity_id = s.id
+        ${f.replace('WHERE','WHERE de.mrb_campaign_id IS NOT NULL AND')}
+        GROUP BY s.name, s.color ORDER BY qty_nok DESC`, p),
+
+      // 5d. By stage
+      query(`SELECT COALESCE(st.name,'Sin etapa') AS stage,
+        SUM(de.quantity)::int AS qty
+        FROM defect_entries_v2 de
+        JOIN mrb_campaigns mc ON de.mrb_campaign_id = mc.id
+        LEFT JOIN inspection_stages st ON de.stage_id = st.id
+        ${f.replace('WHERE','WHERE de.mrb_campaign_id IS NOT NULL AND')}
+        GROUP BY st.name ORDER BY qty DESC`, p),
+
+      // 6a. Downtime by shift
+      query(`SELECT COALESCE(ins.name,'Sin turno') AS shift,
+        COALESCE(SUM(dt.downtime_minutes),0)::int AS minutes, COUNT(*)::int AS entries
+        FROM mrb_downtime_entries dt
+        JOIN mrb_campaigns mc ON dt.mrb_campaign_id = mc.id
+        LEFT JOIN inspection_shifts ins ON dt.shift_id = ins.id
+        ${f.replace('WHERE','WHERE')} GROUP BY ins.name ORDER BY minutes DESC`, p),
+
+      // 6b. Downtime by dept
+      query(`SELECT COALESCE(d.name,'Sin depto') AS dept,
+        COALESCE(SUM(dt.downtime_minutes),0)::int AS minutes
+        FROM mrb_downtime_entries dt
+        JOIN mrb_campaigns mc ON dt.mrb_campaign_id = mc.id
+        LEFT JOIN departments d ON mc.department_id = d.id
+        ${f.replace('WHERE','WHERE')} GROUP BY d.name ORDER BY minutes DESC`, p),
+
+      // 6c. Ops — piezas/hora
+      query(`SELECT
+        COALESCE(SUM(sh.hours_worked * sh.inspector_count),0)::numeric AS total_inspector_hours,
+        COALESCE(SUM(mc.qty_inspected),0)::int AS total_insp,
+        COALESCE(SUM(mc.qty_nok),0)::int AS total_nok
+        FROM mrb_campaigns mc
+        LEFT JOIN mrb_shift_hours sh ON sh.mrb_campaign_id = mc.id
+        ${f}`, p),
+
+      // 6d. Downtime comments
+      query(`SELECT dt.id, dt.lot_number, dt.downtime_minutes, dt.source_type, dt.notes,
+        dt.created_at,
+        COALESCE(ins.name,'Sin turno') AS shift,
+        mc.campaign_number
+        FROM mrb_downtime_entries dt
+        JOIN mrb_campaigns mc ON dt.mrb_campaign_id = mc.id
+        LEFT JOIN inspection_shifts ins ON dt.shift_id = ins.id
+        WHERE dt.notes IS NOT NULL AND dt.notes <> ''
+        ${f.replace('WHERE', 'AND')}
+        ORDER BY dt.created_at DESC LIMIT 100`, p)
+    ]);
+
+    const s = summaryRes.rows[0] || {};
+    const totalInsp = parseInt(s.total_insp) || 0;
+    const totalNok  = parseInt(s.total_nok)  || 0;
+    const ops       = opsRes.rows[0] || {};
+    const inspHours = parseFloat(ops.total_inspector_hours) || 0;
+
+    // JS aggregation from realCosts (real accumulated costs)
+    const totalScrap = realCosts.reduce((a, r) => a + r.scrap, 0);
+    const totalLabor = realCosts.reduce((a, r) => a + r.labor, 0);
+
+    // costByMonth: group by month, sum scrap + labor
+    const costByMonthMap = {};
+    for (const r of realCosts) {
+      if (!costByMonthMap[r.month]) costByMonthMap[r.month] = { month: r.month, scrap: 0, labor: 0 };
+      costByMonthMap[r.month].scrap += r.scrap;
+      costByMonthMap[r.month].labor += r.labor;
+    }
+    const costByMonth = Object.values(costByMonthMap).sort((a, b) => a.month.localeCompare(b.month));
+
+    // costByCampaign: top 10 by total cost
+    const costByCampaign = [...realCosts]
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10)
+      .map(r => ({ id: r.id, campaign_number: r.campaignNumber, title: r.title, dept: r.dept, scrap_cost: r.scrap, labor_cost: r.labor, total_cost: r.total }));
+
+    // costByDept: group by dept
+    const costByDeptMap = {};
+    for (const r of realCosts) {
+      if (!costByDeptMap[r.dept]) costByDeptMap[r.dept] = { dept: r.dept, scrap_cost: 0, labor_cost: 0, total_cost: 0 };
+      costByDeptMap[r.dept].scrap_cost += r.scrap;
+      costByDeptMap[r.dept].labor_cost += r.labor;
+      costByDeptMap[r.dept].total_cost += r.total;
+    }
+    const costByDept = Object.values(costByDeptMap).sort((a, b) => b.total_cost - a.total_cost);
+
+    res.json({
+      success: true,
+      filters: { dateFrom, dateTo, departmentId, clientId, severityId },
+      openCosts,
+
+      summary: {
+        totalInsp, totalOk: parseInt(s.total_ok) || 0, totalNok,
+        yieldPct:   totalInsp > 0 ? ((parseInt(s.total_ok)/totalInsp)*100).toFixed(1) : null,
+        ppm:        totalInsp > 0 ? Math.round((totalNok/totalInsp)*1_000_000) : null,
+        scrapCost:  totalScrap,
+        laborCost:  totalLabor,
+        totalCost:  totalScrap + totalLabor,
+        backlog:    parseInt(s.backlog) || 0,
+        closed:     parseInt(s.closed) || 0,
+        total:      parseInt(s.total)  || 0,
+        byMonthDept: byMonthDeptRes.rows,
+        costByMonth,
+        byDept: deptSummaryRes.rows.map(r => ({
+          ...r,
+          total_cost: costByDeptMap[r.dept]?.total_cost || 0
+        }))
+      },
+
+      disposition: {
+        ...(dispositionRes.rows[0] || {}),
+        byDept:    disposByDeptRes.rows,
+        byMonth:   disposByMonthRes.rows
+      },
+
+      timing: {
+        ...(timingRes.rows[0] || {}),
+        aging: agingRes.rows
+      },
+
+      cost: {
+        scrapCost:  totalScrap,
+        laborCost:  totalLabor,
+        totalCost:  totalScrap + totalLabor,
+        byCampaign: costByCampaign,
+        byDept:     costByDept
+      },
+
+      defects: {
+        top:        topDefectsRes.rows,
+        byDept:     defectsByDeptRes.rows,
+        bySeverity: defectsBySeverityRes.rows,
+        byStage:    defectsByStageRes.rows
+      },
+
+      ops: {
+        totalDowntime:  downtimeByShiftRes.rows.reduce((s, r) => s + (parseInt(r.minutes) || 0), 0),
+        inspectorHours: inspHours,
+        piecesPerHour:  inspHours > 0 ? ((parseInt(ops.total_insp)||0)/inspHours).toFixed(1) : null,
+        defectsPerHour: inspHours > 0 ? ((parseInt(ops.total_nok)||0)/inspHours).toFixed(1) : null,
+        byShift:   downtimeByShiftRes.rows,
+        byDept:    downtimeByDeptRes.rows,
+        comments:  downtimeCommentsRes.rows
+      }
+    });
+  } catch (error) {
+    console.error('Error MRB dashboard:', error);
+    res.status(500).json({ success: false, message: 'Error al generar dashboard' });
+  }
+});
+
+// ============================================================================
+// GET /unregistered-shifts — Campañas activas con turnos sin registrar en mrb_shift_hours
+// IMPORTANT: Must be before /:id routes
+// ============================================================================
+router.get('/unregistered-shifts', authenticateToken, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT DISTINCT
+        mc.id                    AS campaign_id,
+        mc.campaign_number,
+        mc.title,
+        mc.inspector_count,
+        mc.supervisor_count,
+        mc.inspector_unit_cost,
+        mc.supervisor_unit_cost,
+        de.shift_id,
+        ins.name                 AS shift_name,
+        ins.code                 AS shift_code,
+        de.captured_at::date     AS inspection_date
+      FROM defect_entries_v2 de
+      JOIN mrb_campaigns mc ON mc.id = de.mrb_campaign_id
+      LEFT JOIN inspection_shifts ins ON ins.id = de.shift_id
+      LEFT JOIN mrb_shift_hours sh
+        ON sh.mrb_campaign_id = de.mrb_campaign_id
+        AND (sh.shift_id = de.shift_id OR (sh.shift_id IS NULL AND de.shift_id IS NULL))
+        AND sh.inspection_date = de.captured_at::date
+      WHERE mc.status IN ('ABIERTA', 'EN_PROCESO')
+        AND de.captured_at::date < CURRENT_DATE
+        AND sh.id IS NULL
+      ORDER BY de.captured_at::date DESC, mc.campaign_number
+    `);
+    res.json({ success: true, unregistered: result.rows.map(r => transformToCamelCase(r)) });
+  } catch (e) {
+    console.error('Error unregistered-shifts:', e);
+    res.status(500).json({ success: false, message: 'Error al detectar turnos sin registrar' });
   }
 });
 
@@ -1335,6 +1885,18 @@ router.get('/:id/inspector-performance', authenticateToken, async (req, res) => 
 router.get('/:id/campaign-progress', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
+    // Base: all registered shifts (includes days with OK-only, no NOK)
+    const shiftRows = await query(`
+      SELECT
+        sh.inspection_date,
+        sh.shift_id,
+        ins.name AS shift_name,
+        ins.code AS shift_code
+      FROM mrb_shift_hours sh
+      LEFT JOIN inspection_shifts ins ON sh.shift_id = ins.id
+      WHERE sh.mrb_campaign_id = $1
+    `, [id]);
+
     // NOK entries grouped by date + shift
     const nokRows = await query(`
       SELECT
@@ -1371,11 +1933,23 @@ router.get('/:id/campaign-progress', authenticateToken, async (req, res) => {
     `, [id]);
 
     // Attach tally sheets to their matching date+shift row; also build a date-only list for days with no NOK entries
+    const shiftData = shiftRows.rows.map(r => transformToCamelCase(r));
     const nokData = nokRows.rows.map(r => transformToCamelCase(r));
     const tallyData = tallyRows.rows.map(r => transformToCamelCase(r));
 
-    // Build a merged set of date/shift keys
+    // Build a merged set of date/shift keys — base from registered shifts
     const keyMap = {};
+    shiftData.forEach(row => {
+      const k = `${row.inspectionDate}_${row.shiftId || 'none'}`;
+      if (!keyMap[k]) keyMap[k] = {
+        inspectionDate: row.inspectionDate,
+        shiftId: row.shiftId,
+        shiftName: row.shiftName,
+        shiftCode: row.shiftCode,
+        totalNok: 0, useAsIs: 0, rework: 0, scrap: 0, returnSupplier: 0, hold: 0,
+        tallies: []
+      };
+    });
     nokData.forEach(row => {
       const k = `${row.inspectionDate}_${row.shiftId || 'none'}`;
       if (!keyMap[k]) keyMap[k] = { ...row, tallies: [] };
@@ -1415,8 +1989,13 @@ router.get('/:id/campaign-progress', authenticateToken, async (req, res) => {
 });
 
 // GET single MRB Campaign with full details
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   const { id } = req.params;
+
+  // Skip if id is not a number (let other routes handle it)
+  if (isNaN(parseInt(id))) {
+    return next('route');
+  }
 
   try {
     // Department name helper
@@ -1562,7 +2141,7 @@ router.get('/:id/shift-report', authenticateToken, async (req, res) => {
   const targetDate = date || new Date().toISOString().split('T')[0];
 
   try {
-    const [headerRes, kpiRes, paretoRes, dispositionRes, inspectorOkRes, inspectorNokRes, talliesRes, defectDetailRes, okEntriesRes] = await Promise.all([
+    const [headerRes, kpiRes, paretoRes, dispositionRes, inspectorOkRes, inspectorNokRes, talliesRes, defectDetailRes, okEntriesRes, downtimeEntriesRes] = await Promise.all([
       // 1. Header — campaign + shift info
       query(`
         SELECT mc.campaign_number, mc.title, mc.lot_number,
@@ -1587,7 +2166,9 @@ router.get('/:id/shift-report', authenticateToken, async (req, res) => {
                     ${shiftId ? 'AND shift_id = $3' : ''}), 0) AS qty_ok,
           COALESCE(SUM(de.quantity), 0) AS qty_nok,
           COALESCE(SUM(CASE WHEN disp.code = 'SCRAP' THEN de.quantity ELSE 0 END), 0) AS qty_scrap,
-          COALESCE(SUM(CASE WHEN de.downtime_minutes > 0 THEN de.downtime_minutes ELSE 0 END), 0) AS downtime_min
+          COALESCE((SELECT SUM(dt.downtime_minutes) FROM mrb_downtime_entries dt
+                    WHERE dt.mrb_campaign_id = $1 AND DATE(dt.created_at) = $2
+                    ${shiftId ? 'AND dt.shift_id = $3' : ''}), 0) AS downtime_min
         FROM defect_entries_v2 de
         LEFT JOIN inspection_dispositions disp ON de.disposition_id = disp.id
         WHERE de.mrb_campaign_id = $1 AND DATE(de.created_at) = $2
@@ -1684,6 +2265,18 @@ router.get('/:id/shift-report', authenticateToken, async (req, res) => {
         WHERE ok.mrb_campaign_id = $1 AND ok.inspection_date = $2::date
         ${shiftId ? 'AND ok.shift_id = $3' : ''}
         ORDER BY ok.created_at ASC
+      `, shiftId ? [id, targetDate, shiftId] : [id, targetDate]),
+
+      // 9. Downtime entries log
+      query(`
+        SELECT dt.id, dt.lot_number, dt.downtime_minutes, dt.source_type, dt.notes,
+               dt.created_at,
+               u.first_name, u.last_name
+        FROM mrb_downtime_entries dt
+        LEFT JOIN users u ON dt.inspector_id = u.id
+        WHERE dt.mrb_campaign_id = $1 AND DATE(dt.created_at) = $2
+        ${shiftId ? 'AND dt.shift_id = $3' : ''}
+        ORDER BY dt.created_at ASC
       `, shiftId ? [id, targetDate, shiftId] : [id, targetDate])
     ]);
 
@@ -1785,11 +2378,58 @@ router.get('/:id/shift-report', authenticateToken, async (req, res) => {
         partNumber: r.part_number,
         partName: r.part_name,
         inspector: `${r.first_name || ''} ${r.last_name || ''}`.trim()
+      })),
+      downtimeLog: downtimeEntriesRes.rows.map(r => ({
+        id: r.id,
+        lotNumber: r.lot_number,
+        downtimeMinutes: parseInt(r.downtime_minutes) || 0,
+        sourceType: r.source_type,
+        notes: r.notes,
+        createdAt: r.created_at,
+        inspector: `${r.first_name || ''} ${r.last_name || ''}`.trim()
       }))
     });
   } catch (error) {
     console.error('Error fetching shift report:', error);
     res.status(500).json({ success: false, message: 'Error al generar reporte' });
+  }
+});
+
+// ============================================================================
+// DOWNTIME ENTRIES — PATCH + DELETE
+// ============================================================================
+router.patch('/:id/downtime/:entryId', authenticateToken, async (req, res) => {
+  const { id, entryId } = req.params;
+  const { downtimeMinutes, notes } = req.body;
+  if (downtimeMinutes === undefined || parseInt(downtimeMinutes) < 0) {
+    return res.status(400).json({ success: false, message: 'Minutos inválidos' });
+  }
+  try {
+    const result = await query(
+      `UPDATE mrb_downtime_entries SET downtime_minutes = $1, notes = $2
+       WHERE id = $3 AND mrb_campaign_id = $4 RETURNING id`,
+      [parseInt(downtimeMinutes), notes || null, entryId, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Entrada no encontrada' });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Error updating downtime entry:', e);
+    res.status(500).json({ success: false, message: 'Error al actualizar' });
+  }
+});
+
+router.delete('/:id/downtime/:entryId', authenticateToken, async (req, res) => {
+  const { id, entryId } = req.params;
+  try {
+    const result = await query(
+      `DELETE FROM mrb_downtime_entries WHERE id = $1 AND mrb_campaign_id = $2 RETURNING id`,
+      [entryId, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Entrada no encontrada' });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Error deleting downtime entry:', e);
+    res.status(500).json({ success: false, message: 'Error al eliminar' });
   }
 });
 
@@ -2113,6 +2753,13 @@ router.post('/', authenticateToken, async (req, res) => {
     partsList = []
   } = req.body;
 
+  // Require at least one part
+  const hasPartId = !!partId;
+  const hasPartsList = Array.isArray(partsList) && partsList.length > 0;
+  if (!hasPartId && !hasPartsList) {
+    return res.status(400).json({ success: false, message: 'Se requiere al menos un número de parte para crear una campaña MRB.' });
+  }
+
   try {
     // If source is provided, inherit data from it
     let inheritedData = {
@@ -2170,9 +2817,8 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     } else if (sourceType === 'INCOMING' && source8dId) {
       const eightdResult = await query(`
-        SELECT er.report_id, c.name as client_name
+        SELECT er.report_id
         FROM eightd_reports er
-        LEFT JOIN clients c ON er.client_id = c.id
         WHERE er.id = $1
       `, [source8dId]);
 
@@ -2236,27 +2882,32 @@ router.post('/', authenticateToken, async (req, res) => {
       alertNumber = numberResult.rows[0].campaign_number;
     }
 
+    // Get frozen names
+    const assignedToName = await getUserFrozenName(assignedTo);
+    const reportedByName = await getUserFrozenName(req.user.id);
+
     // Create MRB Campaign with source and operation fields
     const result = await query(`
       INSERT INTO mrb_campaigns (
         campaign_number, client_id, project_id, part_id, title, description,
         severity_id, department_id,
-        assigned_to, reported_by, photo_ok_path, photo_nok_path, status,
+        assigned_to, assigned_to_name, reported_by, reported_by_name,
+        photo_ok_path, photo_nok_path, status,
         source_type, source_qar_id, source_8d_id,
         qty_inspected, qty_ok, qty_nok, scrap_cost, labor_cost,
         inspector_count, supervisor_count, inspector_unit_cost, supervisor_unit_cost,
         lot_number, part_description, inspection_criteria, disposition_instructions,
         qty_quarantine_warehouse, qty_quarantine_process, qty_quarantine_transit, qty_quarantine_customer,
         qty_quarantine_total, qty_quarantine_updated_at, parts_list
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,
-        CASE WHEN $34 > 0 THEN CURRENT_TIMESTAMP ELSE NULL END, $35)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,
+        CASE WHEN $36 > 0 THEN CURRENT_TIMESTAMP ELSE NULL END, $37)
       RETURNING *
     `, [
       alertNumber,
       inheritedData.clientId, inheritedData.projectId, inheritedData.partId,
       inheritedData.title, inheritedData.description,
       inheritedData.severityId, inheritedData.departmentId,
-      assignedTo, req.user.id,
+      assignedTo, assignedToName, req.user.id, reportedByName,
       finalPhotoOkPath, finalPhotoNokPath,
       status,
       sourceType || null, sourceQarId || null, source8dId || null,
@@ -2917,7 +3568,7 @@ router.post('/:id/validate', authenticateToken, async (req, res) => {
 
     // Check if MRB Campaign is in EN_PROCESO status
     const mrbCheck = await query(
-      'SELECT status, qty_inspected, qty_quarantine_total, responded_by, campaign_number FROM mrb_campaigns WHERE id = $1', [id]
+      'SELECT status, qty_inspected, qty_quarantine_warehouse, qty_quarantine_process, responded_by, campaign_number FROM mrb_campaigns WHERE id = $1', [id]
     );
     if (mrbCheck.rows[0]?.status !== 'EN_PROCESO') {
       return res.status(400).json({
@@ -2927,9 +3578,9 @@ router.post('/:id/validate', authenticateToken, async (req, res) => {
     }
 
     if (approved) {
-      const { qty_inspected, qty_quarantine_total } = mrbCheck.rows[0];
+      const { qty_inspected, qty_quarantine_warehouse, qty_quarantine_process } = mrbCheck.rows[0];
       const inspected = parseInt(qty_inspected) || 0;
-      const total = parseInt(qty_quarantine_total) || 0;
+      const total = (parseInt(qty_quarantine_warehouse) || 0) + (parseInt(qty_quarantine_process) || 0);
       const inventoryComplete = total === 0 || inspected >= total;
 
       // If inventory incomplete, require a reason
@@ -3111,6 +3762,951 @@ router.get('/users/list', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ success: false, message: 'Error fetching users' });
+  }
+});
+
+// ============================================================================
+// CAMPAIGN-PART RELATIONSHIP ENDPOINTS (Multi-campaign inspection)
+// ============================================================================
+
+// Get active campaigns for a part by part_id
+router.get('/campaigns-by-part/:partId', authenticateToken, async (req, res) => {
+  const { partId } = req.params;
+  try {
+    const result = await query(`
+      SELECT
+        mc.id as campaign_id,
+        mc.campaign_number,
+        mc.title,
+        mc.status,
+        mc.disposition,
+        mc.description,
+        sev.name as severity_name,
+        sev.color as severity_color,
+        mc.qty_inspected,
+        mc.qty_ok,
+        mc.qty_nok,
+        mc.qty_scrap,
+        mc.qty_rework,
+        mc.qty_use_as_is,
+        mc.qty_return,
+        mc.created_at
+      FROM mrb_campaign_parts mcp
+      JOIN mrb_campaigns mc ON mcp.mrb_campaign_id = mc.id
+      LEFT JOIN inspection_severities sev ON mc.severity_id = sev.id
+      WHERE mcp.part_id = $1
+        AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+      ORDER BY mc.campaign_number
+    `, [partId]);
+
+    res.json({
+      success: true,
+      partId: parseInt(partId),
+      campaigns: transformToCamelCase(result.rows)
+    });
+  } catch (error) {
+    console.error('Error fetching campaigns by part:', error);
+    res.status(500).json({ success: false, message: 'Error fetching campaigns' });
+  }
+});
+
+// Get active campaigns by part_number (for scanning)
+router.get('/campaigns-by-part-number/:partNumber', authenticateToken, async (req, res) => {
+  const { partNumber } = req.params;
+  try {
+    // First find the part
+    const partResult = await query(`
+      SELECT cp.id, cp.part_number, cp.part_name, c.name as client_name
+      FROM client_parts cp
+      LEFT JOIN clients c ON cp.client_id = c.id
+      WHERE UPPER(cp.part_number) = UPPER($1)
+    `, [partNumber]);
+
+    if (partResult.rows.length === 0) {
+      return res.json({
+        success: true,
+        found: false,
+        message: 'Número de parte no encontrado',
+        campaigns: []
+      });
+    }
+
+    const part = partResult.rows[0];
+
+    // Get active campaigns for this part
+    const campaignsResult = await query(`
+      SELECT
+        mc.id as campaign_id,
+        mc.campaign_number,
+        mc.title,
+        mc.status,
+        mc.disposition,
+        mc.description,
+        dt.name as defect_name,
+        dt.code as defect_code,
+        sev.name as severity_name,
+        sev.color as severity_color,
+        mc.qty_inspected,
+        mc.qty_ok,
+        mc.qty_nok,
+        mc.qty_scrap,
+        mc.qty_rework,
+        mc.qty_use_as_is,
+        mc.qty_return,
+        mc.created_at
+      FROM mrb_campaign_parts mcp
+      JOIN mrb_campaigns mc ON mcp.mrb_campaign_id = mc.id
+      LEFT JOIN defect_types dt ON mc.severity_id = dt.id
+      LEFT JOIN inspection_severities sev ON mc.severity_id = sev.id
+      WHERE mcp.part_id = $1
+        AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+      ORDER BY sev.level DESC NULLS LAST, mc.campaign_number
+    `, [part.id]);
+
+    res.json({
+      success: true,
+      found: true,
+      part: transformToCamelCase(part),
+      campaigns: transformToCamelCase(campaignsResult.rows)
+    });
+  } catch (error) {
+    console.error('Error fetching campaigns by part number:', error);
+    res.status(500).json({ success: false, message: 'Error fetching campaigns' });
+  }
+});
+
+// Get parts with multiple active campaigns
+router.get('/parts-multi-campaign', authenticateToken, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT * FROM v_parts_multi_campaign
+      WHERE active_campaigns_count > 0
+      ORDER BY active_campaigns_count DESC, part_number
+    `);
+
+    res.json({
+      success: true,
+      parts: transformToCamelCase(result.rows)
+    });
+  } catch (error) {
+    console.error('Error fetching parts with multi campaigns:', error);
+    res.status(500).json({ success: false, message: 'Error fetching parts' });
+  }
+});
+
+// Add part to campaign (for linking existing parts to campaigns)
+router.post('/:id/add-part', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { partId } = req.body;
+
+  try {
+    // Check if already linked
+    const existing = await query(
+      'SELECT 1 FROM mrb_campaign_parts WHERE mrb_campaign_id = $1 AND part_id = $2',
+      [id, partId]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.json({ success: true, message: 'Parte ya vinculada a esta campaña' });
+    }
+
+    // Add the link
+    await query(
+      'INSERT INTO mrb_campaign_parts (mrb_campaign_id, part_id) VALUES ($1, $2)',
+      [id, partId]
+    );
+
+    // Also update parts_list JSONB for backwards compatibility
+    const partInfo = await query(
+      'SELECT id, part_number, part_name FROM client_parts WHERE id = $1',
+      [partId]
+    );
+
+    if (partInfo.rows.length > 0) {
+      const part = partInfo.rows[0];
+      await query(`
+        UPDATE mrb_campaigns
+        SET parts_list = COALESCE(parts_list, '[]'::jsonb) || $2::jsonb,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [id, JSON.stringify([{
+        partId: part.id,
+        partNumber: part.part_number,
+        partName: part.part_name
+      }])]);
+    }
+
+    res.json({ success: true, message: 'Parte agregada a la campaña' });
+  } catch (error) {
+    console.error('Error adding part to campaign:', error);
+    res.status(500).json({ success: false, message: 'Error adding part' });
+  }
+});
+
+// Remove part from campaign
+router.delete('/:id/remove-part/:partId', authenticateToken, async (req, res) => {
+  const { id, partId } = req.params;
+
+  try {
+    await query(
+      'DELETE FROM mrb_campaign_parts WHERE mrb_campaign_id = $1 AND part_id = $2',
+      [id, partId]
+    );
+
+    // Also update parts_list JSONB
+    await query(`
+      UPDATE mrb_campaigns
+      SET parts_list = (
+        SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+        FROM jsonb_array_elements(parts_list) elem
+        WHERE (elem->>'partId')::int != $2
+      ),
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [id, partId]);
+
+    res.json({ success: true, message: 'Parte removida de la campaña' });
+  } catch (error) {
+    console.error('Error removing part from campaign:', error);
+    res.status(500).json({ success: false, message: 'Error removing part' });
+  }
+});
+
+// ============================================================================
+// MRB BUFFER ENDPOINTS (Material QUARANTINE sin campaña)
+// ============================================================================
+
+// GET /mrb/buffer - Lista de defectos en buffer MRB
+router.get('/buffer', authenticateToken, async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM v_mrb_buffer');
+    res.json({
+      success: true,
+      data: transformToCamelCase(result.rows)
+    });
+  } catch (error) {
+    console.error('Error fetching MRB buffer:', error);
+    res.status(500).json({ success: false, message: 'Error fetching MRB buffer' });
+  }
+});
+
+// GET /mrb/buffer/summary - Resumen de buffer por área responsable
+router.get('/buffer/summary', authenticateToken, async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM v_mrb_buffer_summary');
+    res.json({
+      success: true,
+      data: transformToCamelCase(result.rows)
+    });
+  } catch (error) {
+    console.error('Error fetching MRB buffer summary:', error);
+    res.status(500).json({ success: false, message: 'Error fetching MRB buffer summary' });
+  }
+});
+
+// PATCH /mrb/buffer/:id/assign-department - Asignar departamento responsable
+router.patch('/buffer/:id/assign-department', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { departmentId } = req.body;
+
+  try {
+    // Validar que el departamento existe
+    if (departmentId) {
+      const deptCheck = await query('SELECT id FROM departments WHERE id = $1', [departmentId]);
+      if (deptCheck.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'Departamento no encontrado' });
+      }
+    }
+
+    const result = await query(`
+      UPDATE defect_entries_v2
+      SET department_id = $1,
+          mrb_received_at = COALESCE(mrb_received_at, CURRENT_TIMESTAMP)
+      WHERE id = $2 AND repair_status = 'QUARANTINE'
+      RETURNING id
+    `, [departmentId || null, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Defecto no encontrado o no está en QUARANTINE'
+      });
+    }
+
+    res.json({ success: true, message: 'Departamento asignado correctamente' });
+  } catch (error) {
+    console.error('Error assigning department:', error);
+    res.status(500).json({ success: false, message: 'Error al asignar departamento' });
+  }
+});
+
+// PATCH /mrb/buffer/:id/assign-area - DEPRECATED, usar assign-department
+router.patch('/buffer/:id/assign-area', authenticateToken, async (req, res) => {
+  res.status(410).json({ success: false, message: 'Endpoint deprecated. Use /assign-department instead' });
+});
+
+// PATCH /mrb/buffer/:id/assign-campaign - Asignar defecto a campaña MRB
+router.patch('/buffer/:id/assign-campaign', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { campaignId } = req.body;
+
+  if (!campaignId) {
+    return res.status(400).json({ success: false, message: 'campaignId es requerido' });
+  }
+
+  try {
+    // Verificar que la campaña existe y está activa
+    const campaign = await query(
+      `SELECT id, status FROM mrb_campaigns WHERE id = $1`,
+      [campaignId]
+    );
+
+    if (campaign.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+
+    if (!['ABIERTA', 'EN_PROCESO'].includes(campaign.rows[0].status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La campaña no está activa'
+      });
+    }
+
+    // Asignar defecto a la campaña
+    const result = await query(`
+      UPDATE defect_entries_v2
+      SET mrb_campaign_id = $1,
+          mrb_received_at = COALESCE(mrb_received_at, CURRENT_TIMESTAMP)
+      WHERE id = $2 AND repair_status = 'QUARANTINE'
+      RETURNING id
+    `, [campaignId, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Defecto no encontrado o no está en QUARANTINE'
+      });
+    }
+
+    res.json({ success: true, message: 'Defecto asignado a campaña MRB' });
+  } catch (error) {
+    console.error('Error assigning campaign:', error);
+    res.status(500).json({ success: false, message: 'Error assigning campaign' });
+  }
+});
+
+// POST /mrb/buffer/batch-assign-campaign - Asignar múltiples defectos a campaña
+router.post('/buffer/batch-assign-campaign', authenticateToken, async (req, res) => {
+  const { defectIds, campaignId } = req.body;
+
+  if (!defectIds || !Array.isArray(defectIds) || defectIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'defectIds es requerido' });
+  }
+
+  if (!campaignId) {
+    return res.status(400).json({ success: false, message: 'campaignId es requerido' });
+  }
+
+  try {
+    const result = await query(`
+      UPDATE defect_entries_v2
+      SET mrb_campaign_id = $1,
+          mrb_received_at = COALESCE(mrb_received_at, CURRENT_TIMESTAMP)
+      WHERE id = ANY($2::int[]) AND repair_status = 'QUARANTINE'
+      RETURNING id
+    `, [campaignId, defectIds]);
+
+    res.json({
+      success: true,
+      message: `${result.rows.length} defecto(s) asignado(s) a campaña`,
+      assignedCount: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error batch assigning campaign:', error);
+    res.status(500).json({ success: false, message: 'Error batch assigning campaign' });
+  }
+});
+
+// ============================================================================
+// MRB EXPORT ENDPOINT - Datos completos para Excel
+// ============================================================================
+
+router.get('/export', authenticateToken, async (req, res) => {
+  try {
+    const { start_date, end_date, department_id, status } = req.query;
+
+    // Construir condiciones de filtro
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (start_date) {
+      conditions.push(`mc.created_at >= $${paramIndex}::date`);
+      params.push(start_date);
+      paramIndex++;
+    }
+    if (end_date) {
+      conditions.push(`mc.created_at <= ($${paramIndex}::date + interval '1 day')`);
+      params.push(end_date);
+      paramIndex++;
+    }
+    if (department_id) {
+      conditions.push(`mc.department_id = $${paramIndex}`);
+      params.push(parseInt(department_id));
+      paramIndex++;
+    }
+    if (status) {
+      conditions.push(`mc.status = $${paramIndex}`);
+      params.push(status);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    // 1. Todas las campañas MRB con información completa
+    const campaignsQuery = `
+      SELECT
+        mc.campaign_number,
+        mc.title,
+        mc.status,
+        c.name AS client_name,
+        p.project_number,
+        p.project_name,
+        cp.part_number,
+        cp.part_name,
+        dep.name AS department,
+        sev.name AS severity,
+        mc.defect_description,
+        mc.source_type,
+        mc.qty_nok,
+        mc.qty_scrap,
+        mc.qty_rework,
+        mc.qty_use_as_is,
+        mc.qty_return,
+        mc.qty_hold,
+        mc.scrap_cost,
+        mc.labor_cost,
+        mc.downtime_minutes,
+        mc.root_cause,
+        mc.immediate_action,
+        mc.containment_action,
+        mc.created_at,
+        mc.closed_at,
+        CONCAT(uc.first_name, ' ', uc.last_name) AS created_by,
+        CONCAT(ucl.first_name, ' ', ucl.last_name) AS closed_by,
+        CASE WHEN mc.closed_at IS NOT NULL
+          THEN EXTRACT(EPOCH FROM (mc.closed_at - mc.created_at)) / 86400
+          ELSE EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - mc.created_at)) / 86400
+        END AS days_open
+      FROM mrb_campaigns mc
+      LEFT JOIN clients c ON mc.client_id = c.id
+      LEFT JOIN projects p ON mc.project_id = p.id
+      LEFT JOIN client_parts cp ON mc.part_id = cp.id
+      LEFT JOIN departments dep ON mc.department_id = dep.id
+      LEFT JOIN inspection_severities sev ON mc.severity_id = sev.id
+      LEFT JOIN users uc ON mc.created_by = uc.id
+      LEFT JOIN users ucl ON mc.closed_by = ucl.id
+      ${whereClause}
+      ORDER BY mc.created_at DESC
+    `;
+
+    // 2. Resumen por departamento
+    const byDepartmentQuery = `
+      SELECT
+        dep.name AS department,
+        COUNT(*) AS total_campaigns,
+        SUM(CASE WHEN mc.status = 'CERRADA' THEN 1 ELSE 0 END) AS closed,
+        SUM(CASE WHEN mc.status IN ('ABIERTA', 'EN_PROCESO') THEN 1 ELSE 0 END) AS open,
+        SUM(COALESCE(mc.qty_nok, 0)) AS total_nok,
+        SUM(COALESCE(mc.qty_scrap, 0)) AS total_scrap,
+        SUM(COALESCE(mc.qty_rework, 0)) AS total_rework,
+        SUM(COALESCE(mc.scrap_cost, 0)) AS scrap_cost,
+        SUM(COALESCE(mc.labor_cost, 0)) AS labor_cost,
+        SUM(COALESCE(mc.downtime_minutes, 0)) AS total_downtime
+      FROM mrb_campaigns mc
+      LEFT JOIN departments dep ON mc.department_id = dep.id
+      ${whereClause}
+      GROUP BY dep.id, dep.name
+      ORDER BY total_campaigns DESC
+    `;
+
+    // 3. Resumen por severidad
+    const bySeverityQuery = `
+      SELECT
+        sev.name AS severity,
+        sev.code AS severity_code,
+        COUNT(*) AS total_campaigns,
+        SUM(COALESCE(mc.qty_nok, 0)) AS total_nok,
+        SUM(COALESCE(mc.qty_scrap, 0)) AS total_scrap,
+        SUM(COALESCE(mc.scrap_cost, 0)) AS scrap_cost
+      FROM mrb_campaigns mc
+      LEFT JOIN inspection_severities sev ON mc.severity_id = sev.id
+      ${whereClause}
+      GROUP BY sev.id, sev.name, sev.code
+      ORDER BY total_campaigns DESC
+    `;
+
+    // 4. Resumen por cliente
+    const byClientQuery = `
+      SELECT
+        c.name AS client,
+        COUNT(*) AS total_campaigns,
+        SUM(CASE WHEN mc.status = 'CERRADA' THEN 1 ELSE 0 END) AS closed,
+        SUM(COALESCE(mc.qty_nok, 0)) AS total_nok,
+        SUM(COALESCE(mc.qty_scrap, 0)) AS total_scrap,
+        SUM(COALESCE(mc.scrap_cost, 0) + COALESCE(mc.labor_cost, 0)) AS total_cost
+      FROM mrb_campaigns mc
+      LEFT JOIN clients c ON mc.client_id = c.id
+      ${whereClause}
+      GROUP BY c.id, c.name
+      ORDER BY total_campaigns DESC
+    `;
+
+    // 5. Resumen por parte
+    const byPartQuery = `
+      SELECT
+        cp.part_number,
+        cp.part_name,
+        c.name AS client,
+        COUNT(*) AS total_campaigns,
+        SUM(COALESCE(mc.qty_nok, 0)) AS total_nok,
+        SUM(COALESCE(mc.qty_scrap, 0)) AS total_scrap,
+        SUM(COALESCE(mc.scrap_cost, 0)) AS scrap_cost
+      FROM mrb_campaigns mc
+      LEFT JOIN client_parts cp ON mc.part_id = cp.id
+      LEFT JOIN clients c ON mc.client_id = c.id
+      ${whereClause}
+      GROUP BY cp.id, cp.part_number, cp.part_name, c.name
+      ORDER BY total_campaigns DESC
+    `;
+
+    // 6. Tendencia mensual
+    const monthlyTrendQuery = `
+      SELECT
+        TO_CHAR(mc.created_at, 'YYYY-MM') AS month,
+        COUNT(*) AS campaigns,
+        SUM(COALESCE(mc.qty_nok, 0)) AS nok,
+        SUM(COALESCE(mc.qty_scrap, 0)) AS scrap,
+        SUM(COALESCE(mc.scrap_cost, 0) + COALESCE(mc.labor_cost, 0)) AS total_cost
+      FROM mrb_campaigns mc
+      ${whereClause}
+      GROUP BY TO_CHAR(mc.created_at, 'YYYY-MM')
+      ORDER BY month DESC
+    `;
+
+    // Ejecutar todas las consultas en paralelo
+    const [campaigns, byDepartment, bySeverity, byClient, byPart, monthlyTrend] = await Promise.all([
+      query(campaignsQuery, params),
+      query(byDepartmentQuery, params),
+      query(bySeverityQuery, params),
+      query(byClientQuery, params),
+      query(byPartQuery, params),
+      query(monthlyTrendQuery, params)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        campaigns: transformToCamelCase(campaigns.rows),
+        byDepartment: transformToCamelCase(byDepartment.rows),
+        bySeverity: transformToCamelCase(bySeverity.rows),
+        byClient: transformToCamelCase(byClient.rows),
+        byPart: transformToCamelCase(byPart.rows),
+        monthlyTrend: transformToCamelCase(monthlyTrend.rows)
+      },
+      filters: {
+        startDate: start_date || null,
+        endDate: end_date || null,
+        departmentId: department_id || null,
+        status: status || null
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching MRB export data:', error);
+    res.status(500).json({ success: false, message: 'Error fetching MRB export data' });
+  }
+});
+
+// ============================================================================
+// GET /mrb/:id/tally-template - Descargar template Excel de Tally Sheet
+// ============================================================================
+router.get('/:id/tally-template', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Obtener info de la campaña
+    const campaignRes = await query(`
+      SELECT mc.*,
+             c.name as client_name,
+             p.project_number, p.project_name,
+             cp.part_number, cp.part_name,
+             s.name as severity_name,
+             dep.name as department_name,
+             u.first_name || ' ' || u.last_name as reported_by_name
+      FROM mrb_campaigns mc
+      LEFT JOIN clients c ON mc.client_id = c.id
+      LEFT JOIN projects p ON mc.project_id = p.id
+      LEFT JOIN client_parts cp ON mc.part_id = cp.id
+      LEFT JOIN inspection_severities s ON mc.severity_id = s.id
+      LEFT JOIN departments dep ON mc.department_id = dep.id
+      LEFT JOIN users u ON mc.reported_by = u.id
+      WHERE mc.id = $1
+    `, [id]);
+
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+
+    const campaign = campaignRes.rows[0];
+
+    // 2. Obtener partes de la campaña (de mrb_campaign_parts o part_id directo)
+    const partsRes = await query(`
+      SELECT DISTINCT cp.id as part_id, cp.part_number, cp.part_name FROM (
+        SELECT part_id FROM mrb_campaign_parts WHERE mrb_campaign_id = $1
+        UNION
+        SELECT part_id FROM mrb_campaigns WHERE id = $1 AND part_id IS NOT NULL
+      ) parts
+      JOIN client_parts cp ON cp.id = parts.part_id
+    `, [id]);
+    const partIds = partsRes.rows.map(r => r.part_id);
+    const partNumbers = partsRes.rows.map(r => r.part_number).join(', ');
+
+    // 3. Obtener defectos de todas las partes de la campaña (mismo orden que UI)
+    let defects = [];
+    if (partIds.length > 0) {
+      const defectsRes = await query(`
+        SELECT pdc.id, pdc.display_name, dt.id as defect_type_id, dt.code, dt.name,
+               dt.category_id, dc.name as category_name
+        FROM part_defect_config pdc
+        JOIN defect_types dt ON pdc.defect_type_id = dt.id
+        LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+        WHERE pdc.part_id = ANY($1) AND pdc.is_active = true AND dt.is_active = true
+        ORDER BY dc.display_order, dc.name, dt.display_order, dt.name
+      `, [partIds]);
+      // Eliminar duplicados manteniendo el orden
+      const seen = new Set();
+      defects = defectsRes.rows.filter(d => {
+        if (seen.has(d.defect_type_id)) return false;
+        seen.add(d.defect_type_id);
+        return true;
+      });
+    }
+
+    // Fallback: si no hay parte o no hay defectos configurados, usar catálogo general
+    if (defects.length === 0) {
+      const defectsRes = await query(`
+        SELECT dt.id as defect_type_id, NULL as display_name, dt.code, dt.name,
+               dt.category_id, dc.name as category_name
+        FROM defect_types dt
+        LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+        WHERE dt.is_active = true
+        ORDER BY dc.display_order, dt.display_order, dt.name
+      `);
+      defects = defectsRes.rows;
+    }
+
+    // Agrupar y ordenar exactamente como el frontend
+    const grouped = defects.reduce((acc, d) => {
+      const catId = d.category_id || 0;
+      const existing = acc.find(g => g.categoryId === catId);
+      if (existing) {
+        existing.defects.push(d);
+      } else {
+        acc.push({
+          categoryId: catId,
+          categoryName: d.category_name || 'Sin Categoría',
+          defects: [d]
+        });
+      }
+      return acc;
+    }, []);
+    // Ordenar grupos alfabéticamente por nombre (como localeCompare del frontend)
+    grouped.sort((a, b) => (a.categoryName || '').localeCompare(b.categoryName || ''));
+
+    // 3. Crear workbook
+    const wb = XLSX.utils.book_new();
+
+    // ========== HOJA 1: CONTEO DE DEFECTOS ==========
+    const sheet1Data = [];
+
+    // Header con info de campaña
+    sheet1Data.push(['TALLY SHEET - CONTEO DE DEFECTOS']);
+    sheet1Data.push([]);
+    sheet1Data.push(['Campaña:', campaign.campaign_number]);
+    sheet1Data.push(['Título:', campaign.title]);
+    sheet1Data.push(['Cliente:', campaign.client_name || '-']);
+    sheet1Data.push(['Proyecto:', campaign.project_name || '-']);
+    sheet1Data.push(['No. de Parte:', partNumbers || campaign.part_number || '-']);
+    sheet1Data.push(['Lote / Batch:', campaign.lot_number || 'N/A']);
+    sheet1Data.push(['Severidad:', campaign.severity_name || 'N/A']);
+    sheet1Data.push(['Departamento:', campaign.department_name || '-']);
+    sheet1Data.push(['Emitida por:', campaign.reported_by_name || '-']);
+    sheet1Data.push(['Fecha:', new Date().toLocaleDateString('es-MX'), '', 'Turno:', '___________']);
+    sheet1Data.push([]);
+    sheet1Data.push([]);
+
+    // Header de tabla - una sola fila
+    sheet1Data.push([
+      'DEFECTO',
+      'REWORK',
+      'SCRAP',
+      'HOLD',
+      'RETURN',
+      'UAI',
+      'TOTAL',
+      'ALTA', 'MINOR', 'MAJOR', 'CRITICAL'
+    ]);
+
+    // Iterar grupos ordenados alfabéticamente (igual que el frontend)
+    const fill = '////////';
+    grouped.forEach(group => {
+      // Fila de categoría con relleno visual
+      sheet1Data.push([group.categoryName, fill, fill, fill, fill, fill, fill, fill, fill, fill, fill]);
+      // Defectos de la categoría
+      group.defects.forEach(d => {
+        const defectName = d.display_name || d.name || d.code;
+        sheet1Data.push([
+          defectName,
+          '', // REWORK
+          '', // SCRAP
+          '', // HOLD
+          '', // RETURN
+          '', // UAI
+          '', // TOTAL
+          '', '', '', '' // Severidades
+        ]);
+      });
+    });
+
+    // Fila de totales con relleno visual
+    sheet1Data.push([
+      'TOTAL NOK',
+      fill, fill, fill, fill, fill, fill,
+      fill, fill, fill, fill
+    ]);
+
+    const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+
+    // Ajustar anchos de columna
+    ws1['!cols'] = [
+      { wch: 25 }, // Defecto
+      { wch: 10 }, // REWORK
+      { wch: 10 }, // SCRAP
+      { wch: 10 }, // HOLD
+      { wch: 10 }, // RETURN
+      { wch: 10 }, // UAI
+      { wch: 10 }, // TOTAL
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 } // Severidades
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws1, 'Conteo Defectos');
+
+    // ========== HOJA 2: RESULTADO POR SERIAL ==========
+    const sheet2Data = [];
+
+    // Header con info de campaña
+    sheet2Data.push(['TALLY SHEET - RESULTADO POR SERIAL']);
+    sheet2Data.push([]);
+    sheet2Data.push(['Campaña:', campaign.campaign_number]);
+    sheet2Data.push(['Título:', campaign.title]);
+    sheet2Data.push(['Cliente:', campaign.client_name || '-']);
+    sheet2Data.push(['Proyecto:', campaign.project_name || '-']);
+    sheet2Data.push(['No. de Parte:', campaign.part_number || '-']);
+    sheet2Data.push(['Lote / Batch:', campaign.lot_number || '-']);
+    sheet2Data.push(['Severidad:', campaign.severity_name || '-']);
+    sheet2Data.push(['Departamento:', campaign.department_name || '-']);
+    sheet2Data.push(['Emitida por:', campaign.reported_by_name || '-']);
+    sheet2Data.push(['Fecha:', new Date().toLocaleDateString('es-MX')]);
+    sheet2Data.push([]);
+    sheet2Data.push([]);
+
+    // Tabla de seriales
+    sheet2Data.push(['SERIAL', 'NUMERO DE PARTE', 'OK/NOK', 'NOTAS']);
+
+    // Agregar filas vacías para llenar
+    for (let i = 0; i < 100; i++) {
+      sheet2Data.push(['', '', '', '']);
+    }
+
+    const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+
+    // Ajustar anchos de columna
+    ws2['!cols'] = [
+      { wch: 25 }, // Serial
+      { wch: 20 }, // Numero de Parte
+      { wch: 10 }, // OK/NOK
+      { wch: 40 }  // Notas
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws2, 'Seriales');
+
+    // 4. Generar buffer y enviar
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="TallySheet_${campaign.campaign_number}.xlsx"`);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Error generating tally template:', error);
+    res.status(500).json({ success: false, message: 'Error generando template' });
+  }
+});
+
+// ============================================================================
+// POST /mrb/:id/import-tally - Importar Tally Sheet completado
+// ============================================================================
+router.post('/:id/import-tally', authenticateToken, multer({ storage: multer.memoryStorage() }).single('file'), async (req, res) => {
+  const { id } = req.params;
+  const { shiftId } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'Archivo requerido' });
+  }
+
+  try {
+    // 1. Verificar campaña activa
+    const campaignRes = await query(`
+      SELECT mc.*, cp.part_number
+      FROM mrb_campaigns mc
+      LEFT JOIN client_parts cp ON mc.part_id = cp.id
+      WHERE mc.id = $1 AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+    `, [id]);
+
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada o no activa' });
+    }
+
+    const campaign = campaignRes.rows[0];
+
+    // 2. Leer Excel
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+
+    // 3. Procesar Hoja 1: Conteo de defectos
+    const sheet1 = workbook.Sheets[workbook.SheetNames[0]];
+    const data1 = XLSX.utils.sheet_to_json(sheet1, { header: 1 });
+
+    // Buscar fila de encabezado de tabla (DEFECTO, REWORK, SCRAP...)
+    let defectStartRow = -1;
+    for (let i = 0; i < data1.length; i++) {
+      if (data1[i][0] === 'DEFECTO' && data1[i][1] === 'REWORK') {
+        defectStartRow = i + 1;
+        break;
+      }
+    }
+
+    const defectCounts = { REWORK: 0, SCRAP: 0, HOLD: 0, RETURN: 0, USE_AS_IS: 0 };
+
+    if (defectStartRow > 0) {
+      for (let i = defectStartRow; i < data1.length; i++) {
+        const row = data1[i];
+        if (!row[0] || row[0] === 'TOTAL') break;
+
+        defectCounts.REWORK += parseInt(row[1]) || 0;
+        defectCounts.SCRAP += parseInt(row[2]) || 0;
+        defectCounts.HOLD += parseInt(row[3]) || 0;
+        defectCounts.RETURN += parseInt(row[4]) || 0;
+        defectCounts.USE_AS_IS += parseInt(row[5]) || 0;
+      }
+    }
+
+    // 4. Procesar Hoja 2: Seriales
+    const sheet2 = workbook.Sheets[workbook.SheetNames[1]];
+    const data2 = XLSX.utils.sheet_to_json(sheet2, { header: 1 });
+
+    // Buscar fila de encabezado (SERIAL, NUMERO DE PARTE, OK/NOK)
+    let serialStartRow = -1;
+    for (let i = 0; i < data2.length; i++) {
+      if (data2[i][0] === 'SERIAL' && data2[i][2] === 'OK/NOK') {
+        serialStartRow = i + 1;
+        break;
+      }
+    }
+
+    const serialResults = { ok: [], nok: [], errors: [] };
+    const campaignParts = campaign.parts_list ? JSON.parse(campaign.parts_list) : [];
+    const hasParts = campaignParts.length > 0 || campaign.part_number;
+
+    if (serialStartRow > 0) {
+      for (let i = serialStartRow; i < data2.length; i++) {
+        const row = data2[i];
+        const serial = String(row[0] || '').trim();
+        const partNumber = String(row[1] || '').trim();
+        const result = String(row[2] || '').toUpperCase().trim();
+        const notes = String(row[3] || '').trim();
+
+        if (!serial) continue;
+
+        // Validar parte si hay partes configuradas
+        if (hasParts && partNumber) {
+          const validPart = campaignParts.some(p => p.partNumber === partNumber) ||
+                           campaign.part_number === partNumber;
+          if (!validPart) {
+            serialResults.errors.push({ serial, partNumber, reason: 'Parte no corresponde a campaña' });
+            continue;
+          }
+        }
+
+        if (result === 'OK') {
+          serialResults.ok.push({ serial, partNumber, notes });
+        } else if (result === 'NOK') {
+          serialResults.nok.push({ serial, partNumber, notes });
+        }
+      }
+    }
+
+    // 5. Actualizar campaña con conteos
+    const totalNok = defectCounts.REWORK + defectCounts.SCRAP + defectCounts.HOLD +
+                     defectCounts.RETURN + defectCounts.USE_AS_IS;
+    const totalOk = serialResults.ok.length;
+    const totalInspected = totalOk + serialResults.nok.length;
+
+    await query(`
+      UPDATE mrb_campaigns SET
+        qty_inspected = COALESCE(qty_inspected, 0) + $1,
+        qty_ok = COALESCE(qty_ok, 0) + $2,
+        qty_nok = COALESCE(qty_nok, 0) + $3,
+        qty_rework = COALESCE(qty_rework, 0) + $4,
+        qty_scrap = COALESCE(qty_scrap, 0) + $5,
+        qty_hold = COALESCE(qty_hold, 0) + $6,
+        qty_return = COALESCE(qty_return, 0) + $7,
+        qty_use_as_is = COALESCE(qty_use_as_is, 0) + $8,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $9
+    `, [
+      totalInspected,
+      totalOk,
+      totalNok,
+      defectCounts.REWORK,
+      defectCounts.SCRAP,
+      defectCounts.HOLD,
+      defectCounts.RETURN,
+      defectCounts.USE_AS_IS,
+      id
+    ]);
+
+    // 6. Registrar seriales OK
+    for (const item of serialResults.ok) {
+      await query(`
+        INSERT INTO mrb_ok_entries (mrb_campaign_id, part_id, shift_id, inspector_id, quantity, serial_number, notes, inspection_date)
+        VALUES ($1, $2, $3, $4, 1, $5, $6, CURRENT_DATE)
+      `, [id, campaign.part_id, shiftId || null, req.user.id, item.serial, item.notes || null]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Tally importado correctamente',
+      summary: {
+        defectCounts,
+        totalOk: serialResults.ok.length,
+        totalNok: serialResults.nok.length,
+        errors: serialResults.errors
+      }
+    });
+
+  } catch (error) {
+    console.error('Error importing tally:', error);
+    res.status(500).json({ success: false, message: 'Error importando tally' });
   }
 });
 

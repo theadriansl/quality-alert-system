@@ -15,6 +15,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { useTheme } from '../../../context/ThemeContext';
+import { useLanguage } from '../../../context/LanguageContext';
 
 // Colores para las graficas
 const COLORS = {
@@ -67,9 +68,20 @@ const ChartWidget = ({
   colorMap = null, // Custom color mapping for categories
   showLegend = true,
   showGrid = true,
-  height = 250
+  height = 250,
+  valueSuffix = ''
 }) => {
   const { theme: t } = useTheme();
+  const { language } = useLanguage();
+
+  const tr = {
+    en: {
+      unsupportedChartType: 'Unsupported chart type'
+    },
+    es: {
+      unsupportedChartType: 'Tipo de gráfica no soportado'
+    }
+  }[language] || {};
 
   const getColor = (entry, index) => {
     // Check for status colors
@@ -184,66 +196,65 @@ const ChartWidget = ({
     );
   }
 
-  // Horizontal Bar Chart
+  // Horizontal Bar Chart — progress bar style
   if (type === 'horizontalBar') {
+    const maxVal = Math.max(...data.map(d => Number(d[dataKey]) || 0), 1);
     return (
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 5, right: 20, left: 60, bottom: 5 }}
-        >
-          {showGrid && <CartesianGrid strokeDasharray="3 3" stroke={t.border} horizontal={false} />}
-          <XAxis type="number" tick={{ fontSize: 12 }} />
-          <YAxis
-            type="category"
-            dataKey={nameKey}
-            tick={{ fontSize: 11 }}
-            tickLine={false}
-            axisLine={{ stroke: t.border }}
-            width={80}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey={dataKey} radius={[0, 4, 4, 0]}>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={getColor(entry, index)} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px', padding: '0 2px' }}>
+        {data.map((entry, index) => {
+          const val = Number(entry[dataKey]) || 0;
+          const pct = Math.round(val / maxVal * 100);
+          const color = getColor(entry, index);
+          const label = entry[nameKey] || '';
+          return (
+            <div key={index}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                <span style={{ color: t.text }}>{label}</span>
+                <span style={{ fontWeight: '600', color }}>{val}{valueSuffix}</span>
+              </div>
+              <div style={{ height: '6px', backgroundColor: t.border, borderRadius: '3px' }}>
+                <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, backgroundColor: color, borderRadius: '3px', transition: 'width 0.4s' }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     );
   }
 
   // Pie Chart
   if (type === 'pie' || type === 'donut') {
     const innerRadius = type === 'donut' ? '50%' : 0;
-
     return (
       <ResponsiveContainer width="100%" height={height}>
         <PieChart>
           <Pie
             data={data}
-            cx="50%"
+            cx="38%"
             cy="50%"
             innerRadius={innerRadius}
             outerRadius="80%"
             dataKey={dataKey}
             nameKey={nameKey}
-            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-            labelLine={{ stroke: t.textDim, strokeWidth: 1 }}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={getColor(entry, index)} />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          {showLegend && <Legend />}
+          <Legend
+            layout="vertical"
+            align="right"
+            verticalAlign="middle"
+            wrapperStyle={{ fontSize: '11px', lineHeight: '22px' }}
+            formatter={(value) => value.length > 14 ? value.slice(0, 13) + '…' : value}
+          />
         </PieChart>
       </ResponsiveContainer>
     );
   }
 
-  return <div>Tipo de grafica no soportado: {type}</div>;
+  return <div>{tr.unsupportedChartType}: {type}</div>;
 };
 
 export default ChartWidget;

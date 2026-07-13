@@ -8,7 +8,7 @@ import { useTheme } from '../../../context/ThemeContext';
  * Shows a list of ECRs with key information
  * Admin users can delete ECRs
  */
-const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete }) => {
+const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete, language = 'es' }) => {
   const { theme: t } = useTheme();
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(null);
@@ -119,22 +119,33 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
   };
 
   const getStatusLabel = (status) => {
-    const labels = {
+    const labels = language === 'es' ? {
       draft: 'Borrador',
       submitted: 'Enviado',
       pending_approval: 'En Aprobacion',
       approved: 'Aprobado',
-      rejected: 'Rechazado',
+      rejected: 'Devuelto',
       closed: 'Cerrado'
+    } : {
+      draft: 'Draft',
+      submitted: 'Submitted',
+      pending_approval: 'Pending Approval',
+      approved: 'Approved',
+      rejected: 'Returned',
+      closed: 'Closed'
     };
     return labels[status] || status;
   };
 
   const getCategoryLabel = (category) => {
-    const labels = {
+    const labels = language === 'es' ? {
       emergency: 'Emergencia',
       planned: 'Planeado',
       continuous_improvement: 'Mejora Continua'
+    } : {
+      emergency: 'Emergency',
+      planned: 'Planned',
+      continuous_improvement: 'Continuous Improvement'
     };
     return labels[category] || category || '-';
   };
@@ -142,7 +153,7 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     try {
-      return new Date(dateStr).toLocaleDateString('es-MX', {
+      return new Date(dateStr).toLocaleDateString(language === 'es' ? 'es-MX' : 'en-US', {
         day: '2-digit',
         month: 'short',
         year: 'numeric'
@@ -156,7 +167,9 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
     e.stopPropagation(); // Prevent row click navigation
 
     const confirmed = window.confirm(
-      `¿Eliminar ${ecr.ecrNumber}?\n\n"${ecr.changeTitle || 'Sin titulo'}"\n\nEsta accion no se puede deshacer.`
+      language === 'es'
+        ? `¿Eliminar ${ecr.ecrNumber}?\n\n"${ecr.changeTitle || 'Sin titulo'}"\n\nEsta accion no se puede deshacer.`
+        : `Delete ${ecr.ecrNumber}?\n\n"${ecr.changeTitle || 'No title'}"\n\nThis action cannot be undone.`
     );
 
     if (!confirmed) return;
@@ -168,7 +181,7 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
       }
     } catch (error) {
       console.error('Error deleting ECR:', error);
-      alert('Error al eliminar el ECR');
+      alert(language === 'es' ? 'Error al eliminar el ECR' : 'Error deleting ECR');
     } finally {
       setDeleting(null);
     }
@@ -196,7 +209,7 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
                 backgroundColor: isComplete ? stage.color : t.bgPanel,
                 color: isComplete ? 'white' : t.textDim
               }}
-              title={`ECR-${stage.label}: ${isComplete ? 'Completada' : 'Pendiente'}`}
+              title={`ECR-${stage.label}: ${isComplete ? (language === 'es' ? 'Completada' : 'Completed') : (language === 'es' ? 'Pendiente' : 'Pending')}`}
             >
               {isComplete ? '' : stage.label}
             </div>
@@ -207,11 +220,11 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
   };
 
   if (loading) {
-    return <div style={styles.loadingState}>Cargando ECRs...</div>;
+    return <div style={styles.loadingState}>{language === 'es' ? 'Cargando ECRs...' : 'Loading ECRs...'}</div>;
   }
 
   if (!ecrs || ecrs.length === 0) {
-    return <div style={styles.emptyState}>No hay ECRs registrados</div>;
+    return <div style={styles.emptyState}>{language === 'es' ? 'No hay ECRs registrados' : 'No ECRs registered'}</div>;
   }
 
   return (
@@ -220,14 +233,14 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
         <thead>
           <tr>
             <th style={styles.th}>ECR #</th>
-            <th style={styles.th}>Titulo</th>
-            <th style={styles.th}>Solicitante</th>
-            <th style={styles.th}>Categoria</th>
-            <th style={styles.th}>F. Planeada</th>
-            <th style={styles.th}>F. Efectiva</th>
-            <th style={styles.th}>Etapas</th>
+            <th style={styles.th}>{language === 'es' ? 'Titulo' : 'Title'}</th>
+            <th style={styles.th}>{language === 'es' ? 'Solicitante' : 'Requestor'}</th>
+            <th style={styles.th}>{language === 'es' ? 'Categoria' : 'Category'}</th>
+            <th style={styles.th}>{language === 'es' ? 'F. Planeada' : 'Planned Date'}</th>
+            <th style={styles.th}>{language === 'es' ? 'F. Efectiva' : 'Effective Date'}</th>
+            <th style={styles.th}>{language === 'es' ? 'Etapas' : 'Stages'}</th>
             <th style={styles.th}>Status</th>
-            {isAdmin && <th style={{ ...styles.th, ...styles.actionsCell }}>Acciones</th>}
+            {isAdmin && <th style={{ ...styles.th, ...styles.actionsCell }}>{language === 'es' ? 'Acciones' : 'Actions'}</th>}
           </tr>
         </thead>
         <tbody>
@@ -247,7 +260,7 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
                   {ecr.ecrNumber}
                 </td>
                 <td style={{ ...styles.td, ...styles.title }} title={ecr.changeTitle}>
-                  {ecr.changeTitle || 'Sin titulo'}
+                  {ecr.changeTitle || (language === 'es' ? 'Sin titulo' : 'No title')}
                 </td>
                 <td style={styles.td}>
                   {ecr.requestorDepartment || ecr.requestorName || '-'}
@@ -292,7 +305,7 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete 
                           e.currentTarget.style.backgroundColor = '#fee2e2';
                         }
                       }}
-                      title="Eliminar ECR"
+                      title={language === 'es' ? 'Eliminar ECR' : 'Delete ECR'}
                     >
                       <Trash2 size={14} />
                       {isDeleting ? '...' : ''}

@@ -127,6 +127,55 @@ WITH RECURSIVE descendants AS (
 
 **Archivo:** `backend/endpoints/specCatalogEndpoints.js`
 
+### 11. Checklist de Especificaciones con Auto-Defectos (NUEVO)
+
+**Problema:** No había forma de lanzar un checklist de specs y que las fallas generen defectos automáticamente.
+
+**Solución completa:**
+
+```
+[PIEZA OK] o [+AGREGAR DEFECTO]
+              ↓
+    ¿Parte tiene specs configuradas?
+              ↓
+         SI → Modal Warning
+              "Esta parte tiene N especificaciones"
+              ↓
+       [OMITIR]     [VERIFICAR]
+          ↓              ↓
+    Registra         Modal Checklist
+    SKIPPED          OK/NOK por spec
+    con nota            ↓
+    "Omitido        Por cada NOK:
+    por UserX"      → Auto-crea defecto
+                    → Tipo: SPEC_FAILURE
+                    → Incluye límites y valor medido
+```
+
+**Frontend - DefectCapture.js:**
+- `loadPartSpecs()` - Carga specs al seleccionar parte
+- `handlePiezaOkClick()` - Intercepta botón, verifica specs
+- `handleAgregarDefectoClick()` - Intercepta botón defecto
+- `handleSkipChecklist()` - Omite con registro SKIPPED
+- `handleOpenChecklist()` - Abre modal checklist
+- `handleChecklistSubmit()` - Guarda y auto-crea defectos
+- Modal Warning (Skip/Verificar)
+- Modal Checklist (OK/NOK con valor medido para dimensionales)
+
+**Backend - defectAdminEndpoints.js:**
+- `POST /defects-v2/from-spec` - Crea defecto desde spec NOK
+  - Auto-crea tipo defecto SPEC_FAILURE si no existe
+  - Severidad crítica si spec es crítica
+  - Incluye límites y valor medido en notas
+
+### 12. Iconos Removidos de Lista Especificaciones
+
+**Problema:** Los emojis en títulos de sección se veían poco profesionales.
+
+**Solución:** Removidos emojis de "Dimensionales", "Cualitativas", "Componentes BOM"
+
+**Archivo:** `frontend/src/components/SpecCatalogTab.js`
+
 ---
 
 ## ARCHIVOS MODIFICADOS HOY
@@ -136,14 +185,15 @@ WITH RECURSIVE descendants AS (
 |---------|---------|
 | `endpoints/specCatalogEndpoints.js` | BOM recursivo, fix is_active→active |
 | `endpoints/clientPartsEndpoints.js` | Global BOM con jerarquía y _depth |
+| `endpoints/defectAdminEndpoints.js` | **NUEVO:** POST /from-spec para auto-defectos |
 
 ### Frontend
 | Archivo | Cambios |
 |---------|---------|
-| `pages/DefectCapture.js` | Reset campos, specs a BD, filtros parte |
+| `pages/DefectCapture.js` | Reset campos, specs a BD, filtros parte, **Checklist specs con modales** |
 | `pages/ClientDetail.js` | Jerarquía BOM, Parent Part en crear |
 | `pages/ClientsList.js` | Global BOM con jerarquía |
-| `components/SpecCatalogTab.js` | Filtros cliente/proyecto, modal cualitativas |
+| `components/SpecCatalogTab.js` | Filtros cliente/proyecto, modal cualitativas, sin emojis |
 
 ---
 
@@ -165,17 +215,72 @@ WITH RECURSIVE descendants AS (
 
 ---
 
+## TESTING PENDIENTE - CHECKLIST DE SPECS
+
+### Cómo Probar el Checklist de Especificaciones
+
+**Prerequisitos:**
+1. Tener una parte con especificaciones configuradas
+   - Ir a Configuration > Defect Administration > Tab "Especificaciones"
+   - Seleccionar un cliente y parte
+   - Agregar specs (Dimensionales o Cualitativas)
+
+**Pasos de prueba:**
+
+1. **Ir a Defect Capture** (http://localhost:3000/defect-capture)
+
+2. **Configurar contexto:**
+   - Seleccionar Estación
+   - Seleccionar Inspector
+   - Seleccionar Turno
+   - Seleccionar Cliente → Proyecto → Parte (que tenga specs)
+   - Ingresar un Serial/Lote
+
+3. **Probar PIEZA OK con specs:**
+   - Click en "PIEZA OK"
+   - Debe aparecer modal: "Esta parte tiene N especificaciones"
+   - Probar [OMITIR] → Debe registrar y mostrar mensaje
+   - Volver a intentar y probar [VERIFICAR]
+   - Debe abrir modal de checklist
+
+4. **Probar Checklist:**
+   - Marcar algunas specs OK y algunas NOK
+   - Para dimensionales, ingresar valor medido
+   - Click [CONFIRMAR]
+   - Debe:
+     - Guardar entries en spec_inspection_entries
+     - Crear defectos automáticos por cada NOK
+     - Mostrar mensaje "N defecto(s) auto-registrado(s)"
+
+5. **Verificar en Hospital:**
+   - Ir a Defect Hospital
+   - Buscar el serial
+   - Deben aparecer los defectos auto-generados con tipo "Falla de Especificación"
+
+6. **Probar +AGREGAR DEFECTO con specs:**
+   - Llenar formulario de defecto
+   - Click en "+AGREGAR DEFECTO"
+   - Debe mostrar mismo modal de specs
+   - Completar checklist
+   - Debe registrar defecto manual + defectos auto por NOK
+
+---
+
 ## TESTING PENDIENTE
 
 | # | Test | Estado |
 |---|------|--------|
-| 1 | Flujo completo Inspector → Captura → Hospital | Pendiente |
-| 2 | Flujo completo Reparador → Reparación | Pendiente |
-| 3 | Flujo completo Liberador → Release | Pendiente |
-| 4 | CHANGE_RESPONSIBLE desde ActionBar | Pendiente |
-| 5 | ASSIGN_DEVIATION desde ActionBar | Pendiente |
-| 6 | VIEW_TRACEABILITY con búsqueda automática | Pendiente |
-| 7 | Modal de Repair muestra fotos | Pendiente |
+| 1 | **Checklist specs - PIEZA OK con Skip** | Pendiente |
+| 2 | **Checklist specs - PIEZA OK con Verificar** | Pendiente |
+| 3 | **Checklist specs - Auto-defectos por NOK** | Pendiente |
+| 4 | **Checklist specs - +AGREGAR DEFECTO** | Pendiente |
+| 5 | Flujo completo Inspector → Captura → Hospital | Pendiente |
+| 6 | Flujo completo Reparador → Reparación | Pendiente |
+| 7 | Flujo completo Liberador → Release | Pendiente |
+| 8 | CHANGE_RESPONSIBLE desde ActionBar | Pendiente |
+| 9 | ASSIGN_DEVIATION desde ActionBar | Pendiente |
+| 10 | VIEW_TRACEABILITY con búsqueda automática | Pendiente |
+| 11 | Modal de Repair muestra fotos | Pendiente |
 
 ---
 
@@ -224,14 +329,15 @@ npm start
 
 ---
 
-## PARA CONTINUAR
+## PARA CONTINUAR MAÑANA
 
-1. **Testing flujos completos** - Inspector, Reparador, Liberador
-2. **Verificar acciones ActionBar** - CHANGE_RESPONSIBLE, ASSIGN_DEVIATION, VIEW_TRACEABILITY
-3. **Pendientes varios** - Location Codes, PDF Export, Traducciones
+1. **Probar Checklist de Specs** - Seguir pasos de testing arriba
+2. **Verificar auto-defectos** - Que aparezcan en Hospital con info correcta
+3. **Testing flujos completos** - Inspector, Reparador, Liberador
+4. **Pendientes varios** - Location Codes, PDF Export, Traducciones
 
 ---
 
-*Sesión: 3 de Julio 2026*
-*Mejoras en reset de campos, specs a BD, jerarquía BOM visible, filtros en Defect Admin*
-*Modal cualitativas separado de dimensionales*
+*Sesión: 3 de Julio 2026 (actualizado noche)*
+*Mejoras principales: Checklist de Especificaciones con auto-generación de defectos por NOK*
+*Reset de campos, specs a BD, jerarquía BOM visible, filtros en Defect Admin*

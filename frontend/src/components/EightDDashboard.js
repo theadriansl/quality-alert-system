@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import CustomDashboard from './CustomDashboard';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -99,6 +100,155 @@ const HBar = ({ label, value, max, color, fmt }) => {
 };
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
+
+// TAB 0: Resumen Ejecutivo
+const TabResumen = ({ data, derived }) => {
+  const { theme: t } = useTheme();
+  const tooltipStyle = { backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px', color: t.text };
+
+  // Risk Score (from TabRiesgo)
+  const riskScore = Math.min(100, Math.round(
+    (derived.overdueCount / Math.max(derived.total, 1)) * 30 +
+    (derived.highSevWithoutD4 / Math.max(data.highSeverity, 1)) * 30 +
+    (derived.stagnantCount / Math.max(derived.total, 1)) * 20 +
+    (Math.min(data.totalRevisions || 0, 5) / 5) * 20
+  ));
+  const riskLabel = riskScore >= 60 ? 'ALTO' : riskScore >= 35 ? 'MEDIO' : 'BAJO';
+  const riskColor = riskScore >= 60 ? '#ef4444' : riskScore >= 35 ? '#C77700' : '#2E7D32';
+  const riskBg = riskScore >= 60 ? '#fee2e2' : riskScore >= 35 ? '#fef3c7' : '#dcfce7';
+
+  // SLA Color
+  const slaColor = data.slaCompliance >= 80 ? '#2E7D32' : data.slaCompliance >= 50 ? '#C77700' : '#ef4444';
+
+  // Monthly trend with throughput (from TabVolumen)
+  const monthlyWithThroughput = useMemo(() => {
+    const map = {};
+    (data.monthlyTrend || []).forEach(m => { map[m.month] = { month: m.month, creados: m.count, cost: m.cost }; });
+    (data.throughputByMonth || []).forEach(m => { if (map[m.month]) map[m.month].cerrados = m.count; else map[m.month] = { month: m.month, creados: 0, cost: 0, cerrados: m.count }; });
+    return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
+  }, [data]);
+
+  // Step distribution (from TabVolumen)
+  const stepData = useMemo(() => {
+    const steps = {};
+    derived.all.forEach(r => { const s = r.currentStep || 'D1'; steps[s] = (steps[s] || 0) + 1; });
+    const order = ['D1', 'D2', 'D3', 'D3-MFG', 'D4', 'D5', 'D6', 'D7', 'D8'];
+    return order.map(s => ({ step: s, count: steps[s] || 0, color: STEP_COLORS[s] })).filter(s => s.count > 0);
+  }, [derived.all]);
+
+  // Cost by severity (from TabCostos)
+  const costSevData = (data.costBySeverity || []).map(s => ({
+    name: s.severity || 'N/A',
+    cost: s.cost,
+    count: s.count,
+    color: sevColor(s.severity)
+  }));
+
+  const total = data.totalEstimatedCost || 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Row 1: Índice de Riesgo + Alertas + Métricas únicas (no repetir header) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '160px repeat(5, 1fr)', gap: '10px' }}>
+        {/* Risk Index */}
+        <Card style={{ backgroundColor: riskBg, textAlign: 'center', padding: '12px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '600', color: riskColor, textTransform: 'uppercase' }}>Índice Riesgo</div>
+          <div style={{ fontSize: '36px', fontWeight: '900', color: riskColor, lineHeight: 1 }}>{riskScore}</div>
+          <div style={{ padding: '2px 10px', borderRadius: '12px', backgroundColor: riskColor, color: 'white', fontWeight: '700', fontSize: '11px', display: 'inline-block' }}>{riskLabel}</div>
+        </Card>
+        <KpiTile label="Por Vencer (7 días)" value={derived.dueSoon7} color={derived.dueSoon7 > 0 ? '#C77700' : '#2E7D32'} icon="🔔" sub="Requieren atención" />
+        <KpiTile label="Por Vencer (30 días)" value={derived.dueSoon30} color={derived.dueSoon30 > 5 ? '#C77700' : '#2E7D32'} icon="📅" />
+        <KpiTile label="Estancados >90d" value={derived.stagnantCount} color={derived.stagnantCount > 0 ? '#C77700' : '#2E7D32'} icon="🐌" sub="Sin avance" />
+        <KpiTile label="Throughput Prom." value={data.throughputByMonth?.length ? Math.round(data.throughputByMonth.reduce((s,m)=>s+m.count,0)/data.throughputByMonth.length) : 0} unit="/mes" color="#8b5cf6" icon="🏁" sub="Cerrados/mes" />
+        <KpiTile label="Costo Prom. por 8D" value={formatCurrency(data.total8Ds > 0 ? total / data.total8Ds : 0)} color="#C77700" icon="📊" />
+      </div>
+
+      {/* Row 2: Tendencia + SLA */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+        <Card>
+          <SectionTitle icon="📈" label="Tendencia Mensual: Creados vs Cerrados" />
+          <ResponsiveContainer width="100%" height={200}>
+            <ComposedChart data={monthlyWithThroughput}>
+              <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
+              <XAxis dataKey="month" fontSize={10} stroke={t.textMuted} />
+              <YAxis yAxisId="left" fontSize={11} stroke={t.textMuted} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Bar yAxisId="left" dataKey="creados" name="Creados" fill="#0072CE" radius={[4,4,0,0]} />
+              <Bar yAxisId="left" dataKey="cerrados" name="Cerrados" fill="#2E7D32" radius={[4,4,0,0]} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* SLA Gauge */}
+          <Card>
+            <SectionTitle icon="📋" label="SLA D4 Compliance" />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: '90px', height: '90px', borderRadius: '50%',
+                border: `6px solid ${slaColor}`,
+                backgroundColor: data.slaCompliance >= 80 ? '#dcfce7' : data.slaCompliance >= 50 ? '#fef3c7' : '#fee2e2'
+              }}>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: '800', color: slaColor }}>{data.slaCompliance}%</div>
+                </div>
+              </div>
+              <div style={{ marginTop: '6px', fontSize: '11px', color: t.textMuted }}>
+                {data.slaCompliance >= 80 ? '✅ Satisfactorio' : data.slaCompliance >= 50 ? '⚠️ Por debajo' : '🔴 Crítico'}
+              </div>
+            </div>
+          </Card>
+          <KpiTile label="Días Prom. Cierre" value={data.avgDaysToClose || 0} unit="días" color={parseFloat(data.avgDaysToClose) > 60 ? '#ef4444' : '#2E7D32'} icon="⏱️" />
+        </div>
+      </div>
+
+      {/* Row 3: Distribución por Fase + Costo por Severidad */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <Card>
+          <SectionTitle icon="📊" label="Distribución por Fase" />
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={stepData} layout="vertical" margin={{ left: 5, right: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
+              <XAxis type="number" fontSize={10} stroke={t.textMuted} />
+              <YAxis type="category" dataKey="step" fontSize={11} stroke={t.textMuted} width={50} fontWeight="600" />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="count" radius={[0,6,6,0]} label={{ position:'right', fontSize:11, fontWeight:'700', fill:t.text }}>
+                {stepData.map((e,i) => <Cell key={i} fill={e.color} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <SectionTitle icon="💰" label="Costo por Severidad" />
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <ResponsiveContainer width="50%" height={160}>
+              <PieChart>
+                <Pie data={costSevData} cx="50%" cy="50%" outerRadius={60} innerRadius={30} dataKey="cost" paddingAngle={3}>
+                  {costSevData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} formatter={v => [formatCurrency(v), 'Costo']} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {costSevData.map(s => (
+                <div key={s.name} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: s.color, display: 'inline-block' }} />
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>{s.name}</div>
+                    <div style={{ fontSize: '11px', color: t.textMuted }}>{formatCurrency(s.cost)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
 
 // TAB 1: Volumen & Flujo
 const TabVolumen = ({ data, derived }) => {
@@ -1229,8 +1379,9 @@ const MiniChartWrapper = ({ title, children }) => (
 
 const EightDDashboard = ({ data, allReports }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('8d-dashboard-tab') || 'volumen');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('8d-dashboard-tab') || 'resumen');
   const handleTabChange = (id) => { setActiveTab(id); localStorage.setItem('8d-dashboard-tab', id); };
 
   // Derived KPIs from allReports
@@ -1266,6 +1417,7 @@ const EightDDashboard = ({ data, allReports }) => {
   }, [allReports]);
 
   const TABS = [
+    { id: 'resumen', label: '🏠 Resumen', component: TabResumen },
     { id: 'volumen', label: '📈 Volumen & Flujo', component: TabVolumen },
     { id: 'tiempo', label: '⏱️ Tiempo & Cumplimiento', component: TabTiempo },
     { id: 'costos', label: '💰 Impacto Económico', component: TabCostos },

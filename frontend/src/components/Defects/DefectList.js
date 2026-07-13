@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import defectService from '../../services/defectService';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 /**
  * Lista de defectos capturados con filtros y acciones
  */
 const DefectList = ({ onEdit, onView, filters = {}, compact = false }) => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const [defects, setDefects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

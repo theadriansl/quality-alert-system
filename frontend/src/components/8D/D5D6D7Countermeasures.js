@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import GanttChart from './GanttChart';
 import D7Validation from './D7Validation';
 import { getCurrentUser, isUserAdmin } from '../../utils/permissions';
@@ -9,8 +10,9 @@ import CollapsibleSection from './CollapsibleSection';
 import ApprovalStepper from './ApprovalStepper';
 import SectionProgressIndicator from './SectionProgressIndicator';
 
-const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked = false, activeSection }) => {
+const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked = false, activeSection, isReadOnly = false }) => {
   const { theme: themeColors } = useTheme();
+  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
   const { showSuccess, showError, showWarning } = useToast();
 
   // Get current user from centralized utility
@@ -834,6 +836,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
   };
 
   // Check if current user is the approver for D6
+  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
   const isCurrentApproverD6 = () => {
     if (!data) return false;
 
@@ -854,11 +857,13 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
 
     if (effectiveStep < 1 || effectiveStep > 3) return false;
 
-    const expectedApproverId = countermeasureUsers[effectiveStep];
+    const expectedApprover = countermeasureUsers[effectiveStep];
+    const expectedApproverId = typeof expectedApprover === 'object' ? expectedApprover.id : expectedApprover;
     return currentUser.id === expectedApproverId;
   };
 
   // Check if current user is the primary responsible for D6
+  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
   const isPrimaryUserD6 = () => {
     if (!data) return false;
 
@@ -869,7 +874,8 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
     const countermeasureUsers = escalationPath.countermeasure_users || escalationPath.countermeasureUsers;
     if (!countermeasureUsers || !Array.isArray(countermeasureUsers)) return false;
 
-    const primaryUserId = countermeasureUsers[0];
+    const primaryUser = countermeasureUsers[0];
+    const primaryUserId = typeof primaryUser === 'object' ? primaryUser.id : primaryUser;
     return currentUser.id === primaryUserId;
   };
 
@@ -885,6 +891,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
   const isD6PhotoUploadBlocked = isAdmin ? false : data?.d6Status === 'approved';
 
   // Check if current user is authorized for D7 (Calidad/Confirmation users)
+  // Compatible con formato nuevo (objeto {id, name}) y antiguo (solo ID)
   const isAuthorizedForD7 = () => {
     if (!data) return false;
 
@@ -896,7 +903,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
     if (!confirmationUsers || !Array.isArray(confirmationUsers)) return false;
 
     // Check if current user is in confirmation_users array (any of the 4 positions: primary + 3 approvers)
-    return confirmationUsers.includes(currentUser.id);
+    return confirmationUsers.some(user =>
+      typeof user === 'object' ? user.id === currentUser.id : user === currentUser.id
+    );
   };
 
   // Determine if D7 form should be blocked for editing
@@ -1917,6 +1926,26 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
 
   return (
     <div style={styles.container}>
+      {/* Read-only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ color: '#92400e', fontWeight: '500' }}>
+            Este 8D está cerrado y es de solo lectura
+          </span>
+        </div>
+      )}
+
+      <div style={{ pointerEvents: isReadOnly ? 'none' : 'auto', opacity: isReadOnly ? 0.7 : 1 }}>
       <div style={styles.header}>
         <div style={styles.title}> {activeSection === 'd7' ? t.d7Title : t.d6Title}</div>
       </div>
@@ -2150,9 +2179,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       cursor: 'pointer',
                       padding: '4px'
                     }}
-                    title="Cancelar"
+                    title={language === 'es' ? 'Cancelar' : 'Cancel'}
                   >
-                    
+
                   </button>
                 </div>
 
@@ -4066,6 +4095,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
           </div>
         </div>
       )}
+      </div>{/* End of read-only wrapper */}
     </div>
   );
 };

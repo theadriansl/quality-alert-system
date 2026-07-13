@@ -1030,7 +1030,7 @@ const MRBCreate = () => {
             style={{ padding: '8px 14px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
           >
             <List size={16} />
-            Casos MRB
+            Campaigns
           </button>
           <button
             onClick={() => navigate('/mrb-dashboard')}

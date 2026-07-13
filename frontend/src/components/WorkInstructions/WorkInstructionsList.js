@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import workInstructionsService from '../../services/workInstructionsService';
 import clientService from '../../services/clientService';
 import { useTheme, ThemeSelector } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const WorkInstructionsList = () => {
   const { theme: t } = useTheme();
+  const { t: tr, language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
   const [workInstructions, setWorkInstructions] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expiringCount, setExpiringCount] = useState(0);
+  const [expiredCount, setExpiredCount] = useState(0);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -35,12 +39,17 @@ const WorkInstructionsList = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [wiResponse, clientsResponse] = await Promise.all([
+      const [wiResponse, clientsResponse, summaryResponse] = await Promise.all([
         workInstructionsService.getAll(filters),
-        clientService.getAllClients()
+        clientService.getAllClients(),
+        workInstructionsService.getCertificationSummary()
       ]);
       setWorkInstructions(wiResponse.workInstructions || []);
       setClients(clientsResponse.clients || []);
+      if (summaryResponse.success && summaryResponse.summary) {
+        setExpiringCount(summaryResponse.summary.expiringSoon || 0);
+        setExpiredCount(summaryResponse.summary.expired || 0);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -125,10 +134,30 @@ const WorkInstructionsList = () => {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              position: 'relative'
             }}
           >
-            Dashboard
+            Dashboard ILUO
+            {(expiringCount > 0 || expiredCount > 0) && (
+              <span style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-8px',
+                backgroundColor: expiredCount > 0 ? '#ef4444' : '#f59e0b',
+                color: 'white',
+                borderRadius: '50%',
+                width: '22px',
+                height: '22px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: '700'
+              }}>
+                {expiringCount + expiredCount}
+              </span>
+            )}
           </button>
           <button
             onClick={() => navigate('/work-instructions-config')}

@@ -3,69 +3,82 @@ import { useTheme } from '../../../context/ThemeContext';
 
 /**
  * Risk Matrix Heatmap Widget
- * Shows a 3x3 matrix of Severity vs Occurrence
+ * Shows a dynamic matrix using configured severity, occurrence, and risk rules
  */
-const RiskHeatmapWidget = ({ riskMatrix = {} }) => {
+const RiskHeatmapWidget = ({ riskMatrix = {}, riskMatrixMeta = {} }) => {
   const { theme: t } = useTheme();
-  const levels = ['High', 'Medium', 'Low'];
-  const occurrenceLevels = ['Low', 'Medium', 'High'];
 
-  // Default empty matrix
-  const defaultMatrix = {
-    Low: { Low: 0, Medium: 0, High: 0 },
-    Medium: { Low: 0, Medium: 0, High: 0 },
-    High: { Low: 0, Medium: 0, High: 0 }
+  // Use configured levels or defaults
+  const severityLevels = riskMatrixMeta?.severityLevels || [
+    { label: 'Low', value: 1 },
+    { label: 'Medium', value: 2 },
+    { label: 'High', value: 3 }
+  ];
+  const occurrenceLevels = riskMatrixMeta?.occurrenceLevels || [
+    { label: 'Low', value: 1 },
+    { label: 'Medium', value: 2 },
+    { label: 'High', value: 3 }
+  ];
+  const riskRules = riskMatrixMeta?.riskRules || [];
+
+  const numCols = occurrenceLevels.length;
+  const numRows = severityLevels.length;
+
+  // Get configured risk level for a severity/occurrence combination
+  const getRiskLevel = (sevValue, occValue) => {
+    const rule = riskRules.find(r => r.severity === sevValue && r.occurrence === occValue);
+    return rule?.riskLevel || 'medium';
   };
 
-  const matrix = riskMatrix && Object.keys(riskMatrix).length > 0 ? riskMatrix : defaultMatrix;
+  // Color based on configured risk level (Bajo, Medio, Alto)
+  const getColor = (riskLevel) => {
+    switch (riskLevel) {
+      case 'low':
+        return { bg: '#dcfce7', text: '#166534' }; // Green - Bajo
+      case 'medium':
+        return { bg: '#fef9c3', text: '#854d0e' };  // Yellow - Medio
+      case 'high':
+        return { bg: '#fee2e2', text: '#991b1b' }; // Red - Alto
+      default:
+        return { bg: '#f3f4f6', text: '#6b7280' }; // Gray - Unknown
+    }
+  };
 
-  // Color scale based on risk level
-  const getColor = (severity, occurrence) => {
-    const severityLevel = levels.indexOf(severity);
-    const occurrenceLevel = occurrenceLevels.indexOf(occurrence);
-
-    // Risk = Severity index (0=High, 1=Med, 2=Low) + Occurrence index (0=Low, 1=Med, 2=High)
-    // Lower total = lower risk, Higher total = higher risk
-    const riskScore = (2 - severityLevel) + occurrenceLevel;
-
-    // riskScore: 0-1 = green, 2 = yellow, 3-4 = red
-    if (riskScore <= 1) return { bg: '#dcfce7', text: '#166534' }; // Green
-    if (riskScore === 2) return { bg: '#fef9c3', text: '#854d0e' }; // Yellow
-    if (riskScore === 3) return { bg: '#fed7aa', text: '#9a3412' }; // Orange
-    return { bg: '#fee2e2', text: '#991b1b' }; // Red
+  // Short label for display (extract from parentheses or first word)
+  const getShortLabel = (label) => {
+    if (!label) return '';
+    const match = label.match(/\(([^)]+)\)/);
+    if (match) return match[1];
+    return label.split(' ')[0];
   };
 
   const styles = {
     container: {
       display: 'flex',
       flexDirection: 'column',
-      height: '100%'
     },
     grid: {
       display: 'grid',
-      gridTemplateColumns: '70px repeat(3, 1fr)',
-      gridTemplateRows: 'auto repeat(3, 1fr) auto',
-      gap: '4px',
-      flex: 1
-    },
-    cornerCell: {
-      // Empty corner
+      gridTemplateColumns: `80px repeat(${numCols}, 1fr)`,
+      gridTemplateRows: `auto repeat(${numRows}, auto) auto`,
+      gap: '3px',
     },
     headerCell: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '11px',
+      fontSize: '10px',
       fontWeight: '600',
       color: t.textMuted,
-      padding: '8px 4px'
+      padding: '6px 2px',
+      textAlign: 'center'
     },
     rowLabel: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'flex-end',
-      paddingRight: '12px',
-      fontSize: '11px',
+      paddingRight: '8px',
+      fontSize: '10px',
       fontWeight: '600',
       color: t.textMuted
     },
@@ -73,95 +86,88 @@ const RiskHeatmapWidget = ({ riskMatrix = {} }) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: '8px',
-      fontSize: '18px',
+      borderRadius: '6px',
+      fontSize: '16px',
       fontWeight: '700',
       cursor: 'pointer',
       transition: 'transform 0.2s, box-shadow 0.2s',
-      minHeight: '50px'
+      minHeight: '32px'
     },
     axisLabel: {
       gridColumn: '2 / -1',
       textAlign: 'center',
-      fontSize: '11px',
+      fontSize: '10px',
       color: t.textMuted,
-      paddingTop: '8px'
-    },
-    yAxisLabel: {
-      position: 'absolute',
-      left: '-20px',
-      top: '50%',
-      transform: 'rotate(-90deg) translateX(-50%)',
-      fontSize: '11px',
-      color: t.textMuted,
-      whiteSpace: 'nowrap'
+      paddingTop: '6px'
     },
     legend: {
       display: 'flex',
       justifyContent: 'center',
-      gap: '16px',
-      marginTop: '12px',
-      paddingTop: '12px',
+      flexWrap: 'wrap',
+      gap: '12px',
+      marginTop: '10px',
+      paddingTop: '10px',
       borderTop: `1px solid ${t.border}`
     },
     legendItem: {
       display: 'flex',
       alignItems: 'center',
-      gap: '6px',
+      gap: '4px',
       fontSize: '11px',
       color: t.textMuted
     },
     legendColor: {
-      width: '16px',
-      height: '16px',
-      borderRadius: '4px'
+      width: '12px',
+      height: '12px',
+      borderRadius: '3px',
+      flexShrink: 0
     }
   };
 
   const legendItems = [
     { label: 'Bajo', color: '#dcfce7' },
     { label: 'Medio', color: '#fef9c3' },
-    { label: 'Alto', color: '#fed7aa' },
-    { label: 'Critico', color: '#fee2e2' }
+    { label: 'Alto', color: '#fee2e2' }
   ];
 
   return (
     <div style={styles.container}>
       <div style={styles.grid}>
         {/* Corner cell */}
-        <div style={styles.cornerCell}></div>
+        <div></div>
 
         {/* Column headers (Occurrence) */}
-        {occurrenceLevels.map(level => (
-          <div key={`col-${level}`} style={styles.headerCell}>
-            {level === 'Low' ? 'Baja' : level === 'Medium' ? 'Media' : 'Alta'}
+        {occurrenceLevels.map(occ => (
+          <div key={`col-${occ.value}`} style={styles.headerCell}>
+            {getShortLabel(occ.label)}
           </div>
         ))}
 
-        {/* Rows (Severity from High to Low) */}
-        {levels.map(severity => (
-          <React.Fragment key={`row-${severity}`}>
+        {/* Rows (Severity) */}
+        {severityLevels.map((sev, sevIndex) => (
+          <React.Fragment key={`row-${sev.value}`}>
             {/* Row label */}
             <div style={styles.rowLabel}>
-              {severity === 'High' ? 'Alta' : severity === 'Medium' ? 'Media' : 'Baja'}
+              {getShortLabel(sev.label)}
             </div>
 
             {/* Cells */}
-            {occurrenceLevels.map(occurrence => {
-              const value = matrix[severity]?.[occurrence] || 0;
-              const colors = getColor(severity, occurrence);
+            {occurrenceLevels.map((occ, occIndex) => {
+              const value = riskMatrix[sev.label]?.[occ.label] || 0;
+              const riskLevel = getRiskLevel(sev.value, occ.value);
+              const colors = getColor(riskLevel);
 
               return (
                 <div
-                  key={`${severity}-${occurrence}`}
+                  key={`${sev.value}-${occ.value}`}
                   style={{
                     ...styles.cell,
                     backgroundColor: colors.bg,
                     color: colors.text
                   }}
-                  title={`Severidad: ${severity}, Ocurrencia: ${occurrence}`}
+                  title={`Severidad: ${sev.label}\nOcurrencia: ${occ.label}\nRiesgo: ${riskLevel.toUpperCase()}\nECRs: ${value}`}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.transform = 'scale(1.08)';
                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
                   }}
                   onMouseLeave={(e) => {
@@ -177,7 +183,7 @@ const RiskHeatmapWidget = ({ riskMatrix = {} }) => {
         ))}
 
         {/* X-Axis Label */}
-        <div style={styles.axisLabel}>Ocurrencia</div>
+        <div style={styles.axisLabel}>Ocurrencia →</div>
       </div>
 
       {/* Legend */}
@@ -188,6 +194,16 @@ const RiskHeatmapWidget = ({ riskMatrix = {} }) => {
             <span>{item.label}</span>
           </div>
         ))}
+      </div>
+
+      {/* Y-Axis Label */}
+      <div style={{
+        fontSize: '10px',
+        color: t.textMuted,
+        textAlign: 'center',
+        marginTop: '4px'
+      }}>
+        Severidad ↓
       </div>
     </div>
   );

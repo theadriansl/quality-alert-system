@@ -64,6 +64,15 @@ const DefectQuery = () => {
   const [sortColumn, setSortColumn] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState('defects'); // 'defects' | 'inspections'
+
+  // Inspections data (for inspections tab)
+  const [inspections, setInspections] = useState([]);
+  const [inspectionsLoading, setInspectionsLoading] = useState(false);
+  const [inspectionsPage, setInspectionsPage] = useState(1);
+  const [inspectionsTotal, setInspectionsTotal] = useState(0);
+
   // Initial load
   useEffect(() => {
     loadCatalogs();
@@ -143,6 +152,43 @@ const DefectQuery = () => {
       console.error('Error loading parts:', err);
     }
   };
+
+  // Load spec inspections for Inspections tab
+  const loadInspections = useCallback(async () => {
+    try {
+      setInspectionsLoading(true);
+      const params = new URLSearchParams();
+      params.set('limit', pageSize);
+      params.set('offset', pageSize > 0 ? (inspectionsPage - 1) * pageSize : 0);
+
+      if (filterClient) params.set('clientId', filterClient);
+      if (filterPart) params.set('partId', filterPart);
+      if (filterStation) params.set('stationId', filterStation);
+      if (filterStartDate) params.set('dateFrom', filterStartDate);
+      if (filterEndDate) params.set('dateTo', filterEndDate);
+
+      const res = await fetch(`${API_URL}/spec-inspection/entries?${params.toString()}`, {
+        headers: getHeaders()
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setInspections(data.entries || []);
+        setInspectionsTotal(data.total || 0);
+      }
+    } catch (err) {
+      console.error('Error loading inspections:', err);
+    } finally {
+      setInspectionsLoading(false);
+    }
+  }, [filterClient, filterPart, filterStation, filterStartDate, filterEndDate, inspectionsPage, pageSize]);
+
+  // Load inspections when tab changes to inspections or filters change
+  useEffect(() => {
+    if (activeTab === 'inspections') {
+      loadInspections();
+    }
+  }, [activeTab, loadInspections]);
 
   // Search when filters, page, pageSize or sort change (for table)
   useEffect(() => {
@@ -632,6 +678,47 @@ const DefectQuery = () => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '0',
+        marginBottom: '16px',
+        borderBottom: `2px solid ${t.border}`
+      }}>
+        <button
+          onClick={() => setActiveTab('defects')}
+          style={{
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: '600',
+            border: 'none',
+            borderBottom: activeTab === 'defects' ? '3px solid #0072CE' : '3px solid transparent',
+            backgroundColor: activeTab === 'defects' ? t.bgCard : 'transparent',
+            color: activeTab === 'defects' ? '#0072CE' : t.textMuted,
+            cursor: 'pointer',
+            marginBottom: '-2px'
+          }}
+        >
+          Defectos
+        </button>
+        <button
+          onClick={() => setActiveTab('inspections')}
+          style={{
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: '600',
+            border: 'none',
+            borderBottom: activeTab === 'inspections' ? '3px solid #10b981' : '3px solid transparent',
+            backgroundColor: activeTab === 'inspections' ? t.bgCard : 'transparent',
+            color: activeTab === 'inspections' ? '#10b981' : t.textMuted,
+            cursor: 'pointer',
+            marginBottom: '-2px'
+          }}
+        >
+          Inspecciones de Specs
+        </button>
+      </div>
+
       {/* Filters */}
       <div style={styles.filtersCard}>
         <div style={styles.filtersGrid}>
@@ -729,6 +816,9 @@ const DefectQuery = () => {
         </div>
       </div>
 
+      {/* ========== DEFECTS TAB CONTENT ========== */}
+      {activeTab === 'defects' && (
+        <>
       {/* Results count */}
       <div style={styles.resultsBar}>
         <span>
@@ -1027,6 +1117,115 @@ const DefectQuery = () => {
             Siguiente &gt;
           </button>
         </div>
+      )}
+        </>
+      )}
+
+      {/* ========== INSPECTIONS TAB CONTENT ========== */}
+      {activeTab === 'inspections' && (
+        <>
+          {/* Results count */}
+          <div style={styles.resultsBar}>
+            <span>
+              <strong>{inspectionsTotal}</strong> inspección{inspectionsTotal !== 1 ? 'es' : ''} encontrada{inspectionsTotal !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Inspections Table */}
+          <div style={styles.tableWrapper}>
+            {inspectionsLoading ? (
+              <div style={styles.loading}>Cargando inspecciones...</div>
+            ) : inspections.length === 0 ? (
+              <div style={{ ...styles.loading, padding: '60px' }}>
+                No se encontraron inspecciones con los filtros seleccionados.
+              </div>
+            ) : (
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Fecha</th>
+                    <th style={styles.th}>Serial/Lote</th>
+                    <th style={styles.th}>Parte</th>
+                    <th style={styles.th}>Spec</th>
+                    <th style={styles.th}>Resultado</th>
+                    <th style={styles.th}>Valor Medido</th>
+                    <th style={styles.th}>Límites</th>
+                    <th style={styles.th}>Estación</th>
+                    <th style={styles.th}>Inspector</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inspections.map((insp) => (
+                    <tr key={insp.id} style={styles.trHover}>
+                      <td style={styles.td}>
+                        {insp.createdAt ? new Date(insp.createdAt).toLocaleDateString('es-MX') : '-'}
+                      </td>
+                      <td style={{ ...styles.td, fontWeight: '600' }}>
+                        {insp.serialNumber || insp.lotNumber || '-'}
+                      </td>
+                      <td style={styles.td}>
+                        {insp.partNumber || '-'}
+                      </td>
+                      <td style={styles.td}>
+                        <div style={{ fontWeight: '500' }}>{insp.specNumber || '-'}</div>
+                        <div style={{ fontSize: '12px', color: t.textMuted }}>{insp.specName || ''}</div>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          backgroundColor: insp.result === 'OK' ? '#d1fae5' :
+                                          insp.result === 'NOK' ? '#fee2e2' : '#f3f4f6',
+                          color: insp.result === 'OK' ? '#065f46' :
+                                insp.result === 'NOK' ? '#991b1b' : '#6b7280'
+                        }}>
+                          {insp.result || 'SKIP'}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        {insp.measuredValue ?? '-'}
+                      </td>
+                      <td style={{ ...styles.td, fontSize: '12px' }}>
+                        {insp.lowerLimit != null ? `${insp.lowerLimit} - ${insp.upperLimit}` : '-'}
+                      </td>
+                      <td style={styles.td}>
+                        {insp.stationName || '-'}
+                      </td>
+                      <td style={styles.td}>
+                        {insp.inspectorName || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Pagination for inspections */}
+          {pageSize > 0 && Math.ceil(inspectionsTotal / pageSize) > 1 && (
+            <div style={styles.pagination}>
+              <button
+                style={{ ...styles.pageBtn, ...(inspectionsPage <= 1 ? styles.pageBtnDisabled : {}) }}
+                onClick={() => setInspectionsPage(p => Math.max(1, p - 1))}
+                disabled={inspectionsPage <= 1}
+              >
+                &lt; Anterior
+              </button>
+              <span style={{ fontSize: '14px', color: t.text }}>
+                Página <strong>{inspectionsPage}</strong> de <strong>{Math.ceil(inspectionsTotal / pageSize)}</strong>
+              </span>
+              <button
+                style={{ ...styles.pageBtn, ...(inspectionsPage >= Math.ceil(inspectionsTotal / pageSize) ? styles.pageBtnDisabled : {}) }}
+                onClick={() => setInspectionsPage(p => Math.min(Math.ceil(inspectionsTotal / pageSize), p + 1))}
+                disabled={inspectionsPage >= Math.ceil(inspectionsTotal / pageSize)}
+              >
+                Siguiente &gt;
+              </button>
+            </div>
+          )}
+        </>
       )}
 
     </div>
