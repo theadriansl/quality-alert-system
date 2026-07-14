@@ -51,6 +51,7 @@ const ProductionTab = ({ theme: t }) => {
     file: null,
     preview: null
   });
+  const [dragOver, setDragOver] = useState(false);
 
   // Fetch parts on mount
   useEffect(() => {
@@ -221,6 +222,32 @@ const ProductionTab = ({ theme: t }) => {
     } finally {
       setImporting(false);
       e.target.value = '';
+    }
+  };
+
+  // Drag & Drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+      // Simular evento de input file
+      handleCSVUpload({ target: { files: [file], value: '' } });
+    } else {
+      setError('Solo se permiten archivos CSV');
     }
   };
 
@@ -881,14 +908,23 @@ const ProductionTab = ({ theme: t }) => {
               id="csv-upload"
             />
             <label htmlFor="csv-upload">
-              <div style={styles.uploadZone}>
+              <div
+                style={{
+                  ...styles.uploadZone,
+                  borderColor: dragOver ? '#3b82f6' : undefined,
+                  backgroundColor: dragOver ? 'rgba(59, 130, 246, 0.1)' : undefined
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 {importing ? (
                   <span style={{ color: t.text }}>Importando...</span>
                 ) : (
                   <>
-                    <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
-                    <div style={{ color: t.text, fontWeight: '500' }}>
-                      Arrastra un archivo CSV o haz clic para seleccionar
+                    <div style={{ fontSize: '48px', marginBottom: '8px' }}>{dragOver ? '📥' : '📄'}</div>
+                    <div style={{ color: dragOver ? '#3b82f6' : t.text, fontWeight: '500' }}>
+                      {dragOver ? 'Suelta el archivo aquí' : 'Arrastra un archivo CSV o haz clic para seleccionar'}
                     </div>
                     <div style={{ color: t.textSecondary, fontSize: '14px', marginTop: '4px' }}>
                       Máximo 10MB

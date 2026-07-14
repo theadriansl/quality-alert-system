@@ -4478,11 +4478,11 @@ router.get('/:id/tally-template', authenticateToken, async (req, res) => {
       });
     });
 
-    // Fila de totales con relleno visual
+    // Fila de totales vacía (se calcula al importar)
     sheet1Data.push([
       'TOTAL NOK',
-      fill, fill, fill, fill, fill, fill,
-      fill, fill, fill, fill
+      '', '', '', '', '', '',
+      '', '', '', ''
     ]);
 
     const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
@@ -4511,34 +4511,71 @@ router.get('/:id/tally-template', authenticateToken, async (req, res) => {
     sheet2Data.push(['Título:', campaign.title]);
     sheet2Data.push(['Cliente:', campaign.client_name || '-']);
     sheet2Data.push(['Proyecto:', campaign.project_name || '-']);
-    sheet2Data.push(['No. de Parte:', campaign.part_number || '-']);
-    sheet2Data.push(['Lote / Batch:', campaign.lot_number || '-']);
-    sheet2Data.push(['Severidad:', campaign.severity_name || '-']);
+    sheet2Data.push(['No. de Parte:', partNumbers || campaign.part_number || '-']);
+    sheet2Data.push(['Lote / Batch:', campaign.lot_number || 'N/A']);
+    sheet2Data.push(['Severidad:', campaign.severity_name || 'N/A']);
     sheet2Data.push(['Departamento:', campaign.department_name || '-']);
     sheet2Data.push(['Emitida por:', campaign.reported_by_name || '-']);
-    sheet2Data.push(['Fecha:', new Date().toLocaleDateString('es-MX')]);
-    sheet2Data.push([]);
+    sheet2Data.push(['Fecha:', new Date().toLocaleDateString('es-MX'), '', 'Turno:', '___________']);
     sheet2Data.push([]);
 
-    // Tabla de seriales
-    sheet2Data.push(['SERIAL', 'NUMERO DE PARTE', 'OK/NOK', 'NOTAS']);
+    // Lista plana de defectos (sin categorías) para las columnas
+    const defectList = defects.map(d => ({
+      id: d.defect_type_id,
+      name: d.display_name || d.name || d.code,
+      code: d.code
+    }));
 
-    // Agregar filas vacías para llenar
-    for (let i = 0; i < 100; i++) {
-      sheet2Data.push(['', '', '', '']);
+    // Header de tabla: SERIAL, PARTE, [defectos...], OK
+    const headerRow = ['SERIAL', 'PARTE', ...defectList.map(d => d.code || d.name), 'OK'];
+    sheet2Data.push(headerRow);
+
+    // Agregar filas vacías para llenar (200 filas)
+    const emptyRow = ['', '', ...defectList.map(() => ''), ''];
+    for (let i = 0; i < 200; i++) {
+      sheet2Data.push([...emptyRow]);
     }
 
     const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
 
+    // Guardar mapping de defectos en celda oculta para el import
+    // Formato: JSON en celda A1 del sheet (se sobrescribe el título)
+    // En su lugar, guardamos en una fila adicional al inicio que se ignora en import
+
     // Ajustar anchos de columna
+    const defectColWidth = 5; // Columnas de defectos angostas
     ws2['!cols'] = [
-      { wch: 25 }, // Serial
-      { wch: 20 }, // Numero de Parte
-      { wch: 10 }, // OK/NOK
-      { wch: 40 }  // Notas
+      { wch: 20 }, // Serial
+      { wch: 18 }, // Parte
+      ...defectList.map(() => ({ wch: defectColWidth })), // Defectos
+      { wch: 5 }   // OK
     ];
 
+    // Aplicar rotación vertical a headers de defectos (fila 14, columnas 2+)
+    // Nota: xlsx-style soporta esto, xlsx básico no. Lo intentamos igual.
+    const headerRowIndex = 13; // 0-indexed (fila 14 en Excel)
+    for (let col = 2; col < 2 + defectList.length; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
+      if (!ws2[cellRef]) ws2[cellRef] = { v: defectList[col - 2].code || defectList[col - 2].name };
+      ws2[cellRef].s = {
+        alignment: { textRotation: 90, vertical: 'bottom', horizontal: 'center' },
+        font: { bold: true, sz: 9 }
+      };
+    }
+
     XLSX.utils.book_append_sheet(wb, ws2, 'Seriales');
+
+    // Guardar metadata de defectos para el import (en hoja oculta)
+    const metaData = [
+      ['DEFECT_MAPPING'],
+      ['index', 'defect_type_id', 'code', 'name'],
+      ...defectList.map((d, i) => [i, d.id, d.code, d.name])
+    ];
+    const wsMeta = XLSX.utils.aoa_to_sheet(metaData);
+    XLSX.utils.book_append_sheet(wb, wsMeta, '_meta');
+    wb.Workbook = wb.Workbook || {};
+    wb.Workbook.Sheets = wb.Workbook.Sheets || [];
+    wb.Workbook.Sheets.push({ Hidden: 1 }); // Ocultar hoja meta
 
     // 4. Generar buffer y enviar
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -4554,11 +4591,10 @@ router.get('/:id/tally-template', authenticateToken, async (req, res) => {
 });
 
 // ============================================================================
-// POST /mrb/:id/import-tally - Importar Tally Sheet completado
+// POST /mrb/:id/import-tally/preview - Preview antes de importar
 // ============================================================================
-router.post('/:id/import-tally', authenticateToken, multer({ storage: multer.memoryStorage() }).single('file'), async (req, res) => {
+router.post('/:id/import-tally/preview', authenticateToken, multer({ storage: multer.memoryStorage() }).single('file'), async (req, res) => {
   const { id } = req.params;
-  const { shiftId } = req.body;
 
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'Archivo requerido' });
@@ -4579,134 +4615,373 @@ router.post('/:id/import-tally', authenticateToken, multer({ storage: multer.mem
 
     const campaign = campaignRes.rows[0];
 
-    // 2. Leer Excel
+    // 2. Obtener partes válidas de la campaña (de mrb_campaign_parts)
+    const validPartsRes = await query(`
+      SELECT cp.part_number FROM mrb_campaign_parts mcp
+      JOIN client_parts cp ON mcp.part_id = cp.id
+      WHERE mcp.mrb_campaign_id = $1
+      UNION
+      SELECT cp.part_number FROM mrb_campaigns mc
+      JOIN client_parts cp ON mc.part_id = cp.id
+      WHERE mc.id = $1 AND mc.part_id IS NOT NULL
+    `, [id]);
+    const validPartNumbers = validPartsRes.rows.map(r => r.part_number);
+
+    // 3. Obtener seriales ya registrados (para detectar duplicados)
+    const existingRes = await query(`
+      SELECT serial_number FROM mrb_ok_entries WHERE mrb_campaign_id = $1
+    `, [id]);
+    const existingSerials = new Set(existingRes.rows.map(r => r.serial_number));
+
+    // 4. Leer Excel
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
 
-    // 3. Procesar Hoja 1: Conteo de defectos
-    const sheet1 = workbook.Sheets[workbook.SheetNames[0]];
-    const data1 = XLSX.utils.sheet_to_json(sheet1, { header: 1 });
+    // 5. Leer hoja _meta para obtener mapping de defectos
+    let defectMapping = [];
+    const metaSheet = workbook.Sheets['_meta'];
+    if (metaSheet) {
+      const metaData = XLSX.utils.sheet_to_json(metaSheet, { header: 1 });
+      // Skip header rows, leer desde fila 3
+      for (let i = 2; i < metaData.length; i++) {
+        const row = metaData[i];
+        if (row[1]) {
+          defectMapping.push({
+            index: row[0],
+            defect_type_id: row[1],
+            code: row[2],
+            name: row[3]
+          });
+        }
+      }
+    }
 
-    // Buscar fila de encabezado de tabla (DEFECTO, REWORK, SCRAP...)
-    let defectStartRow = -1;
-    for (let i = 0; i < data1.length; i++) {
-      if (data1[i][0] === 'DEFECTO' && data1[i][1] === 'REWORK') {
-        defectStartRow = i + 1;
+    // 6. Procesar Hoja 2: Seriales
+    const sheet2 = workbook.Sheets[workbook.SheetNames[1]];
+    if (!sheet2) {
+      return res.status(400).json({ success: false, message: 'El archivo debe tener 2 hojas (Conteo Defectos y Seriales)' });
+    }
+    const data2 = XLSX.utils.sheet_to_json(sheet2, { header: 1 });
+
+    // Buscar fila de header (SERIAL, PARTE, ...)
+    let headerRowIndex = -1;
+    let headerRow = [];
+    for (let i = 0; i < data2.length; i++) {
+      if (data2[i][0] === 'SERIAL' && data2[i][1] === 'PARTE') {
+        headerRowIndex = i;
+        headerRow = data2[i];
         break;
       }
     }
 
-    const defectCounts = { REWORK: 0, SCRAP: 0, HOLD: 0, RETURN: 0, USE_AS_IS: 0 };
+    if (headerRowIndex < 0) {
+      return res.status(400).json({ success: false, message: 'No se encontró header de seriales (SERIAL, PARTE, ...)' });
+    }
 
-    if (defectStartRow > 0) {
-      for (let i = defectStartRow; i < data1.length; i++) {
-        const row = data1[i];
-        if (!row[0] || row[0] === 'TOTAL') break;
+    // Identificar columnas: 0=SERIAL, 1=PARTE, 2..n-1=defectos, n=OK
+    const okColIndex = headerRow.length - 1;
+    const defectColStart = 2;
+    const defectColEnd = okColIndex; // exclusive
 
-        defectCounts.REWORK += parseInt(row[1]) || 0;
-        defectCounts.SCRAP += parseInt(row[2]) || 0;
-        defectCounts.HOLD += parseInt(row[3]) || 0;
-        defectCounts.RETURN += parseInt(row[4]) || 0;
-        defectCounts.USE_AS_IS += parseInt(row[5]) || 0;
+    const preview = {
+      total: 0,
+      ok: 0,
+      nok: 0,
+      defectCounts: {}, // { defectCode: count }
+      invalidParts: {},
+      duplicates: [],
+      entries: []
+    };
+
+    // Procesar filas de datos
+    for (let i = headerRowIndex + 1; i < data2.length; i++) {
+      const row = data2[i];
+      const serial = String(row[0] || '').trim();
+      const partNumber = String(row[1] || '').trim();
+
+      if (!serial) continue;
+      preview.total++;
+
+      // Verificar duplicado
+      if (existingSerials.has(serial)) {
+        preview.duplicates.push({ serial, partNumber });
+        continue;
+      }
+
+      // Verificar parte válida
+      const isValidPart = validPartNumbers.length === 0 || validPartNumbers.includes(partNumber);
+      if (!isValidPart && partNumber) {
+        preview.invalidParts[partNumber] = (preview.invalidParts[partNumber] || 0) + 1;
+        continue;
+      }
+
+      // Verificar OK
+      const isOk = String(row[okColIndex] || '').toUpperCase().trim() === 'X';
+
+      // Recoger defectos marcados
+      const defectsMarked = [];
+      for (let col = defectColStart; col < defectColEnd; col++) {
+        const cellValue = String(row[col] || '').toUpperCase().trim();
+        if (cellValue === 'X' || cellValue === 'O') {
+          const defectCode = headerRow[col];
+          defectsMarked.push({
+            column: col,
+            code: defectCode,
+            defect_type_id: defectMapping[col - defectColStart]?.defect_type_id || null
+          });
+          preview.defectCounts[defectCode] = (preview.defectCounts[defectCode] || 0) + 1;
+        }
+      }
+
+      if (isOk) {
+        preview.ok++;
+        preview.entries.push({ serial, partNumber, isOk: true, defects: [] });
+      } else if (defectsMarked.length > 0) {
+        preview.nok++;
+        preview.entries.push({ serial, partNumber, isOk: false, defects: defectsMarked });
+      }
+      // Si no tiene OK ni defectos, se ignora
+    }
+
+    res.json({
+      success: true,
+      preview: {
+        total: preview.total,
+        validOk: preview.ok,
+        validNok: preview.nok,
+        validTotal: preview.ok + preview.nok,
+        defectCounts: Object.entries(preview.defectCounts).map(([code, count]) => ({ code, count })),
+        totalDefects: Object.values(preview.defectCounts).reduce((a, b) => a + b, 0),
+        invalidParts: Object.entries(preview.invalidParts).map(([part, count]) => ({ partNumber: part, count })),
+        invalidPartsTotal: Object.values(preview.invalidParts).reduce((a, b) => a + b, 0),
+        duplicates: preview.duplicates,
+        duplicatesCount: preview.duplicates.length,
+        campaignParts: validPartNumbers,
+        defectMapping: defectMapping
+      }
+    });
+
+  } catch (error) {
+    console.error('Error preview tally:', error);
+    res.status(500).json({ success: false, message: 'Error analizando archivo' });
+  }
+});
+
+// ============================================================================
+// POST /mrb/:id/import-tally - Importar Tally Sheet completado
+// ============================================================================
+router.post('/:id/import-tally', authenticateToken, multer({ storage: multer.memoryStorage() }).single('file'), async (req, res) => {
+  const { id } = req.params;
+  const { shiftId } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'Archivo requerido' });
+  }
+
+  try {
+    // 1. Verificar campaña activa
+    const campaignRes = await query(`
+      SELECT mc.*, cp.part_number, cp.id as main_part_id
+      FROM mrb_campaigns mc
+      LEFT JOIN client_parts cp ON mc.part_id = cp.id
+      WHERE mc.id = $1 AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+    `, [id]);
+
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada o no activa' });
+    }
+
+    const campaign = campaignRes.rows[0];
+
+    // 2. Obtener partes válidas de la campaña
+    const validPartsRes = await query(`
+      SELECT cp.id, cp.part_number FROM mrb_campaign_parts mcp
+      JOIN client_parts cp ON mcp.part_id = cp.id
+      WHERE mcp.mrb_campaign_id = $1
+      UNION
+      SELECT cp.id, cp.part_number FROM mrb_campaigns mc
+      JOIN client_parts cp ON mc.part_id = cp.id
+      WHERE mc.id = $1 AND mc.part_id IS NOT NULL
+    `, [id]);
+    const validParts = {};
+    validPartsRes.rows.forEach(r => { validParts[r.part_number] = r.id; });
+
+    // 3. Obtener seriales ya registrados
+    const existingRes = await query(`
+      SELECT serial_number FROM mrb_ok_entries WHERE mrb_campaign_id = $1
+      UNION
+      SELECT serial_number FROM defect_entries_v2 WHERE mrb_campaign_id = $1
+    `, [id]);
+    const existingSerials = new Set(existingRes.rows.map(r => r.serial_number));
+
+    // 4. Leer Excel
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+
+    // 5. Leer hoja _meta para mapping de defectos
+    let defectMapping = [];
+    const metaSheet = workbook.Sheets['_meta'];
+    if (metaSheet) {
+      const metaData = XLSX.utils.sheet_to_json(metaSheet, { header: 1 });
+      for (let i = 2; i < metaData.length; i++) {
+        const row = metaData[i];
+        if (row[1]) {
+          defectMapping.push({
+            index: row[0],
+            defect_type_id: parseInt(row[1]),
+            code: row[2],
+            name: row[3]
+          });
+        }
       }
     }
 
-    // 4. Procesar Hoja 2: Seriales
+    // 6. Procesar Hoja 2: Seriales
     const sheet2 = workbook.Sheets[workbook.SheetNames[1]];
     const data2 = XLSX.utils.sheet_to_json(sheet2, { header: 1 });
 
-    // Buscar fila de encabezado (SERIAL, NUMERO DE PARTE, OK/NOK)
-    let serialStartRow = -1;
+    // Buscar fila de header
+    let headerRowIndex = -1;
+    let headerRow = [];
     for (let i = 0; i < data2.length; i++) {
-      if (data2[i][0] === 'SERIAL' && data2[i][2] === 'OK/NOK') {
-        serialStartRow = i + 1;
+      if (data2[i][0] === 'SERIAL' && data2[i][1] === 'PARTE') {
+        headerRowIndex = i;
+        headerRow = data2[i];
         break;
       }
     }
 
-    const serialResults = { ok: [], nok: [], errors: [] };
-    const campaignParts = campaign.parts_list ? JSON.parse(campaign.parts_list) : [];
-    const hasParts = campaignParts.length > 0 || campaign.part_number;
+    if (headerRowIndex < 0) {
+      return res.status(400).json({ success: false, message: 'No se encontró header de seriales' });
+    }
 
-    if (serialStartRow > 0) {
-      for (let i = serialStartRow; i < data2.length; i++) {
-        const row = data2[i];
-        const serial = String(row[0] || '').trim();
-        const partNumber = String(row[1] || '').trim();
-        const result = String(row[2] || '').toUpperCase().trim();
-        const notes = String(row[3] || '').trim();
+    const okColIndex = headerRow.length - 1;
+    const defectColStart = 2;
+    const defectColEnd = okColIndex;
 
-        if (!serial) continue;
+    const results = {
+      ok: [],
+      nok: [],
+      defectEntries: [],
+      skipped: { duplicates: 0, invalidParts: 0 }
+    };
 
-        // Validar parte si hay partes configuradas
-        if (hasParts && partNumber) {
-          const validPart = campaignParts.some(p => p.partNumber === partNumber) ||
-                           campaign.part_number === partNumber;
-          if (!validPart) {
-            serialResults.errors.push({ serial, partNumber, reason: 'Parte no corresponde a campaña' });
-            continue;
+    // Generar entry_number base
+    const entryPrefix = `MRB${id}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+    let entryCounter = 1;
+
+    // Procesar filas
+    for (let i = headerRowIndex + 1; i < data2.length; i++) {
+      const row = data2[i];
+      const serial = String(row[0] || '').trim();
+      const partNumber = String(row[1] || '').trim();
+
+      if (!serial) continue;
+
+      // Skip duplicados
+      if (existingSerials.has(serial)) {
+        results.skipped.duplicates++;
+        continue;
+      }
+
+      // Skip partes inválidas
+      const partId = validParts[partNumber] || campaign.main_part_id;
+      if (!partId) {
+        results.skipped.invalidParts++;
+        continue;
+      }
+
+      // Verificar OK
+      const isOk = String(row[okColIndex] || '').toUpperCase().trim() === 'X';
+
+      // Recoger defectos marcados
+      const defectsMarked = [];
+      for (let col = defectColStart; col < defectColEnd; col++) {
+        const cellValue = String(row[col] || '').toUpperCase().trim();
+        if (cellValue === 'X' || cellValue === 'O') {
+          const mapping = defectMapping[col - defectColStart];
+          if (mapping && mapping.defect_type_id) {
+            defectsMarked.push({
+              defect_type_id: mapping.defect_type_id,
+              code: mapping.code
+            });
           }
         }
+      }
 
-        if (result === 'OK') {
-          serialResults.ok.push({ serial, partNumber, notes });
-        } else if (result === 'NOK') {
-          serialResults.nok.push({ serial, partNumber, notes });
+      if (isOk && defectsMarked.length === 0) {
+        results.ok.push({ serial, partNumber, partId });
+        existingSerials.add(serial);
+      } else if (defectsMarked.length > 0) {
+        results.nok.push({ serial, partNumber, partId });
+        existingSerials.add(serial);
+        // Crear entrada de defecto por cada defecto marcado
+        for (const defect of defectsMarked) {
+          results.defectEntries.push({
+            serial,
+            partId,
+            defect_type_id: defect.defect_type_id,
+            entry_number: `${entryPrefix}-${String(entryCounter++).padStart(4, '0')}`
+          });
         }
       }
     }
 
-    // 5. Actualizar campaña con conteos
-    const totalNok = defectCounts.REWORK + defectCounts.SCRAP + defectCounts.HOLD +
-                     defectCounts.RETURN + defectCounts.USE_AS_IS;
-    const totalOk = serialResults.ok.length;
-    const totalInspected = totalOk + serialResults.nok.length;
+    // 7. Insertar OK entries
+    for (const item of results.ok) {
+      await query(`
+        INSERT INTO mrb_ok_entries (mrb_campaign_id, part_id, shift_id, inspector_id, quantity, serial_number, inspection_date)
+        VALUES ($1, $2, $3, $4, 1, $5, CURRENT_DATE)
+        ON CONFLICT DO NOTHING
+      `, [id, item.partId, shiftId || null, req.user.id, item.serial]);
+    }
+
+    // 8. Insertar defect_entries_v2 para cada defecto
+    for (const entry of results.defectEntries) {
+      await query(`
+        INSERT INTO defect_entries_v2 (
+          entry_number, client_id, project_id, part_id, defect_type_id,
+          serial_number, mrb_campaign_id, quantity, captured_by_user_id, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, 'open')
+        ON CONFLICT DO NOTHING
+      `, [
+        entry.entry_number,
+        campaign.client_id,
+        campaign.project_id,
+        entry.partId,
+        entry.defect_type_id,
+        entry.serial,
+        id,
+        req.user.id
+      ]);
+    }
+
+    // 9. Actualizar contadores de campaña
+    const totalOk = results.ok.length;
+    const totalNok = results.nok.length;
+    const totalInspected = totalOk + totalNok;
 
     await query(`
       UPDATE mrb_campaigns SET
         qty_inspected = COALESCE(qty_inspected, 0) + $1,
         qty_ok = COALESCE(qty_ok, 0) + $2,
         qty_nok = COALESCE(qty_nok, 0) + $3,
-        qty_rework = COALESCE(qty_rework, 0) + $4,
-        qty_scrap = COALESCE(qty_scrap, 0) + $5,
-        qty_hold = COALESCE(qty_hold, 0) + $6,
-        qty_return = COALESCE(qty_return, 0) + $7,
-        qty_use_as_is = COALESCE(qty_use_as_is, 0) + $8,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
-    `, [
-      totalInspected,
-      totalOk,
-      totalNok,
-      defectCounts.REWORK,
-      defectCounts.SCRAP,
-      defectCounts.HOLD,
-      defectCounts.RETURN,
-      defectCounts.USE_AS_IS,
-      id
-    ]);
-
-    // 6. Registrar seriales OK
-    for (const item of serialResults.ok) {
-      await query(`
-        INSERT INTO mrb_ok_entries (mrb_campaign_id, part_id, shift_id, inspector_id, quantity, serial_number, notes, inspection_date)
-        VALUES ($1, $2, $3, $4, 1, $5, $6, CURRENT_DATE)
-      `, [id, campaign.part_id, shiftId || null, req.user.id, item.serial, item.notes || null]);
-    }
+      WHERE id = $4
+    `, [totalInspected, totalOk, totalNok, id]);
 
     res.json({
       success: true,
       message: 'Tally importado correctamente',
       summary: {
-        defectCounts,
-        totalOk: serialResults.ok.length,
-        totalNok: serialResults.nok.length,
-        errors: serialResults.errors
+        totalOk,
+        totalNok,
+        totalDefects: results.defectEntries.length,
+        skipped: results.skipped
       }
     });
 
   } catch (error) {
     console.error('Error importing tally:', error);
-    res.status(500).json({ success: false, message: 'Error importando tally' });
+    res.status(500).json({ success: false, message: 'Error importando tally: ' + error.message });
   }
 });
 

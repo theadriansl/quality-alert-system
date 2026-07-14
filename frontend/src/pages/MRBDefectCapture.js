@@ -126,6 +126,7 @@ const MRBDefectCapture = () => {
   const [tallySheets, setTallySheets]       = useState([]);
   const [uploadingTally, setUploadingTally] = useState(false);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [tallyPreview, setTallyPreview] = useState({ open: false, file: null, preview: null });
 
   // ── SCAN INPUT REF ────────────────────────────────────────────────────────
   const scanRef = useRef(null);
@@ -839,6 +840,35 @@ const MRBDefectCapture = () => {
     const token = localStorage.getItem('token');
     const formData = new FormData();
     formData.append('file', file);
+
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/import-tally/preview`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setTallyPreview({ open: true, file, preview: data.preview });
+      } else {
+        showMsg(data.message || 'Error analizando archivo', true);
+      }
+    } catch (err) {
+      showMsg('Error analizando tally', true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── CONFIRMAR IMPORT TALLY ─────────────────────────────────────────────────
+  const handleConfirmTallyImport = async () => {
+    if (!tallyPreview.file || !selectedCampaign) return;
+
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', tallyPreview.file);
     if (selectedShift?.id) formData.append('shiftId', selectedShift.id);
 
     try {
@@ -851,24 +881,15 @@ const MRBDefectCapture = () => {
       const data = await res.json();
 
       if (data.success) {
-        const { defectCounts, totalOk, totalNok, errors } = data.summary;
-        let msg = `✓ Importado: ${totalOk} OK, ${totalNok} NOK`;
-        if (errors?.length > 0) {
-          msg += ` (${errors.length} errores)`;
-        }
-        showMsg(msg);
+        const { totalOk, totalNok } = data.summary;
+        showMsg(`✓ Importado: ${totalOk} OK, ${totalNok} NOK`);
+        setTallyPreview({ open: false, file: null, preview: null });
 
         // Refresh campaign data
         const refreshRes = await fetch(`${API_URL}/mrb/active-campaigns`, { headers: { Authorization: `Bearer ${token}` } });
         const refreshData = await refreshRes.json();
         const updated = (refreshData.campaigns || []).find(c => c.id === selectedCampaign.id);
         if (updated) setSelectedCampaign(updated);
-
-        // Show errors if any
-        if (errors?.length > 0) {
-          console.warn('Import errors:', errors);
-          alert(`Errores en importación:\n${errors.slice(0, 5).map(e => `- ${e.serial}: ${e.reason}`).join('\n')}${errors.length > 5 ? `\n... y ${errors.length - 5} más` : ''}`);
-        }
       } else {
         showMsg(data.message || 'Error importando', true);
       }
@@ -1821,6 +1842,106 @@ const MRBDefectCapture = () => {
                 style={{ flex: 2, padding: '12px', backgroundColor: !pendingShiftNote.trim() ? '#6b7280' : '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !pendingShiftNote.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
                 <CheckCircle size={16} /> Registrar Retroactivo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL PREVIEW TALLY IMPORT ─────────────────────────────────────── */}
+      {tallyPreview.open && tallyPreview.preview && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
+          <div style={{ backgroundColor: t.bgCard, borderRadius: '12px', padding: '28px', maxWidth: '560px', width: '95%', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: t.text, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📊 Preview de Importación
+            </div>
+
+            {/* Resumen */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ backgroundColor: t.bgInput, padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: t.text }}>{tallyPreview.preview.total}</div>
+                <div style={{ fontSize: '12px', color: t.textMuted }}>Total en archivo</div>
+              </div>
+              <div style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: '#22c55e' }}>{tallyPreview.preview.validTotal}</div>
+                <div style={{ fontSize: '12px', color: t.textMuted }}>Válidos ({tallyPreview.preview.validOk} OK, {tallyPreview.preview.validNok} NOK)</div>
+              </div>
+              <div style={{ backgroundColor: tallyPreview.preview.duplicatesCount > 0 ? 'rgba(234, 179, 8, 0.1)' : t.bgInput, padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: tallyPreview.preview.duplicatesCount > 0 ? '#eab308' : t.textMuted }}>{tallyPreview.preview.duplicatesCount}</div>
+                <div style={{ fontSize: '12px', color: t.textMuted }}>Duplicados</div>
+              </div>
+            </div>
+
+            {/* Partes de la campaña */}
+            {tallyPreview.preview.campaignParts?.length > 0 && (
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: t.bgInput, borderRadius: '8px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: t.textMuted, marginBottom: '6px' }}>Partes válidas en esta campaña:</div>
+                <div style={{ fontSize: '13px', color: t.text }}>{tallyPreview.preview.campaignParts.join(', ')}</div>
+              </div>
+            )}
+
+            {/* Partes inválidas */}
+            {tallyPreview.preview.invalidParts?.length > 0 && (
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#ef4444', marginBottom: '8px' }}>
+                  ⚠ Partes que NO corresponden a la campaña ({tallyPreview.preview.invalidPartsTotal} seriales):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {tallyPreview.preview.invalidParts.map((p, i) => (
+                    <span key={i} style={{ padding: '4px 10px', backgroundColor: 'rgba(239, 68, 68, 0.2)', borderRadius: '4px', fontSize: '12px', color: '#ef4444', fontWeight: '500' }}>
+                      {p.partNumber} ({p.count})
+                    </span>
+                  ))}
+                </div>
+                <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '8px' }}>
+                  Estos seriales serán ignorados en la importación.
+                </div>
+              </div>
+            )}
+
+            {/* Duplicados */}
+            {tallyPreview.preview.duplicatesCount > 0 && (
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#eab308', marginBottom: '4px' }}>
+                  ⚠ {tallyPreview.preview.duplicatesCount} seriales ya registrados (serán ignorados)
+                </div>
+                <div style={{ fontSize: '11px', color: t.textMuted }}>
+                  {tallyPreview.preview.duplicates.slice(0, 5).map(d => d.serial).join(', ')}
+                  {tallyPreview.preview.duplicates.length > 5 && ` ... y ${tallyPreview.preview.duplicates.length - 5} más`}
+                </div>
+              </div>
+            )}
+
+            {/* Resumen de defectos */}
+            {tallyPreview.preview.defectCounts?.length > 0 && (
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#ef4444', marginBottom: '8px' }}>
+                  Defectos detectados ({tallyPreview.preview.totalDefects} total):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {tallyPreview.preview.defectCounts.map((d, i) => (
+                    <span key={i} style={{ padding: '4px 10px', backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: '4px', fontSize: '12px', color: '#dc2626', fontWeight: '500' }}>
+                      {d.code}: {d.count}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botones */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                onClick={() => setTallyPreview({ open: false, file: null, preview: null })}
+                style={{ flex: 1, padding: '12px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmTallyImport}
+                disabled={submitting || tallyPreview.preview.validTotal === 0}
+                style={{ flex: 2, padding: '12px', backgroundColor: tallyPreview.preview.validTotal > 0 ? '#7c3aed' : '#6b7280', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: tallyPreview.preview.validTotal > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                {submitting ? 'Importando...' : `Importar ${tallyPreview.preview.validTotal} registros`}
               </button>
             </div>
           </div>
