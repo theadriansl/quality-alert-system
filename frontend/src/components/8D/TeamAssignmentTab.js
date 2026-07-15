@@ -4405,10 +4405,14 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 return <div style={{ color: themeColors.textMuted, fontSize: '13px' }}>No hay usuarios asignados</div>;
               }
 
-              const getUserInfo = (userId) => {
-                if (!userId) return null;
+              const getUserInfo = (userIdOrObj) => {
+                if (!userIdOrObj) return null;
+                // Handle both number ID and object {id, name}
+                const userId = typeof userIdOrObj === 'object' ? userIdOrObj.id : userIdOrObj;
                 const user = users.find(u => u.id === userId);
-                const name = user ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email : `ID: ${userId}`;
+                const name = user
+                  ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email
+                  : (typeof userIdOrObj === 'object' && userIdOrObj.name) ? userIdOrObj.name : `ID: ${userId}`;
                 const email = user?.email || '';
                 const position = user?.position || user?.cargo || '';
                 return { name, email, position };
@@ -4452,10 +4456,14 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 return <div style={{ color: themeColors.textMuted, fontSize: '13px' }}>No hay usuarios asignados</div>;
               }
 
-              const getUserInfo = (userId) => {
-                if (!userId) return null;
+              const getUserInfo = (userIdOrObj) => {
+                if (!userIdOrObj) return null;
+                // Handle both number ID and object {id, name}
+                const userId = typeof userIdOrObj === 'object' ? userIdOrObj.id : userIdOrObj;
                 const user = users.find(u => u.id === userId);
-                const name = user ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email : `ID: ${userId}`;
+                const name = user
+                  ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email
+                  : (typeof userIdOrObj === 'object' && userIdOrObj.name) ? userIdOrObj.name : `ID: ${userId}`;
                 const email = user?.email || '';
                 return { name, email };
               };
@@ -4498,10 +4506,14 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 return <div style={{ color: themeColors.textMuted, fontSize: '13px' }}>No hay usuarios asignados</div>;
               }
 
-              const getUserInfo = (userId) => {
-                if (!userId) return null;
+              const getUserInfo = (userIdOrObj) => {
+                if (!userIdOrObj) return null;
+                // Handle both number ID and object {id, name}
+                const userId = typeof userIdOrObj === 'object' ? userIdOrObj.id : userIdOrObj;
                 const user = users.find(u => u.id === userId);
-                const name = user ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email : `ID: ${userId}`;
+                const name = user
+                  ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email
+                  : (typeof userIdOrObj === 'object' && userIdOrObj.name) ? userIdOrObj.name : `ID: ${userId}`;
                 const email = user?.email || '';
                 return { name, email };
               };

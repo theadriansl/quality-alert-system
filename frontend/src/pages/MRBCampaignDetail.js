@@ -224,6 +224,33 @@ const MRBCampaignDetail = () => {
     quarantine: true, photos: true, criteria: true, disposition: true
   }); // true = link-8d endpoint, false = change-source endpoint
 
+  // Add Part modal
+  const [showAddPartModal, setShowAddPartModal] = useState(false);
+  const [availableParts, setAvailableParts] = useState([]);
+  const [selectedPartToAdd, setSelectedPartToAdd] = useState(null);
+  const [addingPart, setAddingPart] = useState(false);
+
+  // Affected Serials modal
+  const [showAffectedSerialsModal, setShowAffectedSerialsModal] = useState(false);
+  const [affectedSerials, setAffectedSerials] = useState([]);
+  const [affectedSerialsSummary, setAffectedSerialsSummary] = useState({ total: 0, inspected: 0, pending: 0 });
+  const [loadingSerials, setLoadingSerials] = useState(false);
+  const [savingSerials, setSavingSerials] = useState(false);
+  // Tab control for serial modal
+  const [serialModalTab, setSerialModalTab] = useState('search'); // 'search' | 'manual'
+  // Search mode states
+  const [searchMode, setSearchMode] = useState('date'); // 'date' | 'serial'
+  const [searchDateFrom, setSearchDateFrom] = useState('');
+  const [searchDateTo, setSearchDateTo] = useState('');
+  const [searchSerialFrom, setSearchSerialFrom] = useState('');
+  const [searchSerialTo, setSearchSerialTo] = useState('');
+  const [campaignParts, setCampaignParts] = useState([]);
+  const [selectedSearchParts, setSelectedSearchParts] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  // Manual entry states
+  const [manualSerials, setManualSerials] = useState([{ serial: '', partId: '' }]);
+
   useEffect(() => {
     loadMrb();
     loadCurrentUser();
@@ -257,9 +284,11 @@ const MRBCampaignDetail = () => {
         setRecipients(data.recipients || []);
         setComments(data.comments || []);
         setAttachments(data.attachments || []);
-        // Load cost summary in parallel
+        // Load cost summary and affected serials in parallel
         fetch(`${API_URL}/mrb/${id}/cost-summary`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
           .then(r => r.json()).then(cs => { if (cs.success) setCostSummary(cs); }).catch(() => {});
+        fetch(`${API_URL}/mrb/${id}/affected-serials`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+          .then(r => r.json()).then(as => { if (as.success) { setAffectedSerials(as.serials || []); setAffectedSerialsSummary(as.summary || { total: 0, inspected: 0, pending: 0 }); } }).catch(() => {});
 
         // Pre-fill response if exists
         const mrb = data.mrb || data.campaign;
@@ -312,6 +341,256 @@ const MRBCampaignDetail = () => {
       const data = await res.json();
       if (data.success && data.comment) setComments(prev => [...prev, data.comment]);
     } catch (_) {}
+  };
+
+  // ===== ADD PART FUNCTIONS =====
+  const loadAvailableParts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/available-parts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAvailableParts(data.parts || []);
+      }
+    } catch (err) {
+      console.error('Error loading available parts:', err);
+    }
+  };
+
+  const handleOpenAddPartModal = async () => {
+    await loadAvailableParts();
+    setSelectedPartToAdd(null);
+    setShowAddPartModal(true);
+  };
+
+  const handleAddPart = async () => {
+    if (!selectedPartToAdd) return;
+    setAddingPart(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/add-part`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ partId: selectedPartToAdd.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await logHistory(`Parte agregada: ${selectedPartToAdd.partNumber}`, 'audit');
+        setShowAddPartModal(false);
+        loadMrb(); // Reload to get updated parts list
+      } else {
+        alert(data.message || 'Error al agregar parte');
+      }
+    } catch (err) {
+      alert('Error de conexión');
+    } finally {
+      setAddingPart(false);
+    }
+  };
+
+  // ===== AFFECTED SERIALS FUNCTIONS =====
+  const loadAffectedSerials = async () => {
+    setLoadingSerials(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/affected-serials`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAffectedSerials(data.serials || []);
+        setAffectedSerialsSummary(data.summary || { total: 0, inspected: 0, pending: 0 });
+      }
+    } catch (err) {
+      console.error('Error loading affected serials:', err);
+    } finally {
+      setLoadingSerials(false);
+    }
+  };
+
+  const loadCampaignParts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/campaign-parts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCampaignParts(data.parts || []);
+        setSelectedSearchParts(data.parts.map(p => p.id)); // Select all by default
+      }
+    } catch (err) {
+      console.error('Error loading campaign parts:', err);
+    }
+  };
+
+  const handleOpenAffectedSerialsModal = async () => {
+    await loadAffectedSerials();
+    await loadCampaignParts();
+    setSerialModalTab('search');
+    setSearchMode('date');
+    setSearchDateFrom('');
+    setSearchDateTo('');
+    setSearchSerialFrom('');
+    setSearchSerialTo('');
+    setSearchResults([]);
+    setManualSerials([{ serial: '', partId: '' }]);
+    setShowAffectedSerialsModal(true);
+  };
+
+  const handleSearchSerials = async () => {
+    if (selectedSearchParts.length === 0) {
+      alert('Selecciona al menos una parte');
+      return;
+    }
+    if (searchMode === 'date' && (!searchDateFrom || !searchDateTo)) {
+      alert('Selecciona el rango de fechas');
+      return;
+    }
+    if (searchMode === 'serial' && (!searchSerialFrom || !searchSerialTo)) {
+      alert('Ingresa el rango de seriales');
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({
+        mode: searchMode,
+        partIds: selectedSearchParts.join(',')
+      });
+      if (searchMode === 'date') {
+        params.append('dateFrom', searchDateFrom);
+        params.append('dateTo', searchDateTo);
+      } else {
+        params.append('serialFrom', searchSerialFrom);
+        params.append('serialTo', searchSerialTo);
+      }
+
+      const res = await fetch(`${API_URL}/mrb/${id}/search-serials?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSearchResults(data.serials || []);
+        if (data.truncated) {
+          alert('Se encontraron más de 5000 seriales. Mostrando los primeros 5000.');
+        }
+      } else {
+        alert(data.message || 'Error en la búsqueda');
+      }
+    } catch (err) {
+      alert('Error de conexión');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleAddSearchResults = async () => {
+    if (searchResults.length === 0) return;
+    setSavingSerials(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/affected-serials/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          serials: searchResults.map(s => ({ serialNumber: s.serialNumber, partId: s.partId }))
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSearchResults([]);
+        await loadAffectedSerials();
+        await logHistory(`Seriales cargados desde sistema: ${data.inserted} nuevos${data.duplicates > 0 ? `, ${data.duplicates} duplicados omitidos` : ''}`, 'audit');
+        alert(data.message);
+      } else {
+        alert(data.message || 'Error al agregar seriales');
+      }
+    } catch (err) {
+      alert('Error de conexión');
+    } finally {
+      setSavingSerials(false);
+    }
+  };
+
+  const handleAddManualRow = () => {
+    setManualSerials(prev => [...prev, { serial: '', partId: '' }]);
+  };
+
+  const handleRemoveManualRow = (index) => {
+    setManualSerials(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleManualSerialChange = (index, field, value) => {
+    setManualSerials(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+  };
+
+  const handleAddManualSerials = async () => {
+    const validSerials = manualSerials.filter(s => s.serial.trim() && s.partId);
+    if (validSerials.length === 0) {
+      alert('Ingresa al menos un serial con su parte');
+      return;
+    }
+
+    setSavingSerials(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/affected-serials/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          serials: validSerials.map(s => ({ serialNumber: s.serial.trim(), partId: parseInt(s.partId) }))
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setManualSerials([{ serial: '', partId: '' }]);
+        await loadAffectedSerials();
+        await logHistory(`Seriales manuales agregados: ${data.inserted} nuevos${data.duplicates > 0 ? `, ${data.duplicates} duplicados omitidos` : ''}`, 'audit');
+        alert(data.message);
+      } else {
+        alert(data.message || 'Error al agregar seriales');
+      }
+    } catch (err) {
+      alert('Error de conexión');
+    } finally {
+      setSavingSerials(false);
+    }
+  };
+
+  const handleDeleteSerial = async (serialId) => {
+    if (!window.confirm('¿Eliminar este serial de la lista?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_URL}/mrb/${id}/affected-serials/${serialId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await loadAffectedSerials();
+    } catch (err) {
+      alert('Error al eliminar serial');
+    }
+  };
+
+  const handleClearAllSerials = async () => {
+    if (!window.confirm('¿Eliminar TODOS los seriales afectados de esta campaña?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/affected-serials`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadAffectedSerials();
+        await logHistory(`Seriales afectados eliminados: ${data.deleted}`, 'audit');
+      }
+    } catch (err) {
+      alert('Error al limpiar seriales');
+    }
   };
 
   const handleSaveQuarantine = async (syncFrom8D = false) => {
@@ -1161,7 +1440,7 @@ const MRBCampaignDetail = () => {
             Nuevo MRB
           </button>
           <button
-            onClick={() => navigate('/mrb-capture')}
+            onClick={() => navigate(`/mrb-capture?campaignId=${mrbCase.id}`)}
             style={{ padding: '8px 14px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
           >
             <ClipboardCheck size={16} />
@@ -1726,7 +2005,30 @@ const MRBCampaignDetail = () => {
                 <div style={styles.infoValue}>{mrbCase.projectName || '-'}</div>
               </div>
               <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>No. de Parte</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={styles.infoLabel}>No. de Parte</div>
+                  {['ABIERTA', 'EN_PROCESO'].includes(mrbCase.status) && (
+                    <button
+                      onClick={handleOpenAddPartModal}
+                      style={{
+                        padding: '2px 8px',
+                        backgroundColor: t.accent,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      <PlusCircle size={12} />
+                      Agregar
+                    </button>
+                  )}
+                </div>
                 <div style={styles.infoValue}>
                   {Array.isArray(mrbCase.partsList) && mrbCase.partsList.length > 0
                     ? mrbCase.partsList.map(p => p.partNumber).join(', ')
@@ -1774,6 +2076,44 @@ const MRBCampaignDetail = () => {
                   <span style={{ color: '#B00020', fontWeight: '700' }}>{mrbCase.qtyNok ?? 0} NOK</span>
                 </div>
               </div>
+              {/* Affected Serials Section */}
+              {['ABIERTA', 'EN_PROCESO'].includes(mrbCase.status) && (
+                <div style={{ ...styles.infoItem, gridColumn: '1 / -1' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={styles.infoLabel}>Seriales Afectados</div>
+                    <button
+                      onClick={handleOpenAffectedSerialsModal}
+                      style={{
+                        padding: '4px 12px',
+                        backgroundColor: '#7c3aed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <List size={14} />
+                      Gestionar Seriales
+                    </button>
+                  </div>
+                  {affectedSerialsSummary.total > 0 ? (
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
+                      <span style={{ color: t.text }}>Total: <strong>{affectedSerialsSummary.total}</strong></span>
+                      <span style={{ color: '#22c55e' }}>Inspeccionados: <strong>{affectedSerialsSummary.inspected}</strong></span>
+                      <span style={{ color: '#f59e0b' }}>Pendientes: <strong>{affectedSerialsSummary.pending}</strong></span>
+                    </div>
+                  ) : (
+                    <div style={{ color: t.textMuted, fontSize: '12px', fontStyle: 'italic' }}>
+                      Sin seriales cargados — clic en "Gestionar Seriales" para agregar
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Cost summary tables */}
               {costSummary && (
                 <div style={{ gridColumn: '1 / -1', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2368,15 +2708,34 @@ const MRBCampaignDetail = () => {
 
             <div style={{ marginBottom: '16px' }}>
               <div style={styles.label}>Respuesta ({responseRecipients.length})</div>
-              <div>
-                {responseRecipients.map((r, idx) => (
-                  <span key={idx} style={{
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {responseRecipients.map((r) => (
+                  <span key={r.id} style={{
                     ...styles.recipientChip,
                     backgroundColor: r.acknowledgedAt ? '#22c55e33' : '#C7770033',
-                    color: r.acknowledgedAt ? '#22c55e' : '#C77700'
+                    color: r.acknowledgedAt ? '#22c55e' : '#C77700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}>
                     {r.firstName} {r.lastName}
                     {r.acknowledgedAt && <Check size={12} />}
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!window.confirm(`¿Eliminar a ${r.firstName} ${r.lastName} de destinatarios?`)) return;
+                        try {
+                          const res = await fetch(`${API_URL}/mrb/${mrbCase.id}/recipients/${r.id}`, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                          });
+                          const data = await res.json();
+                          if (data.success) setRecipients(data.recipients);
+                        } catch (_) {}
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: 'inherit', opacity: 0.7, fontSize: '14px', lineHeight: 1 }}
+                      title="Eliminar destinatario"
+                    >×</button>
                   </span>
                 ))}
                 {responseRecipients.length === 0 && (
@@ -2387,14 +2746,33 @@ const MRBCampaignDetail = () => {
 
             <div style={{ marginBottom: '16px' }}>
               <div style={styles.label}>Validación ({validationRecipients.length})</div>
-              <div>
-                {validationRecipients.map((r, idx) => (
-                  <span key={idx} style={{
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {validationRecipients.map((r) => (
+                  <span key={r.id} style={{
                     ...styles.recipientChip,
                     backgroundColor: `${t.accent}33`,
-                    color: t.accent
+                    color: t.accent,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}>
                     {r.firstName} {r.lastName}
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!window.confirm(`¿Eliminar a ${r.firstName} ${r.lastName} de destinatarios?`)) return;
+                        try {
+                          const res = await fetch(`${API_URL}/mrb/${mrbCase.id}/recipients/${r.id}`, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                          });
+                          const data = await res.json();
+                          if (data.success) setRecipients(data.recipients);
+                        } catch (_) {}
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: 'inherit', opacity: 0.7, fontSize: '14px', lineHeight: 1 }}
+                      title="Eliminar destinatario"
+                    >×</button>
                   </span>
                 ))}
                 {validationRecipients.length === 0 && (
@@ -2439,7 +2817,7 @@ const MRBCampaignDetail = () => {
                 }}
                 style={{ width: '100%', padding: '7px 12px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: t.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
-                📧 Enviar recordatorio a todos ({recipients.length})
+                Enviar recordatorio a todos ({recipients.length})
               </button>
             )}
           </div>
@@ -2889,6 +3267,573 @@ const MRBCampaignDetail = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ====== MODAL: Add Part ====== */}
+      {showAddPartModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '70vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: `1px solid ${t.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PlusCircle size={20} />
+                Agregar Parte a la Campaña
+              </h3>
+              <button
+                onClick={() => setShowAddPartModal(false)}
+                style={{ background: 'none', border: 'none', color: t.textDim, cursor: 'pointer' }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+              {availableParts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+                  No hay partes adicionales disponibles en este proyecto
+                </div>
+              ) : (
+                availableParts.map(part => (
+                  <div
+                    key={part.id}
+                    onClick={() => setSelectedPartToAdd(part)}
+                    style={{
+                      padding: '12px 16px',
+                      backgroundColor: selectedPartToAdd?.id === part.id ? '#0072CE22' : t.bg,
+                      border: `2px solid ${selectedPartToAdd?.id === part.id ? t.accent : 'transparent'}`,
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontWeight: '700', color: t.text, fontFamily: 'monospace' }}>{part.partNumber}</div>
+                    {part.partName && <div style={{ fontSize: '12px', color: t.textDim }}>{part.partName}</div>}
+                  </div>
+                ))
+              )}
+            </div>
+            <div style={{ padding: '16px 20px', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button onClick={() => setShowAddPartModal(false)} style={{ padding: '10px 20px', backgroundColor: t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={handleAddPart} disabled={!selectedPartToAdd || addingPart} style={{ padding: '10px 20px', backgroundColor: selectedPartToAdd ? '#2E7D32' : t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: selectedPartToAdd ? 'pointer' : 'not-allowed', opacity: addingPart ? 0.7 : 1 }}>
+                {addingPart ? 'Agregando...' : 'Agregar Parte'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== MODAL: Affected Serials ====== */}
+      {showAffectedSerialsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            width: '95%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: `1px solid ${t.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <List size={20} color="#7c3aed" />
+                Seriales Afectados
+                {affectedSerialsSummary.total > 0 && (
+                  <span style={{ fontSize: '12px', color: t.textDim, fontWeight: '400' }}>
+                    ({affectedSerialsSummary.total} total — {affectedSerialsSummary.pending} pendientes)
+                  </span>
+                )}
+              </h3>
+              <button
+                onClick={() => setShowAffectedSerialsModal(false)}
+                style={{ background: 'none', border: 'none', color: t.textDim, cursor: 'pointer' }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}` }}>
+              <button
+                onClick={() => setSerialModalTab('search')}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  backgroundColor: serialModalTab === 'search' ? t.accent + '15' : 'transparent',
+                  border: 'none',
+                  borderBottom: serialModalTab === 'search' ? `3px solid ${t.accent}` : '3px solid transparent',
+                  color: serialModalTab === 'search' ? t.accent : t.textDim,
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Search size={16} />
+                Buscar en Sistema
+              </button>
+              <button
+                onClick={() => setSerialModalTab('manual')}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  backgroundColor: serialModalTab === 'manual' ? t.accent + '15' : 'transparent',
+                  border: 'none',
+                  borderBottom: serialModalTab === 'manual' ? `3px solid ${t.accent}` : '3px solid transparent',
+                  color: serialModalTab === 'manual' ? t.accent : t.textDim,
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Edit3 size={16} />
+                Entrada Manual
+              </button>
+              <button
+                onClick={() => setSerialModalTab('list')}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  backgroundColor: serialModalTab === 'list' ? t.accent + '15' : 'transparent',
+                  border: 'none',
+                  borderBottom: serialModalTab === 'list' ? `3px solid ${t.accent}` : '3px solid transparent',
+                  color: serialModalTab === 'list' ? t.accent : t.textDim,
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <List size={16} />
+                Ver Cargados ({affectedSerialsSummary.total})
+              </button>
+            </div>
+
+            {/* Tab: Buscar en Sistema */}
+            {serialModalTab === 'search' && (
+              <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '16px 20px', borderBottom: `1px solid ${t.border}` }}>
+                  {/* Search Mode */}
+                  <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: t.text }}>
+                      <input type="radio" name="searchMode" checked={searchMode === 'date'} onChange={() => setSearchMode('date')} />
+                      Por Fecha/Hora
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: t.text }}>
+                      <input type="radio" name="searchMode" checked={searchMode === 'serial'} onChange={() => setSearchMode('serial')} />
+                      Por Rango de Serial
+                    </label>
+                  </div>
+
+                  {/* Date Range */}
+                  {searchMode === 'date' && (
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+                      <div>
+                        <label style={{ fontSize: '11px', color: t.textDim, display: 'block', marginBottom: '4px' }}>DESDE</label>
+                        <input
+                          type="datetime-local"
+                          value={searchDateFrom}
+                          onChange={(e) => setSearchDateFrom(e.target.value)}
+                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px' }}
+                        />
+                      </div>
+                      <span style={{ color: t.textDim, marginTop: '16px' }}>→</span>
+                      <div>
+                        <label style={{ fontSize: '11px', color: t.textDim, display: 'block', marginBottom: '4px' }}>HASTA</label>
+                        <input
+                          type="datetime-local"
+                          value={searchDateTo}
+                          onChange={(e) => setSearchDateTo(e.target.value)}
+                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Serial Range */}
+                  {searchMode === 'serial' && (
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+                      <div>
+                        <label style={{ fontSize: '11px', color: t.textDim, display: 'block', marginBottom: '4px' }}>SERIAL DESDE</label>
+                        <input
+                          type="text"
+                          value={searchSerialFrom}
+                          onChange={(e) => setSearchSerialFrom(e.target.value)}
+                          placeholder="SN-001000"
+                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px', fontFamily: 'monospace', width: '150px' }}
+                        />
+                      </div>
+                      <span style={{ color: t.textDim, marginTop: '16px' }}>→</span>
+                      <div>
+                        <label style={{ fontSize: '11px', color: t.textDim, display: 'block', marginBottom: '4px' }}>SERIAL HASTA</label>
+                        <input
+                          type="text"
+                          value={searchSerialTo}
+                          onChange={(e) => setSearchSerialTo(e.target.value)}
+                          placeholder="SN-001500"
+                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px', fontFamily: 'monospace', width: '150px' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parts Selection */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', color: t.textDim, display: 'block', marginBottom: '8px' }}>PARTES AFECTADAS</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {campaignParts.map(part => (
+                        <label
+                          key={part.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            backgroundColor: selectedSearchParts.includes(part.id) ? t.accent + '22' : t.bg,
+                            border: `1px solid ${selectedSearchParts.includes(part.id) ? t.accent : t.border}`,
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            color: t.text,
+                            fontSize: '12px'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedSearchParts.includes(part.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedSearchParts(prev => [...prev, part.id]);
+                              } else {
+                                setSelectedSearchParts(prev => prev.filter(p => p !== part.id));
+                              }
+                            }}
+                          />
+                          <span style={{ fontFamily: 'monospace', fontWeight: '600' }}>{part.partNumber}</span>
+                          {part.partName && <span style={{ color: t.textDim }}>— {part.partName}</span>}
+                        </label>
+                      ))}
+                      {campaignParts.length === 0 && (
+                        <span style={{ color: t.textMuted, fontStyle: 'italic' }}>No hay partes asignadas a esta campaña</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSearchSerials}
+                    disabled={searchLoading || campaignParts.length === 0}
+                    style={{
+                      padding: '10px 24px',
+                      backgroundColor: campaignParts.length > 0 ? t.accent : t.textMuted,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: campaignParts.length > 0 ? 'pointer' : 'not-allowed',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Search size={16} />
+                    {searchLoading ? 'Buscando...' : 'Buscar'}
+                  </button>
+                </div>
+
+                {/* Search Results */}
+                <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+                  {searchResults.length > 0 ? (
+                    <>
+                      <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: t.text, fontWeight: '600' }}>
+                          {searchResults.length} seriales encontrados
+                        </span>
+                        <button
+                          onClick={handleAddSearchResults}
+                          disabled={savingSerials}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#16a34a',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '12px'
+                          }}
+                        >
+                          {savingSerials ? 'Agregando...' : `Agregar ${searchResults.length} seriales`}
+                        </button>
+                      </div>
+                      <div style={{ maxHeight: '300px', overflow: 'auto', border: `1px solid ${t.border}`, borderRadius: '6px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: t.bg, position: 'sticky', top: 0 }}>
+                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Serial</th>
+                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Parte</th>
+                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Fecha Registro</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {searchResults.slice(0, 200).map((s, i) => (
+                              <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '600', color: t.text }}>{s.serialNumber}</td>
+                                <td style={{ padding: '6px 8px', color: t.textDim }}>{s.partNumber}</td>
+                                <td style={{ padding: '6px 8px', color: t.textDim }}>{s.registeredAt ? new Date(s.registeredAt).toLocaleString('es-MX') : '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {searchResults.length > 200 && (
+                          <div style={{ padding: '12px', textAlign: 'center', color: t.textDim, backgroundColor: t.bg }}>
+                            ...y {searchResults.length - 200} más
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+                      Usa los filtros para buscar seriales en producción
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Entrada Manual */}
+            {serialModalTab === 'manual' && (
+              <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+                <div style={{ marginBottom: '16px', color: t.textDim, fontSize: '12px' }}>
+                  Ingresa seriales con su número de parte correspondiente:
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                  {manualSerials.map((row, index) => (
+                    <div key={index} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Serial"
+                        value={row.serial}
+                        onChange={(e) => handleManualSerialChange(index, 'serial', e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          backgroundColor: t.bg,
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          color: t.text,
+                          fontSize: '13px',
+                          fontFamily: 'monospace'
+                        }}
+                      />
+                      <select
+                        value={row.partId}
+                        onChange={(e) => handleManualSerialChange(index, 'partId', e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          backgroundColor: t.bg,
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          color: t.text,
+                          fontSize: '13px'
+                        }}
+                      >
+                        <option value="">-- Seleccionar Parte --</option>
+                        {campaignParts.map(p => (
+                          <option key={p.id} value={p.id}>{p.partNumber} — {p.partName || ''}</option>
+                        ))}
+                      </select>
+                      {manualSerials.length > 1 && (
+                        <button
+                          onClick={() => handleRemoveManualRow(index)}
+                          style={{ background: 'none', border: 'none', color: '#B00020', cursor: 'pointer', padding: '4px' }}
+                        >
+                          <X size={18} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={handleAddManualRow}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: t.bg,
+                      color: t.text,
+                      border: `1px solid ${t.border}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <PlusCircle size={14} />
+                    Agregar fila
+                  </button>
+                  <button
+                    onClick={handleAddManualSerials}
+                    disabled={savingSerials || manualSerials.every(s => !s.serial.trim() || !s.partId)}
+                    style={{
+                      padding: '8px 20px',
+                      backgroundColor: '#16a34a',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '12px',
+                      opacity: savingSerials ? 0.7 : 1
+                    }}
+                  >
+                    {savingSerials ? 'Guardando...' : 'Guardar Seriales'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Ver Cargados */}
+            {serialModalTab === 'list' && (
+              <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+                {loadingSerials ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: t.textDim }}>Cargando...</div>
+                ) : affectedSerials.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+                    Sin seriales afectados registrados
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ color: t.text }}>
+                        <strong>{affectedSerialsSummary.total}</strong> seriales —
+                        <span style={{ color: '#22c55e' }}> {affectedSerialsSummary.inspected} inspeccionados</span>,
+                        <span style={{ color: '#f59e0b' }}> {affectedSerialsSummary.pending} pendientes</span>
+                      </span>
+                      {affectedSerials.length > 0 && (
+                        <button
+                          onClick={handleClearAllSerials}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#B0002022',
+                            color: '#B00020',
+                            border: '1px solid #B00020',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Limpiar todo
+                        </button>
+                      )}
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: `2px solid ${t.border}` }}>
+                          <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Serial</th>
+                          <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Parte</th>
+                          <th style={{ padding: '8px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Estado</th>
+                          <th style={{ padding: '8px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {affectedSerials.map(serial => (
+                          <tr key={serial.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                            <td style={{ padding: '8px', color: t.text, fontFamily: 'monospace', fontWeight: '600' }}>{serial.serialNumber}</td>
+                            <td style={{ padding: '8px', color: t.textDim }}>{serial.partNumber || '-'}</td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                              {serial.inspected ? (
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '10px',
+                                  fontWeight: '700',
+                                  backgroundColor: serial.inspectionResult === 'OK' ? '#22c55e22' : serial.inspectionResult === 'NOK' ? '#B0002022' : '#f59e0b22',
+                                  color: serial.inspectionResult === 'OK' ? '#16a34a' : serial.inspectionResult === 'NOK' ? '#B00020' : '#b45309'
+                                }}>
+                                  {serial.inspectionResult}
+                                </span>
+                              ) : (
+                                <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: '#6b728022', color: '#6b7280' }}>
+                                  Pendiente
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                              {!serial.inspected && (
+                                <button
+                                  onClick={() => handleDeleteSerial(serial.id)}
+                                  style={{ background: 'none', border: 'none', color: '#B00020', cursor: 'pointer', padding: '4px' }}
+                                  title="Eliminar"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ padding: '16px 20px', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowAffectedSerialsModal(false)} style={{ padding: '10px 24px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}

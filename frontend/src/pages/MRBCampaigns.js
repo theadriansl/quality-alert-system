@@ -100,16 +100,30 @@ const MRBCampaigns = () => {
   const [mrbs, setMrbs] = useState([]);
   const [allMrbs, setAllMrbs] = useState([]); // For counting
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterClient, setFilterClient] = useState('');
+
+  // Initialize filters from localStorage for memory persistence
+  const savedFilters = JSON.parse(localStorage.getItem('mrbCampaignsFilters') || '{}');
+  const [filterStatus, setFilterStatus] = useState(savedFilters.status || '');
+  const [filterClient, setFilterClient] = useState(savedFilters.client || '');
   const [clients, setClients] = useState([]);
   const [unregisteredShifts, setUnregisteredShifts] = useState([]);
   const [shiftEdits, setShiftEdits] = useState({});
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [bulkRegistering, setBulkRegistering] = useState(false);
-  const [activeTab, setActiveTab] = useState('campaigns');
-  const [sortField, setSortField] = useState('campaignNumber');
-  const [sortDir, setSortDir] = useState('asc');
+  const [activeTab, setActiveTab] = useState(savedFilters.tab || 'campaigns');
+  const [sortField, setSortField] = useState(savedFilters.sortField || 'campaignNumber');
+  const [sortDir, setSortDir] = useState(savedFilters.sortDir || 'asc');
+
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('mrbCampaignsFilters', JSON.stringify({
+      status: filterStatus,
+      client: filterClient,
+      tab: activeTab,
+      sortField,
+      sortDir
+    }));
+  }, [filterStatus, filterClient, activeTab, sortField, sortDir]);
 
   useEffect(() => {
     if (!unregisteredShifts.length) return;

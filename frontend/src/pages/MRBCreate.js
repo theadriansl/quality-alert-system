@@ -158,6 +158,10 @@ const MRBCreate = () => {
   const [selectedDefects, setSelectedDefects] = useState(prefillData.defects || []);
   const [defectIds, setDefectIds] = useState(prefillData.defectIds || []);
 
+  // ========== CAMPAIGN DEFECTS (selected for this MRB campaign) ==========
+  const [availableDefects, setAvailableDefects] = useState([]); // Defects from selected parts
+  const [campaignDefectIds, setCampaignDefectIds] = useState([]); // Selected defect IDs for campaign
+
   // ========== UI STATE ==========
   const [eightdHasDescription, setEightdHasDescription] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -198,6 +202,53 @@ const MRBCreate = () => {
       setPartDescription(selectedPartIds.map(p => `${p.partNumber}${p.partName ? ' — ' + p.partName : ''}`).join('\n'));
     }
   }, [selectedPartIds]);
+
+  // Load defects when parts change (from selection OR from inherited 8D data)
+  const inheritedPartIds = JSON.stringify(
+    (inheritedData.partsList || []).map(p => p.partId).filter(Boolean)
+  );
+  const inheritedSinglePartId = inheritedData.partId || null;
+
+  useEffect(() => {
+    // Priority: selectedPartIds > inheritedData.partsList > inheritedData.partId
+    if (selectedPartIds.length > 0) {
+      loadPartDefects(selectedPartIds.map(p => p.id));
+    } else {
+      const parsedIds = JSON.parse(inheritedPartIds);
+      if (parsedIds.length > 0) {
+        loadPartDefects(parsedIds);
+      } else if (inheritedSinglePartId) {
+        loadPartDefects([inheritedSinglePartId]);
+      } else {
+        setAvailableDefects([]);
+        setCampaignDefectIds([]);
+      }
+    }
+  }, [selectedPartIds, inheritedPartIds, inheritedSinglePartId]);
+
+  const loadPartDefects = async (partIds) => {
+    if (!partIds || partIds.length === 0) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/parts/defects?partIds=${partIds.join(',')}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setAvailableDefects(data.defects || []);
+      // Auto-select all defects by default
+      setCampaignDefectIds((data.defects || []).map(d => d.defectTypeId));
+    } catch (e) { console.error(e); setAvailableDefects([]); }
+  };
+
+  const toggleDefectSelection = (defectTypeId) => {
+    setCampaignDefectIds(prev => {
+      if (prev.includes(defectTypeId)) {
+        return prev.filter(id => id !== defectTypeId);
+      } else {
+        return [...prev, defectTypeId];
+      }
+    });
+  };
 
   const loadDepartments = async () => {
     try {
@@ -635,7 +686,11 @@ const MRBCreate = () => {
         inspectorUnitCost,
         supervisorUnitCost,
         // Parts list (multi-part for INCOMING)
-        partsList: inheritedData.partsList || [],
+        partsList: selectedPartIds.length > 0
+          ? selectedPartIds.map(p => ({ partId: p.id, partNumber: p.partNumber, partName: p.partName || '' }))
+          : (inheritedData.partsList || []),
+        // Campaign defects (selected for this MRB)
+        campaignDefectIds: campaignDefectIds || [],
         // Inspector detail fields
         lotNumber: lotNumber || undefined,
         partDescription: partDescription || undefined,
@@ -1381,6 +1436,47 @@ const MRBCreate = () => {
                 </div>
               )}
             </div>
+
+            {/* Defectos de la campaña — solo visible cuando hay partes seleccionadas */}
+            {(selectedPartIds.length > 0 || inheritedData.partsList?.length > 0) && availableDefects.length > 0 && (
+              <div style={{ ...styles.inheritedField, gridColumn: '1 / -1' }}>
+                <div style={styles.inheritedLabel}>
+                  Defectos de la Campaña {campaignDefectIds.length > 0 ? `(${campaignDefectIds.length} seleccionados)` : ''}
+                </div>
+                <p style={{ color: t.textDim, fontSize: '11px', margin: '0 0 8px 0' }}>
+                  Selecciona los defectos que aplican a esta campaña MRB. Solo estos aparecerán en el import masivo.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', padding: '4px', border: `1px solid ${t.border}`, borderRadius: '8px', backgroundColor: t.bgPanel }}>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '4px', borderBottom: `1px solid ${t.border}`, paddingBottom: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCampaignDefectIds(availableDefects.map(d => d.defectTypeId))}
+                      style={{ padding: '4px 10px', fontSize: '11px', backgroundColor: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Seleccionar todos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCampaignDefectIds([])}
+                      style={{ padding: '4px 10px', fontSize: '11px', backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Quitar todos
+                    </button>
+                  </div>
+                  {availableDefects.map(defect => {
+                    const selected = campaignDefectIds.includes(defect.defectTypeId);
+                    return (
+                      <label key={defect.defectTypeId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', backgroundColor: selected ? '#fef3c7' : 'transparent', border: `1px solid ${selected ? '#f59e0b' : 'transparent'}` }}>
+                        <input type="checkbox" checked={selected} onChange={() => toggleDefectSelection(defect.defectTypeId)} style={{ width: '15px', height: '15px', flexShrink: 0 }} />
+                        <span style={{ fontWeight: '600', color: '#f59e0b', fontFamily: 'monospace', fontSize: '12px', minWidth: '50px' }}>{defect.code}</span>
+                        <span style={{ color: t.text, fontSize: '12px' }}>{defect.displayName || defect.name}</span>
+                        {defect.categoryName && <span style={{ color: t.textMuted, fontSize: '11px', marginLeft: 'auto' }}>{defect.categoryName}</span>}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Departamento — always editable */}
             <div style={styles.inheritedField}>

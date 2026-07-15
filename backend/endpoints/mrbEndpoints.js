@@ -2750,7 +2750,8 @@ router.post('/', authenticateToken, async (req, res) => {
     qtyQuarantineProcess   = 0,
     qtyQuarantineTransit   = 0,
     qtyQuarantineCustomer  = 0,
-    partsList = []
+    partsList = [],
+    campaignDefectIds = [] // Selected defects for this campaign (from part_defect_config)
   } = req.body;
 
   // Require at least one part
@@ -2941,6 +2942,16 @@ router.post('/', authenticateToken, async (req, res) => {
         WHERE defect_ids ?| $2::text[]
           AND mrb_created_later = false
       `, [mrbId, defectIds.map(String)]);
+    }
+
+    // Insert selected campaign defects (for import/capture filtering)
+    if (Array.isArray(campaignDefectIds) && campaignDefectIds.length > 0) {
+      for (const defectTypeId of campaignDefectIds) {
+        await query(
+          'INSERT INTO mrb_campaign_defects (mrb_campaign_id, defect_type_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [mrbId, defectTypeId]
+        );
+      }
     }
 
     // Add response recipients
@@ -3318,6 +3329,28 @@ router.post('/:id/recipients', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error adding recipients:', error);
     res.status(500).json({ success: false, message: 'Error al agregar destinatarios' });
+  }
+});
+
+// DELETE a recipient from MRB
+router.delete('/:id/recipients/:recipientId', authenticateToken, async (req, res) => {
+  const { id, recipientId } = req.params;
+  try {
+    const check = await query('SELECT status FROM mrb_campaigns WHERE id = $1', [id]);
+    if (!check.rows.length) return res.status(404).json({ success: false, message: 'MRB no encontrado' });
+
+    await query('DELETE FROM mrb_recipients WHERE id = $1 AND mrb_campaign_id = $2', [recipientId, id]);
+
+    const updated = await query(
+      `SELECT mr.*, u.first_name, u.last_name, u.email, u.role
+       FROM mrb_recipients mr JOIN users u ON mr.user_id = u.id
+       WHERE mr.mrb_campaign_id = $1 ORDER BY mr.recipient_type, u.first_name`,
+      [id]
+    );
+    res.json({ success: true, recipients: transformToCamelCase(updated.rows) });
+  } catch (error) {
+    console.error('Error removing recipient:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar destinatario' });
   }
 });
 
@@ -3973,6 +4006,368 @@ router.delete('/:id/remove-part/:partId', authenticateToken, async (req, res) =>
 });
 
 // ============================================================================
+// MRB AFFECTED SERIALS ENDPOINTS (Seriales a inspeccionar)
+// ============================================================================
+
+// GET /mrb/:id/affected-serials - List affected serials for a campaign
+router.get('/:id/affected-serials', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await query(`
+      SELECT
+        mas.id, mas.serial_number, mas.lot_number, mas.notes,
+        mas.inspected, mas.inspected_at, mas.inspection_result,
+        mas.created_at,
+        cp.part_number, cp.part_name,
+        u.first_name || ' ' || u.last_name as created_by_name
+      FROM mrb_affected_serials mas
+      LEFT JOIN client_parts cp ON mas.part_id = cp.id
+      LEFT JOIN users u ON mas.created_by = u.id
+      WHERE mas.mrb_campaign_id = $1
+      ORDER BY mas.inspected ASC, mas.created_at DESC
+    `, [id]);
+
+    const inspectedCount = result.rows.filter(r => r.inspected).length;
+    const pendingCount = result.rows.filter(r => !r.inspected).length;
+
+    res.json({
+      success: true,
+      serials: transformToCamelCase(result.rows),
+      summary: {
+        total: result.rows.length,
+        inspected: inspectedCount,
+        pending: pendingCount
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching affected serials:', error);
+    res.status(500).json({ success: false, message: 'Error fetching affected serials' });
+  }
+});
+
+// POST /mrb/:id/affected-serials - Add affected serials (single or bulk)
+router.post('/:id/affected-serials', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { serials, partId, lotNumber } = req.body;
+  // serials can be: string (single), array of strings, or array of objects {serialNumber, partId?, lotNumber?, notes?}
+
+  try {
+    if (!serials || (Array.isArray(serials) && serials.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Se requiere al menos un serial' });
+    }
+
+    // Normalize input to array of objects
+    let serialList = [];
+    if (typeof serials === 'string') {
+      // Single serial or newline/comma separated
+      const parsed = serials.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+      serialList = parsed.map(s => ({ serialNumber: s, partId, lotNumber }));
+    } else if (Array.isArray(serials)) {
+      serialList = serials.map(s => {
+        if (typeof s === 'string') {
+          return { serialNumber: s.trim(), partId, lotNumber };
+        }
+        return { serialNumber: s.serialNumber?.trim(), partId: s.partId || partId, lotNumber: s.lotNumber || lotNumber, notes: s.notes };
+      }).filter(s => s.serialNumber);
+    }
+
+    if (serialList.length === 0) {
+      return res.status(400).json({ success: false, message: 'No se encontraron seriales válidos' });
+    }
+
+    let inserted = 0;
+    let duplicates = 0;
+
+    for (const serial of serialList) {
+      try {
+        await query(`
+          INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, lot_number, notes, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6)
+        `, [id, serial.serialNumber, serial.partId || null, serial.lotNumber || null, serial.notes || null, req.user.id]);
+        inserted++;
+      } catch (err) {
+        if (err.code === '23505') { // Unique constraint violation
+          duplicates++;
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${inserted} serial(es) agregado(s)${duplicates > 0 ? `, ${duplicates} duplicado(s) omitido(s)` : ''}`,
+      inserted,
+      duplicates
+    });
+  } catch (error) {
+    console.error('Error adding affected serials:', error);
+    res.status(500).json({ success: false, message: 'Error adding affected serials' });
+  }
+});
+
+// DELETE /mrb/:id/affected-serials/:serialId - Remove an affected serial
+router.delete('/:id/affected-serials/:serialId', authenticateToken, async (req, res) => {
+  const { id, serialId } = req.params;
+  try {
+    const result = await query(
+      'DELETE FROM mrb_affected_serials WHERE id = $1 AND mrb_campaign_id = $2 RETURNING id',
+      [serialId, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Serial no encontrado' });
+    }
+    res.json({ success: true, message: 'Serial eliminado' });
+  } catch (error) {
+    console.error('Error deleting affected serial:', error);
+    res.status(500).json({ success: false, message: 'Error deleting serial' });
+  }
+});
+
+// DELETE /mrb/:id/affected-serials - Clear all affected serials
+router.delete('/:id/affected-serials', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await query(
+      'DELETE FROM mrb_affected_serials WHERE mrb_campaign_id = $1 RETURNING id',
+      [id]
+    );
+    res.json({ success: true, message: `${result.rows.length} serial(es) eliminado(s)`, deleted: result.rows.length });
+  } catch (error) {
+    console.error('Error clearing affected serials:', error);
+    res.status(500).json({ success: false, message: 'Error clearing serials' });
+  }
+});
+
+// PATCH /mrb/:id/affected-serials/:serialId/inspect - Mark serial as inspected
+router.patch('/:id/affected-serials/:serialId/inspect', authenticateToken, async (req, res) => {
+  const { id, serialId } = req.params;
+  const { result: inspectionResult } = req.body;
+  try {
+    const qResult = await query(`
+      UPDATE mrb_affected_serials
+      SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = $1
+      WHERE id = $2 AND mrb_campaign_id = $3
+      RETURNING *
+    `, [inspectionResult || 'OK', serialId, id]);
+
+    if (qResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Serial no encontrado' });
+    }
+    res.json({ success: true, serial: transformToCamelCase(qResult.rows[0]) });
+  } catch (error) {
+    console.error('Error marking serial as inspected:', error);
+    res.status(500).json({ success: false, message: 'Error updating serial' });
+  }
+});
+
+// GET /mrb/:id/search-serials - Search serials from production_entries for affected serials loading
+router.get('/:id/search-serials', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { mode, dateFrom, dateTo, serialFrom, serialTo, partIds } = req.query;
+  // mode: 'date' or 'serial'
+  // partIds: comma-separated list of part IDs to filter
+
+  try {
+    // Get campaign parts
+    const campaignRes = await query(`
+      SELECT mc.client_id, mc.part_id, mc.parts_list
+      FROM mrb_campaigns mc
+      WHERE mc.id = $1
+    `, [id]);
+
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+
+    const campaign = campaignRes.rows[0];
+
+    // Get valid part IDs from campaign
+    let campaignPartIds = [];
+    if (campaign.parts_list && Array.isArray(campaign.parts_list)) {
+      campaignPartIds = campaign.parts_list.map(p => p.partId).filter(Boolean);
+    }
+    if (campaign.part_id && !campaignPartIds.includes(campaign.part_id)) {
+      campaignPartIds.push(campaign.part_id);
+    }
+
+    if (campaignPartIds.length === 0) {
+      return res.json({ success: true, serials: [], message: 'La campaña no tiene partes asignadas' });
+    }
+
+    // Filter by selected parts (if provided)
+    let filterPartIds = campaignPartIds;
+    if (partIds) {
+      const requestedParts = partIds.split(',').map(p => parseInt(p)).filter(Boolean);
+      filterPartIds = requestedParts.filter(p => campaignPartIds.includes(p));
+      if (filterPartIds.length === 0) {
+        return res.json({ success: true, serials: [], message: 'Las partes seleccionadas no pertenecen a la campaña' });
+      }
+    }
+
+    // Search in production_entries (source of production data)
+    let sql = `
+      SELECT
+        pe.id, pe.serial_number, pe.part_id, pe.produced_at,
+        pe.inspection_status, pe.lot_number,
+        cp.part_number, cp.part_name
+      FROM production_entries pe
+      JOIN client_parts cp ON pe.part_id = cp.id
+      WHERE pe.part_id = ANY($1::int[])
+    `;
+    const params = [filterPartIds];
+
+    if (mode === 'date' && dateFrom && dateTo) {
+      params.push(dateFrom, dateTo);
+      sql += ` AND pe.produced_at >= $${params.length - 1}::timestamp AND pe.produced_at <= $${params.length}::timestamp`;
+    } else if (mode === 'serial' && serialFrom && serialTo) {
+      params.push(serialFrom, serialTo);
+      sql += ` AND pe.serial_number >= $${params.length - 1} AND pe.serial_number <= $${params.length}`;
+    } else {
+      return res.status(400).json({ success: false, message: 'Especifica rango de fechas o rango de seriales' });
+    }
+
+    sql += ` ORDER BY pe.serial_number LIMIT 5000`;
+
+    const result = await query(sql, params);
+
+    // Transform to match expected format (registeredAt -> producedAt)
+    const serials = result.rows.map(r => ({
+      id: r.id,
+      serialNumber: r.serial_number,
+      partId: r.part_id,
+      registeredAt: r.produced_at, // Use producedAt as registeredAt for frontend compatibility
+      currentStatus: r.inspection_status || 'PENDING',
+      lotNumber: r.lot_number,
+      partNumber: r.part_number,
+      partName: r.part_name
+    }));
+
+    res.json({
+      success: true,
+      serials,
+      count: result.rows.length,
+      truncated: result.rows.length >= 5000
+    });
+  } catch (error) {
+    console.error('Error searching serials:', error);
+    res.status(500).json({ success: false, message: 'Error searching serials' });
+  }
+});
+
+// GET /mrb/:id/campaign-parts - Get parts assigned to this campaign (for filter checkboxes)
+router.get('/:id/campaign-parts', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const campaignRes = await query(`
+      SELECT mc.part_id, mc.parts_list
+      FROM mrb_campaigns mc
+      WHERE mc.id = $1
+    `, [id]);
+
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+
+    const campaign = campaignRes.rows[0];
+    let partIds = [];
+    if (campaign.parts_list && Array.isArray(campaign.parts_list)) {
+      partIds = campaign.parts_list.map(p => p.partId).filter(Boolean);
+    }
+    if (campaign.part_id && !partIds.includes(campaign.part_id)) {
+      partIds.push(campaign.part_id);
+    }
+
+    if (partIds.length === 0) {
+      return res.json({ success: true, parts: [] });
+    }
+
+    const partsRes = await query(`
+      SELECT id, part_number, part_name
+      FROM client_parts
+      WHERE id = ANY($1::int[])
+      ORDER BY part_number
+    `, [partIds]);
+
+    res.json({ success: true, parts: transformToCamelCase(partsRes.rows) });
+  } catch (error) {
+    console.error('Error fetching campaign parts:', error);
+    res.status(500).json({ success: false, message: 'Error fetching parts' });
+  }
+});
+
+// POST /mrb/:id/affected-serials/bulk - Add multiple serials from search results
+router.post('/:id/affected-serials/bulk', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { serials } = req.body;
+  // serials: array of { serialNumber, partId }
+
+  try {
+    if (!serials || !Array.isArray(serials) || serials.length === 0) {
+      return res.status(400).json({ success: false, message: 'Se requiere lista de seriales' });
+    }
+
+    let inserted = 0;
+    let duplicates = 0;
+
+    for (const serial of serials) {
+      try {
+        await query(`
+          INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, created_by)
+          VALUES ($1, $2, $3, $4)
+        `, [id, serial.serialNumber, serial.partId, req.user.id]);
+        inserted++;
+      } catch (err) {
+        if (err.code === '23505') {
+          duplicates++;
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${inserted} serial(es) agregado(s)${duplicates > 0 ? `, ${duplicates} duplicado(s) omitido(s)` : ''}`,
+      inserted,
+      duplicates
+    });
+  } catch (error) {
+    console.error('Error adding bulk affected serials:', error);
+    res.status(500).json({ success: false, message: 'Error adding serials' });
+  }
+});
+
+// GET /mrb/:id/available-parts - Get parts from project that are NOT yet in campaign
+router.get('/:id/available-parts', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await query(`
+      SELECT cp.id, cp.part_number, cp.part_name, cp.capture_display_name
+      FROM client_parts cp
+      JOIN mrb_campaigns mc ON mc.project_id = cp.project_id
+      WHERE mc.id = $1
+        AND cp.active = true
+        AND cp.id NOT IN (
+          SELECT part_id FROM mrb_campaign_parts WHERE mrb_campaign_id = $1
+        )
+        AND cp.id NOT IN (
+          SELECT (elem->>'partId')::int
+          FROM mrb_campaigns mc2, jsonb_array_elements(mc2.parts_list) elem
+          WHERE mc2.id = $1 AND mc2.parts_list IS NOT NULL
+        )
+        AND (mc.part_id IS NULL OR cp.id != mc.part_id)
+      ORDER BY cp.part_number
+    `, [id]);
+
+    res.json({ success: true, parts: transformToCamelCase(result.rows) });
+  } catch (error) {
+    console.error('Error fetching available parts:', error);
+    res.status(500).json({ success: false, message: 'Error fetching available parts' });
+  }
+});
+
+// ============================================================================
 // MRB BUFFER ENDPOINTS (Material QUARANTINE sin campaña)
 // ============================================================================
 
@@ -4328,7 +4723,7 @@ router.get('/export', authenticateToken, async (req, res) => {
 });
 
 // ============================================================================
-// GET /mrb/:id/tally-template - Descargar template Excel de Tally Sheet
+// GET /mrb/:id/tally-template - Descargar template Excel simplificado (SERIAL | PARTE)
 // ============================================================================
 router.get('/:id/tally-template', authenticateToken, async (req, res) => {
   const { id } = req.params;
@@ -4359,7 +4754,7 @@ router.get('/:id/tally-template', authenticateToken, async (req, res) => {
 
     const campaign = campaignRes.rows[0];
 
-    // 2. Obtener partes de la campaña (de mrb_campaign_parts o part_id directo)
+    // 2. Obtener partes de la campaña
     const partsRes = await query(`
       SELECT DISTINCT cp.id as part_id, cp.part_number, cp.part_name FROM (
         SELECT part_id FROM mrb_campaign_parts WHERE mrb_campaign_id = $1
@@ -4368,225 +4763,263 @@ router.get('/:id/tally-template', authenticateToken, async (req, res) => {
       ) parts
       JOIN client_parts cp ON cp.id = parts.part_id
     `, [id]);
-    const partIds = partsRes.rows.map(r => r.part_id);
     const partNumbers = partsRes.rows.map(r => r.part_number).join(', ');
 
-    // 3. Obtener defectos de todas las partes de la campaña (mismo orden que UI)
-    let defects = [];
-    if (partIds.length > 0) {
-      const defectsRes = await query(`
-        SELECT pdc.id, pdc.display_name, dt.id as defect_type_id, dt.code, dt.name,
-               dt.category_id, dc.name as category_name
-        FROM part_defect_config pdc
-        JOIN defect_types dt ON pdc.defect_type_id = dt.id
-        LEFT JOIN defect_categories dc ON dt.category_id = dc.id
-        WHERE pdc.part_id = ANY($1) AND pdc.is_active = true AND dt.is_active = true
-        ORDER BY dc.display_order, dc.name, dt.display_order, dt.name
-      `, [partIds]);
-      // Eliminar duplicados manteniendo el orden
-      const seen = new Set();
-      defects = defectsRes.rows.filter(d => {
-        if (seen.has(d.defect_type_id)) return false;
-        seen.add(d.defect_type_id);
-        return true;
-      });
-    }
-
-    // Fallback: si no hay parte o no hay defectos configurados, usar catálogo general
-    if (defects.length === 0) {
-      const defectsRes = await query(`
-        SELECT dt.id as defect_type_id, NULL as display_name, dt.code, dt.name,
-               dt.category_id, dc.name as category_name
-        FROM defect_types dt
-        LEFT JOIN defect_categories dc ON dt.category_id = dc.id
-        WHERE dt.is_active = true
-        ORDER BY dc.display_order, dt.display_order, dt.name
-      `);
-      defects = defectsRes.rows;
-    }
-
-    // Agrupar y ordenar exactamente como el frontend
-    const grouped = defects.reduce((acc, d) => {
-      const catId = d.category_id || 0;
-      const existing = acc.find(g => g.categoryId === catId);
-      if (existing) {
-        existing.defects.push(d);
-      } else {
-        acc.push({
-          categoryId: catId,
-          categoryName: d.category_name || 'Sin Categoría',
-          defects: [d]
-        });
-      }
-      return acc;
-    }, []);
-    // Ordenar grupos alfabéticamente por nombre (como localeCompare del frontend)
-    grouped.sort((a, b) => (a.categoryName || '').localeCompare(b.categoryName || ''));
-
-    // 3. Crear workbook
+    // 3. Crear workbook simplificado
     const wb = XLSX.utils.book_new();
 
-    // ========== HOJA 1: CONTEO DE DEFECTOS ==========
-    const sheet1Data = [];
+    // ========== HOJA ÚNICA: LISTADO DE SERIALES ==========
+    const sheetData = [];
 
     // Header con info de campaña
-    sheet1Data.push(['TALLY SHEET - CONTEO DE DEFECTOS']);
-    sheet1Data.push([]);
-    sheet1Data.push(['Campaña:', campaign.campaign_number]);
-    sheet1Data.push(['Título:', campaign.title]);
-    sheet1Data.push(['Cliente:', campaign.client_name || '-']);
-    sheet1Data.push(['Proyecto:', campaign.project_name || '-']);
-    sheet1Data.push(['No. de Parte:', partNumbers || campaign.part_number || '-']);
-    sheet1Data.push(['Lote / Batch:', campaign.lot_number || 'N/A']);
-    sheet1Data.push(['Severidad:', campaign.severity_name || 'N/A']);
-    sheet1Data.push(['Departamento:', campaign.department_name || '-']);
-    sheet1Data.push(['Emitida por:', campaign.reported_by_name || '-']);
-    sheet1Data.push(['Fecha:', new Date().toLocaleDateString('es-MX'), '', 'Turno:', '___________']);
-    sheet1Data.push([]);
-    sheet1Data.push([]);
+    sheetData.push(['TEMPLATE IMPORT MASIVO - MRB']);
+    sheetData.push([]);
+    sheetData.push(['Campaña:', campaign.campaign_number]);
+    sheetData.push(['Título:', campaign.title]);
+    sheetData.push(['Cliente:', campaign.client_name || '-']);
+    sheetData.push(['Proyecto:', campaign.project_name || '-']);
+    sheetData.push(['No. de Parte:', partNumbers || campaign.part_number || '-']);
+    sheetData.push(['Lote / Batch:', campaign.lot_number || 'N/A']);
+    sheetData.push([]);
+    sheetData.push(['INSTRUCCIONES:']);
+    sheetData.push(['1. Llena las columnas SERIAL y PARTE con los datos a importar']);
+    sheetData.push(['2. En la aplicación, selecciona el tipo de registro (OK o Defecto)']);
+    sheetData.push(['3. Si es Defecto, selecciona el defecto y la disposición']);
+    sheetData.push(['4. Sube este archivo para importar todos los registros']);
+    sheetData.push([]);
 
-    // Header de tabla - una sola fila
-    sheet1Data.push([
-      'DEFECTO',
-      'REWORK',
-      'SCRAP',
-      'HOLD',
-      'RETURN',
-      'UAI',
-      'TOTAL',
-      'ALTA', 'MINOR', 'MAJOR', 'CRITICAL'
-    ]);
+    // Header de tabla simplificado: solo SERIAL y PARTE
+    sheetData.push(['SERIAL', 'PARTE']);
 
-    // Iterar grupos ordenados alfabéticamente (igual que el frontend)
-    const fill = '////////';
-    grouped.forEach(group => {
-      // Fila de categoría con relleno visual
-      sheet1Data.push([group.categoryName, fill, fill, fill, fill, fill, fill, fill, fill, fill, fill]);
-      // Defectos de la categoría
-      group.defects.forEach(d => {
-        const defectName = d.display_name || d.name || d.code;
-        sheet1Data.push([
-          defectName,
-          '', // REWORK
-          '', // SCRAP
-          '', // HOLD
-          '', // RETURN
-          '', // UAI
-          '', // TOTAL
-          '', '', '', '' // Severidades
-        ]);
-      });
-    });
-
-    // Fila de totales vacía (se calcula al importar)
-    sheet1Data.push([
-      'TOTAL NOK',
-      '', '', '', '', '', '',
-      '', '', '', ''
-    ]);
-
-    const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
-
-    // Ajustar anchos de columna
-    ws1['!cols'] = [
-      { wch: 25 }, // Defecto
-      { wch: 10 }, // REWORK
-      { wch: 10 }, // SCRAP
-      { wch: 10 }, // HOLD
-      { wch: 10 }, // RETURN
-      { wch: 10 }, // UAI
-      { wch: 10 }, // TOTAL
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 } // Severidades
-    ];
-
-    XLSX.utils.book_append_sheet(wb, ws1, 'Conteo Defectos');
-
-    // ========== HOJA 2: RESULTADO POR SERIAL ==========
-    const sheet2Data = [];
-
-    // Header con info de campaña
-    sheet2Data.push(['TALLY SHEET - RESULTADO POR SERIAL']);
-    sheet2Data.push([]);
-    sheet2Data.push(['Campaña:', campaign.campaign_number]);
-    sheet2Data.push(['Título:', campaign.title]);
-    sheet2Data.push(['Cliente:', campaign.client_name || '-']);
-    sheet2Data.push(['Proyecto:', campaign.project_name || '-']);
-    sheet2Data.push(['No. de Parte:', partNumbers || campaign.part_number || '-']);
-    sheet2Data.push(['Lote / Batch:', campaign.lot_number || 'N/A']);
-    sheet2Data.push(['Severidad:', campaign.severity_name || 'N/A']);
-    sheet2Data.push(['Departamento:', campaign.department_name || '-']);
-    sheet2Data.push(['Emitida por:', campaign.reported_by_name || '-']);
-    sheet2Data.push(['Fecha:', new Date().toLocaleDateString('es-MX'), '', 'Turno:', '___________']);
-    sheet2Data.push([]);
-
-    // Lista plana de defectos (sin categorías) para las columnas
-    const defectList = defects.map(d => ({
-      id: d.defect_type_id,
-      name: d.display_name || d.name || d.code,
-      code: d.code
-    }));
-
-    // Header de tabla: SERIAL, PARTE, [defectos...], OK
-    const headerRow = ['SERIAL', 'PARTE', ...defectList.map(d => d.code || d.name), 'OK'];
-    sheet2Data.push(headerRow);
-
-    // Agregar filas vacías para llenar (200 filas)
-    const emptyRow = ['', '', ...defectList.map(() => ''), ''];
-    for (let i = 0; i < 200; i++) {
-      sheet2Data.push([...emptyRow]);
+    // Agregar filas vacías para llenar (500 filas)
+    for (let i = 0; i < 500; i++) {
+      sheetData.push(['', '']);
     }
 
-    const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
-
-    // Guardar mapping de defectos en celda oculta para el import
-    // Formato: JSON en celda A1 del sheet (se sobrescribe el título)
-    // En su lugar, guardamos en una fila adicional al inicio que se ignora en import
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
     // Ajustar anchos de columna
-    const defectColWidth = 5; // Columnas de defectos angostas
-    ws2['!cols'] = [
-      { wch: 20 }, // Serial
-      { wch: 18 }, // Parte
-      ...defectList.map(() => ({ wch: defectColWidth })), // Defectos
-      { wch: 5 }   // OK
+    ws['!cols'] = [
+      { wch: 25 }, // Serial
+      { wch: 20 }  // Parte
     ];
 
-    // Aplicar rotación vertical a headers de defectos (fila 14, columnas 2+)
-    // Nota: xlsx-style soporta esto, xlsx básico no. Lo intentamos igual.
-    const headerRowIndex = 13; // 0-indexed (fila 14 en Excel)
-    for (let col = 2; col < 2 + defectList.length; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
-      if (!ws2[cellRef]) ws2[cellRef] = { v: defectList[col - 2].code || defectList[col - 2].name };
-      ws2[cellRef].s = {
-        alignment: { textRotation: 90, vertical: 'bottom', horizontal: 'center' },
-        font: { bold: true, sz: 9 }
-      };
-    }
-
-    XLSX.utils.book_append_sheet(wb, ws2, 'Seriales');
-
-    // Guardar metadata de defectos para el import (en hoja oculta)
-    const metaData = [
-      ['DEFECT_MAPPING'],
-      ['index', 'defect_type_id', 'code', 'name'],
-      ...defectList.map((d, i) => [i, d.id, d.code, d.name])
-    ];
-    const wsMeta = XLSX.utils.aoa_to_sheet(metaData);
-    XLSX.utils.book_append_sheet(wb, wsMeta, '_meta');
-    wb.Workbook = wb.Workbook || {};
-    wb.Workbook.Sheets = wb.Workbook.Sheets || [];
-    wb.Workbook.Sheets.push({ Hidden: 1 }); // Ocultar hoja meta
+    XLSX.utils.book_append_sheet(wb, ws, 'Seriales');
 
     // 4. Generar buffer y enviar
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="TallySheet_${campaign.campaign_number}.xlsx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="ImportTemplate_${campaign.campaign_number}.xlsx"`);
     res.send(buffer);
 
   } catch (error) {
-    console.error('Error generating tally template:', error);
+    console.error('Error generating import template:', error);
     res.status(500).json({ success: false, message: 'Error generando template' });
+  }
+});
+
+// ============================================================================
+// GET /mrb/:id/defects - Obtener defectos configurados para la campaña
+// ============================================================================
+router.get('/:id/defects', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Primero intentar obtener de mrb_campaign_defects (nuevos)
+    let defectsRes = await query(`
+      SELECT mcd.defect_type_id, dt.code, dt.name, pdc.display_name,
+             dc.name as category_name
+      FROM mrb_campaign_defects mcd
+      JOIN defect_types dt ON mcd.defect_type_id = dt.id
+      LEFT JOIN part_defect_config pdc ON pdc.defect_type_id = dt.id
+      LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+      WHERE mcd.mrb_campaign_id = $1 AND dt.is_active = true
+      ORDER BY dc.display_order, dt.display_order, dt.name
+    `, [id]);
+
+    // Si no hay defectos en mrb_campaign_defects, obtener de las partes de la campaña
+    if (defectsRes.rows.length === 0) {
+      defectsRes = await query(`
+        SELECT DISTINCT dt.id as defect_type_id, dt.code, dt.name, pdc.display_name,
+               dc.name as category_name,
+               dc.display_order as category_display_order,
+               dt.display_order as defect_display_order
+        FROM mrb_campaigns mc
+        LEFT JOIN mrb_campaign_parts mcp ON mc.id = mcp.mrb_campaign_id
+        JOIN client_parts cp ON cp.id = COALESCE(mcp.part_id, mc.part_id)
+        JOIN part_defect_config pdc ON pdc.part_id = cp.id AND pdc.is_active = true
+        JOIN defect_types dt ON pdc.defect_type_id = dt.id AND dt.is_active = true
+        LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+        WHERE mc.id = $1
+        ORDER BY dc.display_order, dt.display_order, dt.name
+      `, [id]);
+    }
+
+    // Eliminar duplicados por defect_type_id
+    const seen = new Set();
+    const defects = defectsRes.rows.filter(d => {
+      if (seen.has(d.defect_type_id)) return false;
+      seen.add(d.defect_type_id);
+      return true;
+    }).map(row => ({
+      defectTypeId: row.defect_type_id,
+      code: row.code,
+      name: row.name,
+      displayName: row.display_name,
+      categoryName: row.category_name
+    }));
+
+    res.json({ success: true, defects });
+  } catch (error) {
+    console.error('Error fetching campaign defects:', error);
+    res.status(500).json({ success: false, message: 'Error obteniendo defectos' });
+  }
+});
+
+// ============================================================================
+// POST /mrb/:id/import-mass - Import masivo simplificado (OK o con defecto)
+// ============================================================================
+router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memoryStorage() }).single('file'), async (req, res) => {
+  const { id } = req.params;
+  const { importType, shiftId, defectTypeId, disposition } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'Archivo requerido' });
+  }
+
+  if (!shiftId) {
+    return res.status(400).json({ success: false, message: 'Turno requerido' });
+  }
+
+  if (importType === 'DEFECT' && !defectTypeId) {
+    return res.status(400).json({ success: false, message: 'Defecto requerido para tipo DEFECT' });
+  }
+
+  try {
+    // 1. Verificar campaña activa
+    const campaignRes = await query('SELECT * FROM mrb_campaigns WHERE id = $1', [id]);
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+    const campaign = campaignRes.rows[0];
+
+    if (campaign.status === 'CERRADA') {
+      return res.status(400).json({ success: false, message: 'La campaña está cerrada' });
+    }
+
+    // 2. Leer archivo Excel/CSV
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+    // 3. Buscar fila de header (SERIAL, PARTE)
+    let headerRowIndex = -1;
+    for (let i = 0; i < Math.min(20, data.length); i++) {
+      const row = data[i];
+      if (row && row[0] && String(row[0]).toUpperCase().includes('SERIAL')) {
+        headerRowIndex = i;
+        break;
+      }
+    }
+
+    if (headerRowIndex < 0) {
+      return res.status(400).json({ success: false, message: 'No se encontró header SERIAL en el archivo' });
+    }
+
+    // 4. Obtener partes válidas de la campaña
+    const partsRes = await query(`
+      SELECT DISTINCT cp.id as part_id, cp.part_number FROM (
+        SELECT part_id FROM mrb_campaign_parts WHERE mrb_campaign_id = $1
+        UNION
+        SELECT part_id FROM mrb_campaigns WHERE id = $1 AND part_id IS NOT NULL
+      ) parts
+      JOIN client_parts cp ON cp.id = parts.part_id
+    `, [id]);
+    const validParts = new Map(partsRes.rows.map(r => [r.part_number.trim().toUpperCase(), r.part_id]));
+
+    // 5. Procesar filas de datos
+    let imported = 0;
+    let skipped = 0;
+    const inspectorId = req.user.id;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Obtener nombre del defecto si aplica
+    let defectName = null;
+    if (importType === 'DEFECT' && defectTypeId) {
+      const dtRes = await query('SELECT code, name FROM defect_types WHERE id = $1', [defectTypeId]);
+      if (dtRes.rows.length > 0) defectName = dtRes.rows[0].code || dtRes.rows[0].name;
+    }
+
+    for (let i = headerRowIndex + 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row || !row[0]) continue; // Skip empty rows
+
+      const serial = String(row[0]).trim();
+      const partNumber = row[1] ? String(row[1]).trim().toUpperCase() : null;
+
+      if (!serial) continue;
+
+      // Validar parte si se proporciona
+      let partId = null;
+      if (partNumber) {
+        partId = validParts.get(partNumber);
+        if (!partId) {
+          skipped++;
+          continue; // Parte no válida para esta campaña
+        }
+      } else if (validParts.size === 1) {
+        // Si solo hay una parte en la campaña, usarla por defecto
+        partId = validParts.values().next().value;
+      }
+
+      if (importType === 'OK') {
+        // Insertar en mrb_ok_entries
+        await query(`
+          INSERT INTO mrb_ok_entries (mrb_campaign_id, shift_id, inspector_id, part_id, quantity, lot_number, serial_number, inspection_date)
+          VALUES ($1, $2, $3, $4, 1, $5, $6, $7)
+        `, [id, shiftId, inspectorId, partId, campaign.lot_number || null, serial, today]);
+        imported++;
+      } else {
+        // Insertar en defect_entries_v2
+        const entryNumRes = await query('SELECT generate_defect_entry_number() as entry_number');
+        const entryNumber = entryNumRes.rows[0].entry_number;
+
+        await query(`
+          INSERT INTO defect_entries_v2 (
+            entry_number, part_id, defect_type_id, disposition, quantity,
+            lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, inspection_date
+          ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, $10)
+        `, [
+          entryNumber, partId, defectTypeId, disposition || 'REWORK',
+          campaign.lot_number || null, serial, shiftId, inspectorId, id, today
+        ]);
+        imported++;
+      }
+    }
+
+    // 6. Actualizar contadores de campaña
+    if (imported > 0) {
+      if (importType === 'OK') {
+        await query('UPDATE mrb_campaigns SET qty_ok = qty_ok + $2, qty_inspected = qty_inspected + $2 WHERE id = $1', [id, imported]);
+      } else {
+        await query('UPDATE mrb_campaigns SET qty_nok = qty_nok + $2, qty_inspected = qty_inspected + $2 WHERE id = $1', [id, imported]);
+      }
+    }
+
+    res.json({
+      success: true,
+      imported,
+      skipped,
+      importType,
+      defectName,
+      disposition: importType === 'DEFECT' ? disposition : null,
+      message: `Importados ${imported} registros${skipped > 0 ? `, ${skipped} omitidos (parte inválida)` : ''}`
+    });
+
+  } catch (error) {
+    console.error('Error in mass import:', error);
+    res.status(500).json({ success: false, message: 'Error en importación masiva: ' + error.message });
   }
 });
 

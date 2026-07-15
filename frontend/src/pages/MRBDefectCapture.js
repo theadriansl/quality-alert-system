@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CheckCircle, XCircle, Plus, Home, List, BarChart3,
   Search, Package, Layers, Hash, Users, Info, Eye,
@@ -49,6 +49,8 @@ const DISPOSITION_SEVERITY = {
 
 const MRBDefectCapture = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlCampaignId = searchParams.get('campaignId');
   const { theme: t } = useTheme();
   const { t: tr, language, changeLanguage } = useLanguage();
 
@@ -128,6 +130,26 @@ const MRBDefectCapture = () => {
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
   const [tallyPreview, setTallyPreview] = useState({ open: false, file: null, preview: null });
 
+  // ── IMPORT MASIVO STATE ─────────────────────────────────────────────────────
+  const [importType, setImportType] = useState('OK'); // 'OK' | 'DEFECT'
+  const [importDefectId, setImportDefectId] = useState(null);
+  const [importDisposition, setImportDisposition] = useState('REWORK');
+  const [importFile, setImportFile] = useState(null);
+  const [importDragOver, setImportDragOver] = useState(false);
+  const [campaignDefects, setCampaignDefects] = useState([]); // Defectos de la campaña
+
+  // ── SCRAP VALIDATION STATE ─────────────────────────────────────────────────
+  const [serialScrapped, setSerialScrapped] = useState(false);
+  const [scrapModalOpen, setScrapModalOpen] = useState(false);
+  const [scrapInfo, setScrapInfo] = useState(null);
+
+  // ── PRODUCTION INFO & VALIDATION STATE ─────────────────────────────────────
+  const [productionInfo, setProductionInfo] = useState(null); // Info from production_entries
+  const [hasRegisteredDefect, setHasRegisteredDefect] = useState(false); // Prevent duplicate registration
+  const [lastEntryNumber, setLastEntryNumber] = useState(null); // Last registered defect entry number
+  const [serialPartMismatch, setSerialPartMismatch] = useState(null); // { expected, found } if serial belongs to different part
+  const [serialValidated, setSerialValidated] = useState(false); // True after serial lookup completes (blocks OK until validated)
+
   // ── SCAN INPUT REF ────────────────────────────────────────────────────────
   const scanRef = useRef(null);
   const refocusScan = useCallback(() => {
@@ -206,10 +228,11 @@ const MRBDefectCapture = () => {
         localStorage.removeItem('mrbLastShiftDate');
       }
 
-      const savedId = localStorage.getItem('mrbCaptureCampaignId');
-      if (savedId) {
-        const saved = campList.find(c => c.id === parseInt(savedId));
-        if (saved) await selectCampaign(saved);
+      // Prioridad: URL param > localStorage
+      const targetId = urlCampaignId || localStorage.getItem('mrbCaptureCampaignId');
+      if (targetId) {
+        const target = campList.find(c => c.id === parseInt(targetId));
+        if (target) await selectCampaign(target);
       }
     } catch (e) {
       showMsg('Error cargando datos', true);
@@ -266,6 +289,17 @@ const MRBDefectCapture = () => {
       const td = await tr.json();
       if (td.success) setTallySheets((td.rows || []).flatMap(r => r.tallies || []));
     } catch (e) { /* silent */ }
+
+    // Load campaign defects (for import masivo)
+    try {
+      const dr = await fetch(`${API_URL}/mrb/${campaign.id}/defects`, { headers: h });
+      const dd = await dr.json();
+      setCampaignDefects(dd.defects || []);
+      // Default select first defect if any
+      if ((dd.defects || []).length > 0) {
+        setImportDefectId(dd.defects[0].defectTypeId);
+      }
+    } catch (e) { setCampaignDefects([]); }
   };
 
   const selectPart = (part, campaignId) => {
@@ -405,13 +439,18 @@ const MRBDefectCapture = () => {
     else { setSuccess(msg); setTimeout(() => setSuccess(null), 2500); }
   };
 
-  // ── SERIAL CHECK (debounce 300ms) + PART DETECTION ───────────────────────
+  // ── SERIAL CHECK (debounce 300ms) + PART DETECTION + SCRAP VALIDATION ─────
   const handleSerialChange = (val) => {
     setLotNumber(val);
     lotNumberRef.current = val;
+    // Reset all validation states on serial change
+    setSerialScrapped(false);
+    setHasRegisteredDefect(false);
+    setLastEntryNumber(null);
+    setProductionInfo(null);
+    setSerialPartMismatch(null);
     if (serialCheckTimer.current) clearTimeout(serialCheckTimer.current);
     if (!val) {
-      // No limpiar detectedPart para mantener selección por lote
       return;
     }
 
@@ -420,19 +459,63 @@ const MRBDefectCapture = () => {
       const today = new Date().toISOString().split('T')[0];
 
       try {
-        // 1. Buscar parte por serial en unit_registry
-        const unitRes = await fetch(
-          `${API_URL}/unit-registry/by-serial/${encodeURIComponent(val)}`,
+        // 1. Buscar parte por serial + verificar SCRAP + info producción
+        const lookupRes = await fetch(
+          `${API_URL}/defects-v2/serial-lookup/${encodeURIComponent(val)}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        if (unitRes.ok) {
-          const unitData = await unitRes.json();
-          if (unitData.success && unitData.unit) {
-            const unit = unitData.unit;
+        if (lookupRes.ok) {
+          const lookupData = await lookupRes.json();
+
+          // Capturar info de producción si existe
+          if (lookupData.productionInfo) {
+            setProductionInfo(lookupData.productionInfo);
+          }
+
+          // Verificar si está en SCRAP - advertir pero NO bloquear
+          if (lookupData.isScrapped) {
+            setSerialScrapped(true);
+            setScrapInfo({
+              serial: val,
+              partNumber: lookupData.unit?.partNumber,
+              partName: lookupData.unit?.partName,
+              scrappedBy: lookupData.scrapInfo?.scrappedBy,
+              scrappedAt: lookupData.scrapInfo?.scrappedAt,
+              scrapNotes: lookupData.scrapInfo?.scrapNotes
+            });
+            setScrapModalOpen(true);
+            // NO return - continuar para permitir registro de defecto (no OK)
+          }
+
+          if (lookupData.success && lookupData.unit) {
+            const unit = lookupData.unit;
             const newPartId = unit.partId;
 
-            // Si la parte cambió, actualizar campañas disponibles
+            // Verificar si el serial pertenece a una parte diferente a la seleccionada
+            if (selectedPart && newPartId && selectedPart.id !== newPartId) {
+              // Verificar si la parte del serial está en la campaña
+              const matchingPart = campaignParts.find(p => p.id === newPartId);
+              if (matchingPart) {
+                // Auto-cambiar a la parte correcta
+                selectPart(matchingPart, selectedCampaign?.id);
+                setSerialPartMismatch(null);
+              } else {
+                // Parte no está en la campaña - advertir
+                setSerialPartMismatch({
+                  expected: selectedPart.partNumber,
+                  found: unit.partNumber
+                });
+              }
+            } else if (selectedCampaign && campaignParts.length > 0 && !selectedPart) {
+              // No hay parte seleccionada, auto-seleccionar si está en campaña
+              const matchingPart = campaignParts.find(p => p.id === newPartId);
+              if (matchingPart) {
+                selectPart(matchingPart, selectedCampaign.id);
+              }
+            }
+
+            // Actualizar detectedPart y campañas disponibles (modo multi-campaña)
             if (newPartId !== lastDetectedPartId.current) {
               setDetectedPart({
                 id: unit.partId,
@@ -442,7 +525,6 @@ const MRBDefectCapture = () => {
               });
               lastDetectedPartId.current = newPartId;
 
-              // Buscar campañas activas para esta parte
               const campRes = await fetch(
                 `${API_URL}/mrb/campaigns-by-part/${newPartId}`,
                 { headers: { Authorization: `Bearer ${token}` } }
@@ -450,21 +532,18 @@ const MRBDefectCapture = () => {
               if (campRes.ok) {
                 const campData = await campRes.json();
                 setAvailableCampaigns(campData.campaigns || []);
-                // Auto-seleccionar todas por defecto si hay pocas
                 if ((campData.campaigns || []).length <= 3) {
                   setSelectedCampaigns(campData.campaigns || []);
                 } else {
                   setSelectedCampaigns([]);
                 }
-                // Reset results
                 setCampaignResults({});
               }
             }
-            // Parte ya detectada, mantener selección
           }
         }
 
-        // 2. Check si es reproceso en campaña seleccionada (compatibilidad)
+        // 2. Check si es reproceso en campaña seleccionada
         if (selectedCampaign) {
           const res = await fetch(
             `${API_URL}/mrb/${selectedCampaign.id}/check-serial?lotNumber=${encodeURIComponent(val)}&date=${today}`,
@@ -558,6 +637,9 @@ const MRBDefectCapture = () => {
   const handlePiezaOk = useCallback(async () => {
     if (!selectedCampaign) return showMsg(L.selectMRB, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
+    // Validaciones de seguridad
+    if (serialScrapped) return showMsg('Serial en SCRAP. No se puede registrar como OK.', true);
+    if (serialPartMismatch) return showMsg(`Serial pertenece a ${serialPartMismatch.found}, no a la parte seleccionada.`, true);
     setSubmitting(true);
     const token = localStorage.getItem('token');
     try {
@@ -630,14 +712,20 @@ const MRBDefectCapture = () => {
       } else {
         setStagedEvidence([]);
       }
+      // Guardar entry number y marcar defecto registrado
+      const entryNum = result.defect?.entryNumber || '';
+      setLastEntryNumber(entryNum);
+      setHasRegisteredDefect(true);
+
       setSelectedDefect(null);
       setLotNumber('');
+      lotNumberRef.current = '';
       setComment('');
       setHasDowntime(false);
       setDowntimeMinutes('');
-      showMsg(!selectedDisposition
-        ? `NOK registrado — Sin disposición, pieza puesta en On Hold`
-        : `NOK registrado — ${result.defect?.entryNumber || ''}`);
+      showMsg(entryNum
+        ? `✓ NOK ${entryNum} registrado`
+        : `✓ NOK registrado — Sin disposición, pieza en Hold`);
       refocusScan();
     } catch (e) { showMsg(e.message || 'Error', true); refocusScan(); }
     finally { setSubmitting(false); }
@@ -900,6 +988,64 @@ const MRBDefectCapture = () => {
     }
   };
 
+  // ── IMPORT MASIVO SIMPLIFICADO ──────────────────────────────────────────────
+  const handleMassImport = async () => {
+    if (!importFile || !selectedCampaign) return showMsg('Selecciona un archivo', true);
+    if (!selectedShift) return showMsg('Selecciona un turno primero', true);
+    if (importType === 'DEFECT' && !importDefectId) return showMsg('Selecciona un defecto', true);
+
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', importFile);
+    formData.append('importType', importType);
+    formData.append('shiftId', selectedShift.id);
+    if (importType === 'DEFECT') {
+      formData.append('defectTypeId', importDefectId);
+      formData.append('disposition', importDisposition);
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/import-mass`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const msg = importType === 'OK'
+          ? `✓ Importados ${data.imported} registros OK`
+          : `✓ Importados ${data.imported} registros con defecto ${data.defectName} → ${data.disposition}`;
+        showMsg(msg);
+        setImportFile(null);
+
+        // Refresh campaign data
+        const refreshRes = await fetch(`${API_URL}/mrb/active-campaigns`, { headers: { Authorization: `Bearer ${token}` } });
+        const refreshData = await refreshRes.json();
+        const updated = (refreshData.campaigns || []).find(c => c.id === selectedCampaign.id);
+        if (updated) setSelectedCampaign(updated);
+      } else {
+        showMsg(data.message || 'Error importando', true);
+      }
+    } catch (err) {
+      showMsg('Error importando archivo', true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleImportDrop = (e) => {
+    e.preventDefault();
+    setImportDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
+      setImportFile(file);
+    } else {
+      showMsg('Solo archivos Excel (.xlsx, .xls) o CSV', true);
+    }
+  };
+
   // ── COMPUTED ──────────────────────────────────────────────────────────────
   const downtimeRequiresComment = hasDowntime && parseInt(downtimeMinutes) > 0 && !comment.trim();
   const isIndividualValid = selectedCampaign && selectedShift && selectedDefect && lotNumber.trim() && !downtimeRequiresComment;
@@ -985,7 +1131,12 @@ const MRBDefectCapture = () => {
           {(c?.qtyScrap  > 0) && <div style={s.counter('#ef4444', '#fee2e2')}><Scissors size={14} /> {c.qtyScrap} SC</div>}
           {downtimeTodayMin > 0 && <div style={s.counter('#f59e0b', '#fef3c7')} title="Downtime total del turno hoy">⏱ {downtimeTodayMin} min</div>}
           {captureMode === 'individual' && (
-            <button style={{ ...s.piezaOkBtn, opacity: (submitting || !isOkValid || isClosed) ? 0.5 : 1 }} onClick={handlePiezaOk} disabled={submitting || !isOkValid || isClosed} title={isClosed ? 'Campaña cerrada' : !lotNumber.trim() ? 'Escanea el serial primero' : ''}>
+            <button
+              style={{ ...s.piezaOkBtn, opacity: (submitting || !isOkValid || isClosed || serialScrapped || serialPartMismatch) ? 0.5 : 1 }}
+              onClick={handlePiezaOk}
+              disabled={submitting || !isOkValid || isClosed || serialScrapped || serialPartMismatch}
+              title={isClosed ? 'Campaña cerrada' : serialScrapped ? 'Serial en SCRAP' : serialPartMismatch ? 'Parte incorrecta' : !lotNumber.trim() ? 'Escanea el serial primero' : ''}
+            >
               <CheckCircle size={18} /> PIEZA OK
             </button>
           )}
@@ -1072,40 +1223,7 @@ const MRBDefectCapture = () => {
           </button>
         )}
 
-        {c && captureMode === 'bulk' && (
-          <>
-            <button
-              style={{ ...s.iconBtn, display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', color: '#16a34a', borderColor: '#16a34a' }}
-              onClick={async () => {
-                try {
-                  const token = localStorage.getItem('token');
-                  const res = await fetch(`${API_URL}/mrb/${c.id}/tally-template`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                  });
-                  if (!res.ok) throw new Error('Error al descargar template');
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `Tally_${c.campaign_number || c.folio || c.id}.xlsx`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  window.URL.revokeObjectURL(url);
-                } catch (err) {
-                  alert('Error descargando template: ' + err.message);
-                }
-              }}
-              title="Descargar Template Excel"
-            >
-              <Download size={16} />Template Excel
-            </button>
-            <label style={{ ...s.iconBtn, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', color: '#8b5cf6', borderColor: '#8b5cf6' }} title="Importar Tally Excel">
-              <Upload size={16} />Importar Excel
-              <input type="file" accept=".xlsx,.xls" onChange={handleImportTally} style={{ display: 'none' }} />
-            </label>
-          </>
-        )}
+        {/* Botones de template/import movidos a la sección de Import Masivo */}
         {c && (
           <label style={{ ...s.iconBtn, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', color: uploadingTally ? t.textMuted : t.accent, borderColor: t.accent }} title="Subir Tally Sheet (imagen/PDF)">
             <Plus size={16} />{uploadingTally ? 'Subiendo...' : 'Foto Tally'}
@@ -1173,15 +1291,63 @@ const MRBDefectCapture = () => {
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (selectedDefect && isIndividualValid) handleSubmitDefect();
-                    else if (isOkValid) handlePiezaOk();
+                    // Enter SOLO busca serial - NO registra nada
+                    // OK y NOK se registran con click en botones
                   }
                 }}
                 autoComplete="off"
               />
               <span style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>
-                Enter → {selectedDefect ? 'registrar NOK' : 'registrar OK'}
+                Enter → buscar serial • OK/NOK con botones
               </span>
+
+              {/* ── ALERTAS Y VALIDACIONES ─────────────────────────────────── */}
+              {serialScrapped && !scrapModalOpen && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Trash2 size={14} /> SERIAL EN SCRAP
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#991b1b', marginTop: '2px' }}>
+                    No se puede registrar OK. Selecciona un defecto para registrar NOK.
+                  </div>
+                </div>
+              )}
+
+              {serialPartMismatch && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #fcd34d' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <XCircle size={14} /> PARTE INCORRECTA
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#78350f', marginTop: '2px' }}>
+                    Serial pertenece a <strong>{serialPartMismatch.found}</strong>, no a {serialPartMismatch.expected}
+                  </div>
+                </div>
+              )}
+
+              {/* ── INFO PRODUCCIÓN ─────────────────────────────────────────── */}
+              {productionInfo && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: productionInfo.inspectionStatus === 'PENDING' ? '#fef3c7' : '#dcfce7', borderRadius: '6px', border: `1px solid ${productionInfo.inspectionStatus === 'PENDING' ? '#fcd34d' : '#86efac'}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>{productionInfo.inspectionStatus === 'PENDING' ? '📋' : '✅'}</span>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: productionInfo.inspectionStatus === 'PENDING' ? '#92400e' : '#166534' }}>
+                        {productionInfo.inspectionStatus === 'PENDING' ? 'Pendiente de inspección' : 'Ya inspeccionado'}
+                      </div>
+                      {productionInfo.workOrder && (
+                        <div style={{ fontSize: '10px', color: '#6b7280' }}>OT: {productionInfo.workOrder}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ÚLTIMO ENTRY NUMBER ─────────────────────────────────────── */}
+              {lastEntryNumber && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#dbeafe', borderRadius: '6px', border: '1px solid #93c5fd' }}>
+                  <div style={{ fontSize: '10px', color: '#1e40af', marginBottom: '2px' }}>ÚLTIMO DEFECTO REGISTRADO</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1d4ed8', fontFamily: 'monospace' }}>{lastEntryNumber}</div>
+                </div>
+              )}
 
               {/* ── PARTE DETECTADA ─────────────────────────────────────────── */}
               {detectedPart && (
@@ -1679,6 +1845,136 @@ const MRBDefectCapture = () => {
             );
           })()}
 
+          {/* ══ IMPORT MASIVO ══════════════════════════════════════════════ */}
+          <div style={{ backgroundColor: t.bgPanel, borderRadius: '10px', padding: '16px 20px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', color: t.accent, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Upload size={16} /> Import Masivo
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+              {/* Tipo de registro */}
+              <div>
+                <label style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', display: 'block', marginBottom: '4px' }}>Tipo de Registro</label>
+                <select
+                  value={importType}
+                  onChange={e => setImportType(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', fontSize: '14px', fontWeight: '600', border: `2px solid ${importType === 'OK' ? '#22c55e' : '#ef4444'}`, borderRadius: '8px', backgroundColor: importType === 'OK' ? '#d1fae5' : '#fee2e2', color: importType === 'OK' ? '#16a34a' : '#dc2626', cursor: 'pointer' }}
+                >
+                  <option value="OK">✓ OK (Sin defecto)</option>
+                  <option value="DEFECT">✕ Con Defecto</option>
+                </select>
+              </div>
+
+              {/* Defecto (si aplica) */}
+              {importType === 'DEFECT' && (
+                <div>
+                  <label style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', display: 'block', marginBottom: '4px' }}>Defecto</label>
+                  <select
+                    value={importDefectId || ''}
+                    onChange={e => setImportDefectId(parseInt(e.target.value))}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: '13px', fontWeight: '600', border: `2px solid ${t.border}`, borderRadius: '8px', backgroundColor: t.bgInput, color: t.text, cursor: 'pointer' }}
+                  >
+                    <option value="">— Seleccionar defecto —</option>
+                    {campaignDefects.map(d => (
+                      <option key={d.defectTypeId} value={d.defectTypeId}>{d.code} - {d.displayName || d.name}</option>
+                    ))}
+                  </select>
+                  {campaignDefects.length === 0 && (
+                    <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '4px' }}>⚠ No hay defectos configurados para esta campaña</div>
+                  )}
+                </div>
+              )}
+
+              {/* Disposición (si aplica) */}
+              {importType === 'DEFECT' && (
+                <div>
+                  <label style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', display: 'block', marginBottom: '4px' }}>Disposición</label>
+                  <select
+                    value={importDisposition}
+                    onChange={e => setImportDisposition(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: '13px', fontWeight: '600', border: `2px solid ${DISPOSITION_CONFIG[importDisposition]?.color || t.border}`, borderRadius: '8px', backgroundColor: DISPOSITION_CONFIG[importDisposition]?.bg || t.bgInput, color: DISPOSITION_CONFIG[importDisposition]?.color || t.text, cursor: 'pointer' }}
+                  >
+                    <option value="REWORK">⟳ Rework</option>
+                    <option value="SCRAP">✕ Scrap</option>
+                    <option value="HOLD">⏸ Hold</option>
+                    <option value="RETURN_SUPPLIER">↩ Return Supplier</option>
+                    <option value="USE_AS_IS">✓ Use As Is</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Drag & Drop area */}
+            <div
+              onDragOver={e => { e.preventDefault(); setImportDragOver(true); }}
+              onDragLeave={() => setImportDragOver(false)}
+              onDrop={handleImportDrop}
+              style={{
+                border: `2px dashed ${importDragOver ? t.accent : importFile ? '#22c55e' : t.border}`,
+                borderRadius: '10px',
+                padding: '20px',
+                textAlign: 'center',
+                backgroundColor: importDragOver ? `${t.accent}10` : importFile ? '#d1fae520' : t.bgInput,
+                marginBottom: '12px',
+                transition: 'all 0.2s'
+              }}
+            >
+              {importFile ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#22c55e' }}>📄 {importFile.name}</span>
+                  <button onClick={() => setImportFile(null)} style={{ padding: '4px 8px', backgroundColor: '#fee2e2', border: 'none', borderRadius: '4px', color: '#dc2626', cursor: 'pointer', fontSize: '12px' }}>✕ Quitar</button>
+                </div>
+              ) : (
+                <label style={{ cursor: 'pointer', display: 'block' }}>
+                  <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '4px' }}>
+                    Arrastra un archivo Excel/CSV aquí o <span style={{ color: t.accent, fontWeight: '600' }}>haz clic para seleccionar</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: t.textDim }}>Solo columnas: SERIAL | PARTE</div>
+                  <input type="file" accept=".xlsx,.xls,.csv" onChange={e => { if (e.target.files?.[0]) setImportFile(e.target.files[0]); e.target.value = ''; }} style={{ display: 'none' }} />
+                </label>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/tally-template`, { headers: { Authorization: `Bearer ${token}` } });
+                    if (!res.ok) throw new Error('Error');
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `Template_${selectedCampaign.campaign_number || selectedCampaign.id}.xlsx`;
+                    document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+                  } catch (err) { showMsg('Error descargando template', true); }
+                }}
+                style={{ padding: '10px 16px', backgroundColor: '#d1fae5', border: '2px solid #22c55e', borderRadius: '8px', fontSize: '13px', fontWeight: '600', color: '#16a34a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={16} /> Descargar Template
+              </button>
+              <button
+                onClick={handleMassImport}
+                disabled={submitting || !importFile || (importType === 'DEFECT' && !importDefectId)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: submitting || !importFile ? t.textDim : t.accent,
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  color: 'white',
+                  cursor: submitting || !importFile ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Upload size={16} /> {submitting ? 'Importando...' : 'Importar Archivo'}
+              </button>
+            </div>
+          </div>
+
           {/* Action row */}
           <div style={{ backgroundColor: t.bgPanel, borderRadius: '10px', padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <textarea style={{ flex: 1, minWidth: '200px', padding: '10px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '13px', minHeight: '56px', resize: 'vertical' }} placeholder="Notas del turno (opcional)..." value={turnNotes} onChange={e => setTurnNotes(e.target.value)} />
@@ -1956,6 +2252,70 @@ const MRBDefectCapture = () => {
         clientId={selectedCampaign?.clientId}
         theme={t}
       />
+
+      {/* Modal de Serial en SCRAP */}
+      {scrapModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ backgroundColor: t.bgCard, borderRadius: '16px', padding: '24px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={24} color="#dc2626" />
+              </div>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: '#dc2626' }}>SERIAL EN SCRAP</div>
+                <div style={{ fontSize: '12px', color: t.textMuted }}>No se puede registrar como OK</div>
+              </div>
+            </div>
+            <div style={{ backgroundColor: '#fef2f2', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', color: '#991b1b', marginBottom: '4px', fontWeight: '600' }}>SERIAL</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626', fontFamily: 'monospace' }}>{scrapInfo?.serial}</div>
+              {scrapInfo?.partNumber && (
+                <div style={{ fontSize: '13px', color: '#7f1d1d', marginTop: '8px' }}>
+                  <strong>Parte:</strong> {scrapInfo.partNumber} {scrapInfo.partName ? `— ${scrapInfo.partName}` : ''}
+                </div>
+              )}
+              {scrapInfo?.scrappedAt && (
+                <div style={{ fontSize: '12px', color: '#991b1b', marginTop: '6px' }}>
+                  Scrapeado: {new Date(scrapInfo.scrappedAt).toLocaleString('es-MX')}
+                </div>
+              )}
+              {scrapInfo?.scrapNotes && (
+                <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px', fontStyle: 'italic' }}>
+                  "{scrapInfo.scrapNotes}"
+                </div>
+              )}
+            </div>
+            <div style={{ backgroundColor: '#fef3c7', borderRadius: '8px', padding: '10px 12px', marginBottom: '16px', fontSize: '12px', color: '#92400e' }}>
+              <strong>Puedes registrar un defecto (NOK)</strong> para documentar hallazgos adicionales en esta pieza.
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setScrapModalOpen(false);
+                  // Mantener serial para permitir registrar NOK
+                  refocusScan();
+                }}
+                style={{ flex: 1, padding: '12px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Registrar NOK
+              </button>
+              <button
+                onClick={() => {
+                  setScrapModalOpen(false);
+                  setLotNumber('');
+                  lotNumberRef.current = '';
+                  setSerialScrapped(false);
+                  setScrapInfo(null);
+                  refocusScan();
+                }}
+                style={{ flex: 1, padding: '12px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

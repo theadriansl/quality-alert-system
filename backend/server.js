@@ -240,6 +240,7 @@ app.delete('/clients/:id', authEndpoints.verifyToken, clientsEndpoints.deleteCli
 
 // Client Parts (BOM) Endpoints
 app.get('/clients/parts/all', authEndpoints.verifyToken, clientPartsEndpoints.getAllClientsParts); // Global BOM - Must be before :clientId routes
+app.get('/parts/defects', authEndpoints.verifyToken, clientPartsEndpoints.getPartsDefects); // Get defects for multiple parts
 app.get('/clients/:clientId/parts', authEndpoints.verifyToken, clientPartsEndpoints.getClientParts);
 app.post('/clients/:clientId/parts', authEndpoints.verifyToken, clientPartsEndpoints.createClientPart);
 app.put('/clients/:clientId/parts/:partId', authEndpoints.verifyToken, clientPartsEndpoints.updateClientPart);

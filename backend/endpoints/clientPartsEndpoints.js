@@ -769,11 +769,72 @@ async function getAllClientsParts(req, res) {
   }
 }
 
+// GET /parts/defects?partIds=1,2,3 - Get defects configured for multiple parts
+async function getPartsDefects(req, res) {
+  const { partIds } = req.query;
+
+  if (!partIds) {
+    return res.status(400).json({ success: false, message: 'partIds query parameter is required' });
+  }
+
+  const partIdArray = partIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+  if (partIdArray.length === 0) {
+    return res.status(400).json({ success: false, message: 'No valid part IDs provided' });
+  }
+
+  try {
+    const result = await query(`
+      SELECT DISTINCT
+        pdc.id,
+        pdc.part_id,
+        pdc.defect_type_id,
+        pdc.display_name,
+        dt.code,
+        dt.name,
+        dt.category_id,
+        dc.name as category_name,
+        dc.display_order as category_display_order,
+        dt.display_order as defect_display_order
+      FROM part_defect_config pdc
+      JOIN defect_types dt ON pdc.defect_type_id = dt.id
+      LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+      WHERE pdc.part_id = ANY($1)
+        AND pdc.is_active = true
+        AND dt.is_active = true
+      ORDER BY dc.display_order, dc.name, dt.display_order, dt.name
+    `, [partIdArray]);
+
+    // Remove duplicates by defect_type_id (same defect can be in multiple parts)
+    const seen = new Set();
+    const defects = result.rows.filter(d => {
+      if (seen.has(d.defect_type_id)) return false;
+      seen.add(d.defect_type_id);
+      return true;
+    }).map(row => ({
+      id: row.id,
+      partId: row.part_id,
+      defectTypeId: row.defect_type_id,
+      displayName: row.display_name,
+      code: row.code,
+      name: row.name,
+      categoryId: row.category_id,
+      categoryName: row.category_name
+    }));
+
+    res.json({ success: true, defects });
+  } catch (error) {
+    console.error('❌ Error fetching parts defects:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch parts defects', message: error.message });
+  }
+}
+
 module.exports = {
   getClientParts,
   createClientPart,
   updateClientPart,
   deleteClientPart,
   togglePartActive,
-  getAllClientsParts
+  getAllClientsParts,
+  getPartsDefects
 };
