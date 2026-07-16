@@ -66,8 +66,43 @@ unit_registry       ← Solo cuando hay evento de calidad (defecto/inspección)
 - `frontend/src/pages/MRBCreate.js` (+98 líneas)
 - `backend/migrations/110_mrb_affected_serials.sql` (nuevo)
 
+### Cambios Adicionales (Sesión Tarde)
+
+#### Migración 111: unit_registry source tracking
+```sql
+ALTER TABLE unit_registry ADD COLUMN source VARCHAR(20) DEFAULT 'MANUAL';
+ALTER TABLE unit_registry ADD COLUMN production_entry_id INTEGER REFERENCES production_entries(id);
+```
+
+#### Endpoints Actualizados para Trazabilidad
+
+| Endpoint | Cambio |
+|----------|--------|
+| defectAdminEndpoints.js | Al crear unit_registry, busca en production_entries y vincula |
+| unitRegistryEndpoints.js | Creación manual con source='MANUAL' o 'PRODUCTION' |
+| mrbEndpoints.js | capture-ok y capture-nok ahora CREAN unit_registry si no existe |
+
+#### Valores de source
+- `PRODUCTION` - Serial existe en production_entries (vinculado)
+- `MANUAL` - Creado manualmente sin respaldo de producción
+- `INSPECTION` - Creado durante captura de defecto/inspección
+- `MRB` - Creado desde campaña MRB (sin respaldo de producción)
+
+#### Flujo Final
+```
+production_entries ←──── CSV/Webhook/API
+       ↓
+unit_registry.production_entry_id = pe.id
+unit_registry.source = 'PRODUCTION'
+       ↓
+production_entries.unit_id = ur.id (link bidireccional)
+```
+
+### Commits Realizados
+1. `209c312` - feat(MRB): Modal de seriales afectados y búsqueda en production_entries
+2. `454d062` - feat(unit_registry): Agregar trazabilidad de origen y link a production_entries
+
 ### Próximos Pasos
-1. Definir si unificar `unit_registry` con `production_entries`
-2. Agregar campos `source` y `production_entry_id` a `unit_registry`
-3. Crear `unit_registry` también para inspecciones OK
-4. Implementar link bidireccional producción ↔ calidad
+1. Probar flujo completo de trazabilidad en MRB
+2. Verificar que inspecciones OK también creen unit_registry (specInspectionEndpoints)
+3. Dashboard/reportes que muestren source de unidades
