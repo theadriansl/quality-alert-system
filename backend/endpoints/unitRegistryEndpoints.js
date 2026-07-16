@@ -41,14 +41,31 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Buscar si existe en production_entries para vincular
+    let productionEntryId = null;
+    let source = 'MANUAL';
+    try {
+      const prodEntry = await query(`
+        SELECT id FROM production_entries
+        WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+        LIMIT 1
+      `, [serialNumber, partId, clientId]);
+      if (prodEntry.rows.length > 0) {
+        productionEntryId = prodEntry.rows[0].id;
+        source = 'PRODUCTION';
+      }
+    } catch (prodErr) {
+      console.log('Production entries check skipped:', prodErr.message);
+    }
+
     // Create new unit
     const result = await query(`
       INSERT INTO unit_registry (
         serial_number, lot_number, client_id, part_id, project_id,
-        current_status, created_by
-      ) VALUES ($1, $2, $3, $4, $5, 'REGISTERED', $6)
+        current_status, created_by, source, production_entry_id
+      ) VALUES ($1, $2, $3, $4, $5, 'REGISTERED', $6, $7, $8)
       RETURNING *
-    `, [serialNumber, lotNumber, clientId, partId, projectId, req.user.id]);
+    `, [serialNumber, lotNumber, clientId, partId, projectId, req.user.id, source, productionEntryId]);
 
     const unit = result.rows[0];
 
@@ -57,21 +74,11 @@ router.post('/', authenticateToken, async (req, res) => {
       INSERT INTO unit_history (
         unit_id, event_type, description, new_status, performed_by
       ) VALUES ($1, 'REGISTERED', $2, 'REGISTERED', $3)
-    `, [unit.id, `Unidad registrada: ${serialNumber}`, req.user.id]);
+    `, [unit.id, `Unidad registrada: ${serialNumber} (${source})`, req.user.id]);
 
-    // Vincular con production_entries si existe
-    let productionLinked = false;
-    try {
-      const prodUpdate = await query(`
-        UPDATE production_entries
-        SET unit_id = $1, inspection_status = 'INSPECTED', inspected_at = CURRENT_TIMESTAMP
-        WHERE part_id = $2 AND serial_number = $3 AND inspection_status = 'PENDING'
-        RETURNING id
-      `, [unit.id, partId, serialNumber]);
-      productionLinked = prodUpdate.rows.length > 0;
-    } catch (prodErr) {
-      // Tabla puede no existir aún, ignorar silenciosamente
-      console.log('Production entries linking skipped:', prodErr.message);
+    // Actualizar production_entries con unit_id si existe link
+    if (productionEntryId) {
+      await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [unit.id, productionEntryId]);
     }
 
     res.json({
@@ -79,7 +86,8 @@ router.post('/', authenticateToken, async (req, res) => {
       unit: transformToCamelCase(unit),
       message: 'Unidad registrada',
       isNew: true,
-      productionLinked
+      productionLinked: !!productionEntryId,
+      source
     });
   } catch (error) {
     console.error('Error registering unit:', error);

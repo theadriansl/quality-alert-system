@@ -1045,20 +1045,37 @@ router.post('/entries', authenticateToken, async (req, res) => {
         const unitStatus = dispositionCode === 'SCRAP' ? 'SCRAPPED'
           : (isDefectClosed ? 'REGISTERED' : 'DEFECTIVE');
         const openCount = isDefectClosed ? 0 : 1;
+
+        // Buscar si existe en production_entries para vincular
+        const prodEntry = await query(`
+          SELECT id FROM production_entries
+          WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+          LIMIT 1
+        `, [serial.trim(), partId, client_id]);
+
+        const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
+        const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
+
         const newUnit = await query(`
           INSERT INTO unit_registry (
             serial_number, lot_number, client_id, part_id, project_id,
-            current_status, total_defects, open_defects, created_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8)
+            current_status, total_defects, open_defects, created_by,
+            source, production_entry_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8, $9, $10)
           RETURNING id
-        `, [serial.trim(), lotNumber || null, client_id, partId, project_id, unitStatus, openCount, req.user.id]);
+        `, [serial.trim(), lotNumber || null, client_id, partId, project_id, unitStatus, openCount, req.user.id, source, productionEntryId]);
         unitId = newUnit.rows[0].id;
+
+        // Actualizar production_entries con el unit_id si existe link
+        if (productionEntryId) {
+          await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [unitId, productionEntryId]);
+        }
 
         // Registrar evento de registro
         await query(`
           INSERT INTO unit_history (unit_id, event_type, description, performed_by)
           VALUES ($1, 'REGISTERED', $2, $3)
-        `, [unitId, `Unidad registrada: ${serial.trim()}`, req.user.id]);
+        `, [unitId, `Unidad registrada: ${serial.trim()} (${source})`, req.user.id]);
       }
     }
 
@@ -1306,15 +1323,31 @@ router.post('/from-spec', authenticateToken, async (req, res) => {
           WHERE id = $1
         `, [unitId]);
       } else {
+        // Buscar si existe en production_entries para vincular
+        const prodEntry = await query(`
+          SELECT id FROM production_entries
+          WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+          LIMIT 1
+        `, [lotNumber.trim(), partId, client_id]);
+
+        const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
+        const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
+
         // Create new unit
         const newUnit = await query(`
           INSERT INTO unit_registry (
             serial_number, client_id, part_id, project_id,
-            current_status, total_defects, open_defects, created_by
-          ) VALUES ($1, $2, $3, $4, 'DEFECTIVE', 1, 1, $5)
+            current_status, total_defects, open_defects, created_by,
+            source, production_entry_id
+          ) VALUES ($1, $2, $3, $4, 'DEFECTIVE', 1, 1, $5, $6, $7)
           RETURNING id
-        `, [lotNumber.trim(), client_id, partId, project_id, req.user.id]);
+        `, [lotNumber.trim(), client_id, partId, project_id, req.user.id, source, productionEntryId]);
         unitId = newUnit.rows[0].id;
+
+        // Actualizar production_entries con el unit_id si existe link
+        if (productionEntryId) {
+          await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [unitId, productionEntryId]);
+        }
       }
     }
 

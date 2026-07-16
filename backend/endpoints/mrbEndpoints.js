@@ -420,7 +420,7 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
     const mrb = result.rows[0];
     const effectivePartId = partId || mrb.part_id;
 
-    // === TRAZABILIDAD: Buscar unit_registry ===
+    // === TRAZABILIDAD: Buscar o crear unit_registry ===
     let unitId = null;
     if (serial && serial.trim()) {
       const existingUnit = await query(
@@ -442,6 +442,36 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
             WHERE id = $1
           `, [unitId]);
         }
+      } else {
+        // Crear unit_registry - buscar si viene de production_entries
+        const prodEntry = await query(`
+          SELECT id FROM production_entries
+          WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+          LIMIT 1
+        `, [serial.trim(), effectivePartId, mrb.client_id]);
+
+        const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
+        const source = productionEntryId ? 'PRODUCTION' : 'MRB';
+
+        const newUnit = await query(`
+          INSERT INTO unit_registry (
+            serial_number, lot_number, client_id, part_id, project_id,
+            current_status, total_inspections, created_by, source, production_entry_id
+          ) VALUES ($1, $2, $3, $4, $5, 'OK', 1, $6, $7, $8)
+          RETURNING id
+        `, [serial.trim(), lotNumber || null, mrb.client_id, effectivePartId, mrb.project_id, inspectorId, source, productionEntryId]);
+        unitId = newUnit.rows[0].id;
+
+        // Actualizar production_entries con unit_id si existe link
+        if (productionEntryId) {
+          await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [unitId, productionEntryId]);
+        }
+
+        // Registrar evento de registro
+        await query(`
+          INSERT INTO unit_history (unit_id, event_type, description, performed_by)
+          VALUES ($1, 'REGISTERED', $2, $3)
+        `, [unitId, `Unidad registrada desde MRB OK: ${serial.trim()} (${source})`, inspectorId]);
       }
     }
 
@@ -543,7 +573,7 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     const mrb = mrbResult.rows[0];
     const effectivePartId = partId || mrb.part_id;
 
-    // === TRAZABILIDAD: Buscar unit_registry ===
+    // === TRAZABILIDAD: Buscar o crear unit_registry ===
     let unitId = null;
     const existingUnit = await query(
       'SELECT id, current_status FROM unit_registry WHERE client_id = $1 AND part_id = $2 AND serial_number = $3',
@@ -561,6 +591,36 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
           last_inspection_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [unitId]);
+    } else {
+      // Crear unit_registry - buscar si viene de production_entries
+      const prodEntry = await query(`
+        SELECT id FROM production_entries
+        WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+        LIMIT 1
+      `, [serial.trim(), effectivePartId, mrb.client_id]);
+
+      const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
+      const source = productionEntryId ? 'PRODUCTION' : 'MRB';
+
+      const newUnit = await query(`
+        INSERT INTO unit_registry (
+          serial_number, lot_number, client_id, part_id, project_id,
+          current_status, total_defects, open_defects, created_by, source, production_entry_id
+        ) VALUES ($1, $2, $3, $4, $5, 'DEFECTIVE', 1, 1, $6, $7, $8)
+        RETURNING id
+      `, [serial.trim(), lotNumber || null, mrb.client_id, effectivePartId, mrb.project_id, req.user.id, source, productionEntryId]);
+      unitId = newUnit.rows[0].id;
+
+      // Actualizar production_entries con unit_id si existe link
+      if (productionEntryId) {
+        await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [unitId, productionEntryId]);
+      }
+
+      // Registrar evento de registro
+      await query(`
+        INSERT INTO unit_history (unit_id, event_type, description, performed_by)
+        VALUES ($1, 'REGISTERED', $2, $3)
+      `, [unitId, `Unidad registrada desde MRB NOK: ${serial.trim()} (${source})`, req.user.id]);
     }
 
     // Default to HOLD if no disposition provided
