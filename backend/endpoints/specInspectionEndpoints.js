@@ -88,22 +88,69 @@ router.post('/entries', authenticateToken, async (req, res) => {
 
     const entry = insertResult.rows[0];
 
-    // If we have a unit, update counters and log history
-    if (unitId) {
-      // Update unit counters
+    // === TRAZABILIDAD: Crear o actualizar unit_registry si tenemos serial ===
+    let effectiveUnitId = unitId;
+    if (!effectiveUnitId && serialNumber && partId && clientId) {
+      // Buscar si ya existe unit_registry
+      const existingUnit = await query(
+        'SELECT id, current_status FROM unit_registry WHERE client_id = $1 AND part_id = $2 AND serial_number = $3',
+        [clientId, partId, serialNumber.trim()]
+      );
+
+      if (existingUnit.rows.length > 0) {
+        effectiveUnitId = existingUnit.rows[0].id;
+        // Actualizar status a OK si era REGISTERED
+        if (existingUnit.rows[0].current_status === 'REGISTERED' && result === 'OK') {
+          await query('UPDATE unit_registry SET current_status = $1, last_inspection_at = CURRENT_TIMESTAMP WHERE id = $2', ['OK', effectiveUnitId]);
+        }
+      } else {
+        // Crear unit_registry - buscar si viene de production_entries
+        const prodEntry = await query(
+          'SELECT id FROM production_entries WHERE serial_number = $1 AND part_id = $2 LIMIT 1',
+          [serialNumber.trim(), partId]
+        );
+        const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
+        const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
+        const unitStatus = result === 'OK' ? 'OK' : (result === 'NOK' ? 'DEFECTIVE' : 'REGISTERED');
+
+        const newUnit = await query(`
+          INSERT INTO unit_registry (
+            serial_number, lot_number, client_id, part_id, project_id,
+            current_status, total_inspections, specs_ok, specs_nok, created_by, source, production_entry_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8, $9, $10, $11)
+          RETURNING id
+        `, [
+          serialNumber.trim(), lotNumber || null, clientId, partId, projectId,
+          unitStatus, result === 'OK' ? 1 : 0, result === 'NOK' ? 1 : 0,
+          req.user.id, source, productionEntryId
+        ]);
+        effectiveUnitId = newUnit.rows[0].id;
+
+        // Actualizar production_entries con unit_id si existe link
+        if (productionEntryId) {
+          await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [effectiveUnitId, productionEntryId]);
+        }
+      }
+    }
+
+    // If we have a unit, update counters and log history (skip if just created to avoid double counting)
+    if (effectiveUnitId && unitId) {
+      // Update unit counters only if unitId was passed (not just created)
       if (result === 'OK') {
         await query(
           'UPDATE unit_registry SET specs_ok = specs_ok + 1, last_inspection_at = CURRENT_TIMESTAMP WHERE id = $1',
-          [unitId]
+          [effectiveUnitId]
         );
       } else if (result === 'NOK') {
         await query(
           'UPDATE unit_registry SET specs_nok = specs_nok + 1, last_inspection_at = CURRENT_TIMESTAMP WHERE id = $1',
-          [unitId]
+          [effectiveUnitId]
         );
       }
+    }
 
-      // Log to unit history
+    // Log to unit history
+    if (effectiveUnitId) {
       const specName = await query('SELECT spec_name, spec_number FROM part_specifications WHERE id = $1', [specId]);
       const specInfo = specName.rows[0] || { spec_number: specId, spec_name: '' };
 
@@ -113,7 +160,7 @@ router.post('/entries', authenticateToken, async (req, res) => {
           station_id, shift_id, performed_by, metadata
         ) VALUES ($1, $2, 'spec_inspection_entries', $3, $4, $5, $6, $7, $8)
       `, [
-        unitId,
+        effectiveUnitId,
         result === 'OK' ? 'SPEC_OK' : 'SPEC_NOK',
         entry.id,
         `Spec ${specInfo.spec_number}: ${result}${measuredValue ? ' (Medido: ' + measuredValue + ')' : ''}`,
@@ -122,6 +169,15 @@ router.post('/entries', authenticateToken, async (req, res) => {
         req.user.id,
         JSON.stringify({ specId, result, measuredValue, deviation })
       ]);
+    }
+
+    // Update production_entries inspection_status if serial exists
+    if (serialNumber && partId) {
+      await query(`
+        UPDATE production_entries
+        SET inspection_status = 'INSPECTED', inspected_at = CURRENT_TIMESTAMP
+        WHERE serial_number = $1 AND part_id = $2 AND inspection_status = 'PENDING'
+      `, [serialNumber, partId]);
     }
 
     res.json({
@@ -161,6 +217,41 @@ router.post('/bulk', authenticateToken, async (req, res) => {
     let okCount = 0;
     let nokCount = 0;
 
+    // === TRAZABILIDAD: Crear o buscar unit_registry si tenemos serial ===
+    let effectiveUnitId = unitId;
+    if (!effectiveUnitId && serialNumber && partId && clientId) {
+      const existingUnit = await query(
+        'SELECT id FROM unit_registry WHERE client_id = $1 AND part_id = $2 AND serial_number = $3',
+        [clientId, partId, serialNumber.trim()]
+      );
+
+      if (existingUnit.rows.length > 0) {
+        effectiveUnitId = existingUnit.rows[0].id;
+      } else {
+        // Crear unit_registry - buscar si viene de production_entries
+        const prodEntry = await query(
+          'SELECT id FROM production_entries WHERE serial_number = $1 AND part_id = $2 LIMIT 1',
+          [serialNumber.trim(), partId]
+        );
+        const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
+        const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
+
+        const newUnit = await query(`
+          INSERT INTO unit_registry (
+            serial_number, lot_number, client_id, part_id, project_id,
+            current_status, total_inspections, created_by, source, production_entry_id
+          ) VALUES ($1, $2, $3, $4, $5, 'REGISTERED', 1, $6, $7, $8)
+          RETURNING id
+        `, [serialNumber.trim(), lotNumber || null, clientId, partId, projectId, req.user.id, source, productionEntryId]);
+        effectiveUnitId = newUnit.rows[0].id;
+
+        // Actualizar production_entries con unit_id si existe link
+        if (productionEntryId) {
+          await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [effectiveUnitId, productionEntryId]);
+        }
+      }
+    }
+
     for (const item of entries) {
       // Generate entry number
       const entryNumberResult = await query('SELECT generate_spec_entry_number() as entry_number');
@@ -199,7 +290,7 @@ router.post('/bulk', authenticateToken, async (req, res) => {
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
         ) RETURNING id
       `, [
-        entryNumber, unitId, lotNumber, serialNumber,
+        entryNumber, effectiveUnitId, lotNumber, serialNumber,
         clientId, projectId, partId, item.specId,
         stationId, shiftId, req.user.id,
         item.result, item.measuredValue, deviation, withinTolerance,
@@ -217,16 +308,19 @@ router.post('/bulk', authenticateToken, async (req, res) => {
       else if (item.result === 'NOK') nokCount++;
     }
 
-    // Update unit counters if we have a unit
-    if (unitId) {
+    // Update unit counters and status if we have a unit
+    if (effectiveUnitId) {
+      // Determinar nuevo status basado en resultados
+      const newStatus = nokCount > 0 ? 'DEFECTIVE' : 'OK';
       await query(`
         UPDATE unit_registry SET
           specs_ok = specs_ok + $1,
           specs_nok = specs_nok + $2,
           total_inspections = total_inspections + 1,
+          current_status = CASE WHEN current_status IN ('REGISTERED', 'OK') THEN $4 ELSE current_status END,
           last_inspection_at = CURRENT_TIMESTAMP
         WHERE id = $3
-      `, [okCount, nokCount, unitId]);
+      `, [okCount, nokCount, effectiveUnitId, newStatus]);
 
       // Log summary to history
       await query(`
@@ -234,13 +328,22 @@ router.post('/bulk', authenticateToken, async (req, res) => {
           unit_id, event_type, description, station_id, shift_id, performed_by, metadata
         ) VALUES ($1, 'STATION_COMPLETE', $2, $3, $4, $5, $6)
       `, [
-        unitId,
+        effectiveUnitId,
         `Inspección completada: ${okCount} OK, ${nokCount} NOK de ${entries.length} specs`,
         stationId,
         shiftId,
         req.user.id,
         JSON.stringify({ okCount, nokCount, total: entries.length, entries: savedEntries })
       ]);
+    }
+
+    // Update production_entries inspection_status if serial exists
+    if (serialNumber && partId) {
+      await query(`
+        UPDATE production_entries
+        SET inspection_status = 'INSPECTED', inspected_at = CURRENT_TIMESTAMP
+        WHERE serial_number = $1 AND part_id = $2 AND inspection_status = 'PENDING'
+      `, [serialNumber, partId]);
     }
 
     res.json({

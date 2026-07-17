@@ -1189,6 +1189,15 @@ router.post('/entries', authenticateToken, async (req, res) => {
     else if (dispositionCode === 'RETURN_SUPPLIER') routingMessage = 'Enviado a Cuarentena (Devolver a Proveedor)';
     else if (dispositionCode === 'HOLD') routingMessage = 'Enviado a Cuarentena (En Hold)';
 
+    // Update production_entries inspection_status if serial exists
+    if (serial && partId) {
+      await query(`
+        UPDATE production_entries
+        SET inspection_status = 'INSPECTED', inspected_at = CURRENT_TIMESTAMP
+        WHERE serial_number = $1 AND part_id = $2 AND inspection_status = 'PENDING'
+      `, [serial.trim(), partId]);
+    }
+
     res.json({
       success: true,
       entry: transformToCamelCase(defectEntry),
@@ -1753,7 +1762,7 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
       let productionInfo = null;
       try {
         const prodResult = await query(`
-          SELECT pe.id, pe.inspection_status, pe.work_order, pe.lot_number, pe.produced_at,
+          SELECT pe.id, pe.unit_id, pe.work_order, pe.lot_number, pe.produced_at,
                  pe.source, pe.inspected_at
           FROM production_entries pe
           WHERE pe.part_id = $1 AND pe.serial_number = $2
@@ -1761,10 +1770,20 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
         `, [unit.part_id, serial.trim()]);
 
         if (prodResult.rows.length > 0) {
-          productionInfo = transformToCamelCase(prodResult.rows[0]);
+          const prod = transformToCamelCase(prodResult.rows[0]);
+          // El estado viene de unit_registry.current_status (fuente de verdad)
+          prod.inspectionStatus = unit.current_status || 'REGISTERED';
+          productionInfo = prod;
         }
       } catch (prodErr) {
         // Tabla puede no existir, ignorar
+      }
+
+      // Si existe en unit_registry pero no en production_entries, crear productionInfo con el status
+      if (!productionInfo) {
+        productionInfo = {
+          inspectionStatus: unit.current_status || 'REGISTERED'
+        };
       }
 
       return res.json({
@@ -1810,24 +1829,28 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
       });
     }
 
-    // Buscar en production_entries (serial importado de producción pero no inspeccionado)
+    // Buscar en production_entries (serial importado de producción pero no en unit_registry)
     try {
       const prodResult = await query(`
-        SELECT pe.id, pe.serial_number, pe.part_id, pe.inspection_status,
+        SELECT pe.id, pe.serial_number, pe.part_id, pe.unit_id,
                pe.work_order, pe.lot_number, pe.produced_at, pe.source,
                cp.part_number, cp.part_name, cp.client_id, cp.project_id,
                c.name as client_name,
-               p.project_number, p.project_name
+               p.project_number, p.project_name,
+               ur.current_status
         FROM production_entries pe
         LEFT JOIN client_parts cp ON pe.part_id = cp.id
         LEFT JOIN clients c ON cp.client_id = c.id
         LEFT JOIN projects p ON cp.project_id = p.id
+        LEFT JOIN unit_registry ur ON pe.unit_id = ur.id
         WHERE pe.serial_number = $1
         LIMIT 1
       `, [serial.trim()]);
 
       if (prodResult.rows.length > 0) {
         const prod = prodResult.rows[0];
+        // Si no tiene unit_id, está pendiente. Si tiene, usa el status de unit_registry
+        const inspectionStatus = prod.unit_id ? (prod.current_status || 'REGISTERED') : 'PENDING';
         return res.json({
           success: true,
           unit: {
@@ -1843,7 +1866,7 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
           isScrapped: false,
           productionInfo: {
             id: prod.id,
-            inspectionStatus: prod.inspection_status,
+            inspectionStatus: inspectionStatus,
             workOrder: prod.work_order,
             lotNumber: prod.lot_number,
             producedAt: prod.produced_at,

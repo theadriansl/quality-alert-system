@@ -95,6 +95,81 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /capture-ok - Registrar pieza OK (sin specs, crea unit_registry y vincula production)
+router.post('/capture-ok', authenticateToken, async (req, res) => {
+  const { serialNumber, clientId, partId, projectId, stationId, shiftId } = req.body;
+
+  if (!serialNumber || !clientId || !partId) {
+    return res.status(400).json({
+      success: false,
+      message: 'serialNumber, clientId y partId son requeridos'
+    });
+  }
+
+  try {
+    // Verificar si ya existe unit_registry
+    const existing = await query(
+      'SELECT id, current_status FROM unit_registry WHERE client_id = $1 AND part_id = $2 AND serial_number = $3',
+      [clientId, partId, serialNumber.trim()]
+    );
+
+    let unitId;
+    let isNew = false;
+
+    if (existing.rows.length > 0) {
+      unitId = existing.rows[0].id;
+      // Actualizar status a OK si no está SCRAPPED
+      if (existing.rows[0].current_status !== 'SCRAPPED') {
+        await query(
+          'UPDATE unit_registry SET current_status = $1, total_inspections = total_inspections + 1, last_inspection_at = CURRENT_TIMESTAMP WHERE id = $2',
+          ['OK', unitId]
+        );
+      }
+    } else {
+      // Buscar si existe en production_entries para vincular
+      const prodEntry = await query(
+        'SELECT id FROM production_entries WHERE serial_number = $1 AND part_id = $2 LIMIT 1',
+        [serialNumber.trim(), partId]
+      );
+      const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
+      const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
+
+      // Crear unit_registry
+      const newUnit = await query(`
+        INSERT INTO unit_registry (
+          serial_number, client_id, part_id, project_id,
+          current_status, total_inspections, created_by, source, production_entry_id
+        ) VALUES ($1, $2, $3, $4, 'OK', 1, $5, $6, $7)
+        RETURNING id
+      `, [serialNumber.trim(), clientId, partId, projectId, req.user.id, source, productionEntryId]);
+
+      unitId = newUnit.rows[0].id;
+      isNew = true;
+
+      // Actualizar production_entries con unit_id si existe link
+      if (productionEntryId) {
+        await query('UPDATE production_entries SET unit_id = $1 WHERE id = $2', [unitId, productionEntryId]);
+      }
+    }
+
+    // Registrar en unit_history
+    await query(`
+      INSERT INTO unit_history (unit_id, event_type, description, station_id, shift_id, performed_by)
+      VALUES ($1, 'INSPECTION_OK', 'Pieza marcada como OK', $2, $3, $4)
+    `, [unitId, stationId || null, shiftId || null, req.user.id]);
+
+    res.json({
+      success: true,
+      unitId,
+      isNew,
+      message: 'Pieza OK registrada'
+    });
+  } catch (error) {
+    console.error('Error en capture-ok:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // GET - Buscar unidad por serial o entry number
 router.get('/by-serial/:serialNumber', authenticateToken, async (req, res) => {
   const { serialNumber } = req.params;

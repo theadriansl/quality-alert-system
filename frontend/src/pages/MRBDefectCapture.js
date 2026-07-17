@@ -4,7 +4,7 @@ import {
   CheckCircle, XCircle, Plus, Home, List, BarChart3,
   Search, Package, Layers, Hash, Users, Info, Eye,
   RefreshCw, Scissors, RotateCcw, Truck, PauseCircle, Trash2, Calendar,
-  Download, Upload
+  Download, Upload, ChevronLeft, ChevronRight, ChevronUp
 } from 'lucide-react';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -91,6 +91,35 @@ const MRBDefectCapture = () => {
   const [partDefects, setPartDefects]         = useState([]);
   const [defectsByCategory, setDefectsByCategory] = useState([]);
   const [defectFilter, setDefectFilter]       = useState('');
+
+  // ── CATEGORY & PAGINATION STATE (UX improvements) ─────────────────────────
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mrbCapture_selectedCategory');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [defectsPage, setDefectsPage] = useState(1);
+  const DEFECTS_PER_PAGE = 20; // 4 rows × 5 columns grid
+
+  const handleCategorySelect = useCallback((categoryId) => {
+    const newCategory = selectedCategory === categoryId ? null : categoryId;
+    setSelectedCategory(newCategory);
+    setDefectsPage(1);
+    localStorage.setItem('mrbCapture_selectedCategory', JSON.stringify(newCategory));
+  }, [selectedCategory]);
+
+  const selectedCategoryDefects = selectedCategory
+    ? defectsByCategory.find(c => c.categoryId === selectedCategory)?.defects || []
+    : [];
+
+  const getPaginatedDefects = useCallback((defects) => {
+    const startIndex = (defectsPage - 1) * DEFECTS_PER_PAGE;
+    return defects.slice(startIndex, startIndex + DEFECTS_PER_PAGE);
+  }, [defectsPage]);
+
+  // Reset page when category changes
+  useEffect(() => { setDefectsPage(1); }, [selectedCategory]);
 
   // ── INDIVIDUAL MODE STATE ─────────────────────────────────────────────────
   const [selectedStage, setSelectedStage]           = useState(null);
@@ -1324,14 +1353,39 @@ const MRBDefectCapture = () => {
                 </div>
               )}
 
-              {/* ── INFO PRODUCCIÓN ─────────────────────────────────────────── */}
+              {/* ── INFO PRODUCCIÓN - usa unit_registry.current_status ─────────── */}
               {productionInfo && (
-                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: productionInfo.inspectionStatus === 'PENDING' ? '#fef3c7' : '#dcfce7', borderRadius: '6px', border: `1px solid ${productionInfo.inspectionStatus === 'PENDING' ? '#fcd34d' : '#86efac'}` }}>
+                <div style={{
+                  marginTop: '8px', padding: '8px 10px', borderRadius: '6px',
+                  backgroundColor:
+                    productionInfo.inspectionStatus === 'OK' ? '#dcfce7' :
+                    productionInfo.inspectionStatus === 'DEFECTIVE' ? '#fee2e2' :
+                    productionInfo.inspectionStatus === 'SCRAPPED' ? '#f3f4f6' :
+                    '#fef3c7',
+                  border: `1px solid ${
+                    productionInfo.inspectionStatus === 'OK' ? '#86efac' :
+                    productionInfo.inspectionStatus === 'DEFECTIVE' ? '#fca5a5' :
+                    productionInfo.inspectionStatus === 'SCRAPPED' ? '#d1d5db' :
+                    '#fcd34d'
+                  }`
+                }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>{productionInfo.inspectionStatus === 'PENDING' ? '📋' : '✅'}</span>
+                    <span style={{ fontSize: '16px' }}>
+                      {productionInfo.inspectionStatus === 'OK' ? '✅' :
+                       productionInfo.inspectionStatus === 'DEFECTIVE' ? '⚠️' :
+                       productionInfo.inspectionStatus === 'SCRAPPED' ? '🗑️' : '📋'}
+                    </span>
                     <div>
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: productionInfo.inspectionStatus === 'PENDING' ? '#92400e' : '#166534' }}>
-                        {productionInfo.inspectionStatus === 'PENDING' ? 'Pendiente de inspección' : 'Ya inspeccionado'}
+                      <div style={{ fontSize: '11px', fontWeight: '600', color:
+                        productionInfo.inspectionStatus === 'OK' ? '#166534' :
+                        productionInfo.inspectionStatus === 'DEFECTIVE' ? '#991b1b' :
+                        productionInfo.inspectionStatus === 'SCRAPPED' ? '#6b7280' : '#92400e'
+                      }}>
+                        {productionInfo.inspectionStatus === 'OK' ? 'Inspeccionado OK' :
+                         productionInfo.inspectionStatus === 'DEFECTIVE' ? 'Con defectos' :
+                         productionInfo.inspectionStatus === 'SCRAPPED' ? 'SCRAP' :
+                         productionInfo.inspectionStatus === 'REGISTERED' ? 'Registrado' :
+                         'Pendiente de inspección'}
                       </div>
                       {productionInfo.workOrder && (
                         <div style={{ fontSize: '10px', color: '#6b7280' }}>OT: {productionInfo.workOrder}</div>
@@ -1578,6 +1632,7 @@ const MRBDefectCapture = () => {
           {/* Right panel */}
           <div style={s.rightPanel}>
             <div style={s.defectsPanel}>
+              {/* Header with search */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <span style={{ color: t.textMuted, fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' }}>
                   Defectos {selectedPart ? `— ${selectedPart.captureDisplayName || selectedPart.partNumber}` : ''} ({partDefects.length})
@@ -1586,41 +1641,115 @@ const MRBDefectCapture = () => {
                   <input type="text" placeholder="Buscar..." value={defectFilter} onChange={e => setDefectFilter(e.target.value)} style={{ ...s.fieldInput, width: '160px', padding: '5px 10px', fontSize: '13px' }} />
                 )}
               </div>
+
               {partDefects.length === 0 ? (
                 <div style={{ color: t.textMuted, textAlign: 'center', padding: '40px', fontSize: '14px' }}>
                   {selectedPart ? L.noDefectsConfigured : L.selectPartDefects}
                 </div>
               ) : (
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                  {filteredDefects.map(cat => (
-                    <div key={cat.categoryId} style={{ marginBottom: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', paddingBottom: '4px', borderBottom: `2px solid ${cat.categoryColor}` }}>
-                        <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: cat.categoryColor }} />
-                        <span style={{ color: t.text, fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>{cat.categoryName}</span>
-                        <span style={{ color: t.textMuted, fontSize: '11px' }}>({cat.defects.length})</span>
+                <>
+                  {/* Category Buttons Row */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', paddingBottom: '10px', borderBottom: `1px solid ${t.border}` }}>
+                    {defectsByCategory.map(cat => {
+                      const isSelected = selectedCategory === cat.categoryId;
+                      const count = cat.defects.filter(d => !defectFilter || d.name.toLowerCase().includes(defectFilter.toLowerCase()) || (d.code && d.code.toLowerCase().includes(defectFilter.toLowerCase()))).length;
+                      if (count === 0 && defectFilter) return null;
+                      return (
+                        <button key={cat.categoryId} type="button" onClick={() => handleCategorySelect(cat.categoryId)}
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', backgroundColor: isSelected ? (cat.categoryColor || t.accent) : t.bgInput, border: `2px solid ${cat.categoryColor || t.border}`, borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: isSelected ? 'white' : (cat.categoryColor || '#6b7280') }} />
+                          <span style={{ color: isSelected ? 'white' : t.text, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>{cat.categoryName}</span>
+                          <span style={{ color: isSelected ? 'rgba(255,255,255,0.8)' : t.textMuted, fontSize: '10px', backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : t.bgCard, padding: '1px 5px', borderRadius: '6px' }}>{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Defects Grid */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                    {!selectedCategory ? (
+                      <div style={{ color: t.textMuted, textAlign: 'center', padding: '30px', fontSize: '13px', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <ChevronUp size={28} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                        Selecciona una categoría
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {cat.defects.map(d => (
-                          <button key={d.id} type="button" onClick={() => setSelectedDefect(selectedDefect?.id === d.id ? null : d)} style={{ padding: '12px 16px', borderRadius: '8px', border: `2px solid ${selectedDefect?.id === d.id ? t.accent : (d.color || t.border)}`, backgroundColor: selectedDefect?.id === d.id ? t.accent : t.bgInput, color: selectedDefect?.id === d.id ? 'white' : t.text, fontSize: '13px', fontWeight: '600', cursor: 'pointer', minWidth: '90px' }}>
-                            {d.code && <span style={{ display: 'block', fontSize: '10px', opacity: 0.7 }}>{d.code}</span>}
-                            {d.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ) : (() => {
+                      const filtered = selectedCategoryDefects.filter(d => !defectFilter || d.name.toLowerCase().includes(defectFilter.toLowerCase()) || (d.code && d.code.toLowerCase().includes(defectFilter.toLowerCase())));
+                      const totalPages = Math.ceil(filtered.length / DEFECTS_PER_PAGE);
+                      const paginated = getPaginatedDefects(filtered);
+                      return (
+                        <>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(5, 1fr)',
+                            gridTemplateRows: 'repeat(4, 1fr)',
+                            gap: '8px',
+                            flex: 1,
+                            padding: '4px'
+                          }}>
+                            {paginated.map(d => (
+                              <button
+                                key={d.id}
+                                type="button"
+                                style={{
+                                  padding: '10px 8px',
+                                  borderRadius: '8px',
+                                  border: `2px solid ${selectedDefect?.id === d.id ? t.accent : (d.color || t.border)}`,
+                                  backgroundColor: selectedDefect?.id === d.id ? t.accent : t.bgInput,
+                                  color: selectedDefect?.id === d.id ? 'white' : t.text,
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '2px',
+                                  transition: 'all 0.15s',
+                                  minHeight: '60px'
+                                }}
+                                onClick={() => setSelectedDefect(selectedDefect?.id === d.id ? null : d)}
+                                title={`${d.code || ''} ${d.name}`}
+                              >
+                                {d.code && <span style={{ fontSize: '10px', opacity: 0.7 }}>{d.code}</span>}
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{d.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                          {totalPages > 1 && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 0', borderTop: `1px solid ${t.border}`, marginTop: '8px' }}>
+                              <button type="button" onClick={() => setDefectsPage(p => Math.max(1, p - 1))} disabled={defectsPage === 1}
+                                style={{ padding: '6px 10px', backgroundColor: defectsPage === 1 ? t.bgInput : t.accent, color: defectsPage === 1 ? t.textMuted : 'white', border: 'none', borderRadius: '5px', cursor: defectsPage === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', fontWeight: '600' }}>
+                                <ChevronLeft size={14} /> Ant
+                              </button>
+                              <span style={{ color: t.text, fontSize: '12px', fontWeight: '500' }}>{defectsPage} / {totalPages}</span>
+                              <button type="button" onClick={() => setDefectsPage(p => Math.min(totalPages, p + 1))} disabled={defectsPage === totalPages}
+                                style={{ padding: '6px 10px', backgroundColor: defectsPage === totalPages ? t.bgInput : t.accent, color: defectsPage === totalPages ? t.textMuted : 'white', border: 'none', borderRadius: '5px', cursor: defectsPage === totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', fontWeight: '600' }}>
+                                Sig <ChevronRight size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </>
               )}
             </div>
 
+            {/* Submit Panel - Preview integrated in button */}
             <div style={s.submitPanel}>
-              <div style={{ padding: '10px 14px', backgroundColor: t.bgInput, borderRadius: '8px', color: t.text, fontSize: '13px', fontWeight: '500', textAlign: 'center' }}>
-                {selectedDefect
-                  ? `${selectedPart?.captureDisplayName || selectedPart?.partNumber || 'Parte'} │ ${selectedDefect.name} │ ${selectedDisposition ? dispositions.find(d => d.id === selectedDisposition.id)?.name : 'Sin disposición'}`
-                  : L.selectDefectContinue}
-              </div>
-              <button style={s.submitBtn(!isIndividualValid || submitting || isClosed)} onClick={handleSubmitDefect} disabled={!isIndividualValid || submitting || isClosed} title={isClosed ? 'Campaña cerrada' : ''}>
-                <Plus size={18} /> {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO NOK'}
+              <button style={{ ...s.submitBtn(!isIndividualValid || submitting || isClosed), flexDirection: 'column', padding: '12px 20px' }} onClick={handleSubmitDefect} disabled={!isIndividualValid || submitting || isClosed} title={isClosed ? 'Campaña cerrada' : ''}>
+                {selectedDefect && (
+                  <span style={{ fontSize: '11px', opacity: 0.85, marginBottom: '4px' }}>
+                    {selectedPart?.captureDisplayName || selectedPart?.partNumber || 'Parte'} │ {selectedDefect.name} │ {selectedDisposition ? dispositions.find(d => d.id === selectedDisposition.id)?.name : 'Disposición'}
+                  </span>
+                )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700' }}>
+                  <Plus size={18} /> {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO NOK'}
+                </span>
               </button>
             </div>
           </div>

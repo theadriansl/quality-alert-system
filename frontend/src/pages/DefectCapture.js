@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { canUserEdit, canUserCaptureDefects, isReadOnly, isUserAdmin } from '../utils/permissions';
-import { CheckCircle, XCircle, Plus, Home, Palette, BarChart3, Search, AlertTriangle, Paperclip, X, FileText, Image } from 'lucide-react';
+import { CheckCircle, XCircle, Plus, Home, Palette, BarChart3, Search, AlertTriangle, Paperclip, X, FileText, Image, ChevronDown, ChevronRight, ChevronUp, ChevronLeft } from 'lucide-react';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import DefectConsultTab, { DefectCounter } from '../components/DefectConsultTab';
@@ -132,6 +132,47 @@ const DefectCapture = () => {
   const [scrapModalOpen, setScrapModalOpen] = useState(false); // Modal for scrapped serial
   const [scrapInfo, setScrapInfo] = useState(null); // Info about scrapped serial
   const [productionInfo, setProductionInfo] = useState(null); // Info from production_entries
+
+  // ============================================================================
+  // STATE - Selected Category (with localStorage persistence)
+  // ============================================================================
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('defectCapture_selectedCategory');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Handle category selection
+  const handleCategorySelect = useCallback((categoryId) => {
+    const newCategory = selectedCategory === categoryId ? null : categoryId;
+    setSelectedCategory(newCategory);
+    localStorage.setItem('defectCapture_selectedCategory', JSON.stringify(newCategory));
+  }, [selectedCategory]);
+
+  // Get defects for selected category
+  const selectedCategoryDefects = selectedCategory
+    ? defectsByCategory.find(c => c.categoryId === selectedCategory)?.defects || []
+    : [];
+
+  // ============================================================================
+  // STATE - Defects Pagination
+  // ============================================================================
+  const [defectsPage, setDefectsPage] = useState(1);
+  const DEFECTS_PER_PAGE = 20; // 4 rows × 5 columns grid
+
+  // Reset page when category changes
+  useEffect(() => {
+    setDefectsPage(1);
+  }, [selectedCategory]);
+
+  // Get paginated defects
+  const getPaginatedDefects = useCallback((defects) => {
+    const startIndex = (defectsPage - 1) * DEFECTS_PER_PAGE;
+    return defects.slice(startIndex, startIndex + DEFECTS_PER_PAGE);
+  }, [defectsPage]);
 
   // ============================================================================
   // STATE - Specs Checklist
@@ -884,12 +925,76 @@ const DefectCapture = () => {
     }
   };
 
-  const handlePiezaOk = useCallback(() => {
-    setOkCount(prev => prev + 1);
-    // Clear lot for next piece
-    setLotNumber('');
-    showSuccessMessage('Pieza OK registrada');
-  }, []);
+  const handlePiezaOk = useCallback(async () => {
+    if (!selectedPart || !lotNumber.trim()) {
+      setError('Selecciona parte y serial antes de marcar OK');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Si hay specs, registrar todas como OK
+      if (partSpecs.length > 0) {
+        const res = await fetch(`${API_URL}/spec-inspection/bulk`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            serialNumber: lotNumber.trim(),
+            lotNumber: lotNumber.trim(),
+            clientId: selectedClient?.id,
+            projectId: selectedProject?.id,
+            partId: selectedPart?.id,
+            stationId: selectedStation?.id,
+            shiftId: selectedShift?.id,
+            entries: partSpecs.map(spec => ({
+              specId: spec.id,
+              result: 'OK',
+              notes: 'Pieza OK - inspección completa'
+            }))
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Error al registrar inspección OK');
+        }
+      } else {
+        // Sin specs, crear unit_registry directamente via endpoint
+        const res = await fetch(`${API_URL}/unit-registry/capture-ok`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            serialNumber: lotNumber.trim(),
+            clientId: selectedClient?.id,
+            partId: selectedPart?.id,
+            projectId: selectedProject?.id,
+            stationId: selectedStation?.id,
+            shiftId: selectedShift?.id
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Error al registrar pieza OK');
+        }
+      }
+
+      setOkCount(prev => prev + 1);
+      setLotNumber('');
+      setProductionInfo(null);
+      showSuccessMessage('Pieza OK registrada');
+    } catch (err) {
+      console.error('Error en Pieza OK:', err);
+      setError(err.message || 'Error al registrar pieza OK');
+    }
+  }, [lotNumber, selectedPart, selectedClient, selectedProject, selectedStation, selectedShift, partSpecs]);
 
   const showSuccessMessage = (msg) => {
     setSuccess(msg);
@@ -1510,21 +1615,26 @@ const DefectCapture = () => {
       minHeight: '60px',
       resize: 'vertical'
     },
-    // Right panel (75%)
+    // Right panel (75%) - scrollable container
     rightPanel: {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      gap: '16px'
+      gap: '16px',
+      overflow: 'hidden',
+      position: 'relative'
     },
-    // Defects grid (75% of right panel)
+    // Defects grid (scrollable area)
     defectsGrid: {
-      flex: 3,
+      flex: 1,
       backgroundColor: t.bgPanel,
-      borderRadius: '12px',
+      borderRadius: '12px 12px 0 0',
       padding: '16px',
+      paddingBottom: '8px',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      overflow: 'hidden',
+      minHeight: 0
     },
     defectsTitle: {
       color: t.textMuted,
@@ -1564,15 +1674,17 @@ const DefectCapture = () => {
       padding: '40px',
       fontSize: '14px'
     },
-    // Preview + Submit (25% of right panel)
+    // Preview + Submit (fixed at bottom of right panel)
     previewSubmit: {
-      flex: 1,
       backgroundColor: t.bgPanel,
-      borderRadius: '12px',
+      borderRadius: '0 0 12px 12px',
       padding: '16px',
+      paddingTop: '12px',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-between'
+      gap: '12px',
+      borderTop: `1px solid ${t.border}`,
+      flexShrink: 0
     },
     previewLine: {
       padding: '12px 16px',
@@ -2066,12 +2178,16 @@ const DefectCapture = () => {
                 />
               </div>
             )}
-            {/* Indicador de producción */}
+            {/* Indicador de producción - usa unit_registry.current_status */}
             {productionInfo && (
               <div style={{
                 marginTop: '8px',
                 padding: '8px 12px',
-                backgroundColor: productionInfo.inspectionStatus === 'PENDING' ? '#fef3c7' : '#dcfce7',
+                backgroundColor:
+                  productionInfo.inspectionStatus === 'OK' ? '#dcfce7' :
+                  productionInfo.inspectionStatus === 'DEFECTIVE' ? '#fee2e2' :
+                  productionInfo.inspectionStatus === 'SCRAPPED' ? '#f3f4f6' :
+                  '#fef3c7',
                 borderRadius: '6px',
                 fontSize: '12px',
                 display: 'flex',
@@ -2079,11 +2195,23 @@ const DefectCapture = () => {
                 gap: '8px'
               }}>
                 <span style={{ fontSize: '16px' }}>
-                  {productionInfo.inspectionStatus === 'PENDING' ? '📋' : '✅'}
+                  {productionInfo.inspectionStatus === 'OK' ? '✅' :
+                   productionInfo.inspectionStatus === 'DEFECTIVE' ? '⚠️' :
+                   productionInfo.inspectionStatus === 'SCRAPPED' ? '🗑️' :
+                   '📋'}
                 </span>
                 <div>
-                  <div style={{ fontWeight: '500', color: productionInfo.inspectionStatus === 'PENDING' ? '#92400e' : '#166534' }}>
-                    {productionInfo.inspectionStatus === 'PENDING' ? 'Pendiente de inspección' : 'Ya inspeccionado'}
+                  <div style={{ fontWeight: '500', color:
+                    productionInfo.inspectionStatus === 'OK' ? '#166534' :
+                    productionInfo.inspectionStatus === 'DEFECTIVE' ? '#991b1b' :
+                    productionInfo.inspectionStatus === 'SCRAPPED' ? '#6b7280' :
+                    '#92400e'
+                  }}>
+                    {productionInfo.inspectionStatus === 'OK' ? 'Inspeccionado OK' :
+                     productionInfo.inspectionStatus === 'DEFECTIVE' ? 'Con defectos' :
+                     productionInfo.inspectionStatus === 'SCRAPPED' ? 'SCRAP' :
+                     productionInfo.inspectionStatus === 'REGISTERED' ? 'Registrado' :
+                     'Pendiente de inspección'}
                   </div>
                   {productionInfo.workOrder && (
                     <div style={{ color: '#6b7280' }}>OT: {productionInfo.workOrder}</div>
@@ -2238,89 +2366,230 @@ const DefectCapture = () => {
                 <br />
               </div>
             ) : (
-              <div style={{ overflowY: 'auto', flex: 1 }}>
+              <>
+              {/* Category Buttons Row */}
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: `1px solid ${t.border}`
+              }}>
                 {defectsByCategory.map(category => {
-                  // Filter defects by search term
-                  const filteredDefects = category.defects.filter(d =>
+                  const isSelected = selectedCategory === category.categoryId;
+                  const defectCount = category.defects.filter(d =>
+                    !defectFilter ||
+                    d.name.toLowerCase().includes(defectFilter.toLowerCase()) ||
+                    (d.code && d.code.toLowerCase().includes(defectFilter.toLowerCase()))
+                  ).length;
+
+                  if (defectCount === 0 && defectFilter) return null;
+
+                  return (
+                    <button
+                      key={category.categoryId}
+                      type="button"
+                      onClick={() => handleCategorySelect(category.categoryId)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '10px 14px',
+                        backgroundColor: isSelected
+                          ? (category.categoryColor || t.accent)
+                          : t.bgInput,
+                        border: `2px solid ${category.categoryColor || t.border}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        transform: isSelected ? 'scale(1.02)' : 'scale(1)'
+                      }}
+                    >
+                      <span style={{
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '3px',
+                        backgroundColor: isSelected ? 'white' : (category.categoryColor || '#6b7280')
+                      }} />
+                      <span style={{
+                        color: isSelected ? 'white' : t.text,
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>
+                        {category.categoryName}
+                      </span>
+                      <span style={{
+                        color: isSelected ? 'rgba(255,255,255,0.8)' : t.textMuted,
+                        fontSize: '11px',
+                        backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : t.bgCard,
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontWeight: '500'
+                      }}>
+                        {defectCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Defects Grid */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {!selectedCategory ? (
+                  <div style={{
+                    color: t.textMuted,
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    fontSize: '14px',
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <ChevronUp size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                    Selecciona una categoría para ver los defectos
+                  </div>
+                ) : (() => {
+                  const filteredDefects = selectedCategoryDefects.filter(d =>
                     !defectFilter ||
                     d.name.toLowerCase().includes(defectFilter.toLowerCase()) ||
                     (d.code && d.code.toLowerCase().includes(defectFilter.toLowerCase()))
                   );
-                  if (filteredDefects.length === 0) return null;
+                  const totalPages = Math.ceil(filteredDefects.length / DEFECTS_PER_PAGE);
+                  const paginatedDefects = getPaginatedDefects(filteredDefects);
 
                   return (
-                    <div key={category.categoryId} style={{ marginBottom: '16px' }}>
-                      {/* Category Header */}
+                    <>
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gridTemplateRows: 'repeat(4, 1fr)',
                         gap: '8px',
-                        marginBottom: '8px',
-                        paddingBottom: '4px',
-                        borderBottom: `2px solid ${category.categoryColor || '#6b7280'}`
+                        flex: 1,
+                        padding: '4px'
                       }}>
-                        <span style={{
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '3px',
-                          backgroundColor: category.categoryColor || '#6b7280'
-                        }} />
-                        <span style={{
-                          color: t.text,
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          textTransform: 'uppercase'
-                        }}>
-                          {category.categoryName}
-                        </span>
-                        <span style={{ color: t.textMuted, fontSize: '12px' }}>
-                          ({filteredDefects.length})
-                        </span>
-                      </div>
-
-                      {/* Defect Buttons */}
-                      <div style={styles.defectsButtons}>
-                        {filteredDefects.map(defect => (
+                        {paginatedDefects.map(defect => (
                           <button
                             key={defect.id}
                             type="button"
                             style={{
-                              ...styles.defectButton,
-                              ...(selectedDefect?.id === defect.id ? styles.defectButtonSelected : {}),
-                              ...(defect.color ? { border: `2px solid ${defect.color}` } : {})
+                              padding: '10px 8px',
+                              borderRadius: '8px',
+                              border: `2px solid ${selectedDefect?.id === defect.id ? t.accent : (defect.color || t.border)}`,
+                              backgroundColor: selectedDefect?.id === defect.id ? t.accent : t.bgInput,
+                              color: selectedDefect?.id === defect.id ? 'white' : t.text,
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '2px',
+                              transition: 'all 0.15s',
+                              minHeight: '60px'
                             }}
                             onClick={() => setSelectedDefect(selectedDefect?.id === defect.id ? null : defect)}
+                            title={`${defect.code || ''} ${defect.name}`}
                           >
-                            {defect.code ? `${defect.code}` : ''} {defect.name}
+                            {defect.code && <span style={{ fontSize: '10px', opacity: 0.7 }}>{defect.code}</span>}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{defect.name}</span>
                           </button>
                         ))}
                       </div>
-                    </div>
+
+                      {/* Pagination Controls */}
+                      {totalPages > 1 && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          padding: '12px 0',
+                          borderTop: `1px solid ${t.border}`,
+                          marginTop: '8px'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => setDefectsPage(p => Math.max(1, p - 1))}
+                            disabled={defectsPage === 1}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: defectsPage === 1 ? t.bgInput : t.accent,
+                              color: defectsPage === 1 ? t.textMuted : 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: defectsPage === 1 ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '13px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            <ChevronLeft size={16} /> Anterior
+                          </button>
+
+                          <span style={{
+                            color: t.text,
+                            fontSize: '13px',
+                            padding: '0 12px',
+                            fontWeight: '500'
+                          }}>
+                            {defectsPage} / {totalPages}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => setDefectsPage(p => Math.min(totalPages, p + 1))}
+                            disabled={defectsPage === totalPages}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: defectsPage === totalPages ? t.bgInput : t.accent,
+                              color: defectsPage === totalPages ? t.textMuted : 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: defectsPage === totalPages ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '13px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            Siguiente <ChevronRight size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </>
                   );
-                })}
+                })()}
               </div>
+              </>
             )}
           </div>
 
-          {/* Preview + Submit (25% of right) */}
+          {/* Submit Section (compact) */}
           <div style={styles.previewSubmit}>
-            <div style={styles.previewLine}>
-              {defectPreview}
-            </div>
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar"
+              style={{ display: 'none' }}
+            />
 
-            {/* Attachments Section */}
-            <div style={{ marginBottom: '12px' }}>
-              {/* Hidden file input */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                multiple
-                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar"
-                style={{ display: 'none' }}
-              />
-
-              {/* Add attachment button */}
+            {/* Row: Attachments + Submit Button */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch' }}>
+              {/* Attachment button (compact) */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -2328,119 +2597,131 @@ const DefectCapture = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px',
-                  width: '100%',
-                  padding: '10px',
+                  gap: '4px',
+                  padding: '12px 16px',
                   backgroundColor: t.bgInput,
                   border: `1px dashed ${t.border}`,
                   borderRadius: '8px',
-                  color: t.textMuted,
+                  color: pendingAttachments.length > 0 ? t.accent : t.textMuted,
                   cursor: 'pointer',
                   fontSize: '13px',
-                  marginBottom: pendingAttachments.length > 0 ? '8px' : '0'
+                  fontWeight: pendingAttachments.length > 0 ? '600' : '400',
+                  flexShrink: 0
                 }}
               >
-                <Paperclip size={16} />
-                {language === 'es' ? 'Adjuntar Evidencia' : 'Attach Evidence'}
+                <Paperclip size={18} />
+                {pendingAttachments.length > 0 && (
+                  <span style={{
+                    backgroundColor: t.accent,
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    fontSize: '11px'
+                  }}>
+                    {pendingAttachments.length}
+                  </span>
+                )}
               </button>
 
-              {/* Preview of selected files */}
-              {pendingAttachments.length > 0 && (
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '8px',
-                  padding: '8px',
-                  backgroundColor: t.bgInput,
-                  borderRadius: '8px',
-                  maxHeight: '120px',
-                  overflowY: 'auto'
-                }}>
-                  {pendingAttachments.map((att, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        position: 'relative',
-                        width: att.isImage ? '60px' : 'auto',
-                        minWidth: att.isImage ? '60px' : '80px',
-                        height: att.isImage ? '60px' : 'auto',
-                        backgroundColor: t.bgCard,
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        border: `1px solid ${t.border}`
-                      }}
-                    >
-                      {att.isImage ? (
-                        <img
-                          src={att.preview}
-                          alt={att.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '6px 8px',
-                          fontSize: '11px',
-                          color: t.text
-                        }}>
-                          <FileText size={14} />
-                          <span style={{ maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {att.name.length > 10 ? att.name.slice(0, 8) + '...' : att.name}
-                          </span>
-                        </div>
-                      )}
-                      {/* Remove button */}
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(idx)}
-                        style={{
-                          position: 'absolute',
-                          top: '2px',
-                          right: '2px',
-                          width: '18px',
-                          height: '18px',
-                          padding: 0,
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          border: 'none',
-                          borderRadius: '50%',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <X size={12} color="white" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Main Submit Button with Preview */}
+              <button
+                style={{
+                  ...styles.submitButton,
+                  flex: 1,
+                  flexDirection: 'column',
+                  padding: '12px 20px',
+                  ...((!isFormValid || submitting) ? styles.submitButtonDisabled : {})
+                }}
+                onClick={handleAgregarDefectoClick}
+                disabled={!isFormValid || submitting}
+              >
+                {/* Preview line (small) */}
+                {selectedDefect && (
+                  <span style={{
+                    fontSize: '11px',
+                    opacity: 0.85,
+                    marginBottom: '4px',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {defectPreview}
+                  </span>
+                )}
+                {/* Main button text */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '700' }}>
+                  <Plus size={20} />
+                  {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO'}
+                </span>
+              </button>
             </div>
 
-            <button
-              style={{
-                ...styles.submitButton,
-                ...((!isFormValid || submitting) ? styles.submitButtonDisabled : {})
-              }}
-              onClick={handleAgregarDefectoClick}
-              disabled={!isFormValid || submitting}
-            >
-              <Plus size={20} />
-              {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO'}
-              {pendingAttachments.length > 0 && (
-                <span style={{
-                  marginLeft: '8px',
-                  backgroundColor: 'rgba(255,255,255,0.2)',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '12px'
-                }}>
-                  +{pendingAttachments.length}
-                </span>
-              )}
-            </button>
+            {/* Attached files preview (inline, compact) */}
+            {pendingAttachments.length > 0 && (
+              <div style={{
+                display: 'flex',
+                gap: '6px',
+                marginTop: '8px',
+                overflowX: 'auto',
+                paddingBottom: '4px'
+              }}>
+                {pendingAttachments.map((att, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      position: 'relative',
+                      width: '40px',
+                      height: '40px',
+                      backgroundColor: t.bgCard,
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      border: `1px solid ${t.border}`,
+                      flexShrink: 0
+                    }}
+                  >
+                    {att.isImage ? (
+                      <img
+                        src={att.preview}
+                        alt={att.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        color: t.textMuted
+                      }}>
+                        <FileText size={16} />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: '1px',
+                        right: '1px',
+                        width: '14px',
+                        height: '14px',
+                        padding: 0,
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <X size={10} color="white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

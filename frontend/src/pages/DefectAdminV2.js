@@ -42,6 +42,10 @@ const DefectAdminV2 = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  // Sorting for parts list
+  const [partSortField, setPartSortField] = useState('partNumber'); // partNumber, partName, defectCount
+  const [partSortDir, setPartSortDir] = useState('asc'); // asc, desc
+
   // Modal states
   const [showDefectModal, setShowDefectModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -698,6 +702,36 @@ const DefectAdminV2 = () => {
 
   const selectedParts = parts.filter(p => selectedPartIds.includes(p.id));
 
+  // Sort parts
+  const handlePartSort = (field) => {
+    if (partSortField === field) {
+      setPartSortDir(partSortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setPartSortField(field);
+      setPartSortDir('asc');
+    }
+  };
+
+  const sortedParts = [...parts].sort((a, b) => {
+    let valA, valB;
+    if (partSortField === 'partNumber') {
+      valA = (a.partNumber || '').toLowerCase();
+      valB = (b.partNumber || '').toLowerCase();
+    } else if (partSortField === 'partName') {
+      valA = (a.partName || '').toLowerCase();
+      valB = (b.partName || '').toLowerCase();
+    } else if (partSortField === 'defectCount') {
+      valA = partDefectConfig[a.id]?.length || 0;
+      valB = partDefectConfig[b.id]?.length || 0;
+    } else if (partSortField === 'project') {
+      valA = (a.projectName || '').toLowerCase();
+      valB = (b.projectName || '').toLowerCase();
+    }
+    if (valA < valB) return partSortDir === 'asc' ? -1 : 1;
+    if (valA > valB) return partSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   // Styles
   const styles = {
     container: { minHeight: '100vh', backgroundColor: t.bg, padding: '20px' },
@@ -893,7 +927,7 @@ const DefectAdminV2 = () => {
           {/* Column 1: Parts */}
           <div style={styles.column}>
             <div style={styles.columnHeader}>
-              <span>Partes</span>
+              <span>Partes ({parts.length})</span>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
@@ -903,12 +937,34 @@ const DefectAdminV2 = () => {
                 Todas
               </label>
             </div>
+            {/* Sort buttons */}
+            <div style={{ display: 'flex', gap: '4px', padding: '8px 12px', borderBottom: `1px solid ${t.border}`, backgroundColor: t.bg, flexWrap: 'wrap' }}>
+              {[
+                { field: 'partNumber', label: '# Parte' },
+                { field: 'partName', label: 'Nombre' },
+                { field: 'defectCount', label: 'Defectos' }
+              ].map(({ field, label }) => (
+                <button
+                  key={field}
+                  onClick={() => handlePartSort(field)}
+                  style={{
+                    padding: '4px 8px', fontSize: '11px', border: `1px solid ${t.border}`,
+                    borderRadius: '4px', cursor: 'pointer',
+                    backgroundColor: partSortField === field ? t.accent : t.bgCard,
+                    color: partSortField === field ? 'white' : t.text,
+                    fontWeight: partSortField === field ? '600' : '400'
+                  }}
+                >
+                  {label} {partSortField === field && (partSortDir === 'asc' ? '↑' : '↓')}
+                </button>
+              ))}
+            </div>
             <div style={styles.columnContent}>
               {loading && <div style={styles.emptyState}>Cargando...</div>}
               {!loading && parts.length === 0 && (
                 <div style={styles.emptyState}>No hay partes para este cliente</div>
               )}
-              {parts.map(part => {
+              {sortedParts.map(part => {
                 const configCount = partDefectConfig[part.id]?.length || 0;
                 return (
                   <div

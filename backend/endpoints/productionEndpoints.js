@@ -731,8 +731,16 @@ router.get('/entries', async (req, res) => {
       params.push(partId);
     }
     if (status) {
-      conditions.push(`pe.inspection_status = $${paramIndex++}`);
-      params.push(status);
+      // Filtrar por estado usando unit_registry como fuente de verdad
+      if (status === 'PENDING') {
+        conditions.push(`pe.unit_id IS NULL`);
+      } else if (status === 'INSPECTED') {
+        conditions.push(`pe.unit_id IS NOT NULL`);
+      } else {
+        // Estados específicos de unit_registry (OK, DEFECTIVE, SCRAPPED, etc.)
+        conditions.push(`ur.current_status = $${paramIndex++}`);
+        params.push(status);
+      }
     }
     if (partStatus) {
       conditions.push(`pe.part_status = $${paramIndex++}`);
@@ -764,10 +772,13 @@ router.get('/entries', async (req, res) => {
 
     // Total count
     const countResult = await pool.query(`
-      SELECT COUNT(*) as total FROM production_entries pe ${whereClause}
+      SELECT COUNT(*) as total
+      FROM production_entries pe
+      LEFT JOIN unit_registry ur ON pe.unit_id = ur.id
+      ${whereClause}
     `, params);
 
-    // Data
+    // Data - incluye unit_registry.current_status
     const dataResult = await pool.query(`
       SELECT
         pe.*,
@@ -775,11 +786,13 @@ router.get('/entries', async (req, res) => {
         cp.part_name,
         ish.code as shift_code,
         ish.name as shift_name,
-        CONCAT(u.first_name, ' ', u.last_name) as created_by_name
+        CONCAT(u.first_name, ' ', u.last_name) as created_by_name,
+        ur.current_status as unit_status
       FROM production_entries pe
       LEFT JOIN client_parts cp ON cp.id = pe.part_id
       LEFT JOIN inspection_shifts ish ON ish.id = pe.shift_id
       LEFT JOIN users u ON u.id = pe.created_by
+      LEFT JOIN unit_registry ur ON pe.unit_id = ur.id
       ${whereClause}
       ORDER BY pe.produced_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
@@ -803,13 +816,13 @@ router.get('/entries', async (req, res) => {
 });
 
 // ============================================================================
-// GET /pending - Solo pendientes de inspección
+// GET /pending - Solo pendientes de inspección (sin unit_id = no inspeccionado)
 // ============================================================================
 router.get('/pending', async (req, res) => {
   try {
     const { partId, workOrder, limit = 100 } = req.query;
 
-    const conditions = ["pe.inspection_status = 'PENDING'", "pe.part_status = 'CONFIGURED'"];
+    const conditions = ["pe.unit_id IS NULL", "pe.part_status = 'CONFIGURED'"];
     const params = [];
     let paramIndex = 1;
 
@@ -886,15 +899,17 @@ router.get('/coverage', async (req, res) => {
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
-    // Totales generales
+    // Totales generales - usa unit_registry.current_status como fuente de verdad
     const totalsResult = await pool.query(`
       SELECT
         COUNT(*) as total_produced,
-        COUNT(*) FILTER (WHERE inspection_status = 'INSPECTED') as total_inspected,
-        COUNT(*) FILTER (WHERE inspection_status = 'PENDING') as pending,
-        COUNT(*) FILTER (WHERE inspection_status = 'PARTIAL') as partial,
-        COUNT(*) FILTER (WHERE inspection_status = 'SKIPPED') as skipped
+        COUNT(*) FILTER (WHERE pe.unit_id IS NOT NULL) as total_inspected,
+        COUNT(*) FILTER (WHERE pe.unit_id IS NULL) as pending,
+        COUNT(*) FILTER (WHERE ur.current_status = 'OK') as total_ok,
+        COUNT(*) FILTER (WHERE ur.current_status = 'DEFECTIVE') as total_defective,
+        COUNT(*) FILTER (WHERE ur.current_status = 'SCRAPPED') as total_scrapped
       FROM production_entries pe
+      LEFT JOIN unit_registry ur ON pe.unit_id = ur.id
       ${whereClause}
     `, params);
 
@@ -912,15 +927,15 @@ router.get('/coverage', async (req, res) => {
       ? Math.round((totalInspected / totalProduced) * 10000) / 100
       : 0;
 
-    // Por parte
+    // Por parte - usa unit_id para determinar si fue inspeccionado
     const byPartResult = await pool.query(`
       SELECT
         pe.part_id,
         cp.part_number,
         cp.part_name,
         COUNT(*) as produced,
-        COUNT(*) FILTER (WHERE pe.inspection_status = 'INSPECTED') as inspected,
-        COUNT(*) FILTER (WHERE pe.inspection_status = 'PENDING') as pending
+        COUNT(*) FILTER (WHERE pe.unit_id IS NOT NULL) as inspected,
+        COUNT(*) FILTER (WHERE pe.unit_id IS NULL) as pending
       FROM production_entries pe
       LEFT JOIN client_parts cp ON cp.id = pe.part_id
       ${whereClause}
@@ -940,15 +955,15 @@ router.get('/coverage', async (req, res) => {
         : 0
     }));
 
-    // Por turno
+    // Por turno - usa unit_id para determinar si fue inspeccionado
     const byShiftResult = await pool.query(`
       SELECT
         pe.shift_id,
         ish.code as shift_code,
         ish.name as shift_name,
         COUNT(*) as produced,
-        COUNT(*) FILTER (WHERE pe.inspection_status = 'INSPECTED') as inspected,
-        COUNT(*) FILTER (WHERE pe.inspection_status = 'PENDING') as pending
+        COUNT(*) FILTER (WHERE pe.unit_id IS NOT NULL) as inspected,
+        COUNT(*) FILTER (WHERE pe.unit_id IS NULL) as pending
       FROM production_entries pe
       LEFT JOIN inspection_shifts ish ON ish.id = pe.shift_id
       ${whereClause}
@@ -968,8 +983,8 @@ router.get('/coverage', async (req, res) => {
         : 0
     }));
 
-    // Seriales pendientes (top 50 más antiguos)
-    const pendingConditions = [...conditions, "pe.inspection_status = 'PENDING'"];
+    // Seriales pendientes (top 50 más antiguos) - sin unit_id = no inspeccionado
+    const pendingConditions = [...conditions, "pe.unit_id IS NULL"];
     const pendingWhereClause = `WHERE ${pendingConditions.join(' AND ')}`;
 
     const pendingSerialsResult = await pool.query(`
@@ -987,8 +1002,10 @@ router.get('/coverage', async (req, res) => {
         totalProduced,
         totalInspected,
         pending: parseInt(totals.pending) || 0,
-        partial: parseInt(totals.partial) || 0,
-        skipped: parseInt(totals.skipped) || 0,
+        // Desglose por estado de unit_registry
+        totalOk: parseInt(totals.total_ok) || 0,
+        totalDefective: parseInt(totals.total_defective) || 0,
+        totalScrapped: parseInt(totals.total_scrapped) || 0,
         coveragePercent,
         unmatchedCount: parseInt(unmatchedResult.rows[0].unmatched_count) || 0,
         byPart,

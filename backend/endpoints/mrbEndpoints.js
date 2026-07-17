@@ -4265,11 +4265,11 @@ router.get('/:id/search-serials', authenticateToken, async (req, res) => {
       }
     }
 
-    // Search in production_entries (source of production data)
+    // Search in production_entries (source of production data) - usa unit_id para status
     let sql = `
       SELECT
         pe.id, pe.serial_number, pe.part_id, pe.produced_at,
-        pe.inspection_status, pe.lot_number,
+        pe.unit_id, pe.lot_number,
         cp.part_number, cp.part_name
       FROM production_entries pe
       JOIN client_parts cp ON pe.part_id = cp.id
@@ -4297,7 +4297,7 @@ router.get('/:id/search-serials', authenticateToken, async (req, res) => {
       serialNumber: r.serial_number,
       partId: r.part_id,
       registeredAt: r.produced_at, // Use producedAt as registeredAt for frontend compatibility
-      currentStatus: r.inspection_status || 'PENDING',
+      currentStatus: r.unit_id ? 'INSPECTED' : 'PENDING', // usa unit_id para determinar si fue inspeccionado
       lotNumber: r.lot_number,
       partNumber: r.part_number,
       partName: r.part_name

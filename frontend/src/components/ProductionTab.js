@@ -27,6 +27,10 @@ const ProductionTab = ({ theme: t }) => {
   // Pagination
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0 });
 
+  // Sorting for list view
+  const [sortField, setSortField] = useState('producedAt');
+  const [sortDir, setSortDir] = useState('desc');
+
   // UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -351,6 +355,57 @@ const ProductionTab = ({ theme: t }) => {
     }
   };
 
+
+  // Handle sort
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  // Sort entries
+  const sortedEntries = [...entries].sort((a, b) => {
+    let valA, valB;
+    switch (sortField) {
+      case 'serialNumber':
+        valA = (a.serialNumber || '').toLowerCase();
+        valB = (b.serialNumber || '').toLowerCase();
+        break;
+      case 'partNumber':
+        valA = (a.partNumber || a.partNumberRaw || '').toLowerCase();
+        valB = (b.partNumber || b.partNumberRaw || '').toLowerCase();
+        break;
+      case 'lotNumber':
+        valA = (a.lotNumber || '').toLowerCase();
+        valB = (b.lotNumber || '').toLowerCase();
+        break;
+      case 'workOrder':
+        valA = (a.workOrder || '').toLowerCase();
+        valB = (b.workOrder || '').toLowerCase();
+        break;
+      case 'producedAt':
+        valA = new Date(a.producedAt || 0).getTime();
+        valB = new Date(b.producedAt || 0).getTime();
+        break;
+      case 'inspectionStatus':
+        valA = (a.inspectionStatus || '').toLowerCase();
+        valB = (b.inspectionStatus || '').toLowerCase();
+        break;
+      case 'source':
+        valA = (a.source || '').toLowerCase();
+        valB = (b.source || '').toLowerCase();
+        break;
+      default:
+        valA = '';
+        valB = '';
+    }
+    if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const getCoverageColor = (percent) => {
     if (percent >= 95) return '#22c55e';
@@ -684,6 +739,25 @@ const ProductionTab = ({ theme: t }) => {
               <div style={{ ...styles.statValue, color: '#eab308' }}>{coverage.pending}</div>
               <div style={styles.statLabel}>Pendientes</div>
             </div>
+            {/* Desglose por estado de unit_registry */}
+            {coverage.totalOk > 0 && (
+              <div style={styles.statCard}>
+                <div style={{ ...styles.statValue, color: '#22c55e' }}>{coverage.totalOk}</div>
+                <div style={styles.statLabel}>OK</div>
+              </div>
+            )}
+            {coverage.totalDefective > 0 && (
+              <div style={styles.statCard}>
+                <div style={{ ...styles.statValue, color: '#ef4444' }}>{coverage.totalDefective}</div>
+                <div style={styles.statLabel}>Con Defectos</div>
+              </div>
+            )}
+            {coverage.totalScrapped > 0 && (
+              <div style={styles.statCard}>
+                <div style={{ ...styles.statValue, color: '#6b7280' }}>{coverage.totalScrapped}</div>
+                <div style={styles.statLabel}>Scrap</div>
+              </div>
+            )}
             <div style={styles.statCard}>
               <div style={{ ...styles.statValue, color: getCoverageColor(coverage.coveragePercent) }}>
                 {coverage.coveragePercent}%
@@ -788,17 +862,27 @@ const ProductionTab = ({ theme: t }) => {
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Serial</th>
-                    <th style={styles.th}>Parte</th>
-                    <th style={styles.th}>Lote</th>
-                    <th style={styles.th}>Orden</th>
-                    <th style={styles.th}>Producido</th>
-                    <th style={styles.th}>Estado</th>
-                    <th style={styles.th}>Fuente</th>
+                    {[
+                      { field: 'serialNumber', label: 'Serial' },
+                      { field: 'partNumber', label: 'Parte' },
+                      { field: 'lotNumber', label: 'Lote' },
+                      { field: 'workOrder', label: 'Orden' },
+                      { field: 'producedAt', label: 'Producido' },
+                      { field: 'inspectionStatus', label: 'Estado' },
+                      { field: 'source', label: 'Fuente' }
+                    ].map(col => (
+                      <th
+                        key={col.field}
+                        style={{ ...styles.th, cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort(col.field)}
+                      >
+                        {col.label} {sortField === col.field && (sortDir === 'asc' ? '↑' : '↓')}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {entries.map(entry => (
+                  {sortedEntries.map(entry => (
                     <tr key={entry.id}>
                       <td style={styles.td}><strong>{entry.serialNumber}</strong></td>
                       <td style={styles.td}>
@@ -814,12 +898,18 @@ const ProductionTab = ({ theme: t }) => {
                       <td style={styles.td}>
                         <span style={{
                           ...styles.badge,
-                          backgroundColor: entry.inspectionStatus === 'INSPECTED' ? '#dcfce7' :
-                            entry.inspectionStatus === 'PENDING' ? '#fef3c7' : '#f3f4f6',
-                          color: entry.inspectionStatus === 'INSPECTED' ? '#166534' :
-                            entry.inspectionStatus === 'PENDING' ? '#92400e' : '#6b7280'
+                          backgroundColor:
+                            entry.unitStatus === 'OK' ? '#dcfce7' :
+                            entry.unitStatus === 'DEFECTIVE' ? '#fee2e2' :
+                            entry.unitStatus === 'SCRAPPED' ? '#e5e7eb' :
+                            entry.unitId ? '#dbeafe' : '#fef3c7',
+                          color:
+                            entry.unitStatus === 'OK' ? '#166534' :
+                            entry.unitStatus === 'DEFECTIVE' ? '#991b1b' :
+                            entry.unitStatus === 'SCRAPPED' ? '#6b7280' :
+                            entry.unitId ? '#1e40af' : '#92400e'
                         }}>
-                          {entry.inspectionStatus}
+                          {entry.unitStatus || (entry.unitId ? 'REGISTRADO' : 'PENDIENTE')}
                         </span>
                         {entry.partStatus === 'UNMATCHED' && (
                           <span style={{ ...styles.badge, backgroundColor: '#fee2e2', color: '#991b1b', marginLeft: '4px' }}>

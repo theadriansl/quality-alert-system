@@ -226,16 +226,18 @@ router.get('/production/status/:serial',
           pe.id,
           pe.serial_number,
           pe.part_number_raw,
-          pe.inspection_status,
+          CASE WHEN pe.unit_id IS NULL THEN 'PENDING' ELSE COALESCE(ur.current_status, 'REGISTERED') END as inspection_status,
           pe.part_status,
           pe.produced_at,
           pe.inspected_at,
           pe.work_order,
           pe.lot_number,
           cp.part_number,
-          cp.part_name
+          cp.part_name,
+          ur.current_status as unit_status
         FROM production_entries pe
         LEFT JOIN client_parts cp ON cp.id = pe.part_id
+        LEFT JOIN unit_registry ur ON pe.unit_id = ur.id
         WHERE pe.serial_number = $1
         LIMIT 1
       `, [serial]);
@@ -295,12 +297,14 @@ router.post('/production/batch-status',
       const result = await pool.query(`
         SELECT
           pe.serial_number,
-          pe.inspection_status,
+          CASE WHEN pe.unit_id IS NULL THEN 'PENDING' ELSE COALESCE(ur.current_status, 'REGISTERED') END as inspection_status,
           pe.part_status,
           pe.inspected_at,
-          cp.part_number
+          cp.part_number,
+          ur.current_status as unit_status
         FROM production_entries pe
         LEFT JOIN client_parts cp ON cp.id = pe.part_id
+        LEFT JOIN unit_registry ur ON pe.unit_id = ur.id
         WHERE pe.serial_number = ANY($1)
       `, [serials]);
 
@@ -309,6 +313,7 @@ router.post('/production/batch-status',
       result.rows.forEach(row => {
         statusMap[row.serial_number] = {
           inspectionStatus: row.inspection_status,
+          unitStatus: row.unit_status,
           partStatus: row.part_status,
           inspectedAt: row.inspected_at,
           partNumber: row.part_number
