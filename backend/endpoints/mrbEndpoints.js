@@ -448,25 +448,21 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
 
       if (existingUnit.rows.length > 0) {
         unitId = existingUnit.rows[0].id;
-        const oldStatus = existingUnit.rows[0].current_status;
-
-        // Actualizar status a OK si estaba DEFECTIVE o PENDING_REINSPECTION
-        if (['DEFECTIVE', 'PENDING_REINSPECTION', 'INSPECTING'].includes(oldStatus)) {
-          await query(`
-            UPDATE unit_registry SET
-              current_status = 'OK',
-              open_defects = 0,
-              last_inspection_at = CURRENT_TIMESTAMP
-            WHERE id = $1
-          `, [unitId]);
-        }
+        // Solo actualizar timestamp de última inspección, NO cambiar status ni borrar defectos
+        // Los defectos existentes deben mantenerse en el historial
+        await query(`
+          UPDATE unit_registry SET
+            last_inspection_at = CURRENT_TIMESTAMP,
+            total_inspections = COALESCE(total_inspections, 0) + 1
+          WHERE id = $1
+        `, [unitId]);
       } else {
         // Crear unit_registry - buscar si viene de production_entries
         const prodEntry = await query(`
           SELECT id FROM production_entries
-          WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+          WHERE serial_number = $1 AND part_id = $2
           LIMIT 1
-        `, [serial.trim(), effectivePartId, mrb.client_id]);
+        `, [serial.trim(), effectivePartId]);
 
         const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
         const source = productionEntryId ? 'PRODUCTION' : 'MRB';
