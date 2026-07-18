@@ -9,7 +9,7 @@ import {
   FileText, Camera, MessageSquare, CheckCircle, XCircle, Users,
   List, PlusCircle, LayoutDashboard, ClipboardCheck, Link, ExternalLink,
   RefreshCw, Search, X, Package, Paperclip, Trash2, Info,
-  Eye, ZoomIn, Hash, AlignLeft, Edit3, UserPlus, Save
+  Eye, ZoomIn, Hash, AlignLeft, Edit3, UserPlus, Save, Settings
 } from 'lucide-react';
 
 const API_URL_DETAIL = 'http://localhost:5000';
@@ -247,9 +247,18 @@ const MRBCampaignDetail = () => {
   const [campaignParts, setCampaignParts] = useState([]);
   const [selectedSearchParts, setSelectedSearchParts] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
+  const [selectedSearchSerials, setSelectedSearchSerials] = useState(new Set()); // Selected serial indices
   const [searchLoading, setSearchLoading] = useState(false);
   // Manual entry states
   const [manualSerials, setManualSerials] = useState([{ serial: '', partId: '' }]);
+
+  // Campaign Defects modal
+  const [showDefectsModal, setShowDefectsModal] = useState(false);
+  const [campaignDefects, setCampaignDefects] = useState([]); // Currently configured defects
+  const [availableDefects, setAvailableDefects] = useState([]); // All defects for campaign parts
+  const [selectedDefectIds, setSelectedDefectIds] = useState([]); // Selected defect IDs for editing
+  const [loadingDefects, setLoadingDefects] = useState(false);
+  const [savingDefects, setSavingDefects] = useState(false);
 
   useEffect(() => {
     loadMrb();
@@ -289,6 +298,8 @@ const MRBCampaignDetail = () => {
           .then(r => r.json()).then(cs => { if (cs.success) setCostSummary(cs); }).catch(() => {});
         fetch(`${API_URL}/mrb/${id}/affected-serials`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
           .then(r => r.json()).then(as => { if (as.success) { setAffectedSerials(as.serials || []); setAffectedSerialsSummary(as.summary || { total: 0, inspected: 0, pending: 0 }); } }).catch(() => {});
+        fetch(`${API_URL}/mrb/${id}/campaign-defects`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+          .then(r => r.json()).then(cd => { if (cd.success) setCampaignDefects(cd.defects || []); }).catch(() => {});
 
         // Pre-fill response if exists
         const mrb = data.mrb || data.campaign;
@@ -390,6 +401,68 @@ const MRBCampaignDetail = () => {
     }
   };
 
+  // ===== CAMPAIGN DEFECTS FUNCTIONS =====
+  const loadCampaignDefects = async () => {
+    setLoadingDefects(true);
+    try {
+      const token = localStorage.getItem('token');
+      const [configuredRes, availableRes] = await Promise.all([
+        fetch(`${API_URL}/mrb/${id}/campaign-defects`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/mrb/${id}/available-defects`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      const [configuredData, availableData] = await Promise.all([configuredRes.json(), availableRes.json()]);
+
+      if (configuredData.success) {
+        setCampaignDefects(configuredData.defects || []);
+        setSelectedDefectIds((configuredData.defects || []).map(d => d.defectTypeId));
+      }
+      if (availableData.success) {
+        setAvailableDefects(availableData.defects || []);
+      }
+    } catch (err) {
+      console.error('Error loading campaign defects:', err);
+    } finally {
+      setLoadingDefects(false);
+    }
+  };
+
+  const handleOpenDefectsModal = async () => {
+    setShowDefectsModal(true);
+    await loadCampaignDefects();
+  };
+
+  const toggleDefectSelection = (defectTypeId) => {
+    setSelectedDefectIds(prev => {
+      if (prev.includes(defectTypeId)) {
+        return prev.filter(id => id !== defectTypeId);
+      } else {
+        return [...prev, defectTypeId];
+      }
+    });
+  };
+
+  const handleSaveDefects = async () => {
+    setSavingDefects(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/${id}/campaign-defects`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ defectTypeIds: selectedDefectIds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowDefectsModal(false);
+        // Reload to update UI
+        await loadCampaignDefects();
+      }
+    } catch (err) {
+      console.error('Error saving defects:', err);
+    } finally {
+      setSavingDefects(false);
+    }
+  };
+
   // ===== AFFECTED SERIALS FUNCTIONS =====
   const loadAffectedSerials = async () => {
     setLoadingSerials(true);
@@ -474,7 +547,10 @@ const MRBCampaignDetail = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setSearchResults(data.serials || []);
+        const serials = data.serials || [];
+        setSearchResults(serials);
+        // Seleccionar todos por defecto
+        setSelectedSearchSerials(new Set(serials.map((_, i) => i)));
         if (data.truncated) {
           alert('Se encontraron más de 5000 seriales. Mostrando los primeros 5000.');
         }
@@ -489,7 +565,8 @@ const MRBCampaignDetail = () => {
   };
 
   const handleAddSearchResults = async () => {
-    if (searchResults.length === 0) return;
+    const selectedSerials = searchResults.filter((_, i) => selectedSearchSerials.has(i));
+    if (selectedSerials.length === 0) return;
     setSavingSerials(true);
     try {
       const token = localStorage.getItem('token');
@@ -497,12 +574,13 @@ const MRBCampaignDetail = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          serials: searchResults.map(s => ({ serialNumber: s.serialNumber, partId: s.partId }))
+          serials: selectedSerials.map(s => ({ serialNumber: s.serialNumber, partId: s.partId }))
         })
       });
       const data = await res.json();
       if (data.success) {
         setSearchResults([]);
+        setSelectedSearchSerials(new Set());
         await loadAffectedSerials();
         await logHistory(`Seriales cargados desde sistema: ${data.inserted} nuevos${data.duplicates > 0 ? `, ${data.duplicates} duplicados omitidos` : ''}`, 'audit');
         alert(data.message);
@@ -2114,6 +2192,57 @@ const MRBCampaignDetail = () => {
                   )}
                 </div>
               )}
+              {/* Campaign Defects Section */}
+              {['ABIERTA', 'EN_PROCESO'].includes(mrbCase.status) && (
+                <div style={{ ...styles.infoItem, gridColumn: '1 / -1' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={styles.infoLabel}>Defectos Configurados</div>
+                    <button
+                      onClick={handleOpenDefectsModal}
+                      style={{
+                        padding: '4px 12px',
+                        backgroundColor: '#7c3aed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Settings size={14} />
+                      Editar Defectos
+                    </button>
+                  </div>
+                  {campaignDefects.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {campaignDefects.slice(0, 8).map(d => (
+                        <span key={d.defectTypeId} style={{
+                          padding: '3px 8px',
+                          backgroundColor: d.categoryColor ? `${d.categoryColor}20` : '#f3f4f6',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          color: d.categoryColor || t.text
+                        }}>
+                          {d.name}
+                        </span>
+                      ))}
+                      {campaignDefects.length > 8 && (
+                        <span style={{ padding: '3px 8px', backgroundColor: '#f3f4f6', borderRadius: '4px', fontSize: '11px', color: t.textMuted }}>
+                          +{campaignDefects.length - 8} más
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ color: t.textMuted, fontSize: '12px', fontStyle: 'italic' }}>
+                      Sin defectos configurados — clic en "Editar Defectos" para agregar
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Cost summary tables */}
               {costSummary && (
                 <div style={{ gridColumn: '1 / -1', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -3061,6 +3190,158 @@ const MRBCampaignDetail = () => {
         </div>}   {/* closes activeTab === 'detail' && <div style={styles.grid}> */}
       </>}       {/* closes !isDraft && <> */}
 
+      {/* ====== MODAL: Campaign Defects ====== */}
+      {showDefectsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: `1px solid ${t.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: t.text }}>
+                Configurar Defectos de Campaña
+              </h3>
+              <button
+                onClick={() => setShowDefectsModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+              {loadingDefects ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>Cargando defectos...</div>
+              ) : availableDefects.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+                  No hay defectos configurados para las partes de esta campaña.
+                  <br />
+                  Configura defectos en el módulo de Partes primero.
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom: '12px', fontSize: '12px', color: t.textMuted }}>
+                    Selecciona los defectos que estarán disponibles durante la inspección:
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    <button
+                      onClick={() => setSelectedDefectIds(availableDefects.map(d => d.defectTypeId))}
+                      style={{ padding: '6px 12px', fontSize: '11px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', color: t.text }}
+                    >
+                      Seleccionar todos
+                    </button>
+                    <button
+                      onClick={() => setSelectedDefectIds([])}
+                      style={{ padding: '6px 12px', fontSize: '11px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', color: t.text }}
+                    >
+                      Deseleccionar todos
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                    {availableDefects.map(defect => {
+                      const isSelected = selectedDefectIds.includes(defect.defectTypeId);
+                      return (
+                        <div
+                          key={defect.defectTypeId}
+                          onClick={() => toggleDefectSelection(defect.defectTypeId)}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            border: `2px solid ${isSelected ? '#7c3aed' : t.border}`,
+                            backgroundColor: isSelected ? '#7c3aed15' : t.bgInput,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '18px', height: '18px',
+                              borderRadius: '4px',
+                              border: `2px solid ${isSelected ? '#7c3aed' : t.border}`,
+                              backgroundColor: isSelected ? '#7c3aed' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              {isSelected && <Check size={12} color="white" />}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{defect.name}</div>
+                              {defect.categoryName && (
+                                <div style={{ fontSize: '10px', color: defect.categoryColor || t.textMuted }}>{defect.categoryName}</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 20px',
+              borderTop: `1px solid ${t.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ fontSize: '12px', color: t.textMuted }}>
+                {selectedDefectIds.length} de {availableDefects.length} seleccionados
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setShowDefectsModal(false)}
+                  style={{ padding: '8px 16px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', color: t.text }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveDefects}
+                  disabled={savingDefects}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#7c3aed',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: savingDefects ? 'not-allowed' : 'pointer',
+                    opacity: savingDefects ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {savingDefects ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ====== MODAL: Change Source ====== */}
       {showSourceModal && (
         <div style={{
@@ -3595,29 +3876,43 @@ const MRBCampaignDetail = () => {
                     <>
                       <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: t.text, fontWeight: '600' }}>
-                          {searchResults.length} seriales encontrados
+                          {selectedSearchSerials.size} de {searchResults.length} seleccionados
                         </span>
                         <button
                           onClick={handleAddSearchResults}
-                          disabled={savingSerials}
+                          disabled={savingSerials || selectedSearchSerials.size === 0}
                           style={{
                             padding: '8px 16px',
-                            backgroundColor: '#16a34a',
+                            backgroundColor: selectedSearchSerials.size === 0 ? t.textDim : '#16a34a',
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
-                            cursor: 'pointer',
+                            cursor: selectedSearchSerials.size === 0 ? 'not-allowed' : 'pointer',
                             fontWeight: '600',
                             fontSize: '12px'
                           }}
                         >
-                          {savingSerials ? 'Agregando...' : `Agregar ${searchResults.length} seriales`}
+                          {savingSerials ? 'Agregando...' : `Agregar ${selectedSearchSerials.size} seriales`}
                         </button>
                       </div>
                       <div style={{ maxHeight: '300px', overflow: 'auto', border: `1px solid ${t.border}`, borderRadius: '6px' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                           <thead>
                             <tr style={{ backgroundColor: t.bg, position: 'sticky', top: 0 }}>
+                              <th style={{ padding: '8px', width: '40px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedSearchSerials.size === searchResults.length && searchResults.length > 0}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedSearchSerials(new Set(searchResults.map((_, i) => i)));
+                                    } else {
+                                      setSelectedSearchSerials(new Set());
+                                    }
+                                  }}
+                                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                />
+                              </th>
                               <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Serial</th>
                               <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Parte</th>
                               <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Fecha Registro</th>
@@ -3625,7 +3920,31 @@ const MRBCampaignDetail = () => {
                           </thead>
                           <tbody>
                             {searchResults.slice(0, 200).map((s, i) => (
-                              <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
+                              <tr
+                                key={i}
+                                style={{
+                                  borderBottom: `1px solid ${t.border}`,
+                                  backgroundColor: selectedSearchSerials.has(i) ? `${t.accent}10` : 'transparent'
+                                }}
+                              >
+                                <td style={{ padding: '6px 8px' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedSearchSerials.has(i)}
+                                    onChange={() => {
+                                      setSelectedSearchSerials(prev => {
+                                        const newSet = new Set(prev);
+                                        if (newSet.has(i)) {
+                                          newSet.delete(i);
+                                        } else {
+                                          newSet.add(i);
+                                        }
+                                        return newSet;
+                                      });
+                                    }}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                  />
+                                </td>
                                 <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '600', color: t.text }}>{s.serialNumber}</td>
                                 <td style={{ padding: '6px 8px', color: t.textDim }}>{s.partNumber}</td>
                                 <td style={{ padding: '6px 8px', color: t.textDim }}>{s.registeredAt ? new Date(s.registeredAt).toLocaleString('es-MX') : '-'}</td>
@@ -3635,7 +3954,7 @@ const MRBCampaignDetail = () => {
                         </table>
                         {searchResults.length > 200 && (
                           <div style={{ padding: '12px', textAlign: 'center', color: t.textDim, backgroundColor: t.bg }}>
-                            ...y {searchResults.length - 200} más
+                            ...y {searchResults.length - 200} más (solo se muestran los primeros 200)
                           </div>
                         )}
                       </div>

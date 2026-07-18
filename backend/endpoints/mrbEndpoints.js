@@ -420,6 +420,24 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
     const mrb = result.rows[0];
     const effectivePartId = partId || mrb.part_id;
 
+    // === AFFECTED STATUS: Verificar si serial está en lista de afectados ===
+    let affectedStatus = null;
+    if (serial && serial.trim()) {
+      const affectedCount = await query(
+        'SELECT COUNT(*)::int as count FROM mrb_affected_serials WHERE mrb_campaign_id = $1',
+        [id]
+      );
+      if (affectedCount.rows[0].count === 0) {
+        affectedStatus = 'NO_LIST_DEFINED';
+      } else {
+        const inList = await query(
+          'SELECT id FROM mrb_affected_serials WHERE mrb_campaign_id = $1 AND serial_number = $2',
+          [id, serial.trim()]
+        );
+        affectedStatus = inList.rows.length > 0 ? 'IN_LIST' : 'OUT_OF_LIST';
+      }
+    }
+
     // === TRAZABILIDAD: Buscar o crear unit_registry ===
     let unitId = null;
     if (serial && serial.trim()) {
@@ -478,9 +496,9 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
     // 2. Insert into mrb_ok_entries with unit_id and serial_number
     await query(`
       INSERT INTO mrb_ok_entries
-        (mrb_campaign_id, part_id, shift_id, inspector_id, quantity, inspection_date, notes, lot_number, unit_id, serial_number)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    `, [id, effectivePartId, shiftId || null, inspectorId, quantity, today, notes || null, lotNumber || null, unitId, serial || null]);
+        (mrb_campaign_id, part_id, shift_id, inspector_id, quantity, inspection_date, notes, lot_number, unit_id, serial_number, affected_status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `, [id, effectivePartId, shiftId || null, inspectorId, quantity, today, notes || null, lotNumber || null, unitId, serial || null, affectedStatus]);
 
     // === TRAZABILIDAD: Registrar en unit_history ===
     if (unitId) {
@@ -573,6 +591,22 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     const mrb = mrbResult.rows[0];
     const effectivePartId = partId || mrb.part_id;
 
+    // === AFFECTED STATUS: Verificar si serial está en lista de afectados ===
+    let affectedStatus = null;
+    const affectedCount = await query(
+      'SELECT COUNT(*)::int as count FROM mrb_affected_serials WHERE mrb_campaign_id = $1',
+      [id]
+    );
+    if (affectedCount.rows[0].count === 0) {
+      affectedStatus = 'NO_LIST_DEFINED';
+    } else {
+      const inList = await query(
+        'SELECT id FROM mrb_affected_serials WHERE mrb_campaign_id = $1 AND serial_number = $2',
+        [id, serial.trim()]
+      );
+      affectedStatus = inList.rows.length > 0 ? 'IN_LIST' : 'OUT_OF_LIST';
+    }
+
     // === TRAZABILIDAD: Buscar o crear unit_registry ===
     let unitId = null;
     const existingUnit = await query(
@@ -636,8 +670,8 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
         part_id, defect_type_id, severity_id, stage_id, disposition_id,
         station_id, shift_id, inspector_id, captured_by_user_id, department_id,
         lot_number, serial_number, unit_id, downtime_minutes, notes, quantity,
-        mrb_campaign_id, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'OPEN')
+        mrb_campaign_id, status, affected_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'OPEN', $17)
       RETURNING *
     `, [
       effectivePartId,
@@ -655,7 +689,8 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
       downtimeMinutes,
       notes,
       quantity,
-      id
+      id,
+      affectedStatus
     ]);
 
     const defectEntry = defectResult.rows[0];
@@ -1287,10 +1322,21 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 // ============================================================================
 // GET /unregistered-shifts — Campañas activas con turnos sin registrar en mrb_shift_hours
 // IMPORTANT: Must be before /:id routes
+// Includes both defect_entries_v2 (NOK) and mrb_ok_entries (OK) activity
 // ============================================================================
 router.get('/unregistered-shifts', authenticateToken, async (req, res) => {
   try {
     const result = await query(`
+      WITH all_activity AS (
+        -- Defects (NOK entries)
+        SELECT mrb_campaign_id, shift_id, captured_at::date AS inspection_date
+        FROM defect_entries_v2
+        WHERE mrb_campaign_id IS NOT NULL
+        UNION
+        -- OK entries
+        SELECT mrb_campaign_id, shift_id, inspection_date
+        FROM mrb_ok_entries
+      )
       SELECT DISTINCT
         mc.id                    AS campaign_id,
         mc.campaign_number,
@@ -1299,21 +1345,21 @@ router.get('/unregistered-shifts', authenticateToken, async (req, res) => {
         mc.supervisor_count,
         mc.inspector_unit_cost,
         mc.supervisor_unit_cost,
-        de.shift_id,
+        act.shift_id,
         ins.name                 AS shift_name,
         ins.code                 AS shift_code,
-        de.captured_at::date     AS inspection_date
-      FROM defect_entries_v2 de
-      JOIN mrb_campaigns mc ON mc.id = de.mrb_campaign_id
-      LEFT JOIN inspection_shifts ins ON ins.id = de.shift_id
+        act.inspection_date
+      FROM all_activity act
+      JOIN mrb_campaigns mc ON mc.id = act.mrb_campaign_id
+      LEFT JOIN inspection_shifts ins ON ins.id = act.shift_id
       LEFT JOIN mrb_shift_hours sh
-        ON sh.mrb_campaign_id = de.mrb_campaign_id
-        AND (sh.shift_id = de.shift_id OR (sh.shift_id IS NULL AND de.shift_id IS NULL))
-        AND sh.inspection_date = de.captured_at::date
+        ON sh.mrb_campaign_id = act.mrb_campaign_id
+        AND (sh.shift_id = act.shift_id OR (sh.shift_id IS NULL AND act.shift_id IS NULL))
+        AND sh.inspection_date = act.inspection_date
       WHERE mc.status IN ('ABIERTA', 'EN_PROCESO')
-        AND de.captured_at::date < CURRENT_DATE
+        AND act.inspection_date < CURRENT_DATE
         AND sh.id IS NULL
-      ORDER BY de.captured_at::date DESC, mc.campaign_number
+      ORDER BY act.inspection_date DESC, mc.campaign_number
     `);
     res.json({ success: true, unregistered: result.rows.map(r => transformToCamelCase(r)) });
   } catch (e) {
@@ -4112,6 +4158,14 @@ router.post('/:id/affected-serials', authenticateToken, async (req, res) => {
   // serials can be: string (single), array of strings, or array of objects {serialNumber, partId?, lotNumber?, notes?}
 
   try {
+    // Obtener info de la campaña para el client_id
+    const campaignRes = await query('SELECT client_id, part_id FROM mrb_campaigns WHERE id = $1', [id]);
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+    const campaignClientId = campaignRes.rows[0].client_id;
+    const campaignPartId = campaignRes.rows[0].part_id;
+
     if (!serials || (Array.isArray(serials) && serials.length === 0)) {
       return res.status(400).json({ success: false, message: 'Se requiere al menos un serial' });
     }
@@ -4145,6 +4199,20 @@ router.post('/:id/affected-serials', authenticateToken, async (req, res) => {
           VALUES ($1, $2, $3, $4, $5, $6)
         `, [id, serial.serialNumber, serial.partId || null, serial.lotNumber || null, serial.notes || null, req.user.id]);
         inserted++;
+
+        // Actualizar unit_registry a QUARANTINE si existe
+        const effectivePartId = serial.partId || campaignPartId;
+        if (effectivePartId && campaignClientId) {
+          await query(`
+            UPDATE unit_registry
+            SET current_status = 'QUARANTINE',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE serial_number = $1
+              AND client_id = $2
+              AND part_id = $3
+              AND current_status NOT IN ('SCRAPPED', 'SHIPPED')
+          `, [serial.serialNumber, campaignClientId, effectivePartId]);
+        }
       } catch (err) {
         if (err.code === '23505') { // Unique constraint violation
           duplicates++;
@@ -4315,6 +4383,147 @@ router.get('/:id/search-serials', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /mrb/:id/check-affected/:serial - Check if serial is in affected list
+router.get('/:id/check-affected/:serial', authenticateToken, async (req, res) => {
+  const { id, serial } = req.params;
+  try {
+    // Check if campaign has any affected serials defined
+    const countRes = await query(
+      'SELECT COUNT(*)::int as count FROM mrb_affected_serials WHERE mrb_campaign_id = $1',
+      [id]
+    );
+
+    if (countRes.rows[0].count === 0) {
+      return res.json({ success: true, affectedStatus: 'NO_LIST_DEFINED', hasAffectedList: false });
+    }
+
+    // Check if this serial is in the list
+    const inListRes = await query(
+      'SELECT id, inspected, inspection_result FROM mrb_affected_serials WHERE mrb_campaign_id = $1 AND serial_number = $2',
+      [id, serial.trim()]
+    );
+
+    if (inListRes.rows.length > 0) {
+      const row = inListRes.rows[0];
+      return res.json({
+        success: true,
+        affectedStatus: 'IN_LIST',
+        hasAffectedList: true,
+        affectedSerial: {
+          id: row.id,
+          inspected: row.inspected,
+          inspectionResult: row.inspection_result
+        }
+      });
+    }
+
+    return res.json({ success: true, affectedStatus: 'OUT_OF_LIST', hasAffectedList: true });
+  } catch (error) {
+    console.error('Error checking affected serial:', error);
+    res.status(500).json({ success: false, message: 'Error verificando serial' });
+  }
+});
+
+// GET /mrb/:id/campaign-defects - Get configured defects for this campaign
+router.get('/:id/campaign-defects', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Get defects configured for this campaign
+    const defectsRes = await query(`
+      SELECT mcd.id, mcd.defect_type_id, dt.name, dt.code, dt.category_id, dc.name as category_name, dc.color as category_color
+      FROM mrb_campaign_defects mcd
+      JOIN defect_types dt ON mcd.defect_type_id = dt.id
+      LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+      WHERE mcd.mrb_campaign_id = $1
+      ORDER BY dc.name, dt.name
+    `, [id]);
+
+    res.json({ success: true, defects: defectsRes.rows.map(r => transformToCamelCase(r)) });
+  } catch (error) {
+    console.error('Error getting campaign defects:', error);
+    res.status(500).json({ success: false, message: 'Error obteniendo defectos de campaña' });
+  }
+});
+
+// PUT /mrb/:id/campaign-defects - Update configured defects for this campaign
+router.put('/:id/campaign-defects', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { defectTypeIds } = req.body; // Array of defect_type_id
+
+  if (!Array.isArray(defectTypeIds)) {
+    return res.status(400).json({ success: false, message: 'defectTypeIds debe ser un array' });
+  }
+
+  try {
+    // Verify campaign exists
+    const campaignRes = await query('SELECT id, status FROM mrb_campaigns WHERE id = $1', [id]);
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+
+    // Delete existing and insert new
+    await query('DELETE FROM mrb_campaign_defects WHERE mrb_campaign_id = $1', [id]);
+
+    if (defectTypeIds.length > 0) {
+      const values = defectTypeIds.map((dtId, i) => `($1, $${i + 2})`).join(', ');
+      await query(
+        `INSERT INTO mrb_campaign_defects (mrb_campaign_id, defect_type_id) VALUES ${values} ON CONFLICT DO NOTHING`,
+        [id, ...defectTypeIds]
+      );
+    }
+
+    res.json({ success: true, message: `${defectTypeIds.length} defecto(s) configurado(s)` });
+  } catch (error) {
+    console.error('Error updating campaign defects:', error);
+    res.status(500).json({ success: false, message: 'Error actualizando defectos de campaña' });
+  }
+});
+
+// GET /mrb/:id/available-defects - Get all defects available for campaign parts
+router.get('/:id/available-defects', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Get campaign parts
+    const campaignRes = await query(`
+      SELECT mc.part_id, mc.parts_list
+      FROM mrb_campaigns mc
+      WHERE mc.id = $1
+    `, [id]);
+
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+
+    const campaign = campaignRes.rows[0];
+    let partIds = [];
+    if (campaign.parts_list && Array.isArray(campaign.parts_list)) {
+      partIds = campaign.parts_list.map(p => p.partId).filter(Boolean);
+    }
+    if (campaign.part_id && !partIds.includes(campaign.part_id)) {
+      partIds.push(campaign.part_id);
+    }
+
+    if (partIds.length === 0) {
+      return res.json({ success: true, defects: [] });
+    }
+
+    // Get defects for these parts
+    const defectsRes = await query(`
+      SELECT DISTINCT dt.id as defect_type_id, dt.name, dt.code, dc.name as category_name, dc.color as category_color
+      FROM part_defect_config pdc
+      JOIN defect_types dt ON pdc.defect_type_id = dt.id
+      LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+      WHERE pdc.part_id = ANY($1::int[]) AND pdc.is_active = true AND dt.is_active = true
+      ORDER BY dc.name, dt.name
+    `, [partIds]);
+
+    res.json({ success: true, defects: defectsRes.rows.map(r => transformToCamelCase(r)) });
+  } catch (error) {
+    console.error('Error getting available defects:', error);
+    res.status(500).json({ success: false, message: 'Error obteniendo defectos disponibles' });
+  }
+});
+
 // GET /mrb/:id/campaign-parts - Get parts assigned to this campaign (for filter checkboxes)
 router.get('/:id/campaign-parts', authenticateToken, async (req, res) => {
   const { id } = req.params;
@@ -4363,6 +4572,13 @@ router.post('/:id/affected-serials/bulk', authenticateToken, async (req, res) =>
   // serials: array of { serialNumber, partId }
 
   try {
+    // Obtener client_id de la campaña
+    const campaignRes = await query('SELECT client_id FROM mrb_campaigns WHERE id = $1', [id]);
+    if (campaignRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+    const campaignClientId = campaignRes.rows[0].client_id;
+
     if (!serials || !Array.isArray(serials) || serials.length === 0) {
       return res.status(400).json({ success: false, message: 'Se requiere lista de seriales' });
     }
@@ -4377,6 +4593,18 @@ router.post('/:id/affected-serials/bulk', authenticateToken, async (req, res) =>
           VALUES ($1, $2, $3, $4)
         `, [id, serial.serialNumber, serial.partId, req.user.id]);
         inserted++;
+
+        // Actualizar unit_registry a QUARANTINE si existe
+        if (serial.partId && campaignClientId) {
+          await query(`
+            UPDATE unit_registry
+            SET current_status = 'QUARANTINE'
+            WHERE serial_number = $1
+              AND client_id = $2
+              AND part_id = $3
+              AND current_status NOT IN ('SCRAPPED', 'SHIPPED')
+          `, [serial.serialNumber, campaignClientId, serial.partId]);
+        }
       } catch (err) {
         if (err.code === '23505') {
           duplicates++;

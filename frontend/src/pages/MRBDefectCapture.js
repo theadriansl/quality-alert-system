@@ -100,7 +100,7 @@ const MRBDefectCapture = () => {
     } catch { return null; }
   });
   const [defectsPage, setDefectsPage] = useState(1);
-  const DEFECTS_PER_PAGE = 20; // 4 rows × 5 columns grid
+  const DEFECTS_PER_PAGE = 15; // 3 rows × 5 columns grid
 
   const handleCategorySelect = useCallback((categoryId) => {
     const newCategory = selectedCategory === categoryId ? null : categoryId;
@@ -132,7 +132,7 @@ const MRBDefectCapture = () => {
   const lotNumberRef                                = useRef('');
   const [comment, setComment]                       = useState('');
   const [defectConsultOpen, setDefectConsultOpen] = useState(false);
-  const [selectedDefect, setSelectedDefect]         = useState(null);
+  const [selectedDefects, setSelectedDefects]       = useState([]); // Array de defectos seleccionados con campaignIds
   const [stagedEvidence, setStagedEvidence]         = useState([]); // { file, previewUrl }
   const [uploadedEvidence, setUploadedEvidence]     = useState([]); // last submitted entry's attachments
   const serialCheckTimer                            = useRef(null);
@@ -178,6 +178,7 @@ const MRBDefectCapture = () => {
   const [lastEntryNumber, setLastEntryNumber] = useState(null); // Last registered defect entry number
   const [serialPartMismatch, setSerialPartMismatch] = useState(null); // { expected, found } if serial belongs to different part
   const [serialValidated, setSerialValidated] = useState(false); // True after serial lookup completes (blocks OK until validated)
+  const [affectedStatus, setAffectedStatus] = useState({}); // { campaignId: 'IN_LIST' | 'OUT_OF_LIST' | 'NO_LIST_DEFINED' }
 
   // ── SCAN INPUT REF ────────────────────────────────────────────────────────
   const scanRef = useRef(null);
@@ -192,6 +193,7 @@ const MRBDefectCapture = () => {
   const [closingShift, setClosingShift]   = useState(false);
   const [pendingShift, setPendingShift]   = useState(null); // { shiftId, shiftName, date, campaignId, campaignName }
   const [pendingShiftNote, setPendingShiftNote] = useState('');
+  const [pendingShiftHours, setPendingShiftHours] = useState(8);
   const [horasWorked, setHorasWorked]     = useState(8);
   const [error, setError]             = useState(null);
   const [success, setSuccess]         = useState(null);
@@ -206,6 +208,14 @@ const MRBDefectCapture = () => {
   useEffect(() => {
     if (captureMode === 'individual') refocusScan();
   }, [captureMode]); // eslint-disable-line
+
+  // Recargar defectos cuando cambian las campañas seleccionadas
+  useEffect(() => {
+    if (detectedPart?.id && selectedCampaigns.length > 0) {
+      const campaignIds = selectedCampaigns.map(c => c.campaignId);
+      loadPartDefects(detectedPart.id, campaignIds);
+    }
+  }, [selectedCampaigns.length]); // eslint-disable-line
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -287,7 +297,7 @@ const MRBDefectCapture = () => {
   // ── CAMPAIGN / PART SELECTION ─────────────────────────────────────────────
   const selectCampaign = async (campaign) => {
     setSelectedCampaign(campaign);
-    setSelectedDefect(null);
+    setSelectedDefects([]);
     setPartDefects([]);
     setDefectsByCategory([]);
     setDefectGrid({});
@@ -333,20 +343,83 @@ const MRBDefectCapture = () => {
 
   const selectPart = (part, campaignId) => {
     setSelectedPart(part);
-    setSelectedDefect(null);
+    setSelectedDefects([]);
     if (!part?.id) return;
     localStorage.setItem(`mrbLastPart_${campaignId || selectedCampaign?.id}`, part.id);
-    loadPartDefects(part.id);
+    // Pasar todas las campañas seleccionadas o la campaña individual
+    const campaignIds = selectedCampaigns.length > 0
+      ? selectedCampaigns.map(c => c.campaignId)
+      : (campaignId ? [campaignId] : (selectedCampaign?.id ? [selectedCampaign.id] : []));
+    loadPartDefects(part.id, campaignIds);
   };
 
-  const loadPartDefects = async (partId) => {
+  const loadPartDefects = async (partId, campaignIds = []) => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_URL}/defects-v2/parts/${partId}/config`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      const defects = data.defects || [];
+      const defectsMap = new Map(); // defectTypeId -> { ...defect, campaignIds: [] }
+      const campaignsWithoutDefects = []; // Campañas que no tienen defectos configurados
+
+      // Cargar defectos de TODAS las campañas seleccionadas
+      for (const campaignId of campaignIds) {
+        try {
+          const campRes = await fetch(`${API_URL}/mrb/${campaignId}/campaign-defects`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const campData = await campRes.json();
+          if (campData.success && campData.defects && campData.defects.length > 0) {
+            // Esta campaña tiene defectos configurados
+            campData.defects.forEach(d => {
+              if (defectsMap.has(d.defectTypeId)) {
+                // Agregar esta campaña al defecto existente
+                defectsMap.get(d.defectTypeId).campaignIds.push(campaignId);
+              } else {
+                defectsMap.set(d.defectTypeId, {
+                  id: d.defectTypeId,
+                  defectTypeId: d.defectTypeId,
+                  name: d.name,
+                  code: d.code,
+                  categoryId: d.categoryId || 0,
+                  categoryName: d.categoryName || 'Sin Categoría',
+                  categoryColor: d.categoryColor || '#6b7280',
+                  campaignIds: [campaignId]
+                });
+              }
+            });
+          } else {
+            // Esta campaña NO tiene defectos configurados
+            campaignsWithoutDefects.push(campaignId);
+          }
+        } catch (e) {
+          campaignsWithoutDefects.push(campaignId);
+        }
+      }
+
+      // Cargar defectos de la parte para campañas sin configuración
+      if (campaignsWithoutDefects.length > 0 || campaignIds.length === 0) {
+        const res = await fetch(`${API_URL}/defects-v2/parts/${partId}/config`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const targetCampaigns = campaignsWithoutDefects.length > 0 ? campaignsWithoutDefects : campaignIds;
+        (data.defects || []).forEach(d => {
+          if (defectsMap.has(d.id)) {
+            // Agregar campañas sin config a este defecto
+            targetCampaigns.forEach(cid => {
+              if (!defectsMap.get(d.id).campaignIds.includes(cid)) {
+                defectsMap.get(d.id).campaignIds.push(cid);
+              }
+            });
+          } else {
+            defectsMap.set(d.id, {
+              ...d,
+              campaignIds: [...targetCampaigns]
+            });
+          }
+        });
+      }
+
+      let defects = Array.from(defectsMap.values());
+
       setPartDefects(defects);
       const grouped = defects.reduce((acc, d) => {
         const catId = d.categoryId || 0;
@@ -478,6 +551,7 @@ const MRBDefectCapture = () => {
     setLastEntryNumber(null);
     setProductionInfo(null);
     setSerialPartMismatch(null);
+    setAffectedStatus(null);
     if (serialCheckTimer.current) clearTimeout(serialCheckTimer.current);
     if (!val) {
       return;
@@ -583,6 +657,31 @@ const MRBDefectCapture = () => {
             setComment(prev => prev.includes('[Reproceso]') ? prev : (prev ? `${prev} [Reproceso]` : '[Reproceso]'));
           }
         }
+
+        // 3. Check si serial está en lista de afectados (para todas las campañas seleccionadas)
+        const campaignsToCheck = selectedCampaigns.length > 0
+          ? selectedCampaigns
+          : (selectedCampaign ? [{ campaignId: selectedCampaign.id }] : []);
+
+        if (campaignsToCheck.length > 0) {
+          const newAffectedStatus = {};
+          for (const camp of campaignsToCheck) {
+            const campId = camp.campaignId || camp.id;
+            try {
+              const affectedRes = await fetch(
+                `${API_URL}/mrb/${campId}/check-affected/${encodeURIComponent(val)}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              if (affectedRes.ok) {
+                const affectedData = await affectedRes.json();
+                newAffectedStatus[campId] = affectedData.affectedStatus;
+              }
+            } catch (e) { /* silent */ }
+          }
+          setAffectedStatus(newAffectedStatus);
+        } else {
+          setAffectedStatus({});
+        }
       } catch (e) { /* silent */ }
     }, 300);
   };
@@ -590,27 +689,61 @@ const MRBDefectCapture = () => {
   const isClosed = selectedCampaign?.status === 'CERRADA';
 
   // ── MULTI-CAMPAIGN SUBMIT HANDLER ───────────────────────────────────────────
+  // Lógica automática: defectos → NOK a sus campañas, resto → OK automático
   const handleMultiCampaignSubmit = useCallback(async () => {
     if (!selectedShift) return showMsg(L.selectShift, true);
     if (selectedCampaigns.length === 0) return showMsg(L.selectCampaign, true);
 
-    const results = Object.entries(campaignResults);
-    if (results.length === 0) return showMsg('Marca OK o NOK en al menos una campaña', true);
-
     setSubmitting(true);
     const token = localStorage.getItem('token');
     const today = new Date().toLocaleDateString('en-CA');
-    let successCount = 0;
+    let okCount = 0;
+    let nokCount = 0;
     let errorCount = 0;
 
+    // Tracking: qué campañas reciben al menos un defecto
+    const campaignsWithDefects = new Set();
+
     try {
-      for (const [campaignId, result] of results) {
-        if (!result) continue;
+      // 1. Enviar defectos seleccionados a sus campañas correspondientes
+      for (const defect of selectedDefects) {
+        for (const campaignId of (defect.campaignIds || [])) {
+          // Verificar que la campaña esté seleccionada
+          if (!selectedCampaigns.find(c => c.campaignId === campaignId)) continue;
 
-        const camp = selectedCampaigns.find(c => c.campaignId === parseInt(campaignId));
-        if (!camp) continue;
+          campaignsWithDefects.add(campaignId);
 
-        const endpoint = result === 'OK' ? 'capture-ok' : 'capture-nok';
+          const body = {
+            quantity: 1,
+            shiftId: selectedShift.id,
+            partId: detectedPart?.id,
+            defectTypeId: defect.id,
+            lotNumber: lotNumberRef.current.trim() || undefined,
+            inspectionDate: today,
+            downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
+            notes: comment || null,
+            severityId: selectedSeverity?.id || null,
+            dispositionId: selectedDisposition?.id || null
+          };
+
+          try {
+            const res = await fetch(`${API_URL}/mrb/${campaignId}/capture-nok`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify(body)
+            });
+            if (res.ok) nokCount++;
+            else errorCount++;
+          } catch (e) {
+            errorCount++;
+          }
+        }
+      }
+
+      // 2. Enviar OK automático a campañas que NO recibieron defectos
+      for (const camp of selectedCampaigns) {
+        if (campaignsWithDefects.has(camp.campaignId)) continue; // Ya tiene defecto(s)
+
         const body = {
           quantity: 1,
           shiftId: selectedShift.id,
@@ -621,37 +754,59 @@ const MRBDefectCapture = () => {
           notes: comment || null
         };
 
-        // Si es NOK, agregar defecto default de la campaña si existe
-        if (result === 'NOK') {
-          body.defectTypeId = camp.defectTypeId || null;
-          body.dispositionId = selectedDisposition?.id || null;
-        }
-
         try {
-          const res = await fetch(`${API_URL}/mrb/${campaignId}/${endpoint}`, {
+          const res = await fetch(`${API_URL}/mrb/${camp.campaignId}/capture-ok`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify(body)
           });
-          if (res.ok) successCount++;
+          if (res.ok) okCount++;
           else errorCount++;
         } catch (e) {
           errorCount++;
         }
       }
 
+      // Upload staged evidence to the first campaign with defects (or first selected)
+      if (stagedEvidence.length > 0 && lotNumberRef.current.trim()) {
+        const targetCampaignId = campaignsWithDefects.size > 0
+          ? Array.from(campaignsWithDefects)[0]
+          : selectedCampaigns[0]?.campaignId;
+        if (targetCampaignId) {
+          for (const item of stagedEvidence) {
+            const fd = new FormData();
+            fd.append('file', item.file);
+            fd.append('attachmentType', 'defect_evidence');
+            fd.append('lotNumber', lotNumberRef.current.trim());
+            fd.append('shiftId', selectedShift.id);
+            fd.append('inspectionDate', today);
+            try {
+              await fetch(`${API_URL}/mrb/${targetCampaignId}/attachments`, {
+                method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd
+              });
+            } catch (e) { /* ignore upload errors */ }
+          }
+        }
+      }
+      setStagedEvidence([]);
+      setUploadedEvidence([]);
+
       // Reset para siguiente pieza
       setLotNumber('');
       lotNumberRef.current = '';
       setCampaignResults({});
+      setSelectedDefects([]);
       setHasDowntime(false);
       setDowntimeMinutes('');
       setComment('');
 
       if (errorCount === 0) {
-        showMsg(`✓ ${successCount} resultado(s) registrado(s)`);
+        const msg = nokCount > 0
+          ? `✓ ${nokCount} NOK + ${okCount} OK registrados`
+          : `✓ ${okCount} OK registrado(s)`;
+        showMsg(msg);
       } else {
-        showMsg(`${successCount} OK, ${errorCount} errores`, true);
+        showMsg(`${okCount + nokCount} OK, ${errorCount} errores`, true);
       }
       refocusScan();
     } catch (e) {
@@ -660,7 +815,7 @@ const MRBDefectCapture = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedShift, selectedCampaigns, campaignResults, detectedPart, hasDowntime, downtimeMinutes, comment, selectedDisposition]); // eslint-disable-line
+  }, [selectedShift, selectedCampaigns, selectedDefects, detectedPart, hasDowntime, downtimeMinutes, comment, selectedDisposition, selectedSeverity, stagedEvidence]); // eslint-disable-line
 
   // ── INDIVIDUAL MODE HANDLERS ──────────────────────────────────────────────
   const handlePiezaOk = useCallback(async () => {
@@ -695,28 +850,34 @@ const MRBDefectCapture = () => {
   const handleSubmitDefect = async () => {
     if (!selectedCampaign) return showMsg(L.selectMRB, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
-    if (!selectedDefect) return showMsg(L.selectDefect, true);
+    if (selectedDefects.length === 0) return showMsg(L.selectDefect, true);
     setSubmitting(true);
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/capture-nok`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          partId: selectedPart?.id,
-          defectTypeId: selectedDefect.id,
-          severityId: selectedSeverity?.id,
-          stageId: selectedStage?.id,
-          dispositionId: selectedDisposition?.id,
-          shiftId: selectedShift.id,
-          lotNumber: lotNumber || null,
-          downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
-          notes: comment || null,
-          quantity: 1
-        })
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message);
+      // Enviar cada defecto seleccionado
+      let lastResult = null;
+      for (const defect of selectedDefects) {
+        const res = await fetch(`${API_URL}/mrb/${selectedCampaign.id}/capture-nok`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            partId: selectedPart?.id,
+            defectTypeId: defect.id,
+            severityId: selectedSeverity?.id,
+            stageId: selectedStage?.id,
+            dispositionId: selectedDisposition?.id,
+            shiftId: selectedShift.id,
+            lotNumber: lotNumber || null,
+            downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
+            notes: comment || null,
+            quantity: 1
+          })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+        lastResult = result;
+      }
+      const result = lastResult;
       setSelectedCampaign(prev => ({ ...prev, ...result.mrb }));
       if (result.downtimeTodayMin !== undefined) setDowntimeTodayMin(result.downtimeTodayMin);
       // Upload staged evidence linked by serial
@@ -746,7 +907,7 @@ const MRBDefectCapture = () => {
       setLastEntryNumber(entryNum);
       setHasRegisteredDefect(true);
 
-      setSelectedDefect(null);
+      setSelectedDefects([]);
       setLotNumber('');
       lotNumberRef.current = '';
       setComment('');
@@ -1077,7 +1238,7 @@ const MRBDefectCapture = () => {
 
   // ── COMPUTED ──────────────────────────────────────────────────────────────
   const downtimeRequiresComment = hasDowntime && parseInt(downtimeMinutes) > 0 && !comment.trim();
-  const isIndividualValid = selectedCampaign && selectedShift && selectedDefect && lotNumber.trim() && !downtimeRequiresComment;
+  const isIndividualValid = selectedCampaign && selectedShift && selectedDefects.length > 0 && lotNumber.trim() && !downtimeRequiresComment;
   const isOkValid         = selectedCampaign && selectedShift && lotNumber.trim() && !downtimeRequiresComment;
 
   const filteredDefects = defectsByCategory.map(cat => ({
@@ -1353,6 +1514,40 @@ const MRBDefectCapture = () => {
                 </div>
               )}
 
+              {/* ── AFFECTED STATUS - indica si serial está en lista de afectados (multi-campaña) ─────────── */}
+              {affectedStatus && Object.keys(affectedStatus).length > 0 && Object.values(affectedStatus).some(s => s === 'OUT_OF_LIST') && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ⚠️ FUERA DE CAMPAÑA
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#92400e', marginTop: '2px' }}>
+                    {(() => {
+                      const outCampaigns = Object.entries(affectedStatus || {})
+                        .filter(([, s]) => s === 'OUT_OF_LIST')
+                        .map(([cid]) => {
+                          const camp = [...availableCampaigns, ...selectedCampaigns, ...(selectedCampaign ? [selectedCampaign] : [])]
+                            .find(c => (c.campaignId || c.id) === parseInt(cid));
+                          return camp?.campaignNumber || camp?.campaignName || `#${cid}`;
+                        });
+                      return outCampaigns.length === 1
+                        ? `Serial no está en lista de afectados de ${outCampaigns[0]}.`
+                        : `Serial no está en lista de afectados de: ${outCampaigns.join(', ')}.`;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {affectedStatus && Object.keys(affectedStatus).length > 0 && Object.values(affectedStatus).every(s => s === 'IN_LIST') && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#dcfce7', borderRadius: '6px', border: '1px solid #86efac' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ✅ EN TODAS LAS CAMPAÑAS
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#14532d', marginTop: '2px' }}>
+                    Serial está en la lista de afectados de todas las campañas seleccionadas.
+                  </div>
+                </div>
+              )}
+
               {/* ── INFO PRODUCCIÓN - usa unit_registry.current_status ─────────── */}
               {productionInfo && (
                 <div style={{
@@ -1412,129 +1607,6 @@ const MRBDefectCapture = () => {
                 </div>
               )}
 
-              {/* ── CAMPAÑAS DISPONIBLES (Multi-select) ────────────────────── */}
-              {availableCampaigns.length > 0 && (
-                <div style={{ marginTop: '10px' }}>
-                  <div style={{ fontSize: '10px', color: t.textMuted, marginBottom: '6px', textTransform: 'uppercase', fontWeight: '600' }}>
-                    Campañas Activas ({availableCampaigns.length})
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '140px', overflowY: 'auto' }}>
-                    {availableCampaigns.map(camp => {
-                      const isSelected = selectedCampaigns.some(sc => sc.campaignId === camp.campaignId);
-                      return (
-                        <label
-                          key={camp.campaignId}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px',
-                            backgroundColor: isSelected ? `${camp.severityColor || t.accent}15` : t.bgInput,
-                            border: `1px solid ${isSelected ? (camp.severityColor || t.accent) : t.border}`,
-                            borderRadius: '6px', cursor: 'pointer', fontSize: '12px'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              if (isSelected) {
-                                setSelectedCampaigns(prev => prev.filter(sc => sc.campaignId !== camp.campaignId));
-                              } else {
-                                setSelectedCampaigns(prev => [...prev, camp]);
-                              }
-                            }}
-                            style={{ width: '14px', height: '14px', accentColor: camp.severityColor || t.accent }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '600', color: t.text }}>{camp.campaignNumber}</div>
-                            <div style={{ fontSize: '10px', color: t.textMuted }}>{camp.title}</div>
-                          </div>
-                          {camp.severityName && (
-                            <span style={{
-                              padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '700',
-                              backgroundColor: camp.severityColor || t.accent, color: 'white'
-                            }}>
-                              {camp.severityName}
-                            </span>
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {selectedCampaigns.length > 0 && (
-                    <div style={{ marginTop: '6px', fontSize: '10px', color: t.accent, fontWeight: '600' }}>
-                      ✓ {selectedCampaigns.length} campaña(s) seleccionada(s)
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── CHECKLIST OK/NOK POR CAMPAÑA ─────────────────────────────── */}
-              {selectedCampaigns.length > 0 && lotNumber && (
-                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
-                  <div style={{ fontSize: '10px', color: t.textMuted, marginBottom: '8px', textTransform: 'uppercase', fontWeight: '600' }}>
-                    Resultado por Campaña
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {selectedCampaigns.map(camp => {
-                      const result = campaignResults[camp.campaignId];
-                      return (
-                        <div
-                          key={camp.campaignId}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px',
-                            backgroundColor: result === 'OK' ? '#d1fae520' : result === 'NOK' ? '#fee2e220' : t.bgInput,
-                            border: `1px solid ${result === 'OK' ? '#22c55e' : result === 'NOK' ? '#ef4444' : t.border}`,
-                            borderRadius: '6px'
-                          }}
-                        >
-                          <div style={{ flex: 1, fontSize: '11px' }}>
-                            <div style={{ fontWeight: '600', color: t.text }}>{camp.campaignNumber}</div>
-                            <div style={{ fontSize: '9px', color: t.textMuted }}>{camp.title}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                              onClick={() => setCampaignResults(prev => ({ ...prev, [camp.campaignId]: prev[camp.campaignId] === 'OK' ? null : 'OK' }))}
-                              style={{
-                                padding: '4px 10px', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-                                backgroundColor: result === 'OK' ? '#22c55e' : t.bgPanel,
-                                color: result === 'OK' ? 'white' : '#22c55e'
-                              }}
-                            >
-                              OK
-                            </button>
-                            <button
-                              onClick={() => setCampaignResults(prev => ({ ...prev, [camp.campaignId]: prev[camp.campaignId] === 'NOK' ? null : 'NOK' }))}
-                              style={{
-                                padding: '4px 10px', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-                                backgroundColor: result === 'NOK' ? '#ef4444' : t.bgPanel,
-                                color: result === 'NOK' ? 'white' : '#ef4444'
-                              }}
-                            >
-                              NOK
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Botón Enviar Multi-Campaña */}
-                  {Object.values(campaignResults).some(r => r) && (
-                    <button
-                      onClick={handleMultiCampaignSubmit}
-                      disabled={submitting}
-                      style={{
-                        marginTop: '10px', width: '100%', padding: '10px', border: 'none', borderRadius: '6px',
-                        backgroundColor: submitting ? t.textDim : t.accent, color: 'white',
-                        fontSize: '13px', fontWeight: '700', cursor: submitting ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                      }}
-                    >
-                      <CheckCircle size={16} />
-                      {submitting ? 'Enviando...' : `Registrar ${Object.values(campaignResults).filter(r => r).length} resultado(s)`}
-                    </button>
-                  )}
-                </div>
-              )}
-
               {availableCampaigns.length === 0 && detectedPart && (
                 <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '11px', color: '#92400e' }}>
                   ⚠ {L.noActiveCampaigns}
@@ -1584,49 +1656,6 @@ const MRBDefectCapture = () => {
               <textarea style={{ ...s.textarea, borderColor: downtimeRequiresComment ? '#ef4444' : undefined }} placeholder="Observaciones..." value={comment} onChange={e => setComment(e.target.value)} />
             </div>
 
-            {/* Evidencia fotográfica */}
-            <div style={s.fieldGroup}>
-              <label style={s.label}>Evidencia</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', backgroundColor: lotNumber ? t.bgInput : t.bgPanel, border: `1px dashed ${lotNumber ? t.accent : t.border}`, borderRadius: '6px', cursor: lotNumber ? 'pointer' : 'not-allowed', opacity: lotNumber ? 1 : 0.5, fontSize: '12px', color: t.textMuted }}>
-                <input type="file" accept="image/*" multiple style={{ display: 'none' }} disabled={!lotNumber}
-                  onChange={e => {
-                    const files = Array.from(e.target.files || []);
-                    const newItems = files.map(f => ({ file: f, previewUrl: URL.createObjectURL(f), id: Math.random() }));
-                    setStagedEvidence(prev => [...prev, ...newItems]);
-                    e.target.value = '';
-                  }} />
-                📷 {lotNumber ? 'Agregar fotos' : 'Requiere serial'}
-              </label>
-              {/* Staged photos */}
-              {stagedEvidence.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                  {stagedEvidence.map(item => (
-                    <div key={item.id} style={{ position: 'relative', width: '56px', height: '56px' }}>
-                      <img src={item.previewUrl} alt="" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '4px', border: `1px solid ${t.border}` }} />
-                      <button onClick={() => { URL.revokeObjectURL(item.previewUrl); setStagedEvidence(prev => prev.filter(i => i.id !== item.id)); }}
-                        style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#ef4444', border: 'none', color: 'white', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* Uploaded photos (last submitted) */}
-              {uploadedEvidence.length > 0 && (
-                <div style={{ marginTop: '6px' }}>
-                  <div style={{ fontSize: '10px', color: '#16a34a', fontWeight: '600', marginBottom: '4px' }}>✓ Subidas</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {uploadedEvidence.map(att => (
-                      <div key={att.id} style={{ position: 'relative', width: '56px', height: '56px' }}>
-                        <a href={`${API_URL}${att.filePath}`} target="_blank" rel="noreferrer">
-                          <img src={`${API_URL}${att.filePath}`} alt="" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #86efac' }} />
-                        </a>
-                        <button onClick={() => handleDeleteEvidence(att.id)}
-                          style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#ef4444', border: 'none', color: 'white', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Right panel */}
@@ -1681,7 +1710,7 @@ const MRBDefectCapture = () => {
                           <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(5, 1fr)',
-                            gridTemplateRows: 'repeat(4, 1fr)',
+                            gridTemplateRows: 'repeat(3, 1fr)',
                             gap: '8px',
                             flex: 1,
                             padding: '4px'
@@ -1693,9 +1722,9 @@ const MRBDefectCapture = () => {
                                 style={{
                                   padding: '10px 8px',
                                   borderRadius: '8px',
-                                  border: `2px solid ${selectedDefect?.id === d.id ? t.accent : (d.color || t.border)}`,
-                                  backgroundColor: selectedDefect?.id === d.id ? t.accent : t.bgInput,
-                                  color: selectedDefect?.id === d.id ? 'white' : t.text,
+                                  border: `2px solid ${selectedDefects.some(sd => sd.id === d.id) ? t.accent : (d.color || t.border)}`,
+                                  backgroundColor: selectedDefects.some(sd => sd.id === d.id) ? t.accent : t.bgInput,
+                                  color: selectedDefects.some(sd => sd.id === d.id) ? 'white' : t.text,
                                   fontSize: '12px',
                                   fontWeight: '600',
                                   cursor: 'pointer',
@@ -1710,8 +1739,12 @@ const MRBDefectCapture = () => {
                                   transition: 'all 0.15s',
                                   minHeight: '60px'
                                 }}
-                                onClick={() => setSelectedDefect(selectedDefect?.id === d.id ? null : d)}
-                                title={`${d.code || ''} ${d.name}`}
+                                onClick={() => setSelectedDefects(prev =>
+                                  prev.some(sd => sd.id === d.id)
+                                    ? prev.filter(sd => sd.id !== d.id)
+                                    : [...prev, d]
+                                )}
+                                title={`${d.code || ''} ${d.name}${d.campaignIds?.length ? ` (${d.campaignIds.length} campaña${d.campaignIds.length > 1 ? 's' : ''})` : ''}`}
                               >
                                 {d.code && <span style={{ fontSize: '10px', opacity: 0.7 }}>{d.code}</span>}
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{d.name}</span>
@@ -1739,19 +1772,124 @@ const MRBDefectCapture = () => {
               )}
             </div>
 
-            {/* Submit Panel - Preview integrated in button */}
-            <div style={s.submitPanel}>
-              <button style={{ ...s.submitBtn(!isIndividualValid || submitting || isClosed), flexDirection: 'column', padding: '12px 20px' }} onClick={handleSubmitDefect} disabled={!isIndividualValid || submitting || isClosed} title={isClosed ? 'Campaña cerrada' : ''}>
-                {selectedDefect && (
-                  <span style={{ fontSize: '11px', opacity: 0.85, marginBottom: '4px' }}>
-                    {selectedPart?.captureDisplayName || selectedPart?.partNumber || 'Parte'} │ {selectedDefect.name} │ {selectedDisposition ? dispositions.find(d => d.id === selectedDisposition.id)?.name : 'Disposición'}
+            {/* ══ SECCIÓN MULTI-CAMPAÑA ══ */}
+            {availableCampaigns.length > 0 && (
+              <div style={{ padding: '10px', backgroundColor: t.bgCard, borderRadius: '8px', marginBottom: '8px', border: `1px solid ${t.border}` }}>
+                {/* LÍNEA 1: Campañas (checkboxes) + Preview */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  {/* Campañas con checkbox */}
+                  {availableCampaigns.map(camp => {
+                    const isSelected = selectedCampaigns.some(sc => sc.campaignId === camp.campaignId);
+                    const defectsForCampaign = selectedDefects.filter(d => (d.campaignIds || []).includes(camp.campaignId));
+                    const hasDefects = defectsForCampaign.length > 0;
+                    const campAffectedStatus = affectedStatus?.[camp.campaignId];
+                    const isOutOfList = campAffectedStatus === 'OUT_OF_LIST';
+                    return (
+                      <label
+                        key={camp.campaignId}
+                        title={`${camp.title}${isOutOfList ? ' ⚠️ Serial no está en lista de afectados' : ''}`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px',
+                          backgroundColor: isSelected ? (hasDefects ? '#fee2e2' : '#d1fae5') : t.bgInput,
+                          border: `1px solid ${isOutOfList ? '#f59e0b' : (isSelected ? (hasDefects ? '#ef4444' : '#22c55e') : t.border)}`,
+                          borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setSelectedCampaigns(prev => prev.filter(sc => sc.campaignId !== camp.campaignId));
+                            } else {
+                              setSelectedCampaigns(prev => [...prev, camp]);
+                            }
+                          }}
+                          style={{ width: '14px', height: '14px', accentColor: hasDefects ? '#ef4444' : '#22c55e' }}
+                        />
+                        <span style={{ color: t.text }}>{camp.campaignNumber}</span>
+                        {isOutOfList && <span style={{ fontSize: '10px' }}>⚠️</span>}
+                        {isSelected && (
+                          <span style={{
+                            width: '14px', height: '14px', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            backgroundColor: hasDefects ? '#ef4444' : '#22c55e', color: 'white', fontSize: '9px', fontWeight: '700'
+                          }}>
+                            {hasDefects ? '✕' : '✓'}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {/* LÍNEA 2: Fotos */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', padding: '5px 10px',
+                    backgroundColor: lotNumber ? t.bgInput : t.bgPanel,
+                    border: `1px dashed ${lotNumber ? t.accent : t.border}`, borderRadius: '5px',
+                    cursor: lotNumber ? 'pointer' : 'not-allowed', opacity: lotNumber ? 1 : 0.5,
+                    fontSize: '11px', color: t.textMuted
+                  }}>
+                    <input type="file" accept="image/*" multiple style={{ display: 'none' }} disabled={!lotNumber}
+                      onChange={e => {
+                        const files = Array.from(e.target.files || []);
+                        const newItems = files.map(f => ({ file: f, previewUrl: URL.createObjectURL(f), id: Math.random() }));
+                        setStagedEvidence(prev => [...prev, ...newItems]);
+                        e.target.value = '';
+                      }} />
+                    Agregar Fotos
+                  </label>
+                  {stagedEvidence.map(item => (
+                    <div key={item.id} style={{ position: 'relative', width: '36px', height: '36px' }}>
+                      <img src={item.previewUrl} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: `1px solid ${t.border}` }} />
+                      <button onClick={() => { URL.revokeObjectURL(item.previewUrl); setStagedEvidence(prev => prev.filter(i => i.id !== item.id)); }}
+                        style={{ position: 'absolute', top: '-4px', right: '-4px', width: '14px', height: '14px', borderRadius: '50%', backgroundColor: '#ef4444', border: 'none', color: 'white', fontSize: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* BOTÓN: Preview + Agregar Defectos */}
+                <button
+                  onClick={handleMultiCampaignSubmit}
+                  disabled={submitting || selectedCampaigns.length === 0}
+                  style={{
+                    width: '100%', padding: '10px 16px', border: 'none', borderRadius: '6px',
+                    backgroundColor: (submitting || selectedCampaigns.length === 0) ? t.textDim : t.accent, color: 'white',
+                    cursor: (submitting || selectedCampaigns.length === 0) ? 'not-allowed' : 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'
+                  }}
+                >
+                  {selectedDefects.length > 0 && (
+                    <span style={{ fontSize: '10px', opacity: 0.9 }}>
+                      {selectedPart?.partNumber || detectedPart?.partNumber || ''} │ {selectedDefects.map(d => d.name).join(', ')} │ {selectedSeverity?.code || ''}
+                    </span>
+                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700' }}>
+                    <Plus size={16} />
+                    {submitting ? 'GUARDANDO...' : selectedDefects.length > 0
+                      ? `AGREGAR ${selectedDefects.length} DEFECTO${selectedDefects.length > 1 ? 'S' : ''} NOK`
+                      : `REGISTRAR ${selectedCampaigns.length} OK`}
                   </span>
-                )}
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700' }}>
-                  <Plus size={18} /> {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO NOK'}
-                </span>
-              </button>
-            </div>
+                </button>
+              </div>
+            )}
+
+            {/* Submit Panel - Single Campaign Mode (sin multi-campaña) */}
+            {availableCampaigns.length === 0 && (
+              <div style={s.submitPanel}>
+                <button style={{ ...s.submitBtn(!isIndividualValid || submitting || isClosed), flexDirection: 'column', padding: '12px 20px' }} onClick={handleSubmitDefect} disabled={!isIndividualValid || submitting || isClosed} title={isClosed ? 'Campaña cerrada' : ''}>
+                  {selectedDefects.length > 0 && (
+                    <span style={{ fontSize: '11px', opacity: 0.85, marginBottom: '4px' }}>
+                      {selectedPart?.captureDisplayName || selectedPart?.partNumber || 'Parte'} │ {selectedDefects.map(d => d.name).join(', ')} │ {selectedDisposition ? dispositions.find(d => d.id === selectedDisposition.id)?.name : 'Disposición'}
+                    </span>
+                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700' }}>
+                    <Plus size={18} /> {submitting ? 'GUARDANDO...' : `AGREGAR ${selectedDefects.length > 1 ? selectedDefects.length + ' DEFECTOS' : 'DEFECTO'} NOK`}
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1784,7 +1922,12 @@ const MRBDefectCapture = () => {
               </div>
             )}
             {selectedPart && (
-              <button onClick={() => loadPartDefects(selectedPart.id)} style={{ ...s.iconBtn, padding: '6px 12px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', color: t.accent, borderColor: t.accent, marginLeft: totalOk === 0 && totalNok === 0 ? 'auto' : '0' }}>
+              <button onClick={() => {
+                const campaignIds = selectedCampaigns.length > 0
+                  ? selectedCampaigns.map(c => c.campaignId)
+                  : (selectedCampaign?.id ? [selectedCampaign.id] : []);
+                loadPartDefects(selectedPart.id, campaignIds);
+              }} style={{ ...s.iconBtn, padding: '6px 12px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', color: t.accent, borderColor: t.accent, marginLeft: totalOk === 0 && totalNok === 0 ? 'auto' : '0' }}>
                 <RefreshCw size={13} /> Sincronizar defectos
               </button>
             )}
@@ -2177,7 +2320,7 @@ const MRBDefectCapture = () => {
               <input
                 type="number" min="0.5" max="24" step="0.5"
                 value={horasWorked}
-                onChange={e => setHorasWorked(parseFloat(e.target.value) || 8)}
+                onChange={e => setHorasWorked(Math.min(24, Math.max(0.5, parseFloat(e.target.value) || 8)))}
                 style={{ width: '80px', padding: '8px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgInput, color: t.text, fontSize: '16px', fontWeight: '700', textAlign: 'center' }}
               />
               <span style={{ fontSize: '12px', color: t.textMuted }}>hrs</span>
@@ -2226,8 +2369,21 @@ const MRBDefectCapture = () => {
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '16px', lineHeight: '1.6' }}>
               El <strong style={{ color: t.text }}>{pendingShift.shiftName}</strong> del <strong style={{ color: t.text }}>{pendingShift.date}</strong> de la campaña <strong style={{ color: t.text }}>{pendingShift.campaignName}</strong> nunca fue registrado formalmente.
               <br /><br />
-              Agrega una nota y regístralo ahora para que quede en el historial.
+              Agrega las horas trabajadas y una nota para que quede en el historial.
             </div>
+
+            {/* Horas trabajadas */}
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', flexShrink: 0 }}>Horas trabajadas</label>
+              <input
+                type="number" min="0.5" max="24" step="0.5"
+                value={pendingShiftHours}
+                onChange={e => setPendingShiftHours(Math.min(24, Math.max(0.5, parseFloat(e.target.value) || 8)))}
+                style={{ width: '80px', padding: '8px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgInput, color: t.text, fontSize: '16px', fontWeight: '700', textAlign: 'center' }}
+              />
+              <span style={{ fontSize: '12px', color: t.textMuted }}>hrs</span>
+            </div>
+
             <div style={{ marginBottom: '20px' }}>
               <label style={{ fontSize: '12px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Nota de cierre *</label>
               <textarea
@@ -2241,7 +2397,7 @@ const MRBDefectCapture = () => {
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
-                onClick={() => { setPendingShift(null); setPendingShiftNote(''); }}
+                onClick={() => { setPendingShift(null); setPendingShiftNote(''); setPendingShiftHours(8); }}
                 style={{ flex: 1, padding: '12px', backgroundColor: t.bgInput, color: t.textMuted, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
               >
                 Omitir
@@ -2256,13 +2412,14 @@ const MRBDefectCapture = () => {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                       body: JSON.stringify({
-                        comment: `📋 Turno registrado (retroactivo): ${pendingShift.shiftName} — ${pendingShift.date} — Nota: ${pendingShiftNote.trim()}`,
+                        comment: `📋 Turno registrado (retroactivo): ${pendingShift.shiftName} — ${pendingShift.date} — ${pendingShiftHours}h — Nota: ${pendingShiftNote.trim()}`,
                         commentType: 'system'
                       })
                     });
                   } catch (_) { /* silent */ }
                   setPendingShift(null);
                   setPendingShiftNote('');
+                  setPendingShiftHours(8);
                 }}
                 style={{ flex: 2, padding: '12px', backgroundColor: !pendingShiftNote.trim() ? '#6b7280' : '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: !pendingShiftNote.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
