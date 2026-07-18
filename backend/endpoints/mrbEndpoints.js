@@ -629,9 +629,9 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
       // Crear unit_registry - buscar si viene de production_entries
       const prodEntry = await query(`
         SELECT id FROM production_entries
-        WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+        WHERE serial_number = $1 AND part_id = $2
         LIMIT 1
-      `, [serial.trim(), effectivePartId, mrb.client_id]);
+      `, [serial.trim(), effectivePartId]);
 
       const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
       const source = productionEntryId ? 'PRODUCTION' : 'MRB';
