@@ -47,7 +47,14 @@ import {
   quarantineToScrap,
   releaseWithDeviation,
   confirmScrap,
-  scrapToQuarantine
+  scrapToQuarantine,
+  // Transfer Packages
+  createTransferPackage,
+  getPendingTransferPackages,
+  getPendingSerials,
+  getTransferPackageDetails,
+  receiveTransferPackage,
+  getHospitalPendingSummary
 } from '../services/repairService';
 import {
   getDeviations,
@@ -510,6 +517,31 @@ const DefectHospital = () => {
   const [mrbCampaignsForHandoff, setMrbCampaignsForHandoff] = useState([]); // Campañas MRB activas
   const [selectedMrbCampaign, setSelectedMrbCampaign] = useState(null); // Campaña MRB seleccionada (opcional)
 
+  // Modal de Crear Paquete MRB
+  const [showCreatePackageModal, setShowCreatePackageModal] = useState(false);
+  const [packageQarId, setPackageQarId] = useState(null);
+  const [package8dId, setPackage8dId] = useState(null);
+  const [packageCampaignId, setPackageCampaignId] = useState(null);
+  const [packageNotes, setPackageNotes] = useState('');
+  const [packageAlertHours, setPackageAlertHours] = useState(24);
+  const [packageDestinationLocationId, setPackageDestinationLocationId] = useState(null); // Ubicación MRB destino
+  const [availableQars, setAvailableQars] = useState([]);
+  const [available8Ds, setAvailable8Ds] = useState([]);
+  const [creatingPackage, setCreatingPackage] = useState(false);
+
+  // Paquetes entrantes desde MRB (REWORK)
+  const [incomingPackages, setIncomingPackages] = useState([]);
+  const [incomingPackageDetails, setIncomingPackageDetails] = useState(null);
+  const [showReceivePackageModal, setShowReceivePackageModal] = useState(false);
+  const [selectedIncomingPackage, setSelectedIncomingPackage] = useState(null);
+  const [receivePackageNotes, setReceivePackageNotes] = useState('');
+  const [receivingPackage, setReceivingPackage] = useState(false);
+  const [hospitalLocations, setHospitalLocations] = useState([]);
+  const [receiveLocationId, setReceiveLocationId] = useState('');
+
+  // Seriales ya en paquetes pendientes (para validación y UI)
+  const [pendingSerials, setPendingSerials] = useState(new Set());
+
   // Modal de Reject con destino
   const [rejectDestination, setRejectDestination] = useState('REPAIR'); // 'REPAIR', 'SCRAP', 'QUARANTINE'
   const [rejectSelectedStation, setRejectSelectedStation] = useState(null); // Estación destino para reject a reparaciones
@@ -723,6 +755,27 @@ const DefectHospital = () => {
     }
   }, [mode]);
 
+  // Cargar ubicaciones de Hospital cuando se abre el modal de recibir paquete
+  useEffect(() => {
+    if (showReceivePackageModal) {
+      const loadHospitalLocations = async () => {
+        try {
+          const locs = await getLocationCodes('HOSPITAL');
+          setHospitalLocations(locs);
+          // Pre-seleccionar si solo hay una
+          if (locs.length === 1) {
+            setReceiveLocationId(locs[0].id);
+          }
+        } catch (err) {
+          console.error('Error loading hospital locations:', err);
+        }
+      };
+      loadHospitalLocations();
+    } else {
+      setReceiveLocationId('');
+    }
+  }, [showReceivePackageModal]);
+
   // Cargar catálogos y contadores iniciales
   useEffect(() => {
     loadCatalogs();
@@ -821,19 +874,141 @@ const DefectHospital = () => {
     }
   };
 
+  // Cargar QARs, 8Ds y Campañas MRB disponibles para el modal de crear paquete
+  const loadAvailableQarsAnd8Ds = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const [qarsRes, eightDsRes, campaignsRes] = await Promise.all([
+        fetch(`${API_URL}/qar?status=EMITIDO&status=RESPONDIDO`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${API_URL}/8d/reports?status=open&limit=100`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${API_URL}/mrb?status=ABIERTA&status=EN_PROCESO&limit=100`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      const qarsData = await qarsRes.json();
+      const eightDsData = await eightDsRes.json();
+      const campaignsData = await campaignsRes.json();
+      setAvailableQars(qarsData.qars || qarsData.items || []);
+      setAvailable8Ds(eightDsData.reports || eightDsData.items || []);
+      setMrbCampaignsForHandoff(campaignsData.campaigns || []);
+    } catch (err) {
+      console.error('Error loading QARs/8Ds/Campaigns:', err);
+    }
+  };
+
+  // Crear paquete de transferencia
+  const handleCreatePackage = async () => {
+    console.log('handleCreatePackage called, selectedForMrb.size:', selectedForMrb.size);
+    if (selectedForMrb.size === 0) {
+      setError(language === 'es' ? 'Selecciona al menos un defecto' : 'Select at least one defect');
+      return;
+    }
+
+    // Validar ubicación MRB destino (obligatorio para control 360°)
+    if (!packageDestinationLocationId) {
+      setError(language === 'es' ? 'Selecciona la ubicación MRB destino' : 'Select MRB destination location');
+      return;
+    }
+
+    setCreatingPackage(true);
+    try {
+      const defectIds = Array.from(selectedForMrb);
+      const result = await createTransferPackage(
+        'HOSPITAL',
+        'MRB',
+        defectIds,
+        {
+          notes: packageNotes,
+          alertHours: packageAlertHours,
+          destinationLocationId: packageDestinationLocationId
+        }
+      );
+
+      if (result.success) {
+        setSuccess(language === 'es'
+          ? `Paquete ${result.package?.packageNumber || ''} creado con ${result.itemsAdded} item(s)`
+          : `Package ${result.package?.packageNumber || ''} created with ${result.itemsAdded} item(s)`);
+        setShowCreatePackageModal(false);
+        setSelectedForMrb(new Set());
+        setPackageNotes('');
+        setPackageDestinationLocationId(null);
+        loadData();
+      } else {
+        setError(result.message || 'Error al crear paquete');
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+    } finally {
+      setCreatingPackage(false);
+    }
+  };
+
+  // Recibir paquete desde MRB
+  const handleReceivePackage = async () => {
+    if (!selectedIncomingPackage) return;
+    if (!receiveLocationId) {
+      setError(language === 'es' ? 'Seleccione ubicación de destino' : 'Select destination location');
+      return;
+    }
+
+    setReceivingPackage(true);
+    try {
+      const result = await receiveTransferPackage(
+        selectedIncomingPackage.id,
+        receivePackageNotes,
+        null, // mrbCampaignId (not used for Hospital reception)
+        receiveLocationId
+      );
+
+      if (result.success) {
+        setSuccess(language === 'es'
+          ? `Paquete ${selectedIncomingPackage.packageNumber} recibido (${result.transferHours}h)`
+          : `Package ${selectedIncomingPackage.packageNumber} received (${result.transferHours}h)`);
+        setShowReceivePackageModal(false);
+        setSelectedIncomingPackage(null);
+        setReceivePackageNotes('');
+        loadIncomingPackages();
+        loadData();
+      } else {
+        setError(result.message || 'Error al recibir paquete');
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+    } finally {
+      setReceivingPackage(false);
+    }
+  };
+
+  // Ver detalles de paquete entrante
+  const viewIncomingPackageDetails = async (pkg) => {
+    try {
+      const result = await getTransferPackageDetails(pkg.id);
+      if (result.success) {
+        setIncomingPackageDetails(result);
+        setSelectedIncomingPackage(pkg);
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+    }
+  };
 
   // loadData: carga todos los datos (usado después de acciones para refrescar)
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [all, repairs, inRepair, releases, handoff, quarantine, scrapped] = await Promise.all([
+      const [all, repairs, inRepair, releases, handoff, quarantine, scrapped, pendingSerialsRes] = await Promise.all([
         getAllDefects(clientId, { page: generalPage, pageSize: generalPageSize }),
         getPendingRepairs(clientId),
         getInRepair(clientId),
         getPendingReleases(clientId),
         getPendingHandoff(clientId),
         getQuarantineDefects(),
-        getScrappedDefects()
+        getScrappedDefects(),
+        getPendingSerials()
       ]);
       setAllDefects(all.defects || all.items || []);
       if (all.pagination) setGeneralPagination(all.pagination);
@@ -843,6 +1018,7 @@ const DefectHospital = () => {
       setPendingHandoff(handoff.defects || handoff.items || []);
       setQuarantineDefects(quarantine.defects || []);
       setScrappedDefects(scrapped.defects || []);
+      setPendingSerials(new Set(pendingSerialsRes.serials || []));
     } catch (err) {
       console.error('Error loading data:', err);
       setError(`Error cargando datos: ${err.message}`);
@@ -888,12 +1064,14 @@ const DefectHospital = () => {
             setSerialHistory(history.defects || history.items || []);
             break;
           case 'mrb':
-            const [quarantine, scrapped] = await Promise.all([
+            const [quarantine, scrapped, pendingSerialsRes] = await Promise.all([
               getQuarantineDefects(),
-              getScrappedDefects()
+              getScrappedDefects(),
+              getPendingSerials()
             ]);
             setQuarantineDefects(quarantine.defects || []);
             setScrappedDefects(scrapped.defects || []);
+            setPendingSerials(new Set(pendingSerialsRes.serials || []));
             break;
           default:
             break;
@@ -934,6 +1112,20 @@ const DefectHospital = () => {
     };
     loadCounts();
   }, [clientId]);
+
+  // Cargar paquetes entrantes desde MRB
+  const loadIncomingPackages = useCallback(async () => {
+    try {
+      const result = await getPendingTransferPackages('HOSPITAL');
+      setIncomingPackages(result.packages || []);
+    } catch (err) {
+      console.error('Error loading incoming packages:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadIncomingPackages();
+  }, [loadIncomingPackages]);
 
   // Recargar tab General cuando cambia paginación
   useEffect(() => {
@@ -992,7 +1184,12 @@ const DefectHospital = () => {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
           });
           const locData = await locRes.json();
-          setMrbLocations(locData.locations || []);
+          const locations = locData.locations || [];
+          setMrbLocations(locations);
+          // Pre-seleccionar si solo hay una ubicación MRB
+          if (locations.length === 1) {
+            setSelectedMrbLocation(locations[0]);
+          }
 
           // Cargar campañas MRB activas
           const campRes = await fetch(`${API_URL}/mrb?status=ABIERTA&limit=100`, {
@@ -1007,6 +1204,29 @@ const DefectHospital = () => {
       loadMrbData();
     }
   }, [showHandoffModal, handoffDestination]);
+
+  // Cargar locations MRB cuando se abre modal de crear paquete
+  useEffect(() => {
+    if (showCreatePackageModal) {
+      const loadMrbLocationsForPackage = async () => {
+        try {
+          const locRes = await fetch(`${API_URL}/location-codes?type=MRB&activeOnly=true`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          const locData = await locRes.json();
+          const locations = locData.locations || [];
+          setMrbLocations(locations);
+          // Pre-seleccionar si solo hay una ubicación MRB
+          if (locations.length === 1) {
+            setPackageDestinationLocationId(locations[0].id);
+          }
+        } catch (err) {
+          console.error('Error loading MRB locations:', err);
+        }
+      };
+      loadMrbLocationsForPackage();
+    }
+  }, [showCreatePackageModal]);
 
   // Agrupar defectos por serial
   const groupBySerial = useCallback((defects) => {
@@ -2440,6 +2660,14 @@ const DefectHospital = () => {
         setMrbModalOpen(true);
         break;
 
+      case 'CREATE_MRB_PACKAGE':
+        // Abrir modal para crear paquete de transferencia a MRB
+        setPackageNotes('');
+        setPackageAlertHours(24);
+        setSelectedForMrb(new Set(defectIds));
+        setShowCreatePackageModal(true);
+        break;
+
       // MANAGEMENT ACTIONS
       case 'ASSIGN_LOCATION':
         // Limpiar estado anterior
@@ -2546,6 +2774,27 @@ const DefectHospital = () => {
     release: hospitalPermissions.canRelease,
     admin: hospitalPermissions.isHospitalAdmin
   }), [hospitalPermissions]);
+
+  // Grupos de partes para modal de crear paquete MRB (memoizado para evitar lag)
+  const packagePartsGroups = useMemo(() => {
+    const allDefectsForMrb = [...quarantineDefects, ...scrappedDefects];
+    const selectedDefectsData = allDefectsForMrb.filter(d => selectedForMrb.has(d.id));
+    const groupedByPart = {};
+
+    selectedDefectsData.forEach(d => {
+      const partKey = d.partNumber || d.part_number || 'SIN_PARTE';
+      if (!groupedByPart[partKey]) {
+        groupedByPart[partKey] = {
+          partNumber: partKey,
+          partName: d.partName || d.part_name || '',
+          serials: []
+        };
+      }
+      groupedByPart[partKey].serials.push(d.serialNumber || d.serial_number || d.lotNumber || d.lot_number || '-');
+    });
+
+    return Object.values(groupedByPart);
+  }, [quarantineDefects, scrappedDefects, selectedForMrb]);
 
   // Seleccionar por tipo de defecto
   const selectByDefectType = (defectTypeId) => {
@@ -5320,6 +5569,51 @@ const DefectHospital = () => {
         </div>
       )}
 
+      {/* Banner de paquetes entrantes desde MRB */}
+      {incomingPackages.length > 0 && (
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          marginBottom: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '20px' }}>📦</span>
+            <div>
+              <div style={{ fontWeight: '600', color: '#92400e', fontSize: '14px' }}>
+                {incomingPackages.length} {language === 'es' ? 'paquete(s) desde MRB pendiente(s)' : 'pending package(s) from MRB'}
+              </div>
+              <div style={{ fontSize: '12px', color: '#a16207' }}>
+                {language === 'es' ? 'Material REWORK listo para recibir' : 'REWORK material ready to receive'}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedIncomingPackage(incomingPackages[0]);
+              setShowReceivePackageModal(true);
+            }}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#f59e0b',
+              border: 'none',
+              borderRadius: '6px',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '600'
+            }}
+          >
+            {language === 'es' ? 'Ver Paquetes' : 'View Packages'}
+          </button>
+        </div>
+      )}
+
       {/* Barra de modo y estación */}
       <div style={{
         display: 'flex',
@@ -5669,24 +5963,12 @@ const DefectHospital = () => {
             {selectedForHandoff.size} {language === 'es' ? 'seleccionado(s)' : 'selected'}
           </span>
 
-          {/* Guía visual hacia ActionBar */}
-          <div style={{
-            marginLeft: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            backgroundColor: `${t.primary}15`,
-            borderRadius: '6px',
-            border: `1px dashed ${t.primary}50`
-          }}>
-            <span style={{ fontSize: '18px' }}>☝️</span>
-            <span style={{ fontSize: '13px', color: t.textSecondary }}>
-              {language === 'es'
-                ? 'Usa la barra de acciones superior para QA, Scrap o MRB'
-                : 'Use the action bar above for QA, Scrap or MRB'}
-            </span>
-          </div>
+          {/* Hint hacia ActionBar */}
+          <span style={{ marginLeft: 'auto', fontSize: '12px', color: t.textMuted, fontStyle: 'italic' }}>
+            {language === 'es'
+              ? 'Usa la barra de acciones superior para QA, Scrap o MRB'
+              : 'Use the action bar above for QA, Scrap or MRB'}
+          </span>
         </div>
       )}
 
@@ -5785,24 +6067,12 @@ const DefectHospital = () => {
               <span style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626' }}>
                 {selectedForMrb.size} {language === 'es' ? 'seleccionado(s)' : 'selected'}
               </span>
-              {/* Guía visual hacia ActionBar */}
-              <div style={{
-                marginLeft: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                backgroundColor: `${t.primary}15`,
-                borderRadius: '6px',
-                border: `1px dashed ${t.primary}50`
-              }}>
-                <span style={{ fontSize: '18px' }}>☝️</span>
-                <span style={{ fontSize: '13px', color: t.textSecondary }}>
-                  {language === 'es'
-                    ? 'Usa la barra de acciones superior'
-                    : 'Use the action bar above'}
-                </span>
-              </div>
+              {/* Hint hacia ActionBar */}
+              <span style={{ marginLeft: 'auto', fontSize: '12px', color: t.textMuted, fontStyle: 'italic' }}>
+                {language === 'es'
+                  ? 'Usa la barra de acciones superior'
+                  : 'Use the action bar above'}
+              </span>
             </div>
           )}
 
@@ -5836,9 +6106,10 @@ const DefectHospital = () => {
                   <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>Serial/Lote</th>
                   <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Parte' : 'Part'}</th>
                   <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Defecto' : 'Defect'}</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Cliente' : 'Client'}</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Campaña' : 'Campaign'}</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>QAR</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>8D</th>
                   <th style={{ padding: '12px 8px', textAlign: 'center', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Horas' : 'Hours'}</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Últ. Mov' : 'Last Update'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -5850,7 +6121,7 @@ const DefectHospital = () => {
                   if (mrbDefects.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={mrbSubTab === 'all' ? 9 : 8} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
+                        <td colSpan={mrbSubTab === 'all' ? 11 : 10} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
                           {mrbSubTab === 'all'
                             ? (language === 'es' ? 'No hay defectos en MRB' : 'No defects in MRB')
                             : mrbSubTab === 'quarantine'
@@ -5865,29 +6136,46 @@ const DefectHospital = () => {
                   return mrbDefects.map(defect => {
                     const hours = defect._mrbType === 'quarantine' ? defect.hoursInQuarantine : defect.hoursInScrap;
                     const hoursColor = hours > 72 ? '#dc2626' : hours > 24 ? '#f59e0b' : t.success;
+                    const defectSerial = defect.serialNumber || defect.lotNumber;
+                    const isInPendingPackage = defectSerial && pendingSerials.has(defectSerial);
                     return (
                       <tr
                         key={defect.id}
                         style={{
                           borderBottom: `1px solid ${t.border}`,
-                          backgroundColor: selectedForMrb.has(defect.id) ? '#dc262610' : 'transparent'
+                          backgroundColor: isInPendingPackage ? '#6b728020' : selectedForMrb.has(defect.id) ? '#dc262610' : 'transparent',
+                          opacity: isInPendingPackage ? 0.6 : 1
                         }}
                       >
                         <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedForMrb.has(defect.id)}
-                            onChange={(e) => {
-                              const newSet = new Set(selectedForMrb);
-                              if (e.target.checked) {
-                                newSet.add(defect.id);
-                              } else {
-                                newSet.delete(defect.id);
-                              }
-                              setSelectedForMrb(newSet);
-                            }}
-                            style={{ cursor: 'pointer', accentColor: '#dc2626' }}
-                          />
+                          {isInPendingPackage ? (
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '9px',
+                              fontWeight: '600',
+                              backgroundColor: '#6b728030',
+                              color: '#6b7280',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {language === 'es' ? 'EN PKG' : 'IN PKG'}
+                            </span>
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={selectedForMrb.has(defect.id)}
+                              onChange={(e) => {
+                                const newSet = new Set(selectedForMrb);
+                                if (e.target.checked) {
+                                  newSet.add(defect.id);
+                                } else {
+                                  newSet.delete(defect.id);
+                                }
+                                setSelectedForMrb(newSet);
+                              }}
+                              style={{ cursor: 'pointer', accentColor: '#dc2626' }}
+                            />
+                          )}
                         </td>
                         <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontSize: '12px', color: t.accent }}>
                           {defect.entryNumber}
@@ -5918,8 +6206,68 @@ const DefectHospital = () => {
                         <td style={{ padding: '10px 8px', color: t.text }}>
                           {defect.defectTypeName}
                         </td>
-                        <td style={{ padding: '10px 8px', color: t.textMuted }}>
-                          {defect.clientName}
+                        {/* Campaña MRB */}
+                        <td style={{ padding: '10px 8px' }}>
+                          {defect.mrbCampaignNumber ? (
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: '#7c3aed20',
+                              color: '#7c3aed',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => navigate(`/mrb/${defect.mrbCampaignId}`)}
+                            title={defect.mrbCampaignTitle}
+                            >
+                              {defect.mrbCampaignNumber}
+                            </span>
+                          ) : (
+                            <span style={{ color: t.textMuted, fontSize: '11px' }}>—</span>
+                          )}
+                        </td>
+                        {/* QAR */}
+                        <td style={{ padding: '10px 8px' }}>
+                          {defect.qarNumber ? (
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: '#3b82f620',
+                              color: '#3b82f6',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => navigate(`/quality-alerts/${defect.qarId}`)}
+                            title={defect.qarTitle}
+                            >
+                              {defect.qarNumber}
+                            </span>
+                          ) : (
+                            <span style={{ color: t.textMuted, fontSize: '11px' }}>—</span>
+                          )}
+                        </td>
+                        {/* 8D */}
+                        <td style={{ padding: '10px 8px' }}>
+                          {defect.eightdNumber ? (
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: '#16a34a20',
+                              color: '#16a34a',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => navigate(`/8d/${defect.eightdId}`)}
+                            title={defect.eightdTitle}
+                            >
+                              {defect.eightdNumber}
+                            </span>
+                          ) : (
+                            <span style={{ color: t.textMuted, fontSize: '11px' }}>—</span>
+                          )}
                         </td>
                         <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                           <span style={{
@@ -5932,9 +6280,6 @@ const DefectHospital = () => {
                           }}>
                             {hours ? Number(hours).toFixed(1) : '0'}h
                           </span>
-                        </td>
-                        <td style={{ padding: '10px 8px', fontSize: '12px', color: t.textMuted }}>
-                          {defect.updatedAt ? new Date(defect.updatedAt).toLocaleString() : '-'}
                         </td>
                       </tr>
                     );
@@ -9128,6 +9473,419 @@ const DefectHospital = () => {
         </div>
       )}
 
+      {/* Modal Crear Paquete MRB */}
+      {showCreatePackageModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowCreatePackageModal(false)}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            padding: '24px',
+            minWidth: '500px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: t.primary }}>
+              {language === 'es' ? '📦 Crear Paquete de Transferencia a MRB' : '📦 Create Transfer Package to MRB'}
+            </h3>
+
+            {/* Resumen de partes a enviar */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>
+                {language === 'es' ? '📋 Resumen de Partes a Enviar' : '📋 Parts Summary'}
+              </label>
+              <div style={{
+                backgroundColor: t.bgPanel,
+                border: `1px solid ${t.border}`,
+                borderRadius: '8px',
+                maxHeight: '200px',
+                overflow: 'auto'
+              }}>
+                {packagePartsGroups.map((group, idx) => (
+                  <div key={idx} style={{
+                    padding: '10px 12px',
+                    borderBottom: idx < packagePartsGroups.length - 1 ? `1px solid ${t.border}` : 'none'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: '600', color: t.text, fontSize: '13px' }}>
+                        {group.partNumber}
+                      </span>
+                      <span style={{
+                        backgroundColor: t.primary,
+                        color: '#fff',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
+                        fontWeight: '600'
+                      }}>
+                        {group.serials.length} {language === 'es' ? 'pza(s)' : 'pc(s)'}
+                      </span>
+                    </div>
+                    {group.partName && (
+                      <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px' }}>
+                        {group.partName}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '11px', color: t.textMuted }}>
+                      <strong>Seriales:</strong> {group.serials.slice(0, 5).join(', ')}
+                      {group.serials.length > 5 && ` +${group.serials.length - 5} más`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '8px', fontSize: '12px', color: t.textMuted, textAlign: 'right' }}>
+                {language === 'es'
+                  ? `Total: ${selectedForMrb.size} parte(s) en paquete`
+                  : `Total: ${selectedForMrb.size} part(s) in package`}
+              </div>
+            </div>
+
+            {/* Ubicación MRB destino (obligatorio) */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                {language === 'es' ? '📍 Ubicación MRB Destino *' : '📍 MRB Destination Location *'}
+              </label>
+              <select
+                value={packageDestinationLocationId || ''}
+                onChange={(e) => setPackageDestinationLocationId(e.target.value ? parseInt(e.target.value) : null)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${packageDestinationLocationId ? t.border : '#ef4444'}`,
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  fontSize: '13px'
+                }}
+              >
+                <option value="">{language === 'es' ? '-- Seleccionar ubicación MRB --' : '-- Select MRB location --'}</option>
+                {mrbLocations.map(loc => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.code} - {loc.description}
+                  </option>
+                ))}
+              </select>
+              {!packageDestinationLocationId && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#ef4444' }}>
+                  {language === 'es' ? 'Requerido para control de inventario' : 'Required for inventory control'}
+                </p>
+              )}
+            </div>
+
+            {/* Horas de alerta */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                {language === 'es' ? '⏰ Alerta si no se recibe en (horas)' : '⏰ Alert if not received in (hours)'}
+              </label>
+              <input
+                type="number"
+                value={packageAlertHours}
+                onChange={(e) => setPackageAlertHours(parseInt(e.target.value) || 24)}
+                min="1"
+                max="168"
+                style={{
+                  width: '100px',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${t.border}`,
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  fontSize: '13px'
+                }}
+              />
+            </div>
+
+            {/* Notas */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                {language === 'es' ? '📝 Notas (opcional)' : '📝 Notes (optional)'}
+              </label>
+              <textarea
+                value={packageNotes}
+                onChange={(e) => setPackageNotes(e.target.value)}
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${t.border}`,
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  fontSize: '13px',
+                  resize: 'vertical'
+                }}
+                placeholder={language === 'es' ? 'Información adicional para MRB...' : 'Additional information for MRB...'}
+              />
+            </div>
+
+            {/* Botones */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowCreatePackageModal(false);
+                  setPackageNotes('');
+                  setPackageDestinationLocationId(null);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '6px',
+                  backgroundColor: t.bgCard,
+                  color: t.text,
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                {language === 'es' ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleCreatePackage}
+                disabled={creatingPackage || selectedForMrb.size === 0 || !packageDestinationLocationId}
+                style={{
+                  padding: '10px 24px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: (!packageDestinationLocationId || selectedForMrb.size === 0) ? t.border : t.primary,
+                  color: '#fff',
+                  cursor: (creatingPackage || !packageDestinationLocationId) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  opacity: (creatingPackage || !packageDestinationLocationId) ? 0.7 : 1
+                }}
+              >
+                {creatingPackage
+                  ? (language === 'es' ? 'Creando...' : 'Creating...')
+                  : (language === 'es' ? '📦 Crear Paquete' : '📦 Create Package')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Recibir Paquete desde MRB */}
+      {showReceivePackageModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowReceivePackageModal(false)}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            padding: '24px',
+            minWidth: '600px',
+            maxWidth: '800px',
+            maxHeight: '85vh',
+            overflow: 'auto'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#f59e0b' }}>
+              📦 {language === 'es' ? 'Paquetes desde MRB' : 'Packages from MRB'}
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: t.textMuted }}>
+              {language === 'es'
+                ? `${incomingPackages.length} paquete(s) REWORK pendiente(s) de recibir`
+                : `${incomingPackages.length} pending REWORK package(s) to receive`}
+            </p>
+
+            {/* Lista de paquetes */}
+            <div style={{ marginBottom: '20px' }}>
+              {incomingPackages.map(pkg => (
+                <div
+                  key={pkg.id}
+                  style={{
+                    padding: '12px 16px',
+                    marginBottom: '8px',
+                    backgroundColor: selectedIncomingPackage?.id === pkg.id ? '#f59e0b15' : t.bgPanel,
+                    border: `1px solid ${selectedIncomingPackage?.id === pkg.id ? '#f59e0b' : t.border}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setSelectedIncomingPackage(pkg);
+                    viewIncomingPackageDetails(pkg);
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontWeight: '700', color: t.primary, marginRight: '10px' }}>
+                        {pkg.packageNumber}
+                      </span>
+                      <span style={{ fontSize: '12px', color: t.textMuted }}>
+                        {pkg.itemCount} item(s) • {pkg.partsSummary}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        backgroundColor: pkg.alertTriggered ? '#dc262620' : '#f59e0b20',
+                        color: pkg.alertTriggered ? '#dc2626' : '#f59e0b'
+                      }}>
+                        {pkg.hoursElapsed < 1
+                          ? `${Math.round(pkg.hoursElapsed * 60)}m`
+                          : pkg.hoursElapsed < 24
+                            ? `${Math.round(pkg.hoursElapsed)}h`
+                            : `${Math.round(pkg.hoursElapsed / 24)}d`}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '6px' }}>
+                    {language === 'es' ? 'Enviado por' : 'Sent by'}: {pkg.createdByName} • {new Date(pkg.createdAt).toLocaleString('es-MX')}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Detalles del paquete seleccionado */}
+            {incomingPackageDetails && selectedIncomingPackage && (
+              <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: t.bg, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: t.text }}>
+                  {language === 'es' ? 'Items en' : 'Items in'} {selectedIncomingPackage.packageNumber}
+                </h4>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: t.bgPanel }}>
+                      <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted }}>Serial</th>
+                      <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted }}>{language === 'es' ? 'Parte' : 'Part'}</th>
+                      <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted }}>{language === 'es' ? 'Defecto' : 'Defect'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomingPackageDetails.items?.map(item => (
+                      <tr key={item.id} style={{ borderTop: `1px solid ${t.border}` }}>
+                        <td style={{ padding: '8px', fontFamily: 'monospace', color: t.primary }}>{item.serialNumber || '-'}</td>
+                        <td style={{ padding: '8px', color: t.text }}>{item.partNumber}</td>
+                        <td style={{ padding: '8px', color: t.text }}>{item.defectSummary || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Ubicación destino */}
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                    {language === 'es' ? 'Ubicación destino *' : 'Destination location *'}
+                  </label>
+                  <select
+                    value={receiveLocationId}
+                    onChange={(e) => setReceiveLocationId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${receiveLocationId ? t.border : '#ef4444'}`,
+                      backgroundColor: t.bgCard,
+                      color: t.text,
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">{language === 'es' ? '-- Seleccionar ubicación --' : '-- Select location --'}</option>
+                    {hospitalLocations.map(loc => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.code} - {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                  {!receiveLocationId && (
+                    <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
+                      {language === 'es' ? 'Requerido para recibir el paquete' : 'Required to receive package'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Notas de recepción */}
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                    {language === 'es' ? 'Notas de recepción (opcional)' : 'Reception notes (optional)'}
+                  </label>
+                  <textarea
+                    value={receivePackageNotes}
+                    onChange={(e) => setReceivePackageNotes(e.target.value)}
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${t.border}`,
+                      backgroundColor: t.bgCard,
+                      color: t.text,
+                      fontSize: '13px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Botones */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowReceivePackageModal(false);
+                  setSelectedIncomingPackage(null);
+                  setIncomingPackageDetails(null);
+                  setReceivePackageNotes('');
+                  setReceiveLocationId('');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '6px',
+                  backgroundColor: t.bgCard,
+                  color: t.text,
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                {language === 'es' ? 'Cerrar' : 'Close'}
+              </button>
+              {selectedIncomingPackage && (
+                <button
+                  onClick={handleReceivePackage}
+                  disabled={receivingPackage || !receiveLocationId}
+                  style={{
+                    padding: '10px 24px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    backgroundColor: (receivingPackage || !receiveLocationId) ? '#6b7280' : '#16a34a',
+                    color: '#fff',
+                    cursor: (receivingPackage || !receiveLocationId) ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    opacity: (receivingPackage || !receiveLocationId) ? 0.7 : 1
+                  }}
+                >
+                  {receivingPackage
+                    ? (language === 'es' ? 'Recibiendo...' : 'Receiving...')
+                    : (language === 'es' ? 'Recibir Paquete' : 'Receive Package')}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal MRB Actions */}
       {mrbModalOpen && (
         <div style={{
@@ -9197,31 +9955,100 @@ const DefectHospital = () => {
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.text, marginBottom: '6px' }}>
                   {language === 'es' ? 'Desviación *' : 'Deviation *'}
                 </label>
-                <select
-                  value={mrbDeviationId}
-                  onChange={(e) => setMrbDeviationId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '6px',
-                    border: `1px solid ${mrbDeviationId ? t.success : t.border}`,
-                    backgroundColor: t.bgPanel,
-                    color: t.text,
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="">{language === 'es' ? '-- Seleccionar desviación --' : '-- Select deviation --'}</option>
-                  {deviations.filter(d => d.status === 'ACTIVE').map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.deviationNumber || `DEV-${d.id}`} - {d.description?.substring(0, 50)}...
-                    </option>
-                  ))}
-                </select>
-                {deviations.filter(d => d.status === 'ACTIVE').length === 0 && (
-                  <p style={{ color: t.warning, fontSize: '12px', marginTop: '6px' }}>
-                    {language === 'es' ? 'No hay desviaciones activas. Crea una primero.' : 'No active deviations. Create one first.'}
-                  </p>
-                )}
+                {(() => {
+                  // Get part_ids from selected defects
+                  const selectedPartIds = [...selectedForMrb].map(defectId => {
+                    const defect = [...quarantineDefects, ...scrappedDefects, ...allDefects].find(d => d.id === defectId);
+                    return defect?.partId || defect?.part_id;
+                  }).filter(Boolean).map(id => parseInt(id));
+
+                  // Filter deviations that apply to selected parts
+                  const filteredDeviations = deviations.filter(d => {
+                    if (d.status !== 'ACTIVE') return false;
+                    // If deviation has no partIds, it applies to all parts
+                    if (!d.partIds || d.partIds.length === 0) return true;
+                    // Check if any selected part is covered by this deviation
+                    const devPartIds = Array.isArray(d.partIds) ? d.partIds.map(p => parseInt(p)) : [parseInt(d.partIds)];
+                    return selectedPartIds.some(partId => devPartIds.includes(partId));
+                  });
+
+                  const selectedDeviation = filteredDeviations.find(d => d.id === parseInt(mrbDeviationId));
+
+                  return (
+                    <>
+                      {/* Dropdown de desviaciones */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        border: `1px solid ${t.border}`,
+                        borderRadius: '8px',
+                        padding: '8px'
+                      }}>
+                        {filteredDeviations.length === 0 ? (
+                          <p style={{ color: t.warning, fontSize: '12px', margin: 0, padding: '8px' }}>
+                            {language === 'es' ? 'No hay desviaciones activas para este número de parte.' : 'No active deviations for this part number.'}
+                          </p>
+                        ) : filteredDeviations.map(d => (
+                          <div
+                            key={d.id}
+                            onClick={() => setMrbDeviationId(String(d.id))}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              backgroundColor: mrbDeviationId === String(d.id) ? t.accent + '20' : t.bgPanel,
+                              border: mrbDeviationId === String(d.id) ? `2px solid ${t.accent}` : `1px solid ${t.border}`,
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                              <span style={{ fontWeight: '700', color: t.primary, fontSize: '13px' }}>
+                                {d.referenceNumber || `DEV-${d.id}`}
+                              </span>
+                              <span style={{ fontSize: '10px', color: t.textMuted, backgroundColor: t.bgCard, padding: '2px 6px', borderRadius: '4px' }}>
+                                {d.clientName || d.client_name || 'Global'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '12px', color: t.text, marginBottom: '4px' }}>
+                              {d.title || d.description?.substring(0, 60) || 'Sin descripción'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: t.textMuted }}>
+                              <strong>{language === 'es' ? 'Partes:' : 'Parts:'}</strong>{' '}
+                              {d.partNumbers?.length > 0
+                                ? d.partNumbers.slice(0, 3).join(', ') + (d.partNumbers.length > 3 ? ` +${d.partNumbers.length - 3}` : '')
+                                : (language === 'es' ? 'Todas' : 'All')}
+                            </div>
+                            {d.validityDate && (
+                              <div style={{ fontSize: '10px', color: t.warning, marginTop: '2px' }}>
+                                {language === 'es' ? 'Válida hasta:' : 'Valid until:'} {new Date(d.validityDate).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Detalle de desviación seleccionada */}
+                      {selectedDeviation && (
+                        <div style={{
+                          marginTop: '10px',
+                          padding: '10px',
+                          backgroundColor: t.accent + '10',
+                          borderRadius: '6px',
+                          border: `1px solid ${t.accent}30`,
+                          fontSize: '12px'
+                        }}>
+                          <div style={{ fontWeight: '600', color: t.accent, marginBottom: '4px' }}>
+                            ✓ {selectedDeviation.referenceNumber || `DEV-${selectedDeviation.id}`}
+                          </div>
+                          <div style={{ color: t.text }}>{selectedDeviation.description || selectedDeviation.title}</div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
 

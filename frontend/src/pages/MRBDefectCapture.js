@@ -57,7 +57,7 @@ const MRBDefectCapture = () => {
   // Traducciones locales
   const L = {
     en: {
-      selectShift: 'Select the shift', selectCampaign: 'Select at least one campaign', selectMRB: 'Select an MRB campaign',
+      selectShift: 'Select the shift', selectCampaign: 'Select at least one campaign', selectMRB: 'Select an MRB campaign', selectMrbLocation: 'Select MRB location', selectMrbStation: 'Select MRB station',
       selectDefect: 'Select a defect', errorSave: 'Error saving', errorUpload: 'Error uploading file', errorDelete: 'Error deleting',
       selectCampaignPlaceholder: 'Select MRB Campaign...', selectCampaignStart: 'Select an MRB campaign to start',
       noActiveCampaigns: 'No active campaigns for this part',
@@ -65,7 +65,7 @@ const MRBDefectCapture = () => {
       selectDefectContinue: 'Select a defect to continue',
     },
     es: {
-      selectShift: 'Selecciona el turno', selectCampaign: 'Selecciona al menos una campaña', selectMRB: 'Selecciona una campaña MRB',
+      selectShift: 'Selecciona el turno', selectCampaign: 'Selecciona al menos una campaña', selectMRB: 'Selecciona una campaña MRB', selectMrbLocation: 'Selecciona ubicación MRB', selectMrbStation: 'Selecciona estación MRB',
       selectDefect: 'Selecciona un defecto', errorSave: 'Error guardando', errorUpload: 'Error subiendo archivo', errorDelete: 'Error eliminando',
       selectCampaignPlaceholder: 'Seleccionar Campaña MRB...', selectCampaignStart: 'Selecciona una campaña MRB para comenzar',
       noActiveCampaigns: 'No hay campañas activas para esta parte',
@@ -85,6 +85,24 @@ const MRBDefectCapture = () => {
   const [currentUser, setCurrentUser]         = useState(null);
   const [shifts, setShifts]                   = useState([]);
   const [selectedShift, setSelectedShift]     = useState(null);
+  // Ubicación MRB (seleccionada en modal al entrar)
+  const [mrbLocations, setMrbLocations]       = useState([]);
+  const [selectedMrbLocation, setSelectedMrbLocation] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('mrbSelectedLocation');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
+  // Estaciones MRB (para inspección)
+  const [mrbStations, setMrbStations]         = useState([]);
+  const [selectedMrbStation, setSelectedMrbStation] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('mrbSelectedStation');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [stages, setStages]                   = useState([]);
   const [dispositions, setDispositions]       = useState([]);
   const [severities, setSeverities]           = useState([]);
@@ -222,17 +240,19 @@ const MRBDefectCapture = () => {
     const token = localStorage.getItem('token');
     const h = { Authorization: `Bearer ${token}` };
     try {
-      const [campRes, shiftsRes, stagesRes, dispRes, sevRes, userRes] = await Promise.all([
+      const [campRes, shiftsRes, stagesRes, dispRes, sevRes, userRes, locationsRes, stationsRes] = await Promise.all([
         fetch(`${API_URL}/mrb/active-campaigns`, { headers: h }),
         fetch(`${API_URL}/inspection-catalogs/shifts`, { headers: h }),
         fetch(`${API_URL}/inspection-catalogs/stages`, { headers: h }),
         fetch(`${API_URL}/inspection-catalogs/dispositions`, { headers: h }),
         fetch(`${API_URL}/inspection-catalogs/severities`, { headers: h }),
         fetch(`${API_URL}/auth/me`, { headers: h }),
+        fetch(`${API_URL}/location-codes?type=MRB`, { headers: h }),
+        fetch(`${API_URL}/station-config/stations?type=MRB`, { headers: h }),
       ]);
-      const [campData, shiftsData, stagesData, dispData, sevData, userData] = await Promise.all([
+      const [campData, shiftsData, stagesData, dispData, sevData, userData, locationsData, stationsData] = await Promise.all([
         campRes.json(), shiftsRes.json(), stagesRes.json(),
-        dispRes.json(), sevRes.json(), userRes.ok ? userRes.json() : null
+        dispRes.json(), sevRes.json(), userRes.ok ? userRes.json() : null, locationsRes.json(), stationsRes.json()
       ]);
       const campList = campData.campaigns || [];
       setCampaigns(campList);
@@ -241,6 +261,38 @@ const MRBDefectCapture = () => {
       setDispositions(dispData.items || []);
       setSeverities(sevData.items || []);
       if (userData?.user) setCurrentUser(userData.user);
+
+      // Cargar ubicaciones MRB y restaurar selección de sesión
+      const mrbLocationsList = locationsData.locations || [];
+      setMrbLocations(mrbLocationsList);
+      let hasLocation = false;
+      const savedLocation = sessionStorage.getItem('mrbSelectedLocation');
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          const found = mrbLocationsList.find(l => l.id === parsed.id);
+          if (found) {
+            setSelectedMrbLocation(found);
+            hasLocation = true;
+          }
+        } catch { /* ignore */ }
+      }
+      // Mostrar modal si no hay ubicación seleccionada
+      if (!hasLocation && mrbLocationsList.length > 0) {
+        setShowLocationModal(true);
+      }
+
+      // Cargar estaciones MRB y restaurar selección
+      const mrbStationsList = stationsData.stations || [];
+      setMrbStations(mrbStationsList);
+      const savedStation = sessionStorage.getItem('mrbSelectedStation');
+      if (savedStation) {
+        try {
+          const parsed = JSON.parse(savedStation);
+          const found = mrbStationsList.find(s => s.id === parsed.id);
+          if (found) setSelectedMrbStation(found);
+        } catch { /* ignore */ }
+      }
 
       // MRB: restaurar turno solo si es el mismo día
       const lastShiftId   = localStorage.getItem('mrbLastShiftId');
@@ -691,6 +743,8 @@ const MRBDefectCapture = () => {
   // ── MULTI-CAMPAIGN SUBMIT HANDLER ───────────────────────────────────────────
   // Lógica automática: defectos → NOK a sus campañas, resto → OK automático
   const handleMultiCampaignSubmit = useCallback(async () => {
+    if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
+    if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
     if (selectedCampaigns.length === 0) return showMsg(L.selectCampaign, true);
 
@@ -820,6 +874,8 @@ const MRBDefectCapture = () => {
   // ── INDIVIDUAL MODE HANDLERS ──────────────────────────────────────────────
   const handlePiezaOk = useCallback(async () => {
     if (!selectedCampaign) return showMsg(L.selectMRB, true);
+    if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
+    if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
     // Validaciones de seguridad
     if (serialScrapped) return showMsg('Serial en SCRAP. No se puede registrar como OK.', true);
@@ -849,6 +905,8 @@ const MRBDefectCapture = () => {
 
   const handleSubmitDefect = async () => {
     if (!selectedCampaign) return showMsg(L.selectMRB, true);
+    if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
+    if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
     if (selectedDefects.length === 0) return showMsg(L.selectDefect, true);
     setSubmitting(true);
@@ -924,6 +982,8 @@ const MRBDefectCapture = () => {
   // ── BULK MODE: GUARDAR AVANCE ─────────────────────────────────────────────
   const handleGuardarAvance = async () => {
     if (!selectedCampaign) return showMsg(L.selectMRB, true);
+    if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
+    if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift)    return showMsg(L.selectShift, true);
     if (totalOk === 0 && totalNok === 0) return showMsg('Ingresa al menos una cantidad', true);
 
@@ -1181,6 +1241,8 @@ const MRBDefectCapture = () => {
   // ── IMPORT MASIVO SIMPLIFICADO ──────────────────────────────────────────────
   const handleMassImport = async () => {
     if (!importFile || !selectedCampaign) return showMsg('Selecciona un archivo', true);
+    if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
+    if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift) return showMsg('Selecciona un turno primero', true);
     if (importType === 'DEFECT' && !importDefectId) return showMsg('Selecciona un defecto', true);
 
@@ -1291,6 +1353,40 @@ const MRBDefectCapture = () => {
           {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : '...'}
         </div>
 
+        {/* Indicador Ubicación MRB (click para cambiar) */}
+        <div
+          style={{
+            ...s.badge,
+            backgroundColor: selectedMrbLocation ? t.accent + '20' : '#fee2e2',
+            border: `1px solid ${selectedMrbLocation ? t.accent : '#ef4444'}`,
+            cursor: 'pointer',
+            padding: '6px 12px'
+          }}
+          onClick={() => setShowLocationModal(true)}
+          title="Click para cambiar ubicación MRB"
+        >
+          📍 {selectedMrbLocation ? selectedMrbLocation.code : '⚠ Sin ubicación'}
+        </div>
+
+        {/* Selector Estación MRB (inspección) */}
+        <select
+          style={{ ...s.select, borderColor: selectedMrbStation ? t.accent : '#ef4444', fontWeight: '600', minWidth: '140px' }}
+          value={selectedMrbStation?.id || ''}
+          onChange={e => {
+            const st = mrbStations.find(s => s.id === parseInt(e.target.value)) || null;
+            setSelectedMrbStation(st);
+            if (st) {
+              sessionStorage.setItem('mrbSelectedStation', JSON.stringify(st));
+            } else {
+              sessionStorage.removeItem('mrbSelectedStation');
+            }
+          }}
+        >
+          <option value="">⚠ Estación...</option>
+          {mrbStations.map(st => <option key={st.id} value={st.id}>{st.name}</option>)}
+        </select>
+
+        {/* Selector Turno */}
         <select
           style={{ ...s.select, borderColor: selectedShift ? t.accent : '#ef4444', fontWeight: '600' }}
           value={selectedShift?.id || ''}
@@ -1626,10 +1722,10 @@ const MRBDefectCapture = () => {
               )}
             </div>
             <div style={s.fieldGroup}>
-              <label style={s.label}>Disposición {!selectedDisposition && <span style={{ color: '#f59e0b', fontSize: '10px', fontWeight: '600' }}>→ On Hold por defecto</span>}</label>
+              <label style={s.label}>Disposición {!selectedDisposition && <span style={{ color: '#ef4444', fontSize: '10px', fontWeight: '600' }}>* Requerida</span>}</label>
               <select style={s.fieldSelect} value={selectedDisposition?.id || ''} onChange={e => setSelectedDisposition(dispositions.find(d => d.id === parseInt(e.target.value)) || null)}>
-                <option value="">Sin especificar (On Hold)</option>
-                {dispositions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                <option value="">-- Seleccionar disposición --</option>
+                {dispositions.map(d => <option key={d.id} value={d.id}>{d.code === 'REWORK' ? 'Retrabajo OK' : d.name}</option>)}
               </select>
             </div>
             <div style={s.fieldGroup}>
@@ -2599,6 +2695,75 @@ const MRBDefectCapture = () => {
                 Cancelar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Selección de Ubicación MRB (obligatorio al entrar) */}
+      {showLocationModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard, borderRadius: '16px', padding: '32px',
+            maxWidth: '500px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>📍</div>
+              <h2 style={{ color: t.text, fontSize: '20px', fontWeight: '700', margin: 0 }}>
+                Selecciona Ubicación MRB
+              </h2>
+              <p style={{ color: t.textMuted, fontSize: '14px', marginTop: '8px' }}>
+                ¿En qué ubicación MRB estás trabajando?
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto' }}>
+              {mrbLocations.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: t.textMuted }}>
+                  No hay ubicaciones MRB configuradas.<br/>
+                  <small>Ve a Defect Admin → Ubicaciones para crear una.</small>
+                </div>
+              ) : (
+                mrbLocations.map(loc => (
+                  <button
+                    key={loc.id}
+                    style={{
+                      padding: '16px 20px', borderRadius: '10px', border: `2px solid ${t.border}`,
+                      backgroundColor: t.bgPanel, cursor: 'pointer', textAlign: 'left',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = t.accent; e.currentTarget.style.backgroundColor = t.accent + '10'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.backgroundColor = t.bgPanel; }}
+                    onClick={() => {
+                      setSelectedMrbLocation(loc);
+                      sessionStorage.setItem('mrbSelectedLocation', JSON.stringify(loc));
+                      setShowLocationModal(false);
+                    }}
+                  >
+                    <div style={{ fontWeight: '700', fontSize: '16px', color: t.text }}>{loc.code}</div>
+                    <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>
+                      {loc.description || loc.stationName || 'Sin descripción'}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {selectedMrbLocation && (
+              <button
+                style={{
+                  marginTop: '20px', width: '100%', padding: '12px',
+                  backgroundColor: t.bgPanel, border: `1px solid ${t.border}`,
+                  borderRadius: '8px', cursor: 'pointer', color: t.textMuted, fontSize: '14px'
+                }}
+                onClick={() => setShowLocationModal(false)}
+              >
+                Cancelar
+              </button>
+            )}
           </div>
         </div>
       )}

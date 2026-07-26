@@ -1124,6 +1124,60 @@ const SpecCatalogTab = ({ theme: t }) => {
                 </select>
               </div>
 
+              {/* Estaciones donde aplica esta spec */}
+              <div style={styles.formGroupFull}>
+                <label style={styles.label}>Estaciones de Inspección</label>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                  gap: '8px',
+                  padding: '12px',
+                  backgroundColor: t.bgPanel,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`,
+                  maxHeight: '150px',
+                  overflowY: 'auto'
+                }}>
+                  {allStations.length === 0 ? (
+                    <span style={{ color: t.textMuted, fontSize: '13px' }}>No hay estaciones configuradas</span>
+                  ) : (
+                    allStations.map(station => (
+                      <label
+                        key={station.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          padding: '6px 10px',
+                          borderRadius: '4px',
+                          backgroundColor: selectedStationIds.includes(station.id) ? t.accent + '20' : 'transparent',
+                          border: `1px solid ${selectedStationIds.includes(station.id) ? t.accent : 'transparent'}`,
+                          fontSize: '13px'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStationIds.includes(station.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStationIds([...selectedStationIds, station.id]);
+                            } else {
+                              setSelectedStationIds(selectedStationIds.filter(id => id !== station.id));
+                            }
+                          }}
+                          style={{ accentColor: t.accent }}
+                        />
+                        {station.name}
+                      </label>
+                    ))
+                  )}
+                </div>
+                <small style={{ color: t.textMuted, fontSize: '12px', marginTop: '6px', display: 'block' }}>
+                  El checklist solo mostrará esta spec en las estaciones seleccionadas
+                </small>
+              </div>
+
               {/* Notes */}
               <div style={styles.formGroupFull}>
                 <label style={styles.label}>Notas</label>

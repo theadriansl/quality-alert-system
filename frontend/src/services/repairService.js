@@ -519,6 +519,180 @@ export const getLocationCodes = async (type = null) => {
 };
 
 // ============================================================================
+// TRANSFER PACKAGES (Hospital <-> MRB)
+// ============================================================================
+
+/**
+ * Get pending transfer packages for a destination
+ */
+export const getPendingTransferPackages = async (destination) => {
+  const res = await fetch(`${API_URL}/transfer-packages/pending/${destination}`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Get serials already in pending packages (for validation)
+ */
+export const getPendingSerials = async () => {
+  const res = await fetch(`${API_URL}/transfer-packages/pending-serials`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Get transfer package details
+ */
+export const getTransferPackageDetails = async (packageId) => {
+  const res = await fetch(`${API_URL}/transfer-packages/${packageId}`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Create a transfer package
+ * @param {string} originType - 'HOSPITAL' or 'MRB'
+ * @param {string} destinationType - 'HOSPITAL' or 'MRB'
+ * @param {number[]} defectIds - Array of defect IDs
+ * @param {object} options - Optional parameters
+ * @param {number} options.mrbCampaignId - MRB Campaign ID
+ * @param {number} options.qarId - QAR ID
+ * @param {number} options.source8dId - 8D Report ID
+ * @param {number} options.alertUserId - User ID to notify on alert
+ * @param {string} options.notes - Notes
+ * @param {number} options.alertHours - Hours before alert (default 24)
+ */
+export const createTransferPackage = async (originType, destinationType, defectIds, options = {}) => {
+  const {
+    mrbCampaignId = null,
+    qarId = null,
+    source8dId = null,
+    alertUserId = null,
+    destinationLocationId = null,
+    notes = '',
+    alertHours = 24
+  } = options;
+
+  const res = await fetch(`${API_URL}/transfer-packages`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      originType,
+      destinationType,
+      defectIds,
+      mrbCampaignId,
+      qarId,
+      source8dId,
+      alertUserId,
+      destinationLocationId,
+      notes,
+      alertHours
+    })
+  });
+  return res.json();
+};
+
+/**
+ * Receive a transfer package
+ */
+export const receiveTransferPackage = async (packageId, notes = '', mrbCampaignId = null, locationId = null) => {
+  const res = await fetch(`${API_URL}/transfer-packages/${packageId}/receive`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ notes, mrbCampaignId, locationId })
+  });
+  return res.json();
+};
+
+/**
+ * Cancel a transfer package
+ */
+export const cancelTransferPackage = async (packageId, reason = '') => {
+  const res = await fetch(`${API_URL}/transfer-packages/${packageId}/cancel`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ reason })
+  });
+  return res.json();
+};
+
+/**
+ * Get transfer package alerts (exceeded time)
+ */
+export const getTransferPackageAlerts = async () => {
+  const res = await fetch(`${API_URL}/transfer-packages/status/alerts`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Get transfer package stats
+ */
+export const getTransferPackageStats = async () => {
+  const res = await fetch(`${API_URL}/transfer-packages/status/stats`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Get summary of material without campaign
+ */
+export const getNoCampaignSummary = async () => {
+  const res = await fetch(`${API_URL}/transfer-packages/summary/no-campaign`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Get REWORK defects pending transfer to Hospital
+ */
+export const getReworkPendingTransfer = async () => {
+  const res = await fetch(`${API_URL}/transfer-packages/rework/pending`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Get pending packages summary for Hospital (from MRB)
+ */
+export const getHospitalPendingSummary = async () => {
+  const res = await fetch(`${API_URL}/transfer-packages/hospital/pending-summary`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Get campaign assignment matrix for pending packages
+ */
+export const getCampaignAssignmentMatrix = async () => {
+  const res = await fetch(`${API_URL}/transfer-packages/campaign-assignment-matrix`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
+ * Bulk assign campaigns to serials
+ * @param {Array} assignments - Array of {serialNumber, campaignId, defectId, partId}
+ */
+export const assignCampaignsBulk = async (assignments) => {
+  const res = await fetch(`${API_URL}/transfer-packages/assign-campaigns-bulk`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ assignments })
+  });
+  return res.json();
+};
+
+// ============================================================================
 // UTILITY
 // ============================================================================
 
@@ -595,5 +769,19 @@ export default {
   quarantineToScrap,
   releaseWithDeviation,
   confirmScrap,
-  scrapToQuarantine
+  scrapToQuarantine,
+  // Transfer Packages
+  getPendingTransferPackages,
+  getPendingSerials,
+  getTransferPackageDetails,
+  createTransferPackage,
+  receiveTransferPackage,
+  cancelTransferPackage,
+  getTransferPackageAlerts,
+  getTransferPackageStats,
+  getNoCampaignSummary,
+  getReworkPendingTransfer,
+  getHospitalPendingSummary,
+  getCampaignAssignmentMatrix,
+  assignCampaignsBulk
 };

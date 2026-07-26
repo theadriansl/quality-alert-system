@@ -59,7 +59,7 @@ const LocationCodesTab = ({ theme: t }) => {
       });
       const data = await response.json();
       if (data.success) {
-        // Filter to only REPAIR and RELEASE type stations
+        // Cargar todas las estaciones (REPAIR, RELEASE, MRB)
         const filtered = (data.stations || []).filter(s =>
           ['REPAIR', 'RELEASE', 'MRB'].includes(s.stationType)
         );
@@ -68,6 +68,16 @@ const LocationCodesTab = ({ theme: t }) => {
     } catch (err) {
       console.error('Error loading stations:', err);
     }
+  };
+
+  // Filtrar estaciones según tipo de ubicación seleccionado
+  const getFilteredStations = () => {
+    if (formData.locationType === 'MRB') {
+      return stations.filter(s => s.stationType === 'MRB');
+    } else if (['REPAIR', 'RELEASE'].includes(formData.locationType)) {
+      return stations.filter(s => ['REPAIR', 'RELEASE'].includes(s.stationType));
+    }
+    return [];
   };
 
   useEffect(() => {
@@ -338,38 +348,66 @@ const LocationCodesTab = ({ theme: t }) => {
 
               <div style={styles.formGroup}>
                 <label style={styles.label}>Tipo de Ubicacion *</label>
-                <div style={styles.radioGroup}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {locationTypes.map(type => (
-                    <div
+                    <label
                       key={type.value}
                       style={{
-                        ...styles.radioOption,
-                        ...(formData.locationType === type.value ? styles.radioSelected : {})
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: formData.locationType === type.value ? t.accent + '15' : 'transparent',
+                        border: `1px solid ${formData.locationType === type.value ? t.accent : t.borderColor}`,
+                        transition: 'all 0.2s'
                       }}
-                      onClick={() => setFormData({ ...formData, locationType: type.value })}
                     >
-                      <span style={{ marginRight: '6px' }}>{type.icon}</span>
-                      {type.label}
-                    </div>
+                      <input
+                        type="radio"
+                        name="locationType"
+                        value={type.value}
+                        checked={formData.locationType === type.value}
+                        onChange={(e) => setFormData({ ...formData, locationType: e.target.value, stationId: '' })}
+                        style={{ accentColor: t.accent }}
+                      />
+                      <span style={{ fontWeight: formData.locationType === type.value ? '600' : '400' }}>
+                        {type.label}
+                      </span>
+                    </label>
                   ))}
                 </div>
+                <small style={{ color: t.textMuted, fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                  Reparación/Liberación: Requieren estación de Hospital asociada
+                </small>
               </div>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Estacion Asociada</label>
-                <select
-                  style={styles.input}
-                  value={formData.stationId}
-                  onChange={(e) => setFormData({ ...formData, stationId: e.target.value })}
-                >
-                  <option value="">Sin estacion</option>
-                  {stations.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.stationType})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Estación Asociada - Solo para REPAIR, RELEASE y MRB */}
+              {['REPAIR', 'RELEASE', 'MRB'].includes(formData.locationType) && (
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Estacion Asociada *</label>
+                  <select
+                    style={styles.input}
+                    value={formData.stationId}
+                    onChange={(e) => setFormData({ ...formData, stationId: e.target.value })}
+                    required
+                  >
+                    <option value="">Seleccionar estacion...</option>
+                    {getFilteredStations().map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{ color: t.textMuted, fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                    {formData.locationType === 'MRB'
+                      ? 'Estación MRB donde se realizará la inspección'
+                      : `Estación de Hospital donde se realizará la ${formData.locationType === 'REPAIR' ? 'reparación' : 'liberación'}`
+                    }
+                  </small>
+                </div>
+              )}
 
               <div style={styles.formGroup}>
                 <label style={styles.label}>Descripcion</label>
