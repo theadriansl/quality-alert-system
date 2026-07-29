@@ -57,6 +57,8 @@ const deviationEndpoints = require('./endpoints/deviationEndpoints');
 const skillsEndpoints = require('./endpoints/skillsEndpoints');
 const productionEndpoints = require('./endpoints/productionEndpoints');
 const webhookEndpoints = require('./endpoints/webhookEndpoints');
+const transferPackageEndpoints = require('./endpoints/transferPackageEndpoints');
+const { setupReleaseOkEndpoints } = require('./endpoints/releaseOkEndpoints');
 const { auditEightDChanges } = require('./middleware/auditMiddleware');
 const authenticateToken = require('./middleware/auth');
 const { checkWritePermission, attachUserPermissions } = require('./middleware/permissionMiddleware');
@@ -270,6 +272,7 @@ projectsEndpoints(app);
 // 8D REPORTS ENDPOINTS
 // ============================================================================
 app.post('/8d/reports', authEndpoints.verifyToken, eightDEndpoints.createEightDReport);
+app.get('/8d/reports', authEndpoints.verifyToken, eightDEndpoints.getAllEightDReports); // List all 8D reports
 app.get('/8d/reports/my-assigned', authEndpoints.verifyToken, eightDEndpoints.getMyAssignedReports);
 app.get('/8d/reports/:reportId', authEndpoints.verifyToken, eightDEndpoints.getEightDReportById);
 app.put('/8d/reports/:reportId', authEndpoints.verifyToken, auditEightDChanges, eightDEndpoints.updateEightDReport);
@@ -841,6 +844,8 @@ app.use('/deviations', deviationEndpoints);
 console.log('✅ Deviations endpoints registered');
 app.use('/qar', qarEndpoints);
 app.use('/mrb', mrbEndpoints);
+app.use('/transfer-packages', transferPackageEndpoints);
+console.log('✅ Transfer Packages endpoints registered');
 
 // ============================================================================
 // AUDIT ISO MODULE ROUTES
@@ -887,6 +892,11 @@ console.log('✅ Webhook endpoints registered');
 // ============================================================================
 app.use('/spec-inspection', specInspectionEndpoints);
 console.log('✅ Spec Inspection endpoints registered');
+
+// ============================================================================
+// RELEASE OK ENDPOINTS (Estación final de liberación)
+// ============================================================================
+setupReleaseOkEndpoints(app);
 
 // ============================================================================
 // TEAM TEMPLATES ROUTES

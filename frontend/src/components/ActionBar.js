@@ -16,6 +16,7 @@ import { useLanguage } from '../context/LanguageContext';
 // CONFIGURACIÓN DE ACCIONES
 // ============================================================================
 
+// Acciones de flujo de trabajo (workflow)
 const WORKFLOW_ACTIONS = {
   START_REPAIR: {
     id: 'START_REPAIR',
@@ -41,22 +42,6 @@ const WORKFLOW_ACTIONS = {
     validStatuses: ['REPAIRED'],
     requiresModal: true
   },
-  SEND_TO_MRB: {
-    id: 'SEND_TO_MRB',
-    labelEs: 'Enviar a MRB',
-    labelEn: 'Send to MRB',
-    icon: '⚠️',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED'],
-    requiresModal: true
-  },
-  SEND_TO_SCRAP: {
-    id: 'SEND_TO_SCRAP',
-    labelEs: 'Enviar a Scrap',
-    labelEn: 'Send to Scrap',
-    icon: '🗑️',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE'],
-    requiresModal: true
-  },
   RELEASE: {
     id: 'RELEASE',
     labelEs: 'Liberar',
@@ -64,14 +49,6 @@ const WORKFLOW_ACTIONS = {
     icon: '✅',
     validStatuses: ['IN_VALIDATION'],
     permissionRequired: 'release'
-  },
-  RELEASE_WITH_DEVIATION: {
-    id: 'RELEASE_WITH_DEVIATION',
-    labelEs: 'Liberar con Desviación',
-    labelEn: 'Release with Deviation',
-    icon: '📝',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE', 'IN_VALIDATION'],
-    requiresModal: true
   },
   REJECT: {
     id: 'REJECT',
@@ -94,7 +71,8 @@ const WORKFLOW_ACTIONS = {
     labelEs: 'Confirmar Scrap',
     labelEn: 'Confirm Scrap',
     icon: '☑️',
-    validStatuses: ['SCRAPPED']
+    validStatuses: ['SCRAPPED'],
+    permissionRequired: 'scrap'
   },
   RETURN_TO_QUARANTINE: {
     id: 'RETURN_TO_QUARANTINE',
@@ -102,6 +80,43 @@ const WORKFLOW_ACTIONS = {
     labelEn: 'Return to Quarantine',
     icon: '↩️',
     validStatuses: ['SCRAPPED']
+  },
+  CREATE_MRB_PACKAGE: {
+    id: 'CREATE_MRB_PACKAGE',
+    labelEs: 'Crear Paquete MRB',
+    labelEn: 'Create MRB Package',
+    icon: '📦',
+    validStatuses: ['QUARANTINE', 'SCRAPPED'],
+    requiresModal: true
+  }
+};
+
+// Acciones de cambio de status (disposición)
+const STATUS_ACTIONS = {
+  SEND_TO_MRB: {
+    id: 'SEND_TO_MRB',
+    labelEs: 'Enviar a Cuarentena (MRB)',
+    labelEn: 'Send to Quarantine (MRB)',
+    icon: '⚠️',
+    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED'],
+    requiresModal: true
+  },
+  SEND_TO_SCRAP: {
+    id: 'SEND_TO_SCRAP',
+    labelEs: 'Enviar a Scrap',
+    labelEn: 'Send to Scrap',
+    icon: '🗑️',
+    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE'],
+    requiresModal: true,
+    permissionRequired: 'scrap'
+  },
+  RELEASE_WITH_DEVIATION: {
+    id: 'RELEASE_WITH_DEVIATION',
+    labelEs: 'Liberar con Desviación',
+    labelEn: 'Release with Deviation',
+    icon: '📝',
+    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE', 'IN_VALIDATION'],
+    requiresModal: true
   }
 };
 
@@ -313,6 +328,7 @@ const ActionBar = ({
   };
 
   const workflowActions = useMemo(() => getAvailableActions(WORKFLOW_ACTIONS), [selectedStatuses, userPermissions, selectedDefects.length]);
+  const statusActions = useMemo(() => getAvailableActions(STATUS_ACTIONS), [selectedStatuses, userPermissions, selectedDefects.length]);
   const managementActions = useMemo(() => getAvailableActions(MANAGEMENT_ACTIONS), [selectedStatuses, userPermissions, selectedDefects.length]);
   const toolsActions = useMemo(() => getAvailableActions(TOOLS_ACTIONS), [selectedStatuses, userPermissions, selectedDefects.length]);
 
@@ -387,6 +403,16 @@ const ActionBar = ({
         label={language === 'es' ? 'Workflow' : 'Workflow'}
         icon="⚡"
         actions={workflowActions}
+        onAction={handleAction}
+        disabled={loading}
+        theme={t}
+        language={language}
+      />
+
+      <ActionDropdown
+        label={language === 'es' ? 'Disposición' : 'Disposition'}
+        icon="🔀"
+        actions={statusActions}
         onAction={handleAction}
         disabled={loading}
         theme={t}

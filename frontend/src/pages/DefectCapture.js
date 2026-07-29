@@ -143,7 +143,14 @@ const DefectCapture = () => {
   const [defectCounts, setDefectCounts] = useState({ open: 0, repaired: 0, released: 0, total: 0 });
   const [selectedDefectForDetail, setSelectedDefectForDetail] = useState(null);
   const [defectDetailModalOpen, setDefectDetailModalOpen] = useState(false);
-  const [hospitalPermissions, setHospitalPermissions] = useState({ canRepair: false, canRelease: false });
+  const [hospitalPermissions, setHospitalPermissions] = useState({
+    canRepair: false,
+    canRelease: false,
+    canScrap: false,
+    isHospitalAdmin: false,
+    canManageDeviations: false,
+    hospitalRoles: []
+  });
 
   // ============================================================================
   // STATE - Selected Category (with localStorage persistence)
@@ -403,21 +410,35 @@ const DefectCapture = () => {
     return shiftList[0] || null;
   };
 
-  // Load hospital permissions when client changes
+  // Load hospital permissions from hospital roles service
   useEffect(() => {
     const loadHospitalPermissions = async () => {
-      if (selectedClient?.id) {
-        try {
-          const res = await repairService.checkPermissions(selectedClient.id);
-          setHospitalPermissions(res.permissions || { canRepair: false, canRelease: false });
-        } catch (err) {
-          console.error('Error loading hospital permissions:', err);
-          setHospitalPermissions({ canRepair: false, canRelease: false });
+      try {
+        const result = await checkMyHospitalPermissions();
+        if (result.success && result.data) {
+          setHospitalPermissions({
+            canRepair: result.data.canRepair || false,
+            canRelease: result.data.canRelease || false,
+            canScrap: result.data.canScrap || false,
+            isHospitalAdmin: result.data.isHospitalAdmin || false,
+            canManageDeviations: result.data.canManageDeviations || false,
+            hospitalRoles: result.data.hospitalRoles || []
+          });
         }
+      } catch (err) {
+        console.error('Error loading hospital permissions:', err);
+        setHospitalPermissions({
+          canRepair: false,
+          canRelease: false,
+          canScrap: false,
+          isHospitalAdmin: false,
+          canManageDeviations: false,
+          hospitalRoles: []
+        });
       }
     };
     loadHospitalPermissions();
-  }, [selectedClient]);
+  }, []);
 
   // Load projects when client changes
   useEffect(() => {

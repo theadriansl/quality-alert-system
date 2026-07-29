@@ -83,6 +83,8 @@ async function checkUserHospitalPermissions(req, res) {
           isSystemAdmin: true,
           canRepair: true,
           canRelease: true,
+          canScrap: true,
+          canUploadProduction: true,
           isHospitalAdmin: true,
           canManageRoles: true,
           canManageDeviations: true,
@@ -93,7 +95,7 @@ async function checkUserHospitalPermissions(req, res) {
 
     // Obtener roles de hospital
     const rolesResult = await query(`
-      SELECT hospital_role, assigned_stations, can_manage_roles, can_manage_deviations
+      SELECT hospital_role, assigned_stations, can_manage_roles, can_manage_deviations, can_scrap, can_upload_production
       FROM hospital_user_roles
       WHERE user_id = $1 AND is_active = true
     `, [userId]);
@@ -106,6 +108,8 @@ async function checkUserHospitalPermissions(req, res) {
     const isHospitalAdmin = hospitalRoles.includes('admin');
     const canManageRoles = roles.some(r => r.can_manage_roles) || isHospitalAdmin;
     const canManageDeviations = roles.some(r => r.can_manage_deviations) || isHospitalAdmin;
+    const canScrap = roles.some(r => r.can_scrap) || isHospitalAdmin;
+    const canUploadProduction = roles.some(r => r.can_upload_production) || isHospitalAdmin;
 
     res.json({
       success: true,
@@ -114,6 +118,8 @@ async function checkUserHospitalPermissions(req, res) {
         isSystemAdmin: false,
         canRepair,
         canRelease,
+        canScrap,
+        canUploadProduction,
         isHospitalAdmin,
         canManageRoles,
         canManageDeviations,
@@ -141,7 +147,7 @@ async function checkUserHospitalPermissions(req, res) {
 // ============================================================================
 async function assignHospitalRole(req, res) {
   try {
-    const { userId, hospitalRole, assignedStations = null, canManageRoles = false, canManageDeviations = false, notes = null } = req.body;
+    const { userId, hospitalRole, assignedStations = null, canManageRoles = false, canManageDeviations = false, canScrap = false, canUploadProduction = false, notes = null } = req.body;
     const createdBy = req.user?.id;
 
     // Validar rol
@@ -166,11 +172,13 @@ async function assignHospitalRole(req, res) {
             assigned_stations = $1,
             can_manage_roles = $2,
             can_manage_deviations = $3,
-            notes = $4,
+            can_scrap = $4,
+            can_upload_production = $5,
+            notes = $6,
             updated_at = NOW()
-        WHERE user_id = $5 AND hospital_role = $6
+        WHERE user_id = $7 AND hospital_role = $8
         RETURNING *
-      `, [assignedStations, canManageRoles, canManageDeviations, notes, userId, hospitalRole]);
+      `, [assignedStations, canManageRoles, canManageDeviations, canScrap, canUploadProduction, notes, userId, hospitalRole]);
 
       return res.json({
         success: true,
@@ -181,10 +189,10 @@ async function assignHospitalRole(req, res) {
 
     // Crear nuevo
     const result = await query(`
-      INSERT INTO hospital_user_roles (user_id, hospital_role, assigned_stations, can_manage_roles, can_manage_deviations, notes, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO hospital_user_roles (user_id, hospital_role, assigned_stations, can_manage_roles, can_manage_deviations, can_scrap, can_upload_production, notes, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
-    `, [userId, hospitalRole, assignedStations, canManageRoles, canManageDeviations, notes, createdBy]);
+    `, [userId, hospitalRole, assignedStations, canManageRoles, canManageDeviations, canScrap, canUploadProduction, notes, createdBy]);
 
     res.status(201).json({
       success: true,

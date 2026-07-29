@@ -28,6 +28,7 @@ import DefectCapture from './pages/DefectCapture';
 import DefectConfig from './pages/DefectConfig';
 import DefectQuery from './pages/DefectQuery';
 import DefectHospital from './pages/DefectHospital';
+import ReleaseOK from './pages/ReleaseOK';
 import HospitalDashboard from './pages/HospitalDashboard';
 import QARCreate from './pages/QARCreate';
 import QARList from './pages/QARList';
@@ -41,6 +42,8 @@ import MRBDashboard from './pages/MRBDashboard';
 import MRBDefectCapture from './pages/MRBDefectCapture';
 import MRBConfig from './pages/MRBConfig';
 import MRBBuffer from './pages/MRBBuffer';
+import MRBTransferPackages from './pages/MRBTransferPackages';
+import MRBInventory from './pages/MRBInventory';
 // Audit Module
 import AuditDashboard from './pages/AuditDashboard';
 import AuditPrograms from './pages/AuditPrograms';
@@ -380,6 +383,13 @@ function App() {
                 </ProtectedRoute>
               } />
 
+              {/* Release OK - Final Release Station */}
+              <Route path="/release-ok" element={
+                <ProtectedRoute>
+                  <ReleaseOK />
+                </ProtectedRoute>
+              } />
+
               {/* Unit Traceability - Serial/Lot History */}
               <Route path="/unit-traceability" element={
                 <ProtectedRoute>
@@ -446,6 +456,18 @@ function App() {
               <Route path="/mrb-buffer" element={
                 <ProtectedRoute>
                   <MRBBuffer />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/mrb-packages" element={
+                <ProtectedRoute>
+                  <MRBTransferPackages />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/mrb-inventory" element={
+                <ProtectedRoute>
+                  <MRBInventory />
                 </ProtectedRoute>
               } />
 

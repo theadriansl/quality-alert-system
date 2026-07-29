@@ -73,13 +73,15 @@ export const checkUserHospitalPermissions = async (userId) => {
  * @param {number[]} assignedStations - IDs de estaciones (opcional)
  * @param {boolean} canManageRoles - Si puede gestionar roles de otros usuarios
  * @param {boolean} canManageDeviations - Si puede gestionar desviaciones
+ * @param {boolean} canScrap - Si puede marcar partes como SCRAP
+ * @param {boolean} canUploadProduction - Si puede subir datos de producción
  * @param {string} notes - Notas (opcional)
  */
-export const assignHospitalRole = async (userId, hospitalRole, assignedStations = null, canManageRoles = false, canManageDeviations = false, notes = null) => {
+export const assignHospitalRole = async (userId, hospitalRole, assignedStations = null, canManageRoles = false, canManageDeviations = false, canScrap = false, canUploadProduction = false, notes = null) => {
   const res = await fetch(`${API_URL}/hospital-roles`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ userId, hospitalRole, assignedStations, canManageRoles, canManageDeviations, notes })
+    body: JSON.stringify({ userId, hospitalRole, assignedStations, canManageRoles, canManageDeviations, canScrap, canUploadProduction, notes })
   });
   return res.json();
 };

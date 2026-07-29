@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WebhookKeysManager from './WebhookKeysManager';
+import { checkMyHospitalPermissions } from '../services/hospitalRolesService';
 
 const API_URL = 'http://localhost:5000';
 
 const ProductionTab = ({ theme: t }) => {
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
+
+  // Permisos
+  const [canUpload, setCanUpload] = useState(false);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
   // Data
   const [entries, setEntries] = useState([]);
@@ -56,6 +61,24 @@ const ProductionTab = ({ theme: t }) => {
     preview: null
   });
   const [dragOver, setDragOver] = useState(false);
+
+  // Check permissions on mount
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        const result = await checkMyHospitalPermissions();
+        if (result.success && result.data) {
+          setCanUpload(result.data.canUploadProduction || result.data.isSystemAdmin || result.data.isHospitalAdmin);
+        }
+      } catch (err) {
+        console.error('Error checking production permissions:', err);
+        setCanUpload(false);
+      } finally {
+        setPermissionsLoaded(true);
+      }
+    };
+    checkPermissions();
+  }, []);
 
   // Fetch parts on mount
   useEffect(() => {
@@ -190,6 +213,10 @@ const ProductionTab = ({ theme: t }) => {
 
   // Paso 1: Preview del CSV (detecta duplicados)
   const handleCSVUpload = async (e) => {
+    if (!canUpload) {
+      setError('No tienes permiso para subir datos de producción');
+      return;
+    }
     const file = e.target.files[0];
     if (!file) return;
 
@@ -257,6 +284,10 @@ const ProductionTab = ({ theme: t }) => {
 
   // Paso 2: Confirmar importación
   const handleConfirmImport = async () => {
+    if (!canUpload) {
+      setError('No tienes permiso para subir datos de producción');
+      return;
+    }
     if (!previewModal.file) return;
 
     setImporting(true);
@@ -608,10 +639,16 @@ const ProductionTab = ({ theme: t }) => {
             Lista
           </button>
           <button
-            style={{ ...styles.tab, ...(activeView === 'import' ? styles.tabActive : {}) }}
-            onClick={() => setActiveView('import')}
+            style={{
+              ...styles.tab,
+              ...(activeView === 'import' ? styles.tabActive : {}),
+              ...(canUpload ? {} : { opacity: 0.5, cursor: 'not-allowed' })
+            }}
+            onClick={() => canUpload && setActiveView('import')}
+            disabled={!canUpload}
+            title={!canUpload ? 'No tienes permiso para subir datos de producción' : ''}
           >
-            Importar
+            Importar {!canUpload && '🔒'}
           </button>
           <button
             style={{ ...styles.tab, ...(activeView === 'unmatched' ? styles.tabActive : {}) }}

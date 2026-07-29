@@ -29,6 +29,8 @@ const HospitalRolesManager = () => {
     hospitalRole: 'repairer',
     canManageRoles: false,
     canManageDeviations: false,
+    canScrap: false,
+    canUploadProduction: false,
     notes: ''
   });
 
@@ -89,6 +91,8 @@ const HospitalRolesManager = () => {
       hospitalRole: 'repairer',
       canManageRoles: false,
       canManageDeviations: false,
+      canScrap: false,
+      canUploadProduction: false,
       notes: ''
     });
     setShowModal(true);
@@ -106,6 +110,8 @@ const HospitalRolesManager = () => {
         null, // assignedStations
         roleForm.canManageRoles,
         roleForm.canManageDeviations,
+        roleForm.canScrap,
+        roleForm.canUploadProduction,
         roleForm.notes
       );
 
@@ -530,6 +536,12 @@ const HospitalRolesManager = () => {
                     {user.canManageDeviations && (
                       <span style={{ ...styles.badge, ...styles.badgeDeviation }}>Desviaciones</span>
                     )}
+                    {user.canScrap && (
+                      <span style={{ ...styles.badge, backgroundColor: '#ef444420', color: '#ef4444', border: '1px solid #ef4444' }}>SCRAP</span>
+                    )}
+                    {user.canUploadProduction && (
+                      <span style={{ ...styles.badge, backgroundColor: '#8b5cf620', color: '#8b5cf6', border: '1px solid #8b5cf6' }}>Producción</span>
+                    )}
                   </div>
                 </td>
                 <td style={styles.td}>
@@ -586,6 +598,28 @@ const HospitalRolesManager = () => {
                   onChange={(e) => setRoleForm({ ...roleForm, canManageDeviations: e.target.checked })}
                 />
                 Puede gestionar desviaciones (SAE, Waivers)
+              </label>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  checked={roleForm.canScrap}
+                  onChange={(e) => setRoleForm({ ...roleForm, canScrap: e.target.checked })}
+                />
+                Puede marcar partes como SCRAP
+              </label>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  checked={roleForm.canUploadProduction}
+                  onChange={(e) => setRoleForm({ ...roleForm, canUploadProduction: e.target.checked })}
+                />
+                Puede subir datos de producción
               </label>
             </div>
 

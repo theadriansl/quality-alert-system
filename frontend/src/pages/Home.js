@@ -127,6 +127,14 @@ const Home = () => {
       code: 'HOS'
     },
     {
+      id: 'release_ok',
+      moduleId: 'quality_alert',
+      name: 'Release OK',
+      description: 'Estación final de liberación - Cierre de ciclo de calidad',
+      path: '/release-ok',
+      code: 'REL'
+    },
+    {
       id: 'management_review',
       moduleId: 'management_review',
       name: 'Management Review',

@@ -202,7 +202,7 @@ const DefectHospital = () => {
   const [hospitalPermissions, setHospitalPermissions] = useState(() => {
     // Intentar cargar desde cache primero
     const cached = getCachedHospitalPermissions();
-    return cached || { canRepair: false, canRelease: false, isHospitalAdmin: false, canManageDeviations: false, hospitalRoles: [] };
+    return cached || { canRepair: false, canRelease: false, canScrap: false, isHospitalAdmin: false, canManageDeviations: false, hospitalRoles: [] };
   });
 
   // Cargar permisos de Hospital desde backend
@@ -226,6 +226,7 @@ const DefectHospital = () => {
   // Permisos efectivos: vienen del backend (que ya verifica si es admin del sistema)
   const canDoRepairActions = hospitalPermissions.canRepair;
   const canDoReleaseActions = hospitalPermissions.canRelease;
+  const canDoScrapActions = hospitalPermissions.canScrap;
   const canAccessAdmin = hospitalPermissions.isHospitalAdmin;
   const canManageDeviations = hospitalPermissions.canManageDeviations;
 
@@ -1846,8 +1847,8 @@ const DefectHospital = () => {
   // Scrap - descartar pieza
   const handleScrap = async (defect) => {
     // Validación de permisos
-    if (!canDoRepairActions) {
-      setError(language === 'es' ? 'No tienes permisos para acciones de reparación' : 'You do not have repair permissions');
+    if (!canDoScrapActions) {
+      setError(language === 'es' ? 'No tienes permisos para enviar a SCRAP' : 'You do not have SCRAP permissions');
       return;
     }
     const confirmed = window.confirm('¿Confirmas enviar a SCRAP? Esta acción no se puede deshacer.');
@@ -2607,6 +2608,10 @@ const DefectHospital = () => {
         break;
 
       case 'SEND_TO_SCRAP':
+        if (!canDoScrapActions) {
+          setError(language === 'es' ? 'No tienes permisos para enviar a SCRAP' : 'You do not have SCRAP permissions');
+          return;
+        }
         setHandoffDestination('SCRAP');
         setHandoffNotes('');
         setSelectedMrbLocation(null);
@@ -2647,6 +2652,10 @@ const DefectHospital = () => {
         break;
 
       case 'CONFIRM_SCRAP':
+        if (!canDoScrapActions) {
+          setError(language === 'es' ? 'No tienes permisos para confirmar SCRAP' : 'You do not have SCRAP permissions');
+          return;
+        }
         setMrbAction('confirmScrap');
         setMrbNotes('');
         setSelectedForMrb(new Set(defectIds));
@@ -2772,7 +2781,8 @@ const DefectHospital = () => {
   const actionBarPermissions = useMemo(() => ({
     repair: hospitalPermissions.canRepair,
     release: hospitalPermissions.canRelease,
-    admin: hospitalPermissions.isHospitalAdmin
+    admin: hospitalPermissions.isHospitalAdmin,
+    scrap: hospitalPermissions.canScrap
   }), [hospitalPermissions]);
 
   // Grupos de partes para modal de crear paquete MRB (memoizado para evitar lag)
@@ -5241,6 +5251,8 @@ const DefectHospital = () => {
                   <button
                     type="button"
                     onClick={() => { setRejectDestination('SCRAP'); setRejectSelectedStation(null); }}
+                    disabled={!canDoScrapActions}
+                    title={!canDoScrapActions ? (language === 'es' ? 'No tienes permiso de SCRAP' : 'You do not have SCRAP permission') : ''}
                     style={{
                       flex: 1,
                       padding: '10px',
@@ -5248,9 +5260,10 @@ const DefectHospital = () => {
                       border: rejectDestination === 'SCRAP' ? `2px solid ${t.danger}` : `1px solid ${t.border}`,
                       backgroundColor: rejectDestination === 'SCRAP' ? (t.danger + '20') : t.bgPanel,
                       color: rejectDestination === 'SCRAP' ? t.danger : t.text,
-                      cursor: 'pointer',
+                      cursor: canDoScrapActions ? 'pointer' : 'not-allowed',
                       fontWeight: rejectDestination === 'SCRAP' ? '600' : '400',
-                      fontSize: '13px'
+                      fontSize: '13px',
+                      opacity: canDoScrapActions ? 1 : 0.5
                     }}
                   >
                     🗑️ Scrap
@@ -10119,6 +10132,10 @@ const DefectHospital = () => {
               <button
                 onClick={async () => {
                   // Validaciones
+                  if ((mrbAction === 'toScrap' || mrbAction === 'confirmScrap') && !canDoScrapActions) {
+                    setError(language === 'es' ? 'No tienes permisos para enviar a SCRAP' : 'You do not have SCRAP permissions');
+                    return;
+                  }
                   if (mrbAction === 'releaseWithDeviation' && !mrbDeviationId) {
                     setError(language === 'es' ? 'Selecciona una desviación' : 'Select a deviation');
                     return;
