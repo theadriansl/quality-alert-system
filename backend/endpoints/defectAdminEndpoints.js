@@ -8,6 +8,55 @@ const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
 
 // ============================================================================
+// HELPER: Obtener defectos de un serial con info de estaciones
+// ============================================================================
+async function getSerialDefectsWithStations(serial) {
+  try {
+    const defectsResult = await query(`
+      SELECT de.id, de.repair_status, de.created_at,
+             de.repaired_at, de.released_at,
+             d.code as defect_code, d.description as defect_name,
+             s_cap.name as capture_station_name,
+             s_rep.name as repair_station_name,
+             s_rel.name as release_station_name,
+             CONCAT(u_cap.first_name, ' ', u_cap.last_name) as captured_by_name,
+             CONCAT(u_rep.first_name, ' ', u_rep.last_name) as repaired_by_name,
+             CONCAT(u_rel.first_name, ' ', u_rel.last_name) as released_by_name
+      FROM defect_entries_v2 de
+      LEFT JOIN defects d ON de.defect_id = d.id
+      LEFT JOIN stations s_cap ON de.station_id = s_cap.id
+      LEFT JOIN stations s_rep ON de.repair_station_id = s_rep.id
+      LEFT JOIN stations s_rel ON de.release_station_id = s_rel.id
+      LEFT JOIN users u_cap ON de.captured_by_user_id = u_cap.id
+      LEFT JOIN users u_rep ON de.repaired_by = u_rep.id
+      LEFT JOIN users u_rel ON de.released_by = u_rel.id
+      WHERE de.serial_number = $1
+      ORDER BY
+        CASE de.repair_status
+          WHEN 'OPEN' THEN 1
+          WHEN 'REPAIRED' THEN 2
+          ELSE 3
+        END,
+        de.created_at DESC
+    `, [serial.trim()]);
+
+    const serialDefects = defectsResult.rows.map(row => transformToCamelCase(row));
+
+    const defectCounts = {
+      open: serialDefects.filter(d => d.repairStatus === 'OPEN').length,
+      repaired: serialDefects.filter(d => d.repairStatus === 'REPAIRED').length,
+      released: serialDefects.filter(d => ['RELEASED', 'CLOSED'].includes(d.repairStatus)).length,
+      total: serialDefects.length
+    };
+
+    return { serialDefects, defectCounts };
+  } catch (err) {
+    console.error('Error fetching serial defects:', err);
+    return { serialDefects: [], defectCounts: { open: 0, repaired: 0, released: 0, total: 0 } };
+  }
+}
+
+// ============================================================================
 // MULTER CONFIG FOR DEFECT ATTACHMENTS
 // ============================================================================
 const attachmentStorage = multer.diskStorage({
@@ -1049,9 +1098,9 @@ router.post('/entries', authenticateToken, async (req, res) => {
         // Buscar si existe en production_entries para vincular
         const prodEntry = await query(`
           SELECT id FROM production_entries
-          WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+          WHERE serial_number = $1 AND part_id = $2
           LIMIT 1
-        `, [serial.trim(), partId, client_id]);
+        `, [serial.trim(), partId]);
 
         const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
         const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
@@ -1088,18 +1137,27 @@ router.post('/entries', authenticateToken, async (req, res) => {
       }
     }
 
+    // === OBTENER UBICACIÓN: basada en la estación ===
+    let locationId = null;
+    if (stationId) {
+      const locResult = await query('SELECT id FROM location_codes WHERE station_id = $1 LIMIT 1', [stationId]);
+      if (locResult.rows.length > 0) {
+        locationId = locResult.rows[0].id;
+      }
+    }
+
     // Insertar defecto con unit_id, serial_number, unit_cost, work_order y repair_status según disposición
     const result = await query(
       `INSERT INTO defect_entries_v2 (
-        part_id, client_id, project_id, defect_type_id, notes, quantity,
+        part_id, client_id, project_id, defect_type_id, notes, quantity, current_location_id,
         severity_id, stage_id, disposition_id, station_id, shift_id,
         inspector_id, department_id, lot_number, serial_number, unit_id, downtime_minutes,
         captured_by_user_id, unit_cost, currency, repair_status, work_order
       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
        RETURNING *`,
       [
-        partId, client_id, project_id, defectTypeId, notes, quantity || 1,
+        partId, client_id, project_id, defectTypeId, notes, quantity || 1, locationId,
         severityId || null, stageId || null, dispositionId || null,
         stationId || null, shiftId || null,
         inspectorId || req.user.id, finalDepartmentId, lotNumber || null,
@@ -1133,6 +1191,11 @@ router.post('/entries', authenticateToken, async (req, res) => {
         req.user.id,
         JSON.stringify({ defectTypeId, severityId, quantity: quantity || 1 })
       ]);
+
+      // === Actualizar ubicación de la parte ===
+      if (locationId) {
+        await query('UPDATE unit_registry SET current_location_id = $1 WHERE id = $2', [locationId, unitId]);
+      }
     }
 
     // === Registrar evento CREATED en defect_events ===
@@ -1392,22 +1455,31 @@ router.post('/from-spec', authenticateToken, async (req, res) => {
       console.log('[from-spec] Could not check spec columns:', e.message);
     }
 
+    // === OBTENER UBICACIÓN: basada en la estación ===
+    let locationId = null;
+    if (stationId) {
+      const locResult = await query('SELECT id FROM location_codes WHERE station_id = $1 LIMIT 1', [stationId]);
+      if (locResult.rows.length > 0) {
+        locationId = locResult.rows[0].id;
+      }
+    }
+
     // Insert defect with or without spec link
     let result;
     if (hasSpecColumns) {
       console.log('[from-spec] Using INSERT with spec columns');
       result = await query(`
         INSERT INTO defect_entries_v2 (
-          part_id, client_id, project_id, defect_type_id, notes, quantity,
+          part_id, client_id, project_id, defect_type_id, notes, quantity, current_location_id,
           severity_id, station_id, shift_id, inspector_id, department_id,
           lot_number, serial_number, unit_id,
           captured_by_user_id, repair_status,
           spec_id, original_measured_value
         )
-        VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'OPEN', $15, $16)
+        VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'OPEN', $16, $17)
         RETURNING *
       `, [
-        partId, client_id, project_id, defectTypeId, defectNotes,
+        partId, client_id, project_id, defectTypeId, defectNotes, locationId,
         severityId, stationId || null, shiftId || null, inspectorId || req.user.id, defaultDeptId,
         lotNumber || null, lotNumber || null, unitId,
         req.user.id,
@@ -1418,15 +1490,15 @@ router.post('/from-spec', authenticateToken, async (req, res) => {
       console.log('[from-spec] WARNING: spec columns not found, using fallback INSERT');
       result = await query(`
         INSERT INTO defect_entries_v2 (
-          part_id, client_id, project_id, defect_type_id, notes, quantity,
+          part_id, client_id, project_id, defect_type_id, notes, quantity, current_location_id,
           severity_id, station_id, shift_id, inspector_id, department_id,
           lot_number, serial_number, unit_id,
           captured_by_user_id, repair_status
         )
-        VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'OPEN')
+        VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'OPEN')
         RETURNING *
       `, [
-        partId, client_id, project_id, defectTypeId, defectNotes,
+        partId, client_id, project_id, defectTypeId, defectNotes, locationId,
         severityId, stationId || null, shiftId || null, inspectorId || req.user.id, defaultDeptId,
         lotNumber || null, lotNumber || null, unitId,
         req.user.id
@@ -1736,8 +1808,34 @@ router.get('/by-serial/:serial', authenticateToken, async (req, res) => {
 });
 
 // SERIAL LOOKUP - Buscar información del serial para auto-rellenar campos
+// También registra el scan en serial_station_scans si se proporciona stationId
 router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
   const { serial } = req.params;
+  const { stationId, shiftId, workOrder } = req.query;
+
+  // Helper para registrar scan (acta de nacimiento digital)
+  const registerScan = async (partId, hasDefect, defectCount) => {
+    if (!stationId) return; // Solo registrar si hay estación
+    try {
+      await query(`
+        INSERT INTO serial_station_scans
+          (serial_number, station_id, part_id, shift_id, work_order, has_defect, defect_count, user_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+        serial.trim(),
+        parseInt(stationId),
+        partId || null,
+        shiftId ? parseInt(shiftId) : null,
+        workOrder || null,
+        hasDefect || false,
+        defectCount || 0,
+        req.user.id
+      ]);
+    } catch (scanErr) {
+      console.error('Error registering scan:', scanErr.message);
+      // No bloquear el flujo si falla el registro
+    }
+  };
 
   try {
     // Buscar en unit_registry primero (seriales registrados)
@@ -1757,6 +1855,9 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
     if (unitResult.rows.length > 0) {
       const unit = unitResult.rows[0];
       const isScrapped = unit.current_status === 'SCRAPPED';
+
+      // Obtener defectos del serial usando helper
+      const { serialDefects, defectCounts } = await getSerialDefectsWithStations(serial);
 
       // Buscar info de producción si existe
       let productionInfo = null;
@@ -1786,12 +1887,17 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
         };
       }
 
+      // Registrar scan (acta de nacimiento digital)
+      await registerScan(unit.part_id, defectCounts.open > 0, defectCounts.open);
+
       return res.json({
         success: true,
         unit: transformToCamelCase(unit),
         isScrapped,
         scrappedMessage: isScrapped ? 'Este serial ya fue enviado a SCRAP. No se pueden capturar más defectos.' : null,
-        productionInfo
+        productionInfo,
+        serialDefects,
+        defectCounts
       });
     }
 
@@ -1816,6 +1922,13 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
     if (defectResult.rows.length > 0) {
       const defect = defectResult.rows[0];
       const isScrapped = ['SCRAPPED', 'SCRAP_CONFIRMED'].includes(defect.repair_status);
+
+      // Obtener defectos del serial usando helper
+      const { serialDefects, defectCounts } = await getSerialDefectsWithStations(serial);
+
+      // Registrar scan (acta de nacimiento digital)
+      await registerScan(defect.part_id, defectCounts.open > 0, defectCounts.open);
+
       return res.json({
         success: true,
         unit: transformToCamelCase(defect),
@@ -1825,7 +1938,9 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
           scrappedAt: defect.scrapped_at,
           scrapNotes: defect.resolution_notes
         } : null,
-        scrappedMessage: isScrapped ? 'Este serial ya fue enviado a SCRAP. No se pueden capturar más defectos.' : null
+        scrappedMessage: isScrapped ? 'Este serial ya fue enviado a SCRAP. No se pueden capturar más defectos.' : null,
+        serialDefects,
+        defectCounts
       });
     }
 
@@ -1851,6 +1966,13 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
         const prod = prodResult.rows[0];
         // Si no tiene unit_id, está pendiente. Si tiene, usa el status de unit_registry
         const inspectionStatus = prod.unit_id ? (prod.current_status || 'REGISTERED') : 'PENDING';
+
+        // Obtener defectos del serial usando helper
+        const { serialDefects, defectCounts } = await getSerialDefectsWithStations(serial);
+
+        // Registrar scan (acta de nacimiento digital)
+        await registerScan(prod.part_id, defectCounts.open > 0, defectCounts.open);
+
         return res.json({
           success: true,
           unit: {
@@ -1872,7 +1994,9 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
             producedAt: prod.produced_at,
             source: prod.source
           },
-          fromProduction: true // Flag para indicar que viene de producción
+          fromProduction: true,
+          serialDefects,
+          defectCounts
         });
       }
     } catch (prodErr) {
@@ -1887,6 +2011,187 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error looking up serial:', error);
     res.status(500).json({ success: false, message: 'Error looking up serial' });
+  }
+});
+
+// ============================================================================
+// INLINE REPAIR/RELEASE - Reparación y liberación simplificada en línea
+// ============================================================================
+
+// REPAIR INLINE - Reparador marca defecto como reparado directamente (sin IN_REPAIR)
+router.post('/entries/:id/repair-inline', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { repairStationId, repairNotes } = req.body;
+
+  try {
+    const defect = await query('SELECT * FROM defect_entries_v2 WHERE id = $1', [id]);
+    if (defect.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Defecto no encontrado' });
+    }
+
+    if (defect.rows[0].repair_status !== 'OPEN') {
+      return res.status(400).json({
+        success: false,
+        message: `Solo se pueden reparar defectos en estado OPEN. Estado actual: ${defect.rows[0].repair_status}`
+      });
+    }
+
+    // Marcar como REPAIRED directamente (flujo simplificado de línea)
+    const result = await query(`
+      UPDATE defect_entries_v2 SET
+        repair_status = 'REPAIRED',
+        repair_station_id = $2,
+        repaired_at = CURRENT_TIMESTAMP,
+        repaired_by = $3,
+        repair_notes = $4,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `, [id, repairStationId || null, req.user.id, repairNotes || null]);
+
+    // Log event
+    await query(`
+      INSERT INTO defect_events (defect_id, event_type, old_status, new_status, performed_by, comments)
+      VALUES ($1, 'REPAIRED_INLINE', 'OPEN', 'REPAIRED', $2, $3)
+    `, [id, req.user.id, repairNotes || 'Reparado en línea']);
+
+    // Update unit_history if unit exists
+    if (defect.rows[0].unit_id) {
+      await query(`
+        INSERT INTO unit_history (unit_id, event_type, source_table, source_id, description, performed_by)
+        VALUES ($1, 'REPAIRED_INLINE', 'defect_entries_v2', $2, 'Reparado en línea', $3)
+      `, [defect.rows[0].unit_id, id, req.user.id]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Defecto marcado como reparado',
+      entry: transformToCamelCase(result.rows[0])
+    });
+  } catch (error) {
+    console.error('Error in repair-inline:', error);
+    res.status(500).json({ success: false, message: 'Error al reparar' });
+  }
+});
+
+// RELEASE INLINE - Inspector libera defecto reparado directamente
+router.post('/entries/:id/release-inline', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { releaseStationId, releaseNotes } = req.body;
+
+  try {
+    const defect = await query('SELECT * FROM defect_entries_v2 WHERE id = $1', [id]);
+    if (defect.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Defecto no encontrado' });
+    }
+
+    if (defect.rows[0].repair_status !== 'REPAIRED') {
+      return res.status(400).json({
+        success: false,
+        message: `Solo se pueden liberar defectos en estado REPAIRED. Estado actual: ${defect.rows[0].repair_status}`
+      });
+    }
+
+    // Marcar como RELEASED/CLOSED
+    const result = await query(`
+      UPDATE defect_entries_v2 SET
+        repair_status = 'CLOSED',
+        release_station_id = $2,
+        released_at = CURRENT_TIMESTAMP,
+        released_by = $3,
+        resolution_notes = COALESCE(resolution_notes || ' | ', '') || $4,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `, [id, releaseStationId || null, req.user.id, releaseNotes || 'Liberado en línea']);
+
+    // Log event
+    await query(`
+      INSERT INTO defect_events (defect_id, event_type, old_status, new_status, performed_by, comments)
+      VALUES ($1, 'RELEASED_INLINE', 'REPAIRED', 'CLOSED', $2, $3)
+    `, [id, req.user.id, releaseNotes || 'Liberado en línea']);
+
+    // Update unit_history if unit exists
+    if (defect.rows[0].unit_id) {
+      await query(`
+        INSERT INTO unit_history (unit_id, event_type, source_table, source_id, description, performed_by)
+        VALUES ($1, 'RELEASED_INLINE', 'defect_entries_v2', $2, 'Liberado en línea', $3)
+      `, [defect.rows[0].unit_id, id, req.user.id]);
+    }
+
+    // Update unit_registry open_defects_count
+    if (defect.rows[0].unit_id) {
+      await query(`
+        UPDATE unit_registry SET
+          open_defects_count = GREATEST(0, open_defects_count - 1),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [defect.rows[0].unit_id]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Defecto liberado',
+      entry: transformToCamelCase(result.rows[0])
+    });
+  } catch (error) {
+    console.error('Error in release-inline:', error);
+    res.status(500).json({ success: false, message: 'Error al liberar' });
+  }
+});
+
+// REJECT INLINE - Inspector rechaza reparación, vuelve a OPEN
+router.post('/entries/:id/reject-inline', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { rejectNotes } = req.body;
+
+  try {
+    const defect = await query('SELECT * FROM defect_entries_v2 WHERE id = $1', [id]);
+    if (defect.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Defecto no encontrado' });
+    }
+
+    if (defect.rows[0].repair_status !== 'REPAIRED') {
+      return res.status(400).json({
+        success: false,
+        message: `Solo se pueden rechazar defectos en estado REPAIRED. Estado actual: ${defect.rows[0].repair_status}`
+      });
+    }
+
+    // Volver a OPEN
+    const result = await query(`
+      UPDATE defect_entries_v2 SET
+        repair_status = 'OPEN',
+        repaired_at = NULL,
+        repaired_by = NULL,
+        repair_notes = COALESCE(repair_notes || ' | RECHAZADO: ', 'RECHAZADO: ') || $2,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `, [id, rejectNotes || 'Reparación rechazada']);
+
+    // Log event
+    await query(`
+      INSERT INTO defect_events (defect_id, event_type, old_status, new_status, performed_by, comments)
+      VALUES ($1, 'REJECTED_INLINE', 'REPAIRED', 'OPEN', $2, $3)
+    `, [id, req.user.id, rejectNotes || 'Reparación rechazada en línea']);
+
+    // Update unit_history if unit exists
+    if (defect.rows[0].unit_id) {
+      await query(`
+        INSERT INTO unit_history (unit_id, event_type, source_table, source_id, description, performed_by)
+        VALUES ($1, 'REJECTED_INLINE', 'defect_entries_v2', $2, 'Reparación rechazada en línea', $3)
+      `, [defect.rows[0].unit_id, id, req.user.id]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Reparación rechazada - defecto vuelve a OPEN',
+      entry: transformToCamelCase(result.rows[0])
+    });
+  } catch (error) {
+    console.error('Error in reject-inline:', error);
+    res.status(500).json({ success: false, message: 'Error al rechazar' });
   }
 });
 
@@ -2254,6 +2559,25 @@ router.post('/entries/:id/release', authenticateToken, async (req, res) => {
 
     // Link deviation if provided
     if (deviationId) {
+      // Validate that defect's part is covered by this deviation
+      const defectPartId = defect.rows[0].part_id;
+      if (defectPartId) {
+        const deviationPartCheck = await query(`
+          SELECT 1 FROM deviation_parts
+          WHERE deviation_id = $1 AND part_id = $2
+          UNION
+          SELECT 1 FROM deviations
+          WHERE id = $1 AND (part_id = $2 OR part_id IS NULL)
+        `, [deviationId, defectPartId]);
+
+        if (deviationPartCheck.rows.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'La desviación seleccionada no aplica para este número de parte'
+          });
+        }
+      }
+
       await query(`
         INSERT INTO defect_deviations (defect_id, deviation_id, linked_by, notes)
         VALUES ($1, $2, $3, $4)
@@ -3193,16 +3517,18 @@ router.post('/handoff', authenticateToken, async (req, res) => {
         VALUES ($1, $2, 'REPAIRED', $3, $4, $5)
       `, [defectId, eventType, newStatus, userId, fullNotes || null]);
 
-      // If SCRAP or QUARANTINE, update unit_registry
+      // If SCRAP or QUARANTINE, update unit_registry (status y ubicación)
       if (destination === 'SCRAP' || destination === 'QUARANTINE') {
         const d = defect.rows[0];
         if (d.serial_number || d.lot_number) {
           await query(`
             UPDATE unit_registry
-            SET open_defects = GREATEST(0, open_defects - 1)
+            SET open_defects = GREATEST(0, open_defects - 1),
+                current_location_id = COALESCE($5, current_location_id),
+                current_status = $6
             WHERE client_id = $1 AND part_id = $2
             AND (serial_number = $3 OR lot_number = $4)
-          `, [d.client_id, d.part_id, d.serial_number, d.lot_number]);
+          `, [d.client_id, d.part_id, d.serial_number, d.lot_number, mrbLocationId || null, destination === 'SCRAP' ? 'SCRAPPED' : 'QUARANTINE']);
         }
       }
 
@@ -3655,7 +3981,19 @@ router.get('/quarantine', authenticateToken, async (req, res) => {
         CONCAT(uq.first_name, ' ', uq.last_name) AS quarantined_by_name,
         d.current_location_id, lc.code AS location_code, lc.description AS location_description,
         (SELECT COUNT(*) FROM defect_attachments da WHERE da.defect_id = d.id) AS attachment_count,
-        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - COALESCE(d.quarantined_at, d.updated_at))) / 3600 AS hours_in_quarantine
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - COALESCE(d.quarantined_at, d.updated_at))) / 3600 AS hours_in_quarantine,
+        -- MRB Campaign info
+        d.mrb_campaign_id,
+        mc.campaign_number AS mrb_campaign_number,
+        mc.title AS mrb_campaign_title,
+        -- QAR info
+        d.qar_id,
+        qa.alert_number AS qar_number,
+        qa.title AS qar_title,
+        -- 8D info (via campaign or direct)
+        mc.source_8d_id AS eightd_id,
+        ed.report_id AS eightd_number,
+        ed.title AS eightd_title
       FROM defect_entries_v2 d
       LEFT JOIN users uc ON d.captured_by_user_id = uc.id
       LEFT JOIN users ur ON d.repaired_by = ur.id
@@ -3666,7 +4004,11 @@ router.get('/quarantine', authenticateToken, async (req, res) => {
       LEFT JOIN clients c ON d.client_id = c.id
       LEFT JOIN defect_types dt ON d.defect_type_id = dt.id
       LEFT JOIN location_codes lc ON d.current_location_id = lc.id
+      LEFT JOIN mrb_campaigns mc ON d.mrb_campaign_id = mc.id
+      LEFT JOIN quality_alerts qa ON d.qar_id = qa.id
+      LEFT JOIN eightd_reports ed ON mc.source_8d_id = ed.id
       WHERE d.repair_status = 'QUARANTINE'
+        AND (d.transfer_status IS NULL OR d.transfer_status != 'PENDING_TRANSFER')
       ORDER BY d.quarantined_at DESC NULLS LAST, d.updated_at DESC
     `;
     const result = await query(sql);
@@ -3697,7 +4039,19 @@ router.get('/scrapped', authenticateToken, async (req, res) => {
         CONCAT(us.first_name, ' ', us.last_name) AS scrapped_by_name,
         d.current_location_id, lc.code AS location_code, lc.description AS location_description,
         (SELECT COUNT(*) FROM defect_attachments da WHERE da.defect_id = d.id) AS attachment_count,
-        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - COALESCE(d.scrapped_at, d.updated_at))) / 3600 AS hours_in_scrap
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - COALESCE(d.scrapped_at, d.updated_at))) / 3600 AS hours_in_scrap,
+        -- MRB Campaign info
+        d.mrb_campaign_id,
+        mc.campaign_number AS mrb_campaign_number,
+        mc.title AS mrb_campaign_title,
+        -- QAR info
+        d.qar_id,
+        qa.alert_number AS qar_number,
+        qa.title AS qar_title,
+        -- 8D info (via campaign)
+        mc.source_8d_id AS eightd_id,
+        ed.report_id AS eightd_number,
+        ed.title AS eightd_title
       FROM defect_entries_v2 d
       LEFT JOIN users uc ON d.captured_by_user_id = uc.id
       LEFT JOIN users ur ON d.repaired_by = ur.id
@@ -3707,7 +4061,12 @@ router.get('/scrapped', authenticateToken, async (req, res) => {
       LEFT JOIN clients c ON d.client_id = c.id
       LEFT JOIN defect_types dt ON d.defect_type_id = dt.id
       LEFT JOIN location_codes lc ON d.current_location_id = lc.id
-      WHERE d.repair_status = 'SCRAPPED' AND (d.scrap_confirmed IS NULL OR d.scrap_confirmed = false)
+      LEFT JOIN mrb_campaigns mc ON d.mrb_campaign_id = mc.id
+      LEFT JOIN quality_alerts qa ON d.qar_id = qa.id
+      LEFT JOIN eightd_reports ed ON mc.source_8d_id = ed.id
+      WHERE d.repair_status = 'SCRAPPED'
+        AND (d.scrap_confirmed IS NULL OR d.scrap_confirmed = false)
+        AND (d.transfer_status IS NULL OR d.transfer_status != 'PENDING_TRANSFER')
       ORDER BY d.updated_at DESC
     `;
     const result = await query(sql);
@@ -3732,6 +4091,24 @@ router.post('/quarantine/:id/return-to-repair', authenticateToken, async (req, r
     }
     if (defect.rows[0].repair_status !== 'QUARANTINE') {
       return res.status(400).json({ success: false, message: 'El defecto no está en cuarentena' });
+    }
+
+    // Verificar inspecciones pendientes de campañas MRB
+    const serial = defect.rows[0].serial_number;
+    if (serial) {
+      const pendingRes = await query(`
+        SELECT mc.campaign_number, mc.title
+        FROM mrb_affected_serials mas
+        JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+        WHERE mas.serial_number = $1 AND NOT mas.inspected AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+      `, [serial]);
+      if (pendingRes.rows.length > 0) {
+        const campaigns = pendingRes.rows.map(r => r.campaign_number).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `No se puede aplicar disposición. Inspecciones pendientes en campañas: ${campaigns}`
+        });
+      }
     }
 
     // Update defect status
@@ -3776,6 +4153,24 @@ router.post('/quarantine/:id/to-scrap', authenticateToken, async (req, res) => {
     }
     if (defect.rows[0].repair_status !== 'QUARANTINE') {
       return res.status(400).json({ success: false, message: 'El defecto no está en cuarentena' });
+    }
+
+    // Verificar inspecciones pendientes de campañas MRB
+    const serial = defect.rows[0].serial_number;
+    if (serial) {
+      const pendingRes = await query(`
+        SELECT mc.campaign_number, mc.title
+        FROM mrb_affected_serials mas
+        JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+        WHERE mas.serial_number = $1 AND NOT mas.inspected AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+      `, [serial]);
+      if (pendingRes.rows.length > 0) {
+        const campaigns = pendingRes.rows.map(r => r.campaign_number).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `No se puede aplicar disposición. Inspecciones pendientes en campañas: ${campaigns}`
+        });
+      }
     }
 
     // Update defect status
@@ -3825,6 +4220,24 @@ router.post('/quarantine/:id/release-with-deviation', authenticateToken, async (
     }
     if (defect.rows[0].repair_status !== 'QUARANTINE') {
       return res.status(400).json({ success: false, message: 'El defecto no está en cuarentena' });
+    }
+
+    // Verificar inspecciones pendientes de campañas MRB
+    const serial = defect.rows[0].serial_number;
+    if (serial) {
+      const pendingRes = await query(`
+        SELECT mc.campaign_number, mc.title
+        FROM mrb_affected_serials mas
+        JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+        WHERE mas.serial_number = $1 AND NOT mas.inspected AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+      `, [serial]);
+      if (pendingRes.rows.length > 0) {
+        const campaigns = pendingRes.rows.map(r => r.campaign_number).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `No se puede aplicar disposición. Inspecciones pendientes en campañas: ${campaigns}`
+        });
+      }
     }
 
     // Update defect status

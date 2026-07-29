@@ -5,7 +5,10 @@ import { CheckCircle, XCircle, Plus, Home, Palette, BarChart3, Search, AlertTria
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import DefectConsultTab, { DefectCounter } from '../components/DefectConsultTab';
+import SerialDefectsSummary from '../components/SerialDefectsSummary';
+import InlineDefectDetailModal from '../components/InlineDefectDetailModal';
 import { checkMyHospitalPermissions } from '../services/hospitalRolesService';
+import * as repairService from '../services/repairService';
 
 /**
  * DefectCapture - Tablet-optimized interface for sequential inspection
@@ -132,6 +135,15 @@ const DefectCapture = () => {
   const [scrapModalOpen, setScrapModalOpen] = useState(false); // Modal for scrapped serial
   const [scrapInfo, setScrapInfo] = useState(null); // Info about scrapped serial
   const [productionInfo, setProductionInfo] = useState(null); // Info from production_entries
+
+  // ============================================================================
+  // STATE - Serial Defects (inline repair/release)
+  // ============================================================================
+  const [serialDefects, setSerialDefects] = useState([]);
+  const [defectCounts, setDefectCounts] = useState({ open: 0, repaired: 0, released: 0, total: 0 });
+  const [selectedDefectForDetail, setSelectedDefectForDetail] = useState(null);
+  const [defectDetailModalOpen, setDefectDetailModalOpen] = useState(false);
+  const [hospitalPermissions, setHospitalPermissions] = useState({ canRepair: false, canRelease: false });
 
   // ============================================================================
   // STATE - Selected Category (with localStorage persistence)
@@ -390,6 +402,22 @@ const DefectCapture = () => {
     }
     return shiftList[0] || null;
   };
+
+  // Load hospital permissions when client changes
+  useEffect(() => {
+    const loadHospitalPermissions = async () => {
+      if (selectedClient?.id) {
+        try {
+          const res = await repairService.checkPermissions(selectedClient.id);
+          setHospitalPermissions(res.permissions || { canRepair: false, canRelease: false });
+        } catch (err) {
+          console.error('Error loading hospital permissions:', err);
+          setHospitalPermissions({ canRepair: false, canRelease: false });
+        }
+      }
+    };
+    loadHospitalPermissions();
+  }, [selectedClient]);
 
   // Load projects when client changes
   useEffect(() => {
@@ -1038,7 +1066,13 @@ const DefectCapture = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/defects-v2/serial-lookup/${encodeURIComponent(serial.trim())}`, {
+      // Construir query params para registrar scan (acta de nacimiento digital)
+      const params = new URLSearchParams();
+      if (selectedStation?.id) params.append('stationId', selectedStation.id);
+      if (selectedShift?.id) params.append('shiftId', selectedShift.id);
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+
+      const res = await fetch(`${API_URL}/defects-v2/serial-lookup/${encodeURIComponent(serial.trim())}${queryString}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -1070,6 +1104,18 @@ const DefectCapture = () => {
             setProductionInfo(data.productionInfo);
           } else {
             setProductionInfo(null);
+          }
+
+          // Capturar defectos del serial
+          if (data.serialDefects) {
+            setSerialDefects(data.serialDefects);
+          } else {
+            setSerialDefects([]);
+          }
+          if (data.defectCounts) {
+            setDefectCounts(data.defectCounts);
+          } else {
+            setDefectCounts({ open: 0, repaired: 0, released: 0, total: 0 });
           }
 
           // Auto-rellenar Cliente, Proyecto y Parte
@@ -1111,7 +1157,7 @@ const DefectCapture = () => {
     } catch (err) {
       console.error('Error looking up serial:', err);
     }
-  }, [clients, allParts, projects, selectedClient]);
+  }, [clients, allParts, projects, selectedClient, selectedStation, selectedShift]);
 
   // Reset hasRegisteredDefect when user enters lot number
   const handleLotChange = (value) => {
@@ -1120,6 +1166,8 @@ const DefectCapture = () => {
       setHasRegisteredDefect(false);
       setSerialScrapped(false); // Reset scrapped state when serial changes
       setProductionInfo(null); // Reset production info
+      setSerialDefects([]); // Reset serial defects
+      setDefectCounts({ open: 0, repaired: 0, released: 0, total: 0 });
       setError(null);
     }
   };
@@ -1143,6 +1191,70 @@ const DefectCapture = () => {
     if (e.key === 'Enter' && lotNumber.trim()) {
       e.preventDefault();
       lookupSerialInfo(lotNumber);
+    }
+  };
+
+  // ============================================================================
+  // INLINE REPAIR/RELEASE HANDLERS
+  // ============================================================================
+  const handleDefectClick = (defect) => {
+    setSelectedDefectForDetail(defect);
+    setDefectDetailModalOpen(true);
+  };
+
+  const handleInlineRepair = async (defectId, data) => {
+    try {
+      const result = await repairService.repairInline(defectId, {
+        ...data,
+        repairStationId: selectedStation?.id
+      });
+      if (result.success) {
+        // Recargar defectos del serial
+        await lookupSerialInfo(lotNumber);
+        setSuccess('Defecto marcado como reparado');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error(result.message || 'Error al reparar');
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const handleInlineRelease = async (defectId, data) => {
+    try {
+      const result = await repairService.releaseInline(defectId, {
+        ...data,
+        releaseStationId: selectedStation?.id
+      });
+      if (result.success) {
+        // Recargar defectos del serial
+        await lookupSerialInfo(lotNumber);
+        setSuccess('Defecto liberado');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error(result.message || 'Error al liberar');
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const handleInlineReject = async (defectId, data) => {
+    try {
+      const result = await repairService.rejectInline(defectId, {
+        ...data
+      });
+      if (result.success) {
+        // Recargar defectos del serial
+        await lookupSerialInfo(lotNumber);
+        setSuccess('Defecto rechazado - vuelve a OPEN');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error(result.message || 'Error al rechazar');
+      }
+    } catch (err) {
+      throw err;
     }
   };
 
@@ -2167,56 +2279,18 @@ const DefectCapture = () => {
             <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
               Presiona Enter para buscar
             </div>
-            {/* Contador de defectos clickeable */}
-            {lotNumber && selectedClient && (
+            {/* Resumen de defectos del serial con semáforo */}
+            {lotNumber && (
               <div style={{ marginTop: '8px' }}>
-                <DefectCounter
-                  serial={lotNumber}
-                  clientId={selectedClient?.id}
-                  onClick={() => setDefectConsultOpen(true)}
+                <SerialDefectsSummary
+                  defects={serialDefects}
+                  counts={defectCounts}
+                  onDefectClick={handleDefectClick}
+                  onViewAll={() => setDefectConsultOpen(true)}
+                  maxVisible={3}
                   theme={currentTheme}
+                  permissions={hospitalPermissions}
                 />
-              </div>
-            )}
-            {/* Indicador de producción - usa unit_registry.current_status */}
-            {productionInfo && (
-              <div style={{
-                marginTop: '8px',
-                padding: '8px 12px',
-                backgroundColor:
-                  productionInfo.inspectionStatus === 'OK' ? '#dcfce7' :
-                  productionInfo.inspectionStatus === 'DEFECTIVE' ? '#fee2e2' :
-                  productionInfo.inspectionStatus === 'SCRAPPED' ? '#f3f4f6' :
-                  '#fef3c7',
-                borderRadius: '6px',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontSize: '16px' }}>
-                  {productionInfo.inspectionStatus === 'OK' ? '✅' :
-                   productionInfo.inspectionStatus === 'DEFECTIVE' ? '⚠️' :
-                   productionInfo.inspectionStatus === 'SCRAPPED' ? '🗑️' :
-                   '📋'}
-                </span>
-                <div>
-                  <div style={{ fontWeight: '500', color:
-                    productionInfo.inspectionStatus === 'OK' ? '#166534' :
-                    productionInfo.inspectionStatus === 'DEFECTIVE' ? '#991b1b' :
-                    productionInfo.inspectionStatus === 'SCRAPPED' ? '#6b7280' :
-                    '#92400e'
-                  }}>
-                    {productionInfo.inspectionStatus === 'OK' ? 'Inspeccionado OK' :
-                     productionInfo.inspectionStatus === 'DEFECTIVE' ? 'Con defectos' :
-                     productionInfo.inspectionStatus === 'SCRAPPED' ? 'SCRAP' :
-                     productionInfo.inspectionStatus === 'REGISTERED' ? 'Registrado' :
-                     'Pendiente de inspección'}
-                  </div>
-                  {productionInfo.workOrder && (
-                    <div style={{ color: '#6b7280' }}>OT: {productionInfo.workOrder}</div>
-                  )}
-                </div>
               </div>
             )}
           </div>
@@ -2256,21 +2330,6 @@ const DefectCapture = () => {
               />
               <span style={{ color: currentTheme.textDim, fontSize: '14px' }}>min</span>
             </div>
-          </div>
-
-          {/* Disposition */}
-          <div style={styles.fieldGroup}>
-            <label style={styles.fieldLabel}>Disposición</label>
-            <select
-              style={styles.fieldSelect}
-              value={selectedDisposition?.id || ''}
-              onChange={(e) => setSelectedDisposition(dispositions.find(d => d.id === parseInt(e.target.value)) || null)}
-            >
-              <option value="">Seleccionar...</option>
-              {dispositions.map(d => (
-                <option key={d.id} value={d.id}>{d.code} - {d.name}</option>
-              ))}
-            </select>
           </div>
 
           {/* Department (REQUIRED) */}
@@ -2873,6 +2932,23 @@ const DefectCapture = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Detalle Defecto Inline */}
+      <InlineDefectDetailModal
+        isOpen={defectDetailModalOpen}
+        onClose={() => {
+          setDefectDetailModalOpen(false);
+          setSelectedDefectForDetail(null);
+        }}
+        defect={selectedDefectForDetail}
+        permissions={hospitalPermissions}
+        stationId={selectedStation?.id}
+        stationName={selectedStation?.name}
+        onRepair={handleInlineRepair}
+        onRelease={handleInlineRelease}
+        onReject={handleInlineReject}
+        theme={currentTheme}
+      />
 
       {/* Modal Warning - Specs Checklist */}
       {specsWarningOpen && (

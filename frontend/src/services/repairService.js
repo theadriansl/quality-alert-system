@@ -729,6 +729,46 @@ export const getStatusInfo = (status) => {
   return statusMap[status] || { label: status, color: '#6b7280', bgColor: '#f3f4f6' };
 };
 
+// ============================================================================
+// INLINE REPAIR/RELEASE - Para reparación/liberación en línea (simplificado)
+// ============================================================================
+
+/**
+ * Repair inline - Mark defect as REPAIRED directly (no IN_REPAIR step)
+ */
+export const repairInline = async (defectId, data = {}) => {
+  const res = await fetch(`${API_URL}/defects-v2/entries/${defectId}/repair-inline`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+};
+
+/**
+ * Release inline - Mark defect as RELEASED/CLOSED directly
+ */
+export const releaseInline = async (defectId, data = {}) => {
+  const res = await fetch(`${API_URL}/defects-v2/entries/${defectId}/release-inline`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+};
+
+/**
+ * Reject inline - Reject repair, return to OPEN
+ */
+export const rejectInline = async (defectId, data = {}) => {
+  const res = await fetch(`${API_URL}/defects-v2/entries/${defectId}/reject-inline`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.json();
+};
+
 export default {
   getDefectsBySerial,
   getDefectEvents,
@@ -783,5 +823,9 @@ export default {
   getReworkPendingTransfer,
   getHospitalPendingSummary,
   getCampaignAssignmentMatrix,
-  assignCampaignsBulk
+  assignCampaignsBulk,
+  // Inline repair/release (line flow)
+  repairInline,
+  releaseInline,
+  rejectInline
 };
