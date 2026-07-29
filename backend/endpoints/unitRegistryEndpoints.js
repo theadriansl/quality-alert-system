@@ -26,16 +26,50 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 
   try {
-    // Check if already exists
+    // Check if already exists - get latest cycle
     const existing = await query(
-      'SELECT id, current_status FROM unit_registry WHERE client_id = $1 AND part_id = $2 AND serial_number = $3',
-      [clientId, partId, serialNumber]
+      `SELECT id, current_status, is_archived, cycle_number
+       FROM unit_registry
+       WHERE serial_number = $1
+       ORDER BY cycle_number DESC
+       LIMIT 1`,
+      [serialNumber]
     );
 
     if (existing.rows.length > 0) {
+      const existingUnit = existing.rows[0];
+
+      // Si está archivado, es un re-ingreso - crear nuevo ciclo
+      if (existingUnit.is_archived) {
+        const returnReason = req.body.returnReason || 'RMA';
+        const returnNotes = req.body.returnNotes || null;
+
+        // Usar función de BD para crear nuevo ciclo
+        const newCycleResult = await query(
+          'SELECT * FROM create_new_cycle($1, $2, $3, $4, $5)',
+          [serialNumber, partId, returnReason, returnNotes, req.user?.id]
+        );
+
+        const newCycle = newCycleResult.rows[0];
+
+        // Obtener el unit completo
+        const newUnit = await query('SELECT * FROM unit_registry WHERE id = $1', [newCycle.new_unit_id]);
+
+        return res.json({
+          success: true,
+          unit: transformToCamelCase(newUnit.rows[0]),
+          message: `Nuevo ciclo ${newCycle.new_cycle_number} creado (${returnReason})`,
+          isNew: true,
+          isReentry: true,
+          previousCycleId: newCycle.previous_cycle_id,
+          cycleNumber: newCycle.new_cycle_number
+        });
+      }
+
+      // Si no está archivado, retornar el existente
       return res.json({
         success: true,
-        unit: transformToCamelCase(existing.rows[0]),
+        unit: transformToCamelCase(existingUnit),
         message: 'Unidad ya registrada',
         isNew: false
       });
@@ -58,12 +92,12 @@ router.post('/', authenticateToken, async (req, res) => {
       console.log('Production entries check skipped:', prodErr.message);
     }
 
-    // Create new unit
+    // Create new unit (cycle 1)
     const result = await query(`
       INSERT INTO unit_registry (
         serial_number, lot_number, client_id, part_id, project_id,
-        current_status, created_by, source, production_entry_id
-      ) VALUES ($1, $2, $3, $4, $5, 'REGISTERED', $6, $7, $8)
+        current_status, created_by, source, production_entry_id, cycle_number
+      ) VALUES ($1, $2, $3, $4, $5, 'REGISTERED', $6, $7, $8, 1)
       RETURNING *
     `, [serialNumber, lotNumber, clientId, partId, projectId, req.user.id, source, productionEntryId]);
 
@@ -134,12 +168,12 @@ router.post('/capture-ok', authenticateToken, async (req, res) => {
       const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
       const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
 
-      // Crear unit_registry
+      // Crear unit_registry (cycle 1)
       const newUnit = await query(`
         INSERT INTO unit_registry (
           serial_number, client_id, part_id, project_id,
-          current_status, total_inspections, created_by, source, production_entry_id
-        ) VALUES ($1, $2, $3, $4, 'OK', 1, $5, $6, $7)
+          current_status, total_inspections, created_by, source, production_entry_id, cycle_number
+        ) VALUES ($1, $2, $3, $4, 'OK', 1, $5, $6, $7, 1)
         RETURNING id
       `, [serialNumber.trim(), clientId, partId, projectId, req.user.id, source, productionEntryId]);
 
