@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/database');
+const { query, getClient, pool } = require('../config/database');
 const { transformToCamelCase } = require('../utils/caseTransform');
 const { authenticateWebhook, requirePermission, logWebhookCall, generateApiKey } = require('../middleware/webhookAuth');
 const authenticateToken = require('../middleware/auth');
@@ -41,7 +41,7 @@ router.post('/production',
   requirePermission('production:write'),
   async (req, res) => {
     const startTime = req.webhookAuth?.startTime || Date.now();
-    const client = await pool.connect();
+    const client = await getClient();
 
     try {
       let entries = [];
