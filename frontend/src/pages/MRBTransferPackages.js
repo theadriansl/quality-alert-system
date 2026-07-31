@@ -27,7 +27,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
   const { theme: t } = useTheme();
   const { language } = useLanguage();
 
-  // Main mode: 'receive' (from Hospital) | 'send' (to Hospital)
+  // Main mode: 'receive' (from Hospital) | 'send' (to Hospital) | 'exit-ok' (OK out of MRB)
   const [mode, setMode] = useState('receive');
 
   const [loading, setLoading] = useState(true);
@@ -76,6 +76,15 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
   const [send8dId, setSend8dId] = useState(null);
   const [sendAlertUserId, setSendAlertUserId] = useState(null);
   const [sendDestinationLocationId, setSendDestinationLocationId] = useState(null); // Ubicación destino Hospital
+
+  // ========== EXIT-OK MODE STATE ==========
+  const [okSerials, setOkSerials] = useState([]);
+  const [selectedOkSerials, setSelectedOkSerials] = useState(new Set());
+  const [showExitOkModal, setShowExitOkModal] = useState(false);
+  const [exitOkNotes, setExitOkNotes] = useState('');
+  const [exitOkLocationId, setExitOkLocationId] = useState(null);
+  const [bufferLocations, setBufferLocations] = useState([]);
+  const [exitingOk, setExitingOk] = useState(false);
 
   // ========== LOAD RECEIVE DATA ==========
   const loadReceiveData = useCallback(async () => {
@@ -166,14 +175,43 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
     }
   }, []);
 
+  // ========== LOAD EXIT-OK DATA ==========
+  const loadExitOkData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const [okRes, locsRes] = await Promise.all([
+        fetch(`${API_URL}/mrb/ok-serials`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${API_URL}/location-codes?type=BUFFER`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json())
+      ]);
+
+      if (okRes.success) {
+        setOkSerials(okRes.serials || []);
+      }
+      if (locsRes.success) {
+        setBufferLocations(locsRes.locations || []);
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Load data based on mode
   useEffect(() => {
     if (mode === 'receive') {
       loadReceiveData();
-    } else {
+    } else if (mode === 'send') {
       loadSendData();
+    } else if (mode === 'exit-ok') {
+      loadExitOkData();
     }
-  }, [mode, loadReceiveData, loadSendData]);
+  }, [mode, loadReceiveData, loadSendData, loadExitOkData]);
 
   // ========== RECEIVE FUNCTIONS ==========
   const loadPackageDetails = async (pkg) => {
@@ -338,6 +376,72 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
       setError(`Error: ${err.message}`);
     } finally {
       setSending(false);
+    }
+  };
+
+  // ========== EXIT-OK FUNCTIONS ==========
+  const toggleOkSerial = (serialNumber) => {
+    setSelectedOkSerials(prev => {
+      const next = new Set(prev);
+      if (next.has(serialNumber)) {
+        next.delete(serialNumber);
+      } else {
+        next.add(serialNumber);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllOk = () => {
+    if (selectedOkSerials.size === okSerials.length) {
+      setSelectedOkSerials(new Set());
+    } else {
+      setSelectedOkSerials(new Set(okSerials.map(s => s.serialNumber)));
+    }
+  };
+
+  const openExitOkModal = () => {
+    if (selectedOkSerials.size === 0) {
+      setError('Selecciona al menos un serial');
+      return;
+    }
+    setShowExitOkModal(true);
+  };
+
+  const handleExitOk = async () => {
+    if (selectedOkSerials.size === 0 || !exitOkLocationId) {
+      setError('Selecciona seriales y ubicación de destino');
+      return;
+    }
+
+    setExitingOk(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/mrb/exit-package`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          serialNumbers: Array.from(selectedOkSerials),
+          destinationLocationId: parseInt(exitOkLocationId),
+          notes: exitOkNotes,
+          exitType: 'OK'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(`Paquete ${data.packageNumber} creado con ${data.processedCount} seriales`);
+        setShowExitOkModal(false);
+        setSelectedOkSerials(new Set());
+        setExitOkNotes('');
+        setExitOkLocationId(null);
+        loadExitOkData();
+      } else {
+        setError(data.message || 'Error al crear paquete');
+      }
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+    } finally {
+      setExitingOk(false);
     }
   };
 
@@ -539,7 +643,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               backgroundColor: mode === 'send' ? '#f59e0b' : t.bgCard,
               color: mode === 'send' ? '#fff' : t.text,
               border: `1px solid ${mode === 'send' ? '#f59e0b' : t.border}`,
-              borderRadius: '0 8px 8px 0',
+              borderRadius: '0',
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: '600',
@@ -558,6 +662,35 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                 fontSize: '11px'
               }}>
                 {reworkDefects.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setMode('exit-ok')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: mode === 'exit-ok' ? '#0072CE' : t.bgCard,
+              color: mode === 'exit-ok' ? '#fff' : t.text,
+              border: `1px solid ${mode === 'exit-ok' ? '#0072CE' : t.border}`,
+              borderRadius: '0 8px 8px 0',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {language === 'es' ? 'Salida OK a Buffer' : 'OK Exit to Buffer'}
+            {okSerials.length > 0 && (
+              <span style={{
+                padding: '2px 8px',
+                backgroundColor: mode === 'exit-ok' ? 'rgba(255,255,255,0.3)' : '#0072CE',
+                color: '#fff',
+                borderRadius: '10px',
+                fontSize: '11px'
+              }}>
+                {okSerials.length}
               </span>
             )}
           </button>
@@ -1208,6 +1341,145 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
         </>
       )}
 
+      {/* ==================== EXIT-OK MODE ==================== */}
+      {mode === 'exit-ok' && (
+        <>
+          {/* Action bar */}
+          {selectedOkSerials.size > 0 && (
+            <div style={{
+              backgroundColor: '#0072CE', color: '#fff', padding: '12px 20px', borderRadius: '8px', marginBottom: '16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+              <span style={{ fontWeight: '600' }}>
+                {selectedOkSerials.size} serial(es) seleccionado(s)
+              </span>
+              <button
+                onClick={openExitOkModal}
+                style={{
+                  padding: '8px 20px', backgroundColor: '#fff', color: '#0072CE', border: 'none', borderRadius: '6px',
+                  cursor: 'pointer', fontWeight: '600', fontSize: '13px'
+                }}
+              >
+                📦 Crear Paquete Salida a Buffer
+              </button>
+            </div>
+          )}
+
+          {/* KPIs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #0072CE' }}>
+              <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
+                Seriales OK en MRB
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#0072CE' }}>{okSerials.length}</div>
+            </div>
+            <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #16a34a' }}>
+              <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
+                Seleccionados
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#16a34a' }}>{selectedOkSerials.size}</div>
+            </div>
+            <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #7c3aed' }}>
+              <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
+                Ubicaciones Buffer
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: '700', color: '#7c3aed' }}>{bufferLocations.length}</div>
+            </div>
+          </div>
+
+          {/* OK Serials Table */}
+          {okSerials.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px', backgroundColor: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}` }}>
+              <div style={{ fontSize: '24px', marginBottom: '16px', color: t.textMuted }}>📦</div>
+              <div style={{ fontSize: '16px', color: t.text, fontWeight: '600' }}>
+                No hay seriales OK listos para salir
+              </div>
+              <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '8px' }}>
+                Los seriales con resultado OK/USE_AS_IS/REWORK aparecerán aquí
+              </div>
+            </div>
+          ) : (
+            <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '10px', overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: t.bgPanel }}>
+                    <th style={{ padding: '12px 16px', width: '40px' }}>
+                      <input
+                        type="checkbox"
+                        checked={okSerials.length > 0 && selectedOkSerials.size === okSerials.length}
+                        onChange={toggleAllOk}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                    </th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>Serial</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>Parte</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>Campaña</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '600' }}>Resultado</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '600' }}>Inspección</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {okSerials.map((serial, i) => {
+                    const isSelected = selectedOkSerials.has(serial.serialNumber);
+                    return (
+                      <tr
+                        key={serial.id}
+                        onClick={() => toggleOkSerial(serial.serialNumber)}
+                        style={{
+                          backgroundColor: isSelected ? '#0072CE10' : (i % 2 === 0 ? t.bgCard : t.bgPanel),
+                          cursor: 'pointer',
+                          borderBottom: `1px solid ${t.border}`
+                        }}
+                      >
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: '600', color: t.text }}>
+                          {serial.serialNumber}
+                          {serial.lotNumber && (
+                            <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '400' }}>
+                              Lote: {serial.lotNumber}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: '500', color: t.text }}>{serial.partNumber}</div>
+                          <div style={{ fontSize: '11px', color: t.textMuted }}>{serial.partName}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ fontWeight: '600', color: '#7c3aed' }}>{serial.campaignNumber}</span>
+                          {serial.campaignTitle && (
+                            <div style={{ fontSize: '11px', color: t.textMuted }}>{serial.campaignTitle}</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <span style={{
+                            padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '600',
+                            backgroundColor: serial.inspectionResult === 'OK' ? '#d1fae5' : '#fef3c7',
+                            color: serial.inspectionResult === 'OK' ? '#16a34a' : '#f59e0b'
+                          }}>
+                            {serial.inspectionResult}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', color: t.textMuted }}>
+                          {serial.inspectedAt ? new Date(serial.inspectedAt).toLocaleDateString('es-MX') : '-'}
+                          <div style={{ fontSize: '11px' }}>{formatHours(serial.hoursSinceInspection)} ago</div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
       {/* ==================== MODALS ==================== */}
 
       {/* Modal Ver Detalle Paquete */}
@@ -1720,6 +1992,114 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                 {sending
                   ? (language === 'es' ? 'Creando...' : 'Creating...')
                   : (language === 'es' ? '📤 Crear Paquete' : '📤 Create Package')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Salida OK a Buffer */}
+      {showExitOkModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowExitOkModal(false)}>
+          <div style={{
+            backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px',
+            width: '500px', maxWidth: '90vw', boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+          }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700', color: t.text }}>
+              📦 Salida OK a Buffer Hospital
+            </h2>
+
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>
+                Seriales seleccionados: <strong style={{ color: t.text }}>{selectedOkSerials.size}</strong>
+              </div>
+              <div style={{
+                maxHeight: '100px', overflowY: 'auto', padding: '8px',
+                backgroundColor: t.bgPanel, borderRadius: '6px', fontSize: '12px'
+              }}>
+                {Array.from(selectedOkSerials).slice(0, 20).map(s => (
+                  <span key={s} style={{
+                    display: 'inline-block', padding: '2px 8px', margin: '2px',
+                    backgroundColor: '#d1fae5', color: '#16a34a',
+                    borderRadius: '4px', fontSize: '11px', fontWeight: '600'
+                  }}>
+                    {s}
+                  </span>
+                ))}
+                {selectedOkSerials.size > 20 && (
+                  <span style={{ color: t.textMuted, fontSize: '11px' }}>
+                    ... y {selectedOkSerials.size - 20} más
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                📍 Ubicación de destino (Buffer) *
+              </label>
+              <select
+                value={exitOkLocationId || ''}
+                onChange={(e) => setExitOkLocationId(e.target.value ? parseInt(e.target.value) : null)}
+                style={{
+                  width: '100%', padding: '10px 12px',
+                  backgroundColor: t.bgPanel, border: `1px solid ${exitOkLocationId ? t.border : '#dc2626'}`,
+                  borderRadius: '6px', color: t.text, fontSize: '13px'
+                }}
+              >
+                <option value="">-- Seleccionar ubicación --</option>
+                {bufferLocations.map(loc => (
+                  <option key={loc.id} value={loc.id}>{loc.code} - {loc.description}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                📝 Notas (opcional)
+              </label>
+              <textarea
+                value={exitOkNotes}
+                onChange={(e) => setExitOkNotes(e.target.value)}
+                placeholder="Notas adicionales del paquete..."
+                rows={2}
+                style={{
+                  width: '100%', padding: '10px 12px',
+                  backgroundColor: t.bgPanel, border: `1px solid ${t.border}`,
+                  borderRadius: '6px', color: t.text, fontSize: '13px', resize: 'vertical'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowExitOkModal(false)}
+                style={{
+                  padding: '10px 20px', backgroundColor: t.bgPanel,
+                  border: `1px solid ${t.border}`, borderRadius: '6px',
+                  color: t.text, cursor: 'pointer', fontSize: '14px'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleExitOk}
+                disabled={exitingOk || !exitOkLocationId}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: !exitOkLocationId ? t.border : '#0072CE',
+                  border: 'none', borderRadius: '6px',
+                  color: '#fff', cursor: (exitingOk || !exitOkLocationId) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px', fontWeight: '600',
+                  opacity: (exitingOk || !exitOkLocationId) ? 0.6 : 1
+                }}
+              >
+                {exitingOk ? 'Procesando...' : `📦 Crear Paquete (${selectedOkSerials.size})`}
               </button>
             </div>
           </div>

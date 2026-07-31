@@ -6176,4 +6176,58 @@ router.post('/exit-package', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================================================
+// GET OK SERIALS - Seriales OK listos para salir de MRB
+// ============================================================================
+router.get('/ok-serials', authenticateToken, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        mas.id,
+        mas.serial_number,
+        mas.lot_number,
+        mas.mrb_campaign_id,
+        mas.inspection_result,
+        mas.inspected_at,
+        mas.part_id,
+        cp.part_number,
+        cp.part_name,
+        mc.campaign_number,
+        mc.title as campaign_title,
+        c.name as client_name,
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - mas.inspected_at)) / 3600 as hours_since_inspection
+      FROM mrb_affected_serials mas
+      LEFT JOIN client_parts cp ON mas.part_id = cp.id
+      LEFT JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+      LEFT JOIN clients c ON cp.client_id = c.id
+      WHERE mas.exited_at IS NULL
+        AND mas.inspection_result IN ('OK', 'USE_AS_IS', 'REWORK')
+      ORDER BY mas.inspected_at DESC
+    `);
+
+    res.json({
+      success: true,
+      serials: result.rows.map(r => ({
+        id: r.id,
+        serialNumber: r.serial_number,
+        lotNumber: r.lot_number,
+        mrbCampaignId: r.mrb_campaign_id,
+        inspectionResult: r.inspection_result,
+        inspectedAt: r.inspected_at,
+        partId: r.part_id,
+        partNumber: r.part_number,
+        partName: r.part_name,
+        campaignNumber: r.campaign_number,
+        campaignTitle: r.campaign_title,
+        clientName: r.client_name,
+        hoursSinceInspection: parseFloat(r.hours_since_inspection) || 0
+      })),
+      count: result.rowCount
+    });
+  } catch (error) {
+    console.error('Error getting OK serials:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener seriales OK' });
+  }
+});
+
 module.exports = router;
