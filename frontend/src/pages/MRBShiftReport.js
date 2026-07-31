@@ -313,6 +313,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
   const entries = data?.defectEntries || [];
   const okEntries = data?.okEntries || [];
   const downtimeLog = data?.downtimeLog || [];
+  const okSerials = data?.okSerials || [];
 
   const avancePct = avance.qtyEnPlanta > 0 ? Math.min(100, (avance.qtyInspected / avance.qtyEnPlanta) * 100) : 0;
   const paretoMax = pareto[0]?.qty || 1;
@@ -699,14 +700,31 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
               )}
             </Section>
 
-            {/* ── 8. PIEZAS OK — SERIALES INDIVIDUALES ── */}
+            {/* ── 8. SERIALES OK (de lista afectados) ── */}
+            {okSerials.length > 0 && (
+              <Section title={`Seriales Liberados OK (${okSerials.length})`} defaultOpen={true} sectionId="ok-serials">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {okSerials.map((e, i) => (
+                    <div key={e.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '8px 12px', backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel, borderRadius: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: 'monospace', color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.inspectedAt)}</span>
+                      <span style={{ fontWeight: '700', color: '#2E7D32', minWidth: '140px' }}>{e.serialNumber}</span>
+                      {e.partNumber && <span style={{ color: t.textDim }}>{e.partNumber}</span>}
+                      <span style={{ marginLeft: 'auto', color: t.textMuted }}>{e.inspector}</span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* ── 9. PIEZAS OK — LOTES (legacy) ── */}
             {okEntries.length > 0 && (
-              <Section title={`Piezas OK — Seriales (${okEntries.length})`} defaultOpen={true} sectionId="ok-entries">
+              <Section title={`Piezas OK por Lote (${okEntries.length})`} defaultOpen={false} sectionId="ok-entries">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {okEntries.map((e, i) => (
                     <div key={e.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '8px 12px', backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel, borderRadius: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: 'monospace', color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.createdAt)}</span>
                       <span style={{ fontWeight: '700', color: '#2E7D32', minWidth: '120px' }}>{e.lotNumber || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>Sin serial</span>}</span>
+                      <span style={{ color: t.text }}>Qty: {e.quantity}</span>
                       {e.partNumber && <span style={{ color: t.textDim }}>{e.partNumber}</span>}
                       <span style={{ marginLeft: 'auto', color: t.textMuted }}>{e.inspector}</span>
                     </div>

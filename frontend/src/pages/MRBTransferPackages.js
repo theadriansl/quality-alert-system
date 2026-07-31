@@ -141,13 +141,13 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
     try {
       const [reworkRes, qarsRes, eightdRes, usersRes] = await Promise.all([
         getReworkPendingTransfer(),
-        fetch(`${API_URL}/quality-alerts?status=open&limit=100`, {
+        fetch(`${API_URL}/qar?status=open&limit=100`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }).then(r => r.json()),
         fetch(`${API_URL}/8d/reports?status=open&limit=100`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }).then(r => r.json()),
-        fetch(`${API_URL}/users?active=true&limit=200`, {
+        fetch(`${API_URL}/mrb/users/list`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }).then(r => r.json())
       ]);

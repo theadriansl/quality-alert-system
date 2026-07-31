@@ -435,6 +435,15 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
           [id, serial.trim()]
         );
         affectedStatus = inList.rows.length > 0 ? 'IN_LIST' : 'OUT_OF_LIST';
+
+        // Marcar como inspeccionado si está en la lista
+        if (affectedStatus === 'IN_LIST') {
+          await query(`
+            UPDATE mrb_affected_serials
+            SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = 'OK'
+            WHERE mrb_campaign_id = $1 AND serial_number = $2 AND NOT inspected
+          `, [id, serial.trim()]);
+        }
       }
     }
 
@@ -568,7 +577,19 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     return res.status(400).json({ success: false, message: 'El número de serie / lote es requerido' });
   }
 
+  // Disposición es mandatoria para capture-nok
+  if (!dispositionId) {
+    return res.status(400).json({ success: false, message: 'La disposición es requerida' });
+  }
+
   try {
+    // Obtener código de disposición para guardar en mrb_affected_serials
+    const dispResult = await query('SELECT code FROM inspection_dispositions WHERE id = $1', [dispositionId]);
+    if (dispResult.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Disposición no válida' });
+    }
+    const inspectionResultCode = dispResult.rows[0].code; // SCRAP, REWORK, USE_AS_IS, HOLD, RETURN_SUPPLIER
+
     // Get MRB campaign info
     const mrbResult = await query(`
       SELECT mc.*, cp.part_number
@@ -601,6 +622,15 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
         [id, serial.trim()]
       );
       affectedStatus = inList.rows.length > 0 ? 'IN_LIST' : 'OUT_OF_LIST';
+
+      // Marcar como inspeccionado si está en la lista
+      if (affectedStatus === 'IN_LIST') {
+        await query(`
+          UPDATE mrb_affected_serials
+          SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = $3
+          WHERE mrb_campaign_id = $1 AND serial_number = $2 AND NOT inspected
+        `, [id, serial.trim(), inspectionResultCode]);
+      }
     }
 
     // === TRAZABILIDAD: Buscar o crear unit_registry ===
@@ -2243,7 +2273,7 @@ router.get('/:id/shift-report', authenticateToken, async (req, res) => {
   const targetDate = date || new Date().toISOString().split('T')[0];
 
   try {
-    const [headerRes, kpiRes, paretoRes, dispositionRes, inspectorOkRes, inspectorNokRes, talliesRes, defectDetailRes, okEntriesRes, downtimeEntriesRes] = await Promise.all([
+    const [headerRes, kpiRes, paretoRes, dispositionRes, inspectorOkRes, inspectorNokRes, talliesRes, defectDetailRes, okEntriesRes, downtimeEntriesRes, okSerialsRes] = await Promise.all([
       // 1. Header — campaign + shift info
       query(`
         SELECT mc.campaign_number, mc.title, mc.lot_number,
@@ -2379,7 +2409,22 @@ router.get('/:id/shift-report', authenticateToken, async (req, res) => {
         WHERE dt.mrb_campaign_id = $1 AND DATE(dt.created_at) = $2
         ${shiftId ? 'AND dt.shift_id = $3' : ''}
         ORDER BY dt.created_at ASC
-      `, shiftId ? [id, targetDate, shiftId] : [id, targetDate])
+      `, shiftId ? [id, targetDate, shiftId] : [id, targetDate]),
+
+      // 10. Seriales OK from mrb_affected_serials
+      query(`
+        SELECT mas.id, mas.serial_number, mas.lot_number, mas.inspection_result,
+               mas.inspected_at, mas.notes,
+               cp.part_number, cp.part_name,
+               u.first_name, u.last_name
+        FROM mrb_affected_serials mas
+        LEFT JOIN client_parts cp ON mas.part_id = cp.id
+        LEFT JOIN users u ON mas.created_by = u.id
+        WHERE mas.mrb_campaign_id = $1
+          AND mas.inspection_result = 'OK'
+          AND DATE(mas.inspected_at) = $2
+        ORDER BY mas.inspected_at ASC
+      `, [id, targetDate])
     ]);
 
     const h = headerRes.rows[0] || {};
@@ -2488,6 +2533,17 @@ router.get('/:id/shift-report', authenticateToken, async (req, res) => {
         sourceType: r.source_type,
         notes: r.notes,
         createdAt: r.created_at,
+        inspector: `${r.first_name || ''} ${r.last_name || ''}`.trim()
+      })),
+      okSerials: okSerialsRes.rows.map(r => ({
+        id: r.id,
+        serialNumber: r.serial_number,
+        lotNumber: r.lot_number,
+        inspectionResult: r.inspection_result,
+        inspectedAt: r.inspected_at,
+        notes: r.notes,
+        partNumber: r.part_number,
+        partName: r.part_name,
         inspector: `${r.first_name || ''} ${r.last_name || ''}`.trim()
       }))
     });
@@ -4751,13 +4807,13 @@ router.patch('/buffer/:id/assign-campaign', authenticateToken, async (req, res) 
       });
     }
 
-    // Asignar defecto a la campaña
+    // Asignar defecto a la campaña y obtener datos para mrb_affected_serials
     const result = await query(`
       UPDATE defect_entries_v2
       SET mrb_campaign_id = $1,
           mrb_received_at = COALESCE(mrb_received_at, CURRENT_TIMESTAMP)
       WHERE id = $2 AND repair_status = 'QUARANTINE'
-      RETURNING id
+      RETURNING id, serial_number, part_id, lot_number
     `, [campaignId, id]);
 
     if (result.rows.length === 0) {
@@ -4765,6 +4821,16 @@ router.patch('/buffer/:id/assign-campaign', authenticateToken, async (req, res) 
         success: false,
         message: 'Defecto no encontrado o no está en QUARANTINE'
       });
+    }
+
+    // Crear registro en mrb_affected_serials para control de inspección
+    const defect = result.rows[0];
+    if (defect.serial_number) {
+      await query(`
+        INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, lot_number, created_by, inspected)
+        VALUES ($1, $2, $3, $4, $5, false)
+        ON CONFLICT (mrb_campaign_id, serial_number) DO NOTHING
+      `, [campaignId, defect.serial_number, defect.part_id, defect.lot_number, req.user.id]);
     }
 
     res.json({ success: true, message: 'Defecto asignado a campaña MRB' });
@@ -4787,13 +4853,42 @@ router.post('/buffer/batch-assign-campaign', authenticateToken, async (req, res)
   }
 
   try {
+    // Verificar que la campaña existe y está activa
+    const campaign = await query(
+      `SELECT id, status FROM mrb_campaigns WHERE id = $1`,
+      [campaignId]
+    );
+
+    if (campaign.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Campaña no encontrada' });
+    }
+
+    if (!['ABIERTA', 'EN_PROCESO'].includes(campaign.rows[0].status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La campaña no está activa'
+      });
+    }
+
+    // Asignar defectos y obtener datos para mrb_affected_serials
     const result = await query(`
       UPDATE defect_entries_v2
       SET mrb_campaign_id = $1,
           mrb_received_at = COALESCE(mrb_received_at, CURRENT_TIMESTAMP)
       WHERE id = ANY($2::int[]) AND repair_status = 'QUARANTINE'
-      RETURNING id
+      RETURNING id, serial_number, part_id, lot_number
     `, [campaignId, defectIds]);
+
+    // Crear registros en mrb_affected_serials para control de inspección
+    for (const defect of result.rows) {
+      if (defect.serial_number) {
+        await query(`
+          INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, lot_number, created_by, inspected)
+          VALUES ($1, $2, $3, $4, $5, false)
+          ON CONFLICT (mrb_campaign_id, serial_number) DO NOTHING
+        `, [campaignId, defect.serial_number, defect.part_id, defect.lot_number, req.user.id]);
+      }
+    }
 
     res.json({
       success: true,
@@ -4803,6 +4898,280 @@ router.post('/buffer/batch-assign-campaign', authenticateToken, async (req, res)
   } catch (error) {
     console.error('Error batch assigning campaign:', error);
     res.status(500).json({ success: false, message: 'Error batch assigning campaign' });
+  }
+});
+
+// ============================================================================
+// INSPECCIÓN PENDIENTE POR SERIAL - Control de campañas sin inspeccionar
+// ============================================================================
+
+// GET /mrb/serial/:serialNumber/pending-inspections - Campañas pendientes de inspección para un serial
+router.get('/serial/:serialNumber/pending-inspections', authenticateToken, async (req, res) => {
+  const { serialNumber } = req.params;
+
+  try {
+    const result = await query(`
+      SELECT
+        mas.id,
+        mas.mrb_campaign_id,
+        mc.campaign_number,
+        mc.title as campaign_title,
+        mc.status as campaign_status,
+        mas.inspected,
+        mas.inspected_at,
+        mas.inspection_result,
+        mas.created_at as assigned_at
+      FROM mrb_affected_serials mas
+      JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+      WHERE mas.serial_number = $1
+        AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+      ORDER BY mas.created_at DESC
+    `, [serialNumber]);
+
+    const pending = result.rows.filter(r => !r.inspected);
+    const inspected = result.rows.filter(r => r.inspected);
+
+    res.json({
+      success: true,
+      serialNumber,
+      campaigns: transformToCamelCase(result.rows),
+      summary: {
+        total: result.rows.length,
+        pending: pending.length,
+        inspected: inspected.length,
+        canDispose: pending.length === 0
+      }
+    });
+  } catch (error) {
+    console.error('Error getting pending inspections:', error);
+    res.status(500).json({ success: false, message: 'Error obteniendo inspecciones pendientes' });
+  }
+});
+
+// GET /mrb/buffer/pending-inspections - Todos los seriales con inspecciones pendientes
+router.get('/buffer/pending-inspections', authenticateToken, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        mas.serial_number,
+        COUNT(*) FILTER (WHERE NOT mas.inspected) as pending_count,
+        COUNT(*) FILTER (WHERE mas.inspected) as inspected_count,
+        ARRAY_AGG(DISTINCT mc.campaign_number) FILTER (WHERE NOT mas.inspected) as pending_campaigns,
+        MIN(mas.created_at) as oldest_pending
+      FROM mrb_affected_serials mas
+      JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+      WHERE mc.status IN ('ABIERTA', 'EN_PROCESO')
+      GROUP BY mas.serial_number
+      HAVING COUNT(*) FILTER (WHERE NOT mas.inspected) > 0
+      ORDER BY MIN(mas.created_at)
+    `);
+
+    res.json({
+      success: true,
+      serials: transformToCamelCase(result.rows),
+      totalWithPending: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error getting pending inspections:', error);
+    res.status(500).json({ success: false, message: 'Error obteniendo inspecciones pendientes' });
+  }
+});
+
+// POST /mrb/check-can-dispose - Verificar si un serial puede recibir disposición
+router.post('/check-can-dispose', authenticateToken, async (req, res) => {
+  const { serialNumber, defectId } = req.body;
+
+  if (!serialNumber && !defectId) {
+    return res.status(400).json({ success: false, message: 'serialNumber o defectId es requerido' });
+  }
+
+  try {
+    let serial = serialNumber;
+
+    // Si solo tenemos defectId, obtener el serial
+    if (!serial && defectId) {
+      const defectRes = await query('SELECT serial_number FROM defect_entries_v2 WHERE id = $1', [defectId]);
+      if (defectRes.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Defecto no encontrado' });
+      }
+      serial = defectRes.rows[0].serial_number;
+    }
+
+    if (!serial) {
+      // Si no hay serial, permitir disposición (es por lote)
+      return res.json({ success: true, canDispose: true, reason: 'Sin serial, validación no aplica' });
+    }
+
+    // Verificar campañas pendientes de inspección
+    const pendingRes = await query(`
+      SELECT
+        mas.mrb_campaign_id,
+        mc.campaign_number,
+        mc.title
+      FROM mrb_affected_serials mas
+      JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+      WHERE mas.serial_number = $1
+        AND NOT mas.inspected
+        AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+    `, [serial]);
+
+    if (pendingRes.rows.length > 0) {
+      return res.json({
+        success: true,
+        canDispose: false,
+        reason: 'Inspecciones pendientes',
+        pendingCampaigns: transformToCamelCase(pendingRes.rows)
+      });
+    }
+
+    res.json({ success: true, canDispose: true });
+  } catch (error) {
+    console.error('Error checking dispose eligibility:', error);
+    res.status(500).json({ success: false, message: 'Error verificando elegibilidad' });
+  }
+});
+
+// ============================================================================
+// MRB INVENTORY - Vista de inventario con estado de inspección por campaña
+// ============================================================================
+
+router.get('/inventory', authenticateToken, async (req, res) => {
+  try {
+    // 1. Obtener campañas activas
+    const campaignsRes = await query(`
+      SELECT
+        mc.id,
+        mc.campaign_number,
+        mc.title,
+        mc.status,
+        mc.part_id,
+        (SELECT COUNT(*) FROM mrb_affected_serials WHERE mrb_campaign_id = mc.id) as serials_count
+      FROM mrb_campaigns mc
+      WHERE mc.status IN ('ABIERTA', 'EN_PROCESO')
+      ORDER BY mc.created_at DESC
+      LIMIT 20
+    `);
+    const campaigns = campaignsRes.rows.map(c => ({
+      ...c,
+      serialsCount: parseInt(c.serials_count) || 0
+    }));
+
+    // 2. Obtener todos los seriales AÚN EN MRB (exited_at IS NULL)
+    //    Basado en mrb_affected_serials, no en repair_status
+    const inventoryRes = await query(`
+      SELECT
+        mas.id as affected_serial_id,
+        mas.serial_number,
+        mas.lot_number,
+        mas.mrb_campaign_id,
+        mas.inspected,
+        mas.inspection_result,
+        mas.inspected_at,
+        mas.created_at as entered_mrb_at,
+        mas.part_id,
+        cp.part_number,
+        cp.part_name,
+        mc.campaign_number,
+        mc.title as campaign_title,
+        c.id as client_id,
+        c.name as client_name,
+        -- Buscar defecto asociado si existe
+        d.id as defect_id,
+        d.current_location_id,
+        lc.code as location_code,
+        dt.name as defect_type_name,
+        dt.code as defect_type_code,
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - mas.created_at)) / 3600 as hours_in_mrb
+      FROM mrb_affected_serials mas
+      LEFT JOIN client_parts cp ON mas.part_id = cp.id
+      LEFT JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+      LEFT JOIN clients c ON cp.client_id = c.id
+      LEFT JOIN defect_entries_v2 d ON d.serial_number = mas.serial_number AND d.mrb_campaign_id = mas.mrb_campaign_id
+      LEFT JOIN location_codes lc ON d.current_location_id = lc.id
+      LEFT JOIN defect_types dt ON d.defect_type_id = dt.id
+      WHERE mas.exited_at IS NULL
+      ORDER BY mas.created_at DESC
+    `);
+
+    // 3. Agrupar por serial (un serial puede estar en múltiples campañas)
+    const serialMap = {};
+    for (const row of inventoryRes.rows) {
+      const key = row.serial_number;
+      if (!serialMap[key]) {
+        serialMap[key] = {
+          serialNumber: row.serial_number,
+          lotNumber: row.lot_number,
+          partId: row.part_id,
+          partNumber: row.part_number,
+          partName: row.part_name,
+          clientId: row.client_id,
+          clientName: row.client_name,
+          defectId: row.defect_id,
+          locationCode: row.location_code,
+          defectTypeName: row.defect_type_name,
+          defectTypeCode: row.defect_type_code,
+          hoursInMrb: parseFloat(row.hours_in_mrb) || 0,
+          campaignStatus: {},
+          inspectionResults: []
+        };
+      }
+      // Agregar estado de esta campaña
+      serialMap[key].campaignStatus[row.mrb_campaign_id] = {
+        affected: true,
+        inspected: row.inspected || false,
+        result: row.inspection_result
+      };
+      if (row.inspection_result) {
+        serialMap[key].inspectionResults.push(row.inspection_result);
+      }
+    }
+
+    // 4. Calcular finalTab para cada serial
+    const inventory = Object.values(serialMap).map(item => {
+      const results = item.inspectionResults;
+      const statuses = Object.values(item.campaignStatus);
+      const pendingCount = statuses.filter(s => s.affected && !s.inspected).length;
+      const inspectedCount = statuses.filter(s => s.affected && s.inspected).length;
+      const hasScrap = results.includes('SCRAP');
+      const hasHoldOrReturn = results.includes('HOLD') || results.includes('RETURN_SUPPLIER');
+
+      let finalTab = 'CUARENTENA';
+      if (pendingCount === 0 && inspectedCount > 0) {
+        if (hasScrap) {
+          finalTab = 'SCRAP';
+        } else if (!hasHoldOrReturn) {
+          finalTab = 'OK';
+        }
+      }
+
+      return {
+        ...item,
+        pendingInspections: pendingCount,
+        completedInspections: inspectedCount,
+        canDispose: pendingCount === 0,
+        finalTab
+      };
+    });
+
+    // 5. Resumen
+    const summary = {
+      totalSerials: inventory.length,
+      withPendingInspections: inventory.filter(i => i.pendingInspections > 0).length,
+      readyForDisposition: inventory.filter(i => i.canDispose).length,
+      tabCuarentena: inventory.filter(i => i.finalTab === 'CUARENTENA').length,
+      tabOk: inventory.filter(i => i.finalTab === 'OK').length,
+      tabScrap: inventory.filter(i => i.finalTab === 'SCRAP').length
+    };
+
+    res.json({
+      success: true,
+      campaigns: campaigns.map(c => transformToCamelCase(c)),
+      inventory,
+      summary
+    });
+  } catch (error) {
+    console.error('Error getting MRB inventory:', error);
+    res.status(500).json({ success: false, message: 'Error obteniendo inventario MRB' });
   }
 });
 
@@ -5699,6 +6068,111 @@ router.post('/:id/import-tally', authenticateToken, multer({ storage: multer.mem
   } catch (error) {
     console.error('Error importing tally:', error);
     res.status(500).json({ success: false, message: 'Error importando tally: ' + error.message });
+  }
+});
+
+// ============================================================================
+// MRB EXIT PACKAGE - Salida de seriales OK/SCRAP de MRB
+// ============================================================================
+router.post('/exit-package', authenticateToken, async (req, res) => {
+  const { serialNumbers, destinationLocationId, notes, exitType } = req.body;
+
+  if (!serialNumbers || !Array.isArray(serialNumbers) || serialNumbers.length === 0) {
+    return res.status(400).json({ success: false, message: 'Se requieren seriales para crear paquete' });
+  }
+  if (!destinationLocationId) {
+    return res.status(400).json({ success: false, message: 'Se requiere ubicación de destino' });
+  }
+
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Crear paquete de transferencia
+    const pkgResult = await client.query(`
+      INSERT INTO transfer_packages (
+        origin_type, destination_type, destination_location_id,
+        status, created_by, notes, sent_at, sent_by
+      ) VALUES ('MRB', 'HOSPITAL', $1, 'RECEIVED', $2, $3, CURRENT_TIMESTAMP, $2)
+      RETURNING id, package_number
+    `, [destinationLocationId, req.user.id, notes || `Salida MRB ${exitType}: ${serialNumbers.length} seriales`]);
+
+    const pkg = pkgResult.rows[0];
+
+    // 2. Obtener datos de los seriales
+    const serialsData = await client.query(`
+      SELECT mas.id, mas.serial_number, mas.mrb_campaign_id, mas.part_id,
+             mas.inspection_result, mc.campaign_number,
+             cp.part_number, cp.part_name,
+             ur.id as unit_id
+      FROM mrb_affected_serials mas
+      LEFT JOIN mrb_campaigns mc ON mas.mrb_campaign_id = mc.id
+      LEFT JOIN client_parts cp ON mas.part_id = cp.id
+      LEFT JOIN unit_registry ur ON ur.serial_number = mas.serial_number AND ur.part_id = mas.part_id
+      WHERE mas.serial_number = ANY($1::text[])
+        AND mas.exited_at IS NULL
+    `, [serialNumbers]);
+
+    const processedSerials = [];
+    const now = new Date();
+
+    for (const row of serialsData.rows) {
+      // 3. Marcar como salido de MRB
+      await client.query(`
+        UPDATE mrb_affected_serials
+        SET exited_at = $1, exit_package_id = $2, exited_by = $3
+        WHERE id = $4
+      `, [now, pkg.id, req.user.id, row.id]);
+
+      // 4. Agregar item al paquete
+      await client.query(`
+        INSERT INTO transfer_package_items (
+          package_id, unit_id, serial_number, part_id, part_number, part_name, notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [pkg.id, row.unit_id, row.serial_number, row.part_id, row.part_number, row.part_name,
+          `${row.inspection_result} en campaña ${row.campaign_number}`]);
+
+      // 5. Registrar en unit_history si tiene unit_id
+      if (row.unit_id) {
+        await client.query(`
+          INSERT INTO unit_history (
+            unit_id, event_type, source_table, source_id, description, performed_by, metadata
+          ) VALUES ($1, 'MRB_EXIT', 'transfer_packages', $2, $3, $4, $5)
+        `, [
+          row.unit_id,
+          pkg.id,
+          `Salida de MRB → Hospital Buffer. Resultado: ${row.inspection_result}. Campaña: ${row.campaign_number}`,
+          req.user.id,
+          JSON.stringify({
+            packageNumber: pkg.package_number,
+            exitType,
+            inspectionResult: row.inspection_result,
+            campaignNumber: row.campaign_number,
+            destinationLocationId
+          })
+        ]);
+      }
+
+      processedSerials.push(row.serial_number);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      packageId: pkg.id,
+      packageNumber: pkg.package_number,
+      processedCount: processedSerials.length,
+      serials: processedSerials,
+      message: `Paquete ${pkg.package_number} creado con ${processedSerials.length} seriales`
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating exit package:', error);
+    res.status(500).json({ success: false, message: 'Error al crear paquete de salida: ' + error.message });
+  } finally {
+    client.release();
   }
 });
 

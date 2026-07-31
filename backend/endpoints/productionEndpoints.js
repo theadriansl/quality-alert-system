@@ -441,17 +441,21 @@ router.post('/import/csv', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Construir mapa de part_number -> part_id
+    // Construir mapa de part_number -> {id, client_id, project_id}
     const partNumbers = [...new Set(records.map(r => r.part_number).filter(Boolean))];
     const partMap = {};
 
     if (partNumbers.length > 0) {
       const partsResult = await client.query(
-        'SELECT id, part_number FROM client_parts WHERE part_number = ANY($1)',
+        'SELECT id, part_number, client_id, project_id FROM client_parts WHERE part_number = ANY($1)',
         [partNumbers]
       );
       partsResult.rows.forEach(p => {
-        partMap[p.part_number] = p.id;
+        partMap[p.part_number] = {
+          id: p.id,
+          clientId: p.client_id,
+          projectId: p.project_id
+        };
       });
     }
 
@@ -467,6 +471,22 @@ router.post('/import/csv', upload.single('file'), async (req, res) => {
       shiftsResult.rows.forEach(s => {
         shiftMap[s.code] = s.id;
       });
+    }
+
+    // Obtener info del defaultPartId si se proporcionó
+    let defaultPartInfo = null;
+    if (defaultPartId) {
+      const dpResult = await client.query(
+        'SELECT id, client_id, project_id FROM client_parts WHERE id = $1',
+        [parseInt(defaultPartId)]
+      );
+      if (dpResult.rows.length > 0) {
+        defaultPartInfo = {
+          id: dpResult.rows[0].id,
+          clientId: dpResult.rows[0].client_id,
+          projectId: dpResult.rows[0].project_id
+        };
+      }
     }
 
     await client.query('BEGIN');
@@ -495,7 +515,10 @@ router.post('/import/csv', upload.single('file'), async (req, res) => {
         }
 
         const partNumberRaw = row.part_number || null;
-        let partId = partMap[partNumberRaw] || (defaultPartId ? parseInt(defaultPartId) : null);
+        const partInfo = partMap[partNumberRaw] || defaultPartInfo;
+        let partId = partInfo?.id || null;
+        let clientId = partInfo?.clientId || null;
+        let projectId = partInfo?.projectId || null;
         let partStatus = 'CONFIGURED';
 
         // Si no hay part_id pero sí part_number_raw, es UNMATCHED
@@ -547,10 +570,41 @@ router.post('/import/csv', upload.single('file'), async (req, res) => {
           ]);
 
           if (result.rows.length > 0) {
-            if (result.rows[0].inserted) {
+            const prodEntryId = result.rows[0].id;
+            const wasInserted = result.rows[0].inserted;
+
+            if (wasInserted) {
               results.inserted++;
             } else {
               results.updated = (results.updated || 0) + 1;
+            }
+
+            // Crear unit_registry si es nueva entrada y tiene partId válido
+            if (wasInserted && partId && clientId) {
+              const unitResult = await client.query(`
+                INSERT INTO unit_registry (
+                  serial_number, lot_number, client_id, part_id, project_id,
+                  current_status, source, production_entry_id, created_by
+                ) VALUES ($1, $2, $3, $4, $5, 'PENDING', 'PRODUCTION', $6, $7)
+                ON CONFLICT (client_id, part_id, serial_number) DO NOTHING
+                RETURNING id
+              `, [
+                row.serial_number,
+                row.lot_number || null,
+                clientId,
+                partId,
+                projectId,
+                prodEntryId,
+                req.user?.id || null
+              ]);
+
+              // Vincular production_entry con unit_registry
+              if (unitResult.rows.length > 0) {
+                await client.query(
+                  'UPDATE production_entries SET unit_id = $1 WHERE id = $2',
+                  [unitResult.rows[0].id, prodEntryId]
+                );
+              }
             }
           }
         } else {
@@ -577,7 +631,36 @@ router.post('/import/csv', upload.single('file'), async (req, res) => {
           ]);
 
           if (result.rows.length > 0) {
+            const prodEntryId = result.rows[0].id;
             results.inserted++;
+
+            // Crear unit_registry si tiene partId válido
+            if (partId && clientId) {
+              const unitResult = await client.query(`
+                INSERT INTO unit_registry (
+                  serial_number, lot_number, client_id, part_id, project_id,
+                  current_status, source, production_entry_id, created_by
+                ) VALUES ($1, $2, $3, $4, $5, 'PENDING', 'PRODUCTION', $6, $7)
+                ON CONFLICT (client_id, part_id, serial_number) DO NOTHING
+                RETURNING id
+              `, [
+                row.serial_number,
+                row.lot_number || null,
+                clientId,
+                partId,
+                projectId,
+                prodEntryId,
+                req.user?.id || null
+              ]);
+
+              // Vincular production_entry con unit_registry
+              if (unitResult.rows.length > 0) {
+                await client.query(
+                  'UPDATE production_entries SET unit_id = $1 WHERE id = $2',
+                  [unitResult.rows[0].id, prodEntryId]
+                );
+              }
+            }
           } else {
             results.duplicates++;
           }

@@ -1709,8 +1709,10 @@ const MRBDashboard = () => {
             <button onClick={() => navigate('/')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgPanel, color: t.text, cursor: 'pointer' }}>Módulos</button>
             <button onClick={() => navigate('/mrb-campaigns')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.accent}`, borderRadius: '6px', backgroundColor: 'transparent', color: t.accent, cursor: 'pointer' }}>Campaigns</button>
             <button onClick={() => navigate('/mrb-capture')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: t.accent, color: '#fff', cursor: 'pointer' }}>Inspección</button>
-            <button onClick={() => navigate('/mrb-buffer')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid #f59e0b`, borderRadius: '6px', backgroundColor: 'transparent', color: '#f59e0b', cursor: 'pointer' }}>📦 Buffer</button>
-            {isUserAdmin() && <button onClick={() => navigate('/mrb-config')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgPanel, color: t.text, cursor: 'pointer' }}>⚙ Configuración</button>}
+            <button onClick={() => navigate('/mrb-buffer')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid #f59e0b`, borderRadius: '6px', backgroundColor: 'transparent', color: '#f59e0b', cursor: 'pointer' }}>Buffer</button>
+            <button onClick={() => navigate('/mrb-packages')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid #16a34a`, borderRadius: '6px', backgroundColor: 'transparent', color: '#16a34a', cursor: 'pointer' }}>Paquetes</button>
+            <button onClick={() => navigate('/mrb-inventory')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid #0072CE`, borderRadius: '6px', backgroundColor: 'transparent', color: '#0072CE', cursor: 'pointer' }}>Inventario</button>
+            {isUserAdmin() && <button onClick={() => navigate('/mrb-config')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgPanel, color: t.text, cursor: 'pointer' }}>Configuración</button>}
             {/* Exportar a PDF */}
             <button
               onClick={exportToPDF}

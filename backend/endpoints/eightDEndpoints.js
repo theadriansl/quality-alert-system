@@ -1956,6 +1956,46 @@ async function deleteEightDReport(req, res) {
   }
 }
 
+// GET all 8D reports (with filters)
+async function getAllEightDReports(req, res) {
+  try {
+    const { status, limit = 100, offset = 0 } = req.query;
+
+    let sql = `
+      SELECT
+        id, report_id, title, description, status, severity,
+        supplier_name, part_number, part_name,
+        created_at, updated_at, issue_date, target_closure_date
+      FROM eightd_reports
+      WHERE 1=1
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    // Filter by status (open = draft or in_progress)
+    if (status === 'open') {
+      sql += ` AND status IN ('draft', 'in_progress')`;
+    } else if (status) {
+      sql += ` AND status = $${paramIndex++}`;
+      params.push(status);
+    }
+
+    sql += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const result = await query(sql, params);
+
+    res.json({
+      success: true,
+      reports: transformToCamelCase(result.rows),
+      total: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching 8D reports:', error);
+    res.status(500).json({ success: false, message: 'Error fetching 8D reports' });
+  }
+}
+
 module.exports = {
   createEightDReport,
   getEightDReportById,
@@ -1963,6 +2003,7 @@ module.exports = {
   updatePartsOnly,
   updateD3Only,
   getMyAssignedReports,
+  getAllEightDReports,
   approveD6,
   rejectD6,
   uploadD6Evidence,
