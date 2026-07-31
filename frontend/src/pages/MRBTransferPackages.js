@@ -213,6 +213,25 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
     }
   }, [mode, loadReceiveData, loadSendData, loadExitOkData]);
 
+  // Load counts for all tabs on mount (for badge display)
+  useEffect(() => {
+    const loadAllCounts = async () => {
+      const token = localStorage.getItem('token');
+      try {
+        // Load OK serials count (for tab badge)
+        const okRes = await fetch(`${API_URL}/mrb/ok-serials`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json());
+        if (okRes.success) {
+          setOkSerials(okRes.serials || []);
+        }
+      } catch (err) {
+        console.error('Error loading counts:', err);
+      }
+    };
+    loadAllCounts();
+  }, []);
+
   // ========== RECEIVE FUNCTIONS ==========
   const loadPackageDetails = async (pkg) => {
     try {
