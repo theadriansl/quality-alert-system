@@ -218,12 +218,20 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
     const loadAllCounts = async () => {
       const token = localStorage.getItem('token');
       try {
-        // Load OK serials count (for tab badge)
-        const okRes = await fetch(`${API_URL}/mrb/ok-serials`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).then(r => r.json());
+        const [okRes, reworkRes] = await Promise.all([
+          // Load OK serials count
+          fetch(`${API_URL}/mrb/ok-serials`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(r => r.json()),
+          // Load REWORK count
+          getReworkPendingTransfer()
+        ]);
+
         if (okRes.success) {
           setOkSerials(okRes.serials || []);
+        }
+        if (reworkRes.success) {
+          setReworkDefects(reworkRes.defects || []);
         }
       } catch (err) {
         console.error('Error loading counts:', err);
