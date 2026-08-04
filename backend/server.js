@@ -75,9 +75,12 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Force UTF-8 charset for all responses (Spanish characters)
+// Force UTF-8 charset for JSON responses (Spanish characters)
+// Skip for static files (uploads)
 app.use((req, res, next) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  if (!req.path.startsWith('/uploads')) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  }
   next();
 });
 
@@ -107,8 +110,30 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  // Remove any Content-Type that might be set by other middleware
+  res.removeHeader('Content-Type');
   next();
-}, express.static(uploadsDir));
+}, express.static(uploadsDir, {
+  setHeaders: (res, filePath) => {
+    // Set correct Content-Type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    };
+    if (mimeTypes[ext]) {
+      res.setHeader('Content-Type', mimeTypes[ext]);
+    }
+  }
+}));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({

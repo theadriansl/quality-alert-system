@@ -36,19 +36,104 @@ export const getUserHospitalRoles = async (userId) => {
  */
 export const checkMyHospitalPermissions = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    let user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    // Obtener datos frescos del usuario desde /auth/me
+    try {
+      const meRes = await fetch(`${API_URL}/auth/me`, { headers: getHeaders() });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.user) {
+          user = meData.user;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      }
+    } catch (e) {
+      // Ignorar error, usar datos de localStorage
+    }
+
     if (!user.id) {
       return {
         success: false,
         data: { canRepair: false, canRelease: false, isHospitalAdmin: false, hospitalRoles: [] }
       };
     }
+
+    // Fallback: si el usuario es admin del sistema, dar todos los permisos
+    // Verificar múltiples campos posibles de admin
+    const isSystemAdmin =
+      user.systemRole === 'admin' ||
+      user.role === 'admin' ||
+      user.userType === 'super_admin' ||
+      user.roleName === 'Administrador' ||
+      user.roleName === 'Admin' ||
+      (user.permissions && user.permissions.admin === true) ||
+      user.clearanceLevel >= 100;
+
     const res = await fetch(`${API_URL}/hospital-roles/check/${user.id}`, {
       headers: getHeaders()
     });
-    return res.json();
+
+    if (!res.ok) {
+      // Si falla el endpoint pero es admin, dar permisos
+      if (isSystemAdmin) {
+        return {
+          success: true,
+          data: {
+            canRepair: true,
+            canRelease: true,
+            canScrap: true,
+            isHospitalAdmin: true,
+            isSystemAdmin: true,
+            hospitalRoles: ['admin']
+          }
+        };
+      }
+      throw new Error('Failed to fetch permissions');
+    }
+
+    const result = await res.json();
+
+    // Si el endpoint retorna success pero sin permisos y es admin, corregir
+    if (result.success && isSystemAdmin && !result.data?.canRepair) {
+      result.data = {
+        ...result.data,
+        canRepair: true,
+        canRelease: true,
+        canScrap: true,
+        isHospitalAdmin: true,
+        isSystemAdmin: true
+      };
+    }
+
+    return result;
   } catch (error) {
     console.error('Error checking hospital permissions:', error);
+    // Último fallback: verificar si es admin
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const isSystemAdmin =
+      user.systemRole === 'admin' ||
+      user.role === 'admin' ||
+      user.userType === 'super_admin' ||
+      user.roleName === 'Administrador' ||
+      user.roleName === 'Admin' ||
+      (user.permissions && user.permissions.admin === true) ||
+      user.clearanceLevel >= 100;
+
+    if (isSystemAdmin) {
+      return {
+        success: true,
+        data: {
+          canRepair: true,
+          canRelease: true,
+          canScrap: true,
+          isHospitalAdmin: true,
+          isSystemAdmin: true,
+          hospitalRoles: ['admin']
+        }
+      };
+    }
+
     return {
       success: false,
       data: { canRepair: false, canRelease: false, isHospitalAdmin: false, hospitalRoles: [] }

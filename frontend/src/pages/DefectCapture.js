@@ -6,6 +6,7 @@ import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import DefectConsultTab, { DefectCounter } from '../components/DefectConsultTab';
 import SerialDefectsSummary from '../components/SerialDefectsSummary';
+import DefectsListModal from '../components/DefectsListModal';
 import InlineDefectDetailModal from '../components/InlineDefectDetailModal';
 import { checkMyHospitalPermissions } from '../services/hospitalRolesService';
 import * as repairService from '../services/repairService';
@@ -143,6 +144,7 @@ const DefectCapture = () => {
   const [defectCounts, setDefectCounts] = useState({ open: 0, repaired: 0, released: 0, total: 0 });
   const [selectedDefectForDetail, setSelectedDefectForDetail] = useState(null);
   const [defectDetailModalOpen, setDefectDetailModalOpen] = useState(false);
+  const [defectsListModalOpen, setDefectsListModalOpen] = useState(false);
   const [hospitalPermissions, setHospitalPermissions] = useState({
     canRepair: false,
     canRelease: false,
@@ -427,13 +429,22 @@ const DefectCapture = () => {
         }
       } catch (err) {
         console.error('Error loading hospital permissions:', err);
+        // Fallback: verificar si es admin en localStorage
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isAdmin =
+          user.systemRole === 'admin' ||
+          user.role === 'admin' ||
+          user.userType === 'super_admin' ||
+          user.roleName === 'Administrador' ||
+          user.roleName === 'Admin' ||
+          user.clearanceLevel >= 100;
         setHospitalPermissions({
-          canRepair: false,
-          canRelease: false,
-          canScrap: false,
-          isHospitalAdmin: false,
-          canManageDeviations: false,
-          hospitalRoles: []
+          canRepair: isAdmin,
+          canRelease: isAdmin,
+          canScrap: isAdmin,
+          isHospitalAdmin: isAdmin,
+          canManageDeviations: isAdmin,
+          hospitalRoles: isAdmin ? ['admin'] : []
         });
       }
     };
@@ -486,14 +497,11 @@ const DefectCapture = () => {
     }
   }, [selectedPart, selectedStation]);
 
-  // Reset specific fields when defect changes (same part)
+  // Reset comment when defect changes (keep department and severity - user selected them)
   useEffect(() => {
     if (selectedDefect) {
-      // Reset fields likely to change per defect
       setComment('');
-      setSelectedDepartment(null);
-      setSelectedSeverity(null);
-      // Mantener: selectedStage, selectedDisposition (genéricos)
+      // NO resetear department ni severity - el usuario ya los seleccionó
     }
   }, [selectedDefect]);
 
@@ -533,6 +541,16 @@ const DefectCapture = () => {
       setDefectFilter('');
     }
   }, [selectedStation]);
+
+  // Sincronizar selectedDefectForDetail con serialDefects actualizado
+  useEffect(() => {
+    if (selectedDefectForDetail && serialDefects.length > 0) {
+      const updatedDefect = serialDefects.find(d => d.id === selectedDefectForDetail.id);
+      if (updatedDefect && updatedDefect.repairStatus !== selectedDefectForDetail.repairStatus) {
+        setSelectedDefectForDetail(updatedDefect);
+      }
+    }
+  }, [serialDefects, selectedDefectForDetail]);
 
   // Load station config (specs/defects) when station or part changes
   useEffect(() => {
@@ -1225,9 +1243,10 @@ const DefectCapture = () => {
 
   const handleInlineRepair = async (defectId, data) => {
     try {
+      const stationIdToUse = data.repairStationId || selectedStation?.id;
       const result = await repairService.repairInline(defectId, {
         ...data,
-        repairStationId: selectedStation?.id
+        repairStationId: stationIdToUse
       });
       if (result.success) {
         // Recargar defectos del serial
@@ -1567,6 +1586,21 @@ const DefectCapture = () => {
   const isFormValid = selectedStation && selectedInspector && selectedShift &&
     selectedClient && selectedProject && selectedPart &&
     selectedDepartment && selectedDefect && lotNumber.trim() && !serialScrapped;
+
+  const getMissingFields = () => {
+    const missing = [];
+    if (!selectedStation) missing.push('Estación');
+    if (!selectedInspector) missing.push('Inspector');
+    if (!selectedShift) missing.push('Turno');
+    if (!selectedClient) missing.push('Cliente');
+    if (!selectedProject) missing.push('Proyecto');
+    if (!selectedPart) missing.push('Parte');
+    if (!selectedDepartment) missing.push('Departamento');
+    if (!selectedDefect) missing.push('Defecto');
+    if (!lotNumber.trim()) missing.push('Lote/Serie');
+    if (serialScrapped) missing.push('Serial en SCRAP');
+    return missing;
+  };
 
   const defectPreview = selectedPart && selectedDefect ?
     `${selectedPart.captureDisplayName || selectedPart.partNumber} | ${selectedDefect.name} | ${selectedSeverity?.name || 'Sin severidad'}` :
@@ -2304,13 +2338,9 @@ const DefectCapture = () => {
             {lotNumber && (
               <div style={{ marginTop: '8px' }}>
                 <SerialDefectsSummary
-                  defects={serialDefects}
                   counts={defectCounts}
-                  onDefectClick={handleDefectClick}
-                  onViewAll={() => setDefectConsultOpen(true)}
-                  maxVisible={3}
+                  onClick={() => setDefectsListModalOpen(true)}
                   theme={currentTheme}
-                  permissions={hospitalPermissions}
                 />
               </div>
             )}
@@ -2737,6 +2767,21 @@ const DefectCapture = () => {
               </button>
             </div>
 
+            {/* Missing fields message */}
+            {!isFormValid && !submitting && getMissingFields().length > 0 && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#f59e0b20',
+                border: '1px solid #f59e0b',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: '#f59e0b'
+              }}>
+                <strong>Falta:</strong> {getMissingFields().join(', ')}
+              </div>
+            )}
+
             {/* Attached files preview (inline, compact) */}
             {pendingAttachments.length > 0 && (
               <div style={{
@@ -2954,7 +2999,21 @@ const DefectCapture = () => {
         </div>
       )}
 
-      {/* Modal Detalle Defecto Inline */}
+      {/* Modal Lista de Defectos (Etapa 1) */}
+      <DefectsListModal
+        isOpen={defectsListModalOpen}
+        onClose={() => setDefectsListModalOpen(false)}
+        defects={serialDefects}
+        counts={defectCounts}
+        serialNumber={lotNumber}
+        onDefectClick={(defect) => {
+          setDefectsListModalOpen(false);
+          handleDefectClick(defect);
+        }}
+        theme={currentTheme}
+      />
+
+      {/* Modal Detalle Defecto (Etapa 2) */}
       <InlineDefectDetailModal
         isOpen={defectDetailModalOpen}
         onClose={() => {

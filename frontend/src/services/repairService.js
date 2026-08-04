@@ -737,12 +737,15 @@ export const getStatusInfo = (status) => {
  * Repair inline - Mark defect as REPAIRED directly (no IN_REPAIR step)
  */
 export const repairInline = async (defectId, data = {}) => {
+  console.log('>>> repairService.repairInline called:', { defectId, data });
   const res = await fetch(`${API_URL}/defects-v2/entries/${defectId}/repair-inline`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data)
   });
-  return res.json();
+  const result = await res.json();
+  console.log('>>> repairService.repairInline result:', result);
+  return result;
 };
 
 /**

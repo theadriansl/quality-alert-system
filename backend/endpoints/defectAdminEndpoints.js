@@ -15,18 +15,33 @@ async function getSerialDefectsWithStations(serial) {
     const defectsResult = await query(`
       SELECT de.id, de.repair_status, de.created_at,
              de.repaired_at, de.released_at,
-             d.code as defect_code, d.description as defect_name,
+             de.notes, de.repair_notes, de.resolution_notes,
+             de.downtime_minutes, de.quantity,
+             dt.code as defect_code, dt.name as defect_name,
+             dc.name as category_name, dc.color as category_color,
+             sev.name as severity_name, sev.color as severity_color,
+             disp.name as disposition_name, disp.code as disposition_code,
              s_cap.name as capture_station_name,
              s_rep.name as repair_station_name,
              s_rel.name as release_station_name,
              CONCAT(u_cap.first_name, ' ', u_cap.last_name) as captured_by_name,
              CONCAT(u_rep.first_name, ' ', u_rep.last_name) as repaired_by_name,
-             CONCAT(u_rel.first_name, ' ', u_rel.last_name) as released_by_name
+             CONCAT(u_rel.first_name, ' ', u_rel.last_name) as released_by_name,
+             (SELECT COUNT(*) FROM defect_attachments WHERE defect_id = de.id) as attachment_count,
+             (SELECT json_agg(json_build_object(
+               'id', da.id,
+               'filename', da.filename,
+               'originalName', da.original_name,
+               'mimetype', da.mimetype
+             )) FROM defect_attachments da WHERE da.defect_id = de.id) as attachments
       FROM defect_entries_v2 de
-      LEFT JOIN defects d ON de.defect_id = d.id
-      LEFT JOIN stations s_cap ON de.station_id = s_cap.id
-      LEFT JOIN stations s_rep ON de.repair_station_id = s_rep.id
-      LEFT JOIN stations s_rel ON de.release_station_id = s_rel.id
+      LEFT JOIN defect_types dt ON de.defect_type_id = dt.id
+      LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+      LEFT JOIN inspection_severities sev ON de.severity_id = sev.id
+      LEFT JOIN inspection_dispositions disp ON de.disposition_id = disp.id
+      LEFT JOIN inspection_stations s_cap ON de.station_id = s_cap.id
+      LEFT JOIN inspection_stations s_rep ON de.repair_station_id = s_rep.id
+      LEFT JOIN inspection_stations s_rel ON de.release_station_id = s_rel.id
       LEFT JOIN users u_cap ON de.captured_by_user_id = u_cap.id
       LEFT JOIN users u_rep ON de.repaired_by = u_rep.id
       LEFT JOIN users u_rel ON de.released_by = u_rel.id
@@ -2029,10 +2044,11 @@ router.post('/entries/:id/repair-inline', authenticateToken, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Defecto no encontrado' });
     }
 
-    if (defect.rows[0].repair_status !== 'OPEN') {
+    const allowedStatuses = ['OPEN', 'QUARANTINE'];
+    if (!allowedStatuses.includes(defect.rows[0].repair_status)) {
       return res.status(400).json({
         success: false,
-        message: `Solo se pueden reparar defectos en estado OPEN. Estado actual: ${defect.rows[0].repair_status}`
+        message: `Solo se pueden reparar defectos en estado OPEN o QUARANTINE. Estado actual: ${defect.rows[0].repair_status}`
       });
     }
 
@@ -2050,10 +2066,11 @@ router.post('/entries/:id/repair-inline', authenticateToken, async (req, res) =>
     `, [id, repairStationId || null, req.user.id, repairNotes || null]);
 
     // Log event
+    const oldStatus = defect.rows[0].repair_status;
     await query(`
       INSERT INTO defect_events (defect_id, event_type, old_status, new_status, performed_by, comments)
-      VALUES ($1, 'REPAIRED_INLINE', 'OPEN', 'REPAIRED', $2, $3)
-    `, [id, req.user.id, repairNotes || 'Reparado en línea']);
+      VALUES ($1, 'REPAIRED_INLINE', $2, 'REPAIRED', $3, $4)
+    `, [id, oldStatus, req.user.id, repairNotes || 'Reparado en línea']);
 
     // Update unit_history if unit exists
     if (defect.rows[0].unit_id) {
@@ -2088,7 +2105,7 @@ router.post('/entries/:id/release-inline', authenticateToken, async (req, res) =
     if (defect.rows[0].repair_status !== 'REPAIRED') {
       return res.status(400).json({
         success: false,
-        message: `Solo se pueden liberar defectos en estado REPAIRED. Estado actual: ${defect.rows[0].repair_status}`
+        message: `Solo se pueden liberar defectos REPARADOS. Este defecto está en: ${defect.rows[0].repair_status}. Primero debes REPARAR el defecto.`
       });
     }
 
@@ -2119,14 +2136,17 @@ router.post('/entries/:id/release-inline', authenticateToken, async (req, res) =
       `, [defect.rows[0].unit_id, id, req.user.id]);
     }
 
-    // Update unit_registry open_defects_count
+    // Update unit_registry open_defects_count (si la columna existe)
     if (defect.rows[0].unit_id) {
-      await query(`
-        UPDATE unit_registry SET
-          open_defects_count = GREATEST(0, open_defects_count - 1),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-      `, [defect.rows[0].unit_id]);
+      try {
+        await query(`
+          UPDATE unit_registry SET
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1
+        `, [defect.rows[0].unit_id]);
+      } catch (e) {
+        // Ignorar si falla
+      }
     }
 
     res.json({
