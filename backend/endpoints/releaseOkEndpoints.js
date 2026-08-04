@@ -52,12 +52,12 @@ async function getSerialValidationInfo(serialNumber, clientId) {
       de.serial_number,
       de.repair_status,
       de.created_at,
-      d.code as defect_code,
-      d.description as defect_name,
+      dt.code as defect_code,
+      dt.name as defect_name,
       s.name as station_name
     FROM defect_entries_v2 de
-    LEFT JOIN defects d ON de.defect_id = d.id
-    LEFT JOIN stations s ON de.station_id = s.id
+    LEFT JOIN defect_types dt ON de.defect_type_id = dt.id
+    LEFT JOIN inspection_stations s ON de.station_id = s.id
     WHERE de.serial_number = $1
       AND de.repair_status = 'OPEN'
     ORDER BY de.created_at DESC
@@ -68,20 +68,20 @@ async function getSerialValidationInfo(serialNumber, clientId) {
   // 3. Obtener specs NOK
   const specsResult = await query(`
     SELECT
-      usi.id,
-      usi.spec_id,
-      sc.spec_name,
-      sc.spec_type,
-      usi.result,
-      usi.measured_value,
-      usi.inspected_at,
+      sie.id,
+      sie.spec_id,
+      ps.spec_name,
+      ps.spec_type,
+      sie.result,
+      sie.measured_value,
+      sie.created_at,
       ist.name as station_name
-    FROM unit_spec_inspections usi
-    JOIN spec_catalog sc ON usi.spec_id = sc.id
-    LEFT JOIN inspection_stations ist ON usi.station_id = ist.id
-    WHERE usi.unit_id = $1
-      AND usi.result = 'NOK'
-    ORDER BY usi.inspected_at DESC
+    FROM spec_inspection_entries sie
+    JOIN part_specifications ps ON sie.spec_id = ps.id
+    LEFT JOIN inspection_stations ist ON sie.station_id = ist.id
+    WHERE sie.unit_id = $1
+      AND sie.result = 'NOK'
+    ORDER BY sie.created_at DESC
   `, [unit.id]);
 
   const specsNok = specsResult.rows.map(row => transformToCamelCase(row));

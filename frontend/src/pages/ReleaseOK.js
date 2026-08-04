@@ -261,7 +261,7 @@ const ReleaseOK = () => {
                   ref={serialInputRef}
                   type="text"
                   value={serialInput}
-                  onChange={(e) => setSerialInput(e.target.value.toUpperCase())}
+                  onChange={(e) => setSerialInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Escanear código de barras..."
                   className="w-full px-4 py-4 text-xl border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
@@ -436,7 +436,7 @@ const ReleaseOK = () => {
 
                 {/* Go to Hospital button */}
                 <button
-                  onClick={() => navigate('/hospital')}
+                  onClick={() => navigate('/defect-hospital')}
                   className="w-full py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
                 >
                   <ArrowRight size={20} />
