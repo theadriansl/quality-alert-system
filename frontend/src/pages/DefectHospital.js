@@ -2212,18 +2212,19 @@ const DefectHospital = () => {
       );
       const result = await response.json();
 
-      if (result.success && result.defects?.length > 0) {
-        setTraceDefects(result.defects);
+      if (result.success) {
+        setTraceDefects(result.defects || []);
 
         // Cargar eventos de cada defecto
         const allEvents = [];
-        for (const defect of result.defects) {
+        for (const defect of (result.defects || [])) {
           try {
             const eventsResult = await getDefectEvents(defect.id);
             if (eventsResult.success && eventsResult.events) {
               eventsResult.events.forEach(ev => {
                 allEvents.push({
                   ...ev,
+                  eventSource: 'defect',
                   defectId: defect.id,
                   entryNumber: defect.entryNumber || defect.entry_number,
                   defectTypeName: defect.defectTypeName || defect.defect_type_name
@@ -2235,16 +2236,36 @@ const DefectHospital = () => {
           }
         }
 
+        // Agregar scans de estaciones como eventos
+        if (result.stationScans && result.stationScans.length > 0) {
+          result.stationScans.forEach(scan => {
+            allEvents.push({
+              eventSource: 'scan',
+              eventType: 'STATION_SCAN',
+              stationName: scan.stationName || scan.station_name,
+              stationCode: scan.stationCode || scan.station_code,
+              hasDefect: scan.hasDefect || scan.has_defect,
+              defectCount: scan.defectCount || scan.defect_count || 0,
+              scannedByName: scan.scannedByName || scan.scanned_by_name,
+              createdAt: scan.scannedAt || scan.scanned_at,
+              workOrder: scan.workOrder || scan.work_order
+            });
+          });
+        }
+
         // Ordenar eventos por fecha descendente
-        allEvents.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+        allEvents.sort((a, b) => new Date(b.createdAt || b.created_at || b.eventAt || b.event_at) - new Date(a.createdAt || a.created_at || a.eventAt || a.event_at));
         setTraceEvents(allEvents);
+
+        const defectCount = result.defects?.length || 0;
+        const scanCount = result.stationScans?.length || 0;
         setSuccess(language === 'es'
-          ? `Encontrados ${result.defects.length} defecto(s) para el serial ${serial}`
-          : `Found ${result.defects.length} defect(s) for serial ${serial}`);
+          ? `Encontrados ${defectCount} defecto(s) y ${scanCount} scan(s) para el serial ${serial}`
+          : `Found ${defectCount} defect(s) and ${scanCount} scan(s) for serial ${serial}`);
       } else {
         setError(language === 'es'
-          ? `No se encontraron defectos para el serial: ${serial}`
-          : `No defects found for serial: ${serial}`);
+          ? `No se encontraron datos para el serial: ${serial}`
+          : `No data found for serial: ${serial}`);
       }
     } catch (err) {
       setError((language === 'es' ? 'Error buscando historial: ' : 'Error searching history: ') + err.message);
@@ -2508,6 +2529,18 @@ const DefectHospital = () => {
       'DEVIATION_LINKED': {
         label: language === 'es' ? 'Desviación Vinculada' : 'Deviation Linked',
         color: '#8b5cf6', icon: ''
+      },
+      'STATION_SCAN': {
+        label: language === 'es' ? 'Escaneo Estación' : 'Station Scan',
+        color: '#06b6d4', icon: '📍'
+      },
+      'STATION_SCAN_OK': {
+        label: 'OK',
+        color: '#22c55e', icon: '✓'
+      },
+      'STATION_SCAN_NOK': {
+        label: 'NOK',
+        color: '#ef4444', icon: '✗'
       }
     };
     return types[eventType] || { label: eventType, color: '#6b7280', icon: '' };
@@ -6568,7 +6601,12 @@ const DefectHospital = () => {
                   }} />
 
                   {traceEvents.map((event, idx) => {
-                    const eventInfo = formatEventType(event.eventType || event.event_type);
+                    // Determinar si es un scan de estación
+                    const isScan = event.eventSource === 'scan';
+                    const scanOk = isScan && !event.hasDefect;
+                    const scanEventType = isScan ? (scanOk ? 'STATION_SCAN_OK' : 'STATION_SCAN_NOK') : (event.eventType || event.event_type);
+                    const eventInfo = formatEventType(scanEventType);
+
                     return (
                       <div key={idx} style={{
                         display: 'flex',
@@ -6603,27 +6641,57 @@ const DefectHospital = () => {
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                              <span style={{
-                                display: 'inline-block',
-                                padding: '3px 10px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                backgroundColor: eventInfo.color + '20',
-                                color: eventInfo.color
-                              }}>
-                                {eventInfo.label}
-                              </span>
-                              <span style={{
-                                marginLeft: '8px',
-                                fontSize: '11px',
-                                color: t.textMuted,
-                                backgroundColor: t.bgCard,
-                                padding: '2px 6px',
-                                borderRadius: '3px'
-                              }}>
-                                Entry: {event.entryNumber}
-                              </span>
+                              {isScan ? (
+                                <>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    padding: '3px 10px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    backgroundColor: '#06b6d420',
+                                    color: '#06b6d4'
+                                  }}>
+                                    📍 {event.stationName || event.stationCode || 'Estación'}
+                                  </span>
+                                  <span style={{
+                                    marginLeft: '8px',
+                                    display: 'inline-block',
+                                    padding: '3px 10px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    backgroundColor: eventInfo.color + '20',
+                                    color: eventInfo.color
+                                  }}>
+                                    {scanOk ? '✓ OK' : `✗ NOK (${event.defectCount || 0})`}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    padding: '3px 10px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    backgroundColor: eventInfo.color + '20',
+                                    color: eventInfo.color
+                                  }}>
+                                    {eventInfo.label}
+                                  </span>
+                                  <span style={{
+                                    marginLeft: '8px',
+                                    fontSize: '11px',
+                                    color: t.textMuted,
+                                    backgroundColor: t.bgCard,
+                                    padding: '2px 6px',
+                                    borderRadius: '3px'
+                                  }}>
+                                    Entry: {event.entryNumber}
+                                  </span>
+                                </>
+                              )}
                             </div>
                             <span style={{ fontSize: '12px', color: t.textMuted }}>
                               {new Date(event.eventAt || event.event_at || event.createdAt || event.created_at).toLocaleString('es-MX')}
@@ -6632,14 +6700,29 @@ const DefectHospital = () => {
 
                           {/* Detalles del evento */}
                           <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                            {/* Detalles para scan de estación */}
+                            {isScan && (
+                              <>
+                                {event.workOrder && (
+                                  <div style={{ color: t.textMuted }}>
+                                    Work Order: <span style={{ color: t.text }}>{event.workOrder}</span>
+                                  </div>
+                                )}
+                                {event.scannedByName && (
+                                  <div style={{ color: t.textMuted, marginTop: '4px' }}>
+                                    {language === 'es' ? 'Escaneado por' : 'Scanned by'}: <span style={{ color: t.text }}>{event.scannedByName}</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
                             {/* Estado inicial para CREATED */}
-                            {(event.eventType === 'CREATED' || event.event_type === 'CREATED') && (event.newStatus || event.new_status) && (
+                            {!isScan && (event.eventType === 'CREATED' || event.event_type === 'CREATED') && (event.newStatus || event.new_status) && (
                               <div style={{ color: t.textMuted }}>
                                 {language === 'es' ? 'Estado inicial' : 'Initial status'}: <span style={{ fontWeight: '600', color: t.text }}>{event.newStatus || event.new_status}</span>
                               </div>
                             )}
                             {/* Cambio de estado */}
-                            {(event.oldStatus || event.old_status) && (
+                            {!isScan && (event.oldStatus || event.old_status) && (
                               <div style={{ color: t.textMuted }}>
                                 {language === 'es' ? 'Estado' : 'Status'}: <span style={{ textDecoration: 'line-through' }}>{event.oldStatus || event.old_status}</span>
                                 {' → '}
@@ -6647,25 +6730,25 @@ const DefectHospital = () => {
                               </div>
                             )}
                             {/* Departamento inicial para CREATED */}
-                            {(event.eventType === 'CREATED' || event.event_type === 'CREATED') && (event.newDepartmentName || event.new_department_name) && (
+                            {!isScan && (event.eventType === 'CREATED' || event.event_type === 'CREATED') && (event.newDepartmentName || event.new_department_name) && (
                               <div style={{ color: t.textMuted, marginTop: '4px' }}>
                                 {language === 'es' ? 'Área responsable' : 'Responsible area'}: <span style={{ fontWeight: '600', color: t.text }}>{event.newDepartmentName || event.new_department_name}</span>
                               </div>
                             )}
                             {/* Cambio de departamento */}
-                            {(event.oldDepartmentName || event.old_department_name) && (
+                            {!isScan && (event.oldDepartmentName || event.old_department_name) && (
                               <div style={{ color: t.textMuted, marginTop: '4px' }}>
                                 {language === 'es' ? 'Área' : 'Area'}: <span style={{ textDecoration: 'line-through' }}>{event.oldDepartmentName || event.old_department_name}</span>
                                 {' → '}
                                 <span style={{ fontWeight: '600', color: t.text }}>{event.newDepartmentName || event.new_department_name}</span>
                               </div>
                             )}
-                            {(event.performedByName || event.performed_by_name) && (
+                            {!isScan && (event.performedByName || event.performed_by_name) && (
                               <div style={{ color: t.textMuted, marginTop: '4px' }}>
                                 {language === 'es' ? 'Por' : 'By'}: <span style={{ color: t.text }}>{event.performedByName || event.performed_by_name}</span>
                               </div>
                             )}
-                            {event.comments && (
+                            {!isScan && event.comments && (
                               <div style={{
                                 marginTop: '8px',
                                 padding: '8px 12px',

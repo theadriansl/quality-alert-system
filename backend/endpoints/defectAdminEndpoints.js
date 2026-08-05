@@ -1811,12 +1811,28 @@ router.get('/by-serial/:serial', authenticateToken, async (req, res) => {
       history = transformToCamelCase(historyResult.rows);
     }
 
+    // Get station scans for this serial
+    let stationScans = [];
+    const scansResult = await query(`
+      SELECT sss.id, sss.serial_number, sss.station_id, sss.has_defect,
+             sss.defect_count, sss.scanned_at, sss.work_order,
+             ist.name as station_name, ist.code as station_code,
+             CONCAT(u.first_name, ' ', u.last_name) as scanned_by_name
+      FROM serial_station_scans sss
+      LEFT JOIN inspection_stations ist ON sss.station_id = ist.id
+      LEFT JOIN users u ON sss.user_id = u.id
+      WHERE sss.serial_number = $1
+      ORDER BY sss.scanned_at DESC
+    `, [serial]);
+    stationScans = transformToCamelCase(scansResult.rows);
+
     res.json({
       success: true,
       defects: transformToCamelCase(result.rows),
       counts,
       unit,
-      history
+      history,
+      stationScans
     });
   } catch (error) {
     console.error('Error fetching defects by serial:', error);

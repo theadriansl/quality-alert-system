@@ -10,6 +10,7 @@
   - Nuevo endpoint `POST /reopen-for-reprocess` para reabrir unidades liberadas
   - Endpoint `POST /entries` ahora acepta `isReprocess`
   - Helper `getSerialDefectsWithStations` incluye `is_reprocess`
+  - Endpoint `/by-serial` ahora retorna `stationScans` (historial de escaneos por estación)
 
 - `backend/endpoints/releaseOkEndpoints.js`
   - Agregado `found: true` a respuestas (fix "Serial no encontrado")
@@ -30,6 +31,12 @@
 - `frontend/src/pages/ReleaseOK.js`
   - Sección de historial de liberaciones/reprocesos con badges de colores
   - Muestra fecha y descripción de cada evento
+
+- `frontend/src/pages/DefectHospital.js`
+  - Timeline de trazabilidad ahora muestra scans de estación
+  - Formato: `📍 Estación X` + badge `✓ OK` (verde) o `✗ NOK (n)` (rojo)
+  - Muestra Work Order y usuario que escaneó
+  - Nuevos tipos en `formatEventType`: `STATION_SCAN_OK`, `STATION_SCAN_NOK`
 
 ### Base de Datos
 - Nueva columna `is_reprocess BOOLEAN DEFAULT false` en `defect_entries_v2`
@@ -97,6 +104,21 @@
 - `is_reprocess = true` indica defecto capturado después de reapertura
 - `cycle_number` incrementa con cada reproceso
 - Vista `v_defects_all` incluye `is_reprocess` para filtros y dashboards
+
+## Funcionalidad Nueva: Historial de Estaciones en Trazabilidad
+
+### Implementación
+1. Endpoint `/by-serial` consulta tabla `serial_station_scans`
+2. Frontend combina eventos de defectos + scans de estación en timeline unificado
+3. Visualización diferenciada:
+   - `📍 Release OK` + `✓ OK` (verde) para escaneos sin defecto
+   - `📍 Inspección Visual` + `✗ NOK (3)` (rojo) para escaneos con defecto
+   - Work Order y usuario que escaneó
+
+### Beneficios
+- Trazabilidad completa del recorrido de la pieza por estaciones
+- Identificar si un serial pasó por inspección antes del defecto
+- Auditoría de producción
 
 ## Flujo Probado Hoy
 
