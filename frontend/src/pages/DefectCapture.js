@@ -135,6 +135,11 @@ const DefectCapture = () => {
   const [serialScrapped, setSerialScrapped] = useState(false); // Track if serial is scrapped
   const [scrapModalOpen, setScrapModalOpen] = useState(false); // Modal for scrapped serial
   const [scrapInfo, setScrapInfo] = useState(null); // Info about scrapped serial
+  const [serialReleased, setSerialReleased] = useState(false); // Track if serial is released
+  const [releaseModalOpen, setReleaseModalOpen] = useState(false); // Modal for released serial
+  const [releaseInfo, setReleaseInfo] = useState(null); // Info about released serial
+  const [isReprocessMode, setIsReprocessMode] = useState(false); // Track if capturing in reprocess mode
+  const [reprocessLoading, setReprocessLoading] = useState(false); // Loading state for reprocess confirmation
   const [productionInfo, setProductionInfo] = useState(null); // Info from production_entries
 
   // ============================================================================
@@ -1138,6 +1143,25 @@ const DefectCapture = () => {
             setScrapInfo(null);
           }
 
+          // Check if serial is released - show modal and block
+          if (data.isReleased) {
+            setSerialReleased(true);
+            setReleaseInfo({
+              serial: serial,
+              partNumber: data.unit.partNumber,
+              partName: data.unit.partName,
+              clientName: data.unit.clientName,
+              releasedAt: data.releaseInfo?.releasedAt,
+              releasedBy: data.releaseInfo?.releasedBy,
+              message: data.releasedMessage
+            });
+            setReleaseModalOpen(true);
+            return; // Don't auto-fill anything for released serials
+          } else {
+            setSerialReleased(false);
+            setReleaseInfo(null);
+          }
+
           // Capturar info de producción si existe
           if (data.productionInfo) {
             setProductionInfo(data.productionInfo);
@@ -1204,6 +1228,8 @@ const DefectCapture = () => {
     if (value.trim()) {
       setHasRegisteredDefect(false);
       setSerialScrapped(false); // Reset scrapped state when serial changes
+      setSerialReleased(false); // Reset released state when serial changes
+      setIsReprocessMode(false); // Reset reprocess mode when serial changes
       setProductionInfo(null); // Reset production info
       setSerialDefects([]); // Reset serial defects
       setDefectCounts({ open: 0, repaired: 0, released: 0, total: 0 });
@@ -1217,6 +1243,52 @@ const DefectCapture = () => {
     setLotNumber('');
     setSerialScrapped(false);
     setScrapInfo(null);
+  };
+
+  // Close release modal and clear serial
+  const handleCloseReleaseModal = () => {
+    setReleaseModalOpen(false);
+    setLotNumber('');
+    setSerialReleased(false);
+    setReleaseInfo(null);
+    setIsReprocessMode(false);
+  };
+
+  // Confirm reprocess - reopen unit and allow defect capture
+  const handleConfirmReprocess = async () => {
+    if (!releaseInfo?.serial || !selectedClient?.id) return;
+
+    const token = localStorage.getItem('token');
+    setReprocessLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/defects-v2/reopen-for-reprocess`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          serialNumber: releaseInfo.serial,
+          clientId: selectedClient.id
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setIsReprocessMode(true);
+        setReleaseModalOpen(false);
+        setSerialReleased(false);
+        setSuccess(`Unidad reabierta para reproceso (Ciclo ${data.cycleNumber})`);
+        // Continuar con el flujo normal - los datos ya están cargados
+      } else {
+        setError(data.message || 'Error al reabrir unidad');
+      }
+    } catch (err) {
+      console.error('Error confirming reprocess:', err);
+      setError('Error de conexión al reabrir unidad');
+    } finally {
+      setReprocessLoading(false);
+    }
   };
 
   // Buscar info del serial cuando termina de escribir (onBlur o Enter)
@@ -1451,7 +1523,8 @@ const DefectCapture = () => {
         downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
         notes: comment || null,
         quantity: 1,
-        workOrder: productionInfo?.workOrder || null
+        workOrder: productionInfo?.workOrder || null,
+        isReprocess: isReprocessMode
       };
 
       const res = await fetch(`${API_URL}/defects-v2/entries`, {
@@ -2995,6 +3068,155 @@ const DefectCapture = () => {
             >
               ENTENDIDO
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Serial Liberado */}
+      {releaseModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: currentTheme.bgCard,
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+            border: `2px solid #f59e0b`
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fffbeb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <AlertTriangle size={28} color="#f59e0b" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, color: '#f59e0b', fontSize: '18px', fontWeight: '700' }}>
+                  SERIAL YA LIBERADO
+                </h3>
+                <p style={{ margin: '4px 0 0 0', color: currentTheme.textMuted, fontSize: '13px' }}>
+                  ¿Es un reproceso?
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: currentTheme.bg,
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Serial:</span>
+                <div style={{ color: currentTheme.text, fontWeight: '600', fontSize: '16px' }}>
+                  {releaseInfo?.serial}
+                </div>
+              </div>
+              {releaseInfo?.partNumber && (
+                <div style={{ marginBottom: '12px' }}>
+                  <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Parte:</span>
+                  <div style={{ color: currentTheme.text, fontWeight: '500' }}>
+                    {releaseInfo.partNumber} - {releaseInfo.partName}
+                  </div>
+                </div>
+              )}
+              {releaseInfo?.clientName && (
+                <div style={{ marginBottom: '12px' }}>
+                  <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Cliente:</span>
+                  <div style={{ color: currentTheme.text, fontWeight: '500' }}>
+                    {releaseInfo.clientName}
+                  </div>
+                </div>
+              )}
+              {releaseInfo?.releasedAt && (
+                <div>
+                  <span style={{ color: currentTheme.textMuted, fontSize: '12px' }}>Liberado:</span>
+                  <div style={{ color: currentTheme.text, fontWeight: '500' }}>
+                    {new Date(releaseInfo.releasedAt).toLocaleDateString('es-MX', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                    {releaseInfo.releasedBy && (
+                      <span style={{ color: currentTheme.textMuted, fontWeight: '400', marginLeft: '8px' }}>
+                        por {releaseInfo.releasedBy}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <p style={{
+              color: currentTheme.text,
+              fontSize: '14px',
+              lineHeight: '1.5',
+              margin: '0 0 20px 0'
+            }}>
+              Este serial ya fue <strong style={{ color: '#22c55e' }}>LIBERADO</strong>. Si es un reproceso, los nuevos defectos se marcarán como <strong style={{ color: '#f59e0b' }}>reprocess</strong>.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleCloseReleaseModal}
+                disabled={reprocessLoading}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: 'transparent',
+                  color: currentTheme.text,
+                  border: `1px solid ${currentTheme.border}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: reprocessLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                CANCELAR
+              </button>
+              <button
+                onClick={handleConfirmReprocess}
+                disabled={reprocessLoading}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: reprocessLoading ? 'not-allowed' : 'pointer',
+                  opacity: reprocessLoading ? 0.7 : 1
+                }}
+              >
+                {reprocessLoading ? 'PROCESANDO...' : 'CONFIRMAR REPROCESO'}
+              </button>
+            </div>
           </div>
         </div>
       )}

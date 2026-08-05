@@ -16,7 +16,7 @@ async function getSerialDefectsWithStations(serial) {
       SELECT de.id, de.repair_status, de.created_at,
              de.repaired_at, de.released_at,
              de.notes, de.repair_notes, de.resolution_notes,
-             de.downtime_minutes, de.quantity,
+             de.downtime_minutes, de.quantity, de.is_reprocess,
              dt.code as defect_code, dt.name as defect_name,
              dc.name as category_name, dc.color as category_color,
              sev.name as severity_name, sev.color as severity_color,
@@ -982,7 +982,8 @@ router.post('/entries', authenticateToken, async (req, res) => {
     lotNumber,      // Funciona como serial en escaneo 1 a 1
     serialNumber,   // Campo alternativo para serial explicito
     downtimeMinutes,
-    workOrder       // Orden de trabajo (viene de production_entries)
+    workOrder,      // Orden de trabajo (viene de production_entries)
+    isReprocess     // Flag para defectos de reproceso
   } = req.body;
 
   try {
@@ -1167,9 +1168,9 @@ router.post('/entries', authenticateToken, async (req, res) => {
         part_id, client_id, project_id, defect_type_id, notes, quantity, current_location_id,
         severity_id, stage_id, disposition_id, station_id, shift_id,
         inspector_id, department_id, lot_number, serial_number, unit_id, downtime_minutes,
-        captured_by_user_id, unit_cost, currency, repair_status, work_order
+        captured_by_user_id, unit_cost, currency, repair_status, work_order, is_reprocess
       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
        RETURNING *`,
       [
         partId, client_id, project_id, defectTypeId, notes, quantity || 1, locationId,
@@ -1177,7 +1178,8 @@ router.post('/entries', authenticateToken, async (req, res) => {
         stationId || null, shiftId || null,
         inspectorId || req.user.id, finalDepartmentId, lotNumber || null,
         serial || null, unitId, downtimeMinutes || 0, req.user.id,
-        unit_cost || null, currency || 'USD', initialRepairStatus, workOrder || null
+        unit_cost || null, currency || 'USD', initialRepairStatus, workOrder || null,
+        isReprocess || false
       ]
     );
 
@@ -1855,7 +1857,9 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
   try {
     // Buscar en unit_registry primero (seriales registrados)
     let unitResult = await query(`
-      SELECT ur.id, ur.serial_number, ur.part_id, ur.client_id, ur.current_status,
+      SELECT ur.id, ur.serial_number, ur.part_id, ur.client_id, ur.current_status, ur.is_archived,
+             ur.released_at, ur.released_by,
+             CONCAT(u_rel.first_name, ' ', u_rel.last_name) as released_by_name,
              cp.part_number, cp.part_name, cp.project_id,
              c.name as client_name,
              p.project_number, p.project_name
@@ -1863,6 +1867,7 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
       LEFT JOIN client_parts cp ON ur.part_id = cp.id
       LEFT JOIN clients c ON ur.client_id = c.id
       LEFT JOIN projects p ON cp.project_id = p.id
+      LEFT JOIN users u_rel ON ur.released_by = u_rel.id
       WHERE ur.serial_number = $1
       LIMIT 1
     `, [serial.trim()]);
@@ -1870,6 +1875,7 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
     if (unitResult.rows.length > 0) {
       const unit = unitResult.rows[0];
       const isScrapped = unit.current_status === 'SCRAPPED';
+      const isReleased = unit.is_archived === true;
 
       // Obtener defectos del serial usando helper
       const { serialDefects, defectCounts } = await getSerialDefectsWithStations(serial);
@@ -1910,6 +1916,12 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
         unit: transformToCamelCase(unit),
         isScrapped,
         scrappedMessage: isScrapped ? 'Este serial ya fue enviado a SCRAP. No se pueden capturar más defectos.' : null,
+        isReleased,
+        releasedMessage: isReleased ? 'Este serial ya fue LIBERADO.' : null,
+        releaseInfo: isReleased ? {
+          releasedAt: unit.released_at,
+          releasedBy: unit.released_by_name
+        } : null,
         productionInfo,
         serialDefects,
         defectCounts
@@ -2141,6 +2153,11 @@ router.post('/entries/:id/release-inline', authenticateToken, async (req, res) =
       try {
         await query(`
           UPDATE unit_registry SET
+            open_defects = GREATEST(0, open_defects - 1),
+            current_status = CASE
+              WHEN open_defects - 1 <= 0 THEN 'RELEASED'
+              ELSE current_status
+            END,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $1
         `, [defect.rows[0].unit_id]);
@@ -4384,6 +4401,66 @@ router.post('/scrapped/:id/return-to-quarantine', authenticateToken, async (req,
   } catch (error) {
     console.error('Error returning to quarantine:', error);
     res.status(500).json({ success: false, message: 'Error al devolver a cuarentena' });
+  }
+});
+
+// ============================================================================
+// REOPEN UNIT FOR REPROCESS - Reabrir unidad liberada para reproceso
+// ============================================================================
+router.post('/reopen-for-reprocess', authenticateToken, async (req, res) => {
+  const { serialNumber, clientId } = req.body;
+
+  if (!serialNumber) {
+    return res.status(400).json({ success: false, message: 'Serial requerido' });
+  }
+
+  try {
+    // Buscar unidad
+    const unitResult = await query(`
+      SELECT id, serial_number, is_archived, cycle_number, current_status
+      FROM unit_registry
+      WHERE serial_number = $1 AND client_id = $2
+    `, [serialNumber.trim(), clientId]);
+
+    if (unitResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Unidad no encontrada' });
+    }
+
+    const unit = unitResult.rows[0];
+
+    if (!unit.is_archived) {
+      return res.status(400).json({ success: false, message: 'La unidad no está liberada' });
+    }
+
+    // Reabrir unidad
+    const newCycle = (unit.cycle_number || 1) + 1;
+    await query(`
+      UPDATE unit_registry SET
+        is_archived = false,
+        current_status = 'REPROCESS',
+        cycle_number = $1
+      WHERE id = $2
+    `, [newCycle, unit.id]);
+
+    // Registrar evento en historial
+    await query(`
+      INSERT INTO unit_history (unit_id, event_type, description, performed_by, metadata)
+      VALUES ($1, 'REPROCESS', $2, $3, $4)
+    `, [
+      unit.id,
+      `Unidad reabierta para reproceso (Ciclo ${newCycle})`,
+      req.user.id,
+      JSON.stringify({ previousStatus: unit.current_status, newCycle })
+    ]);
+
+    res.json({
+      success: true,
+      message: `Unidad reabierta para reproceso (Ciclo ${newCycle})`,
+      cycleNumber: newCycle
+    });
+  } catch (error) {
+    console.error('Error reopening unit for reprocess:', error);
+    res.status(500).json({ success: false, message: 'Error al reabrir unidad' });
   }
 });
 

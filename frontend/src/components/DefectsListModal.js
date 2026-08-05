@@ -164,7 +164,9 @@ const DefectsListModal = ({
                       color: t.text,
                       marginBottom: '2px'
                     }}>
-                      {defect.defectCode ? `[${defect.defectCode}] ` : ''}{defect.defectName || 'Defecto'}
+                      {defect.defectCode ? `[${defect.defectCode}] ` : ''}
+                      {defect.isReprocess && <span style={{ color: '#f59e0b', fontWeight: '600' }}>reprocess </span>}
+                      {defect.defectName || 'Defecto'}
                     </div>
                     <div style={{
                       fontSize: '12px',
