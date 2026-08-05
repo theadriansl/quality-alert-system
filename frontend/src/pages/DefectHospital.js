@@ -2759,7 +2759,7 @@ const DefectHospital = () => {
           const serial = defects[0].serialNumber || defects[0].serial_number || defects[0].lotNumber || defects[0].lot_number;
           if (serial) {
             // Establecer serial y cambiar a tab de trazabilidad
-            setTraceSerial(serial.toUpperCase());
+            setTraceSerial(serial);
             setActiveTab('traceability');
             // Disparar búsqueda después de cambiar de tab
             setTimeout(() => {
@@ -6384,7 +6384,7 @@ const DefectHospital = () => {
                 }}
                 placeholder={language === 'es' ? 'Escanea serial, lote o entry...' : 'Scan serial, lot or entry...'}
                 value={traceSerial}
-                onChange={(e) => setTraceSerial(e.target.value.toUpperCase())}
+                onChange={(e) => setTraceSerial(e.target.value)}
                 onKeyDown={handleTraceSearch}
                 disabled={traceLoading}
               />
@@ -6652,7 +6652,7 @@ const DefectHospital = () => {
                                     backgroundColor: '#06b6d420',
                                     color: '#06b6d4'
                                   }}>
-                                    📍 {event.stationName || event.stationCode || 'Estación'}
+                                    📍 {event.stationName || (event.stationCode ? event.stationCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Estación')}
                                   </span>
                                   <span style={{
                                     marginLeft: '8px',
