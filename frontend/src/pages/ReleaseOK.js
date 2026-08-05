@@ -335,6 +335,35 @@ const ReleaseOK = () => {
               </div>
             )}
 
+            {/* Release/Reprocess History */}
+            {validationResult.releaseHistory && validationResult.releaseHistory.length > 0 && (
+              <div className="mb-4 p-3 bg-white/50 rounded-lg border border-gray-200">
+                <div className="text-xs font-semibold text-gray-500 mb-2 flex items-center gap-1">
+                  <Clock size={12} />
+                  Historial de liberaciones
+                </div>
+                <div className="space-y-1">
+                  {validationResult.releaseHistory.map((event, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-1.5 py-0.5 rounded text-white font-medium ${
+                          event.eventType === 'REPROCESS' ? 'bg-orange-500' : 'bg-green-500'
+                        }`}>
+                          {event.eventType === 'REPROCESS' ? 'REPROCESO' : 'LIBERADO'}
+                        </span>
+                        <span className="text-gray-600">{event.description}</span>
+                      </div>
+                      <div className="text-gray-400">
+                        {new Date(event.eventAt).toLocaleDateString('es-MX', {
+                          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Already Released */}
             {validationResult.alreadyReleased && (
               <div className="flex items-center gap-3 p-4 bg-gray-200 rounded-lg">

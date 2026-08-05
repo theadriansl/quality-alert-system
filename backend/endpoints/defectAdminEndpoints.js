@@ -2148,22 +2148,17 @@ router.post('/entries/:id/release-inline', authenticateToken, async (req, res) =
       `, [defect.rows[0].unit_id, id, req.user.id]);
     }
 
-    // Update unit_registry open_defects_count (si la columna existe)
+    // Update unit_registry open_defects_count
     if (defect.rows[0].unit_id) {
-      try {
-        await query(`
-          UPDATE unit_registry SET
-            open_defects = GREATEST(0, open_defects - 1),
-            current_status = CASE
-              WHEN open_defects - 1 <= 0 THEN 'RELEASED'
-              ELSE current_status
-            END,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = $1
-        `, [defect.rows[0].unit_id]);
-      } catch (e) {
-        // Ignorar si falla
-      }
+      await query(`
+        UPDATE unit_registry SET
+          open_defects = GREATEST(0, open_defects - 1),
+          current_status = CASE
+            WHEN open_defects - 1 <= 0 THEN 'RELEASED'
+            ELSE current_status
+          END
+        WHERE id = $1
+      `, [defect.rows[0].unit_id]);
     }
 
     res.json({

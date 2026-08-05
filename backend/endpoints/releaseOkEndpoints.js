@@ -86,7 +86,21 @@ async function getSerialValidationInfo(serialNumber, clientId) {
 
   const specsNok = specsResult.rows.map(row => transformToCamelCase(row));
 
-  return { found: true, unit, defects, specsNok };
+  // 4. Obtener historial de liberaciones/reprocesos
+  const historyResult = await query(`
+    SELECT event_type, description, event_at,
+           CONCAT(u.first_name, ' ', u.last_name) as performed_by_name
+    FROM unit_history uh
+    LEFT JOIN users u ON uh.performed_by = u.id
+    WHERE uh.unit_id = $1
+      AND uh.event_type IN ('RELEASED', 'RELEASED_INLINE', 'REPROCESS', 'RELEASE_OK')
+    ORDER BY uh.event_at DESC
+    LIMIT 10
+  `, [unit.id]);
+
+  const releaseHistory = historyResult.rows.map(row => transformToCamelCase(row));
+
+  return { found: true, unit, defects, specsNok, releaseHistory };
 }
 
 // ============================================================================
@@ -151,16 +165,18 @@ const setupReleaseOkEndpoints = (app) => {
         });
       }
 
-      const { unit, defects, specsNok } = validation;
+      const { unit, defects, specsNok, releaseHistory } = validation;
 
       // Validar si ya está archivada
       if (unit.isArchived) {
         return res.json({
           success: true,
+          found: true,
           canRelease: false,
           alreadyReleased: true,
           message: 'Esta unidad ya fue liberada',
-          unit
+          unit,
+          releaseHistory
         });
       }
 
@@ -190,9 +206,11 @@ const setupReleaseOkEndpoints = (app) => {
 
       res.json({
         success: true,
+        found: true,
         canRelease,
         unit,
         blockers,
+        releaseHistory,
         message: canRelease
           ? 'Unidad lista para liberar'
           : 'No se puede liberar - hay bloqueos pendientes'
