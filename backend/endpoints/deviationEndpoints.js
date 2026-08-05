@@ -116,8 +116,8 @@ router.get('/', authenticateToken, async (req, res) => {
 
     if (partId) {
       paramCount++;
-      // Incluir desviaciones específicas de la parte O desviaciones generales (sin parte específica)
-      sql += ` AND (part_id = $${paramCount} OR part_id IS NULL)`;
+      // Incluir desviaciones que tengan esta parte en deviation_parts O desviaciones sin partes asignadas
+      sql += ` AND (id IN (SELECT deviation_id FROM deviation_parts WHERE part_id = $${paramCount}) OR id NOT IN (SELECT deviation_id FROM deviation_parts))`;
       params.push(partId);
     }
 
@@ -409,6 +409,46 @@ router.post('/:id/link-defect', authenticateToken, async (req, res) => {
   }
 
   try {
+    // Validar que el defecto sea de una parte que esté en la desviación
+    const validationResult = await query(`
+      SELECT
+        de.part_id as defect_part_id,
+        cp_def.part_number as defect_part_number,
+        dp.part_id as deviation_part_id
+      FROM defect_entries_v2 de
+      LEFT JOIN client_parts cp_def ON de.part_id = cp_def.id
+      LEFT JOIN deviation_parts dp ON dp.deviation_id = $1 AND dp.part_id = de.part_id
+      WHERE de.id = $2
+    `, [id, defectId]);
+
+    if (validationResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Defecto no encontrado' });
+    }
+
+    const { defect_part_id, defect_part_number, deviation_part_id } = validationResult.rows[0];
+
+    // Si la desviación tiene partes asignadas, verificar que el defecto sea de una de ellas
+    const deviationPartsResult = await query(
+      'SELECT COUNT(*) as count FROM deviation_parts WHERE deviation_id = $1',
+      [id]
+    );
+    const hasDeviationParts = parseInt(deviationPartsResult.rows[0].count) > 0;
+
+    if (hasDeviationParts && !deviation_part_id) {
+      // La desviación tiene partes pero el defecto no es de ninguna de ellas
+      const allowedParts = await query(`
+        SELECT cp.part_number FROM deviation_parts dp
+        JOIN client_parts cp ON dp.part_id = cp.id
+        WHERE dp.deviation_id = $1
+      `, [id]);
+      const partsList = allowedParts.rows.map(r => r.part_number).join(', ');
+
+      return res.status(400).json({
+        success: false,
+        message: `No se puede vincular: el defecto es de parte ${defect_part_number || defect_part_id} pero la desviación solo aplica a: ${partsList}`
+      });
+    }
+
     const result = await query(
       `INSERT INTO defect_deviations (defect_id, deviation_id, linked_by, notes)
        VALUES ($1, $2, $3, $4)
