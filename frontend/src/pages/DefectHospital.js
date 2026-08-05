@@ -695,6 +695,10 @@ const DefectHospital = () => {
   const [modalAction, setModalAction] = useState(null); // 'repair' | 'complete' | 'release' | 'reject'
   const [selectedDefect, setSelectedDefect] = useState(null);
 
+  // Modal de detalle/historia
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailDefect, setDetailDefect] = useState(null);
+
   // Form data para modal
   const [formData, setFormData] = useState({
     repairTypeId: '',
@@ -6504,7 +6508,7 @@ const DefectHospital = () => {
                     {traceDefects.map((defect, idx) => {
                       const statusInfo = getStatusInfo(defect.repairStatus || defect.repair_status || 'OPEN');
                       return (
-                        <tr key={defect.id} style={{ backgroundColor: idx % 2 === 0 ? t.bgCard : t.bgPanel }}>
+                        <tr key={defect.id} style={{ backgroundColor: idx % 2 === 0 ? t.bgCard : t.bgPanel, cursor: 'pointer' }} onClick={() => { setDetailDefect(defect); setDetailModalOpen(true); }}>
                           <td style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}`, fontWeight: '600', color: t.accent }}>
                             {defect.entryNumber || defect.entry_number}
                           </td>
@@ -10213,6 +10217,226 @@ const DefectHospital = () => {
                 {loading
                   ? (language === 'es' ? 'Procesando...' : 'Processing...')
                   : (language === 'es' ? 'Confirmar' : 'Confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalle/Historia de Defecto (Solo Lectura) */}
+      {detailModalOpen && detailDefect && (
+        <div style={styles.modal} onClick={() => { setDetailModalOpen(false); setDetailDefect(null); }}>
+          <div style={{ ...styles.modalContent, maxWidth: '700px', maxHeight: '85vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ ...styles.modalTitle, margin: 0 }}>
+                {language === 'es' ? 'Detalle del Defecto' : 'Defect Detail'}
+              </h3>
+              <button
+                onClick={() => { setDetailModalOpen(false); setDetailDefect(null); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: t.textMuted,
+                  padding: '4px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Info básica */}
+            <div style={{
+              padding: '16px',
+              backgroundColor: t.bgPanel,
+              borderRadius: '8px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>Entry</span>
+                  <div style={{ fontWeight: '600', color: t.accent, fontSize: '16px' }}>
+                    {detailDefect.entryNumber || detailDefect.entry_number}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>Serial/Lote</span>
+                  <div style={{ fontWeight: '600', fontSize: '16px' }}>
+                    {detailDefect.serialNumber || detailDefect.serial_number || detailDefect.lotNumber || detailDefect.lot_number}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>{language === 'es' ? 'Tipo de Defecto' : 'Defect Type'}</span>
+                  <div style={{ fontWeight: '500' }}>
+                    {detailDefect.defectTypeName || detailDefect.defect_type_name || '-'}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>{language === 'es' ? 'Estado' : 'Status'}</span>
+                  <div>
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      backgroundColor: getStatusInfo(detailDefect.repairStatus || detailDefect.repair_status || 'OPEN').bgColor,
+                      color: getStatusInfo(detailDefect.repairStatus || detailDefect.repair_status || 'OPEN').color
+                    }}>
+                      {getStatusInfo(detailDefect.repairStatus || detailDefect.repair_status || 'OPEN').label}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>{language === 'es' ? 'Área Responsable' : 'Responsible Area'}</span>
+                  <div style={{ fontWeight: '500' }}>
+                    {detailDefect.departmentName || detailDefect.department_name || (language === 'es' ? 'No asignada' : 'Not assigned')}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>{language === 'es' ? 'Fecha Captura' : 'Capture Date'}</span>
+                  <div style={{ fontWeight: '500' }}>
+                    {new Date(detailDefect.capturedAt || detailDefect.captured_at || detailDefect.createdAt || detailDefect.created_at).toLocaleString('es-MX')}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Comentarios del Inspector */}
+            {(detailDefect.notes || detailDefect.defectNotes || detailDefect.defect_notes) && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: t.bgCard,
+                borderRadius: '8px',
+                marginBottom: '12px',
+                border: `1px solid ${t.border}`
+              }}>
+                <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  {language === 'es' ? 'Comentarios del Inspector' : 'Inspector Comments'}
+                </div>
+                <div style={{ whiteSpace: 'pre-wrap', fontSize: '13px' }}>
+                  {detailDefect.notes || detailDefect.defectNotes || detailDefect.defect_notes}
+                </div>
+              </div>
+            )}
+
+            {/* Notas de Reparación */}
+            {(detailDefect.repairNotes || detailDefect.repair_notes) && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: t.bgCard,
+                borderRadius: '8px',
+                marginBottom: '12px',
+                border: `1px solid ${t.border}`
+              }}>
+                <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  {language === 'es' ? 'Notas de Reparación' : 'Repair Notes'}
+                </div>
+                <div style={{ whiteSpace: 'pre-wrap', fontSize: '13px' }}>
+                  {detailDefect.repairNotes || detailDefect.repair_notes}
+                </div>
+              </div>
+            )}
+
+            {/* Fotos del defecto */}
+            {detailDefect.photos && Array.isArray(detailDefect.photos) && detailDefect.photos.length > 0 && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: t.bgCard,
+                borderRadius: '8px',
+                marginBottom: '12px',
+                border: `1px solid ${t.border}`
+              }}>
+                <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
+                  {language === 'es' ? 'Fotos' : 'Photos'} ({detailDefect.photos.length})
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {detailDefect.photos.map((photo, idx) => (
+                    <a
+                      key={idx}
+                      href={photo.url || photo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        border: `1px solid ${t.border}`
+                      }}
+                    >
+                      <img
+                        src={photo.url || photo}
+                        alt={`Foto ${idx + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Información adicional */}
+            <div style={{
+              padding: '12px 16px',
+              backgroundColor: t.bgPanel,
+              borderRadius: '8px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
+                {language === 'es' ? 'Información Adicional' : 'Additional Info'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
+                <div>
+                  <span style={{ color: t.textMuted }}>{language === 'es' ? 'Parte:' : 'Part:'}</span>{' '}
+                  <span style={{ fontWeight: '500' }}>{detailDefect.partNumber || detailDefect.part_number || '-'}</span>
+                </div>
+                <div>
+                  <span style={{ color: t.textMuted }}>{language === 'es' ? 'Estación:' : 'Station:'}</span>{' '}
+                  <span style={{ fontWeight: '500' }}>{detailDefect.stationName || detailDefect.station_name || '-'}</span>
+                </div>
+                {(detailDefect.repairTypeName || detailDefect.repair_type_name) && (
+                  <div>
+                    <span style={{ color: t.textMuted }}>{language === 'es' ? 'Tipo Reparación:' : 'Repair Type:'}</span>{' '}
+                    <span style={{ fontWeight: '500' }}>{detailDefect.repairTypeName || detailDefect.repair_type_name}</span>
+                  </div>
+                )}
+                {(detailDefect.releaseReasonName || detailDefect.release_reason_name) && (
+                  <div>
+                    <span style={{ color: t.textMuted }}>{language === 'es' ? 'Razón Liberación:' : 'Release Reason:'}</span>{' '}
+                    <span style={{ fontWeight: '500' }}>{detailDefect.releaseReasonName || detailDefect.release_reason_name}</span>
+                  </div>
+                )}
+                {(detailDefect.repairedAt || detailDefect.repaired_at) && (
+                  <div>
+                    <span style={{ color: t.textMuted }}>{language === 'es' ? 'Fecha Reparación:' : 'Repair Date:'}</span>{' '}
+                    <span style={{ fontWeight: '500' }}>{new Date(detailDefect.repairedAt || detailDefect.repaired_at).toLocaleString('es-MX')}</span>
+                  </div>
+                )}
+                {(detailDefect.releasedAt || detailDefect.released_at) && (
+                  <div>
+                    <span style={{ color: t.textMuted }}>{language === 'es' ? 'Fecha Liberación:' : 'Release Date:'}</span>{' '}
+                    <span style={{ fontWeight: '500' }}>{new Date(detailDefect.releasedAt || detailDefect.released_at).toLocaleString('es-MX')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Botón cerrar */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setDetailModalOpen(false); setDetailDefect(null); }}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: t.bgPanel,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: t.text
+                }}
+              >
+                {language === 'es' ? 'Cerrar' : 'Close'}
               </button>
             </div>
           </div>

@@ -45,7 +45,7 @@ async function getSerialValidationInfo(serialNumber, clientId) {
 
   const unit = transformToCamelCase(unitResult.rows[0]);
 
-  // 2. Obtener defectos abiertos
+  // 2. Obtener defectos no cerrados (bloquean liberación)
   const defectsResult = await query(`
     SELECT
       de.id,
@@ -59,7 +59,7 @@ async function getSerialValidationInfo(serialNumber, clientId) {
     LEFT JOIN defect_types dt ON de.defect_type_id = dt.id
     LEFT JOIN inspection_stations s ON de.station_id = s.id
     WHERE de.serial_number = $1
-      AND de.repair_status = 'OPEN'
+      AND de.repair_status NOT IN ('RELEASED', 'CLOSED')
     ORDER BY de.created_at DESC
   `, [serialNumber.trim()]);
 
