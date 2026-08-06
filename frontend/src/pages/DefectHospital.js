@@ -642,6 +642,15 @@ const DefectHospital = () => {
   const [bulkDepartmentId, setBulkDepartmentId] = useState('');
   const [bulkNotes, setBulkNotes] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Tab Reports
+  const [reportType, setReportType] = useState('lot'); // 'lot' | 'dateRange' | 'serialList' | 'currentTable'
+  const [reportLot, setReportLot] = useState('');
+  const [reportDateFrom, setReportDateFrom] = useState('');
+  const [reportDateTo, setReportDateTo] = useState('');
+  const [reportSerialList, setReportSerialList] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportPreview, setReportPreview] = useState(null);
   const [defectTypeFilter, setDefectTypeFilter] = useState('');
 
   // Búsqueda/Filtro
@@ -1480,6 +1489,215 @@ const DefectHospital = () => {
 
     // Descargar
     XLSX.writeFile(wb, fileName);
+  };
+
+  // Generar reporte según tipo y formato
+  const generateReport = async (format) => {
+    setReportLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      let reportData = [];
+      let reportTitle = '';
+
+      // Obtener clientId de los defectos cargados o usar 1 por defecto
+      const effectiveClientId = clientId || (allDefects.length > 0 ? (allDefects[0].clientId || allDefects[0].client_id) : null);
+
+      // Si ya tenemos preview y no es preview mode, usar los datos existentes
+      if (format !== 'preview' && reportPreview && reportPreview.length > 0) {
+        reportData = reportPreview;
+        reportTitle = `Reporte_${reportType}`;
+      } else {
+
+      // Obtener datos según tipo de reporte
+      if (reportType === 'lot') {
+        if (!reportLot.trim()) {
+          alert(language === 'es' ? 'Ingresa un número de lote' : 'Enter a lot number');
+          setReportLoading(false);
+          return;
+        }
+        const response = await fetch(`${API_URL}/defects-v2/report/by-lot?lot=${encodeURIComponent(reportLot.trim())}&clientId=${effectiveClientId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          reportData = result.data || [];
+          reportTitle = `Reporte_Lote_${reportLot.trim()}`;
+        } else {
+          alert(result.message || 'Error obteniendo datos');
+          setReportLoading(false);
+          return;
+        }
+      } else if (reportType === 'dateRange') {
+        if (!reportDateFrom || !reportDateTo) {
+          alert(language === 'es' ? 'Selecciona fechas de inicio y fin' : 'Select start and end dates');
+          setReportLoading(false);
+          return;
+        }
+        const response = await fetch(`${API_URL}/defects-v2/report/by-date-range?dateFrom=${reportDateFrom}&dateTo=${reportDateTo}&clientId=${effectiveClientId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          reportData = result.data || [];
+          reportTitle = `Reporte_${reportDateFrom}_a_${reportDateTo}`;
+        } else {
+          alert(result.message || 'Error obteniendo datos');
+          setReportLoading(false);
+          return;
+        }
+      } else if (reportType === 'serialList') {
+        if (!reportSerialList.trim()) {
+          alert(language === 'es' ? 'Ingresa al menos un serial' : 'Enter at least one serial');
+          setReportLoading(false);
+          return;
+        }
+        // Parsear lista de seriales (por línea o por coma)
+        const serials = reportSerialList
+          .split(/[\n,]/)
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+
+        const response = await fetch(`${API_URL}/defects-v2/report/by-serial-list`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ serials, clientId: effectiveClientId })
+        });
+        const result = await response.json();
+        if (result.success) {
+          reportData = result.data || [];
+          reportTitle = `Reporte_Seriales_${serials.length}`;
+        } else {
+          alert(result.message || 'Error obteniendo datos');
+          setReportLoading(false);
+          return;
+        }
+      } else if (reportType === 'currentTable') {
+        // Usar datos actuales de la tabla
+        const rows = [];
+        filteredGroups.forEach(group => {
+          group.defects.forEach(defect => {
+            rows.push(defect);
+          });
+        });
+        reportData = rows;
+        reportTitle = `Reporte_TablaActual`;
+        }
+      } // cierre del else de "si ya tenemos preview"
+
+      if (reportData.length === 0) {
+        alert(language === 'es' ? 'No se encontraron datos para el reporte' : 'No data found for report');
+        setReportLoading(false);
+        return;
+      }
+
+      // Si es modo preview, solo guardar los datos y salir
+      if (format === 'preview') {
+        setReportPreview(reportData);
+        setReportLoading(false);
+        return;
+      }
+
+      // Formatear datos para exportar
+      const formattedRows = reportData.map(row => {
+        if (format === 'raw') {
+          // Raw: todos los campos disponibles
+          return {
+            'entry_number': row.entryNumber || row.entry_number || '',
+            'serial_number': row.serialNumber || row.serial_number || '',
+            'lot_number': row.lotNumber || row.lot_number || '',
+            'part_number': row.partNumber || row.part_number || '',
+            'part_name': row.partName || row.part_name || '',
+            'defect_code': row.defectCode || row.defect_code || '',
+            'defect_name': row.defectTypeName || row.defect_type_name || '',
+            'category_name': row.categoryName || row.category_name || '',
+            'station_name': row.stationName || row.station_name || '',
+            'repair_status': row.repairStatus || row.repair_status || '',
+            'department_name': row.departmentName || row.department_name || '',
+            'location_code': row.locationCode || row.location_code || '',
+            'repair_attempts': row.repairAttempts || row.repair_attempts || 0,
+            'is_reprocess': row.isReprocess || row.is_reprocess || false,
+            'captured_by_name': row.capturedByName || row.captured_by_name || '',
+            'captured_at': row.capturedAt || row.captured_at || '',
+            'repaired_by_name': row.repairedByName || row.repaired_by_name || '',
+            'repaired_at': row.repairedAt || row.repaired_at || '',
+            'released_by_name': row.releasedByName || row.released_by_name || '',
+            'released_at': row.releasedAt || row.released_at || '',
+            'repair_notes': row.repairNotes || row.repair_notes || '',
+            'release_notes': row.releaseNotes || row.release_notes || ''
+          };
+        } else {
+          // CSV/Excel formateado
+          return {
+            'Entry': row.entryNumber || row.entry_number || '',
+            'Serial': row.serialNumber || row.serial_number || row.lotNumber || row.lot_number || '',
+            'Lote': row.lotNumber || row.lot_number || '',
+            'Parte': row.partNumber || row.part_number || '',
+            'Defecto': row.defectTypeName || row.defect_type_name || '',
+            'Categoría': row.categoryName || row.category_name || '',
+            'Estación': row.stationName || row.station_name || '',
+            'Estado': row.repairStatus || row.repair_status || '',
+            'Departamento': row.departmentName || row.department_name || '',
+            'Ubicación': row.locationCode || row.location_code || '',
+            'Reproceso': (row.isReprocess || row.is_reprocess) ? 'Sí' : 'No',
+            'Capturado Por': row.capturedByName || row.captured_by_name || '',
+            'Fecha Captura': row.capturedAt || row.captured_at ? new Date(row.capturedAt || row.captured_at).toLocaleString('es-MX') : '',
+            'Reparado Por': row.repairedByName || row.repaired_by_name || '',
+            'Fecha Reparación': row.repairedAt || row.repaired_at ? new Date(row.repairedAt || row.repaired_at).toLocaleString('es-MX') : '',
+            'Liberado Por': row.releasedByName || row.released_by_name || '',
+            'Fecha Liberación': row.releasedAt || row.released_at ? new Date(row.releasedAt || row.released_at).toLocaleString('es-MX') : ''
+          };
+        }
+      });
+
+      // Generar archivo
+      const today = new Date().toISOString().split('T')[0];
+
+      if (format === 'csv') {
+        // Generar CSV
+        const headers = Object.keys(formattedRows[0]);
+        const csvContent = [
+          headers.join(','),
+          ...formattedRows.map(row =>
+            headers.map(h => {
+              const val = row[h] || '';
+              // Escapar comillas y envolver en comillas si contiene coma
+              if (typeof val === 'string' && (val.includes(',') || val.includes('"') || val.includes('\n'))) {
+                return `"${val.replace(/"/g, '""')}"`;
+              }
+              return val;
+            }).join(',')
+          )
+        ].join('\n');
+
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${reportTitle}_${today}.csv`;
+        link.click();
+      } else {
+        // Excel (formateado o raw)
+        const ws = XLSX.utils.json_to_sheet(formattedRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, format === 'raw' ? 'Raw_Data' : 'Reporte');
+
+        const fileName = format === 'raw'
+          ? `${reportTitle}_RAW_${today}.xlsx`
+          : `${reportTitle}_${today}.xlsx`;
+
+        XLSX.writeFile(wb, fileName);
+      }
+
+      setSuccess(language === 'es' ? 'Reporte generado exitosamente' : 'Report generated successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert(language === 'es' ? 'Error generando reporte' : 'Error generating report');
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   // Abrir modal de acción
@@ -5901,6 +6119,19 @@ const DefectHospital = () => {
             {language === 'es' ? 'Desviaciones' : 'Deviations'} ({deviations.length})
           </button>
         )}
+
+        {/* Reports: visible para todos */}
+        <button
+          style={{
+            ...styles.tab,
+            ...(activeTab === 'reports' ? styles.tabActive : styles.tabInactive),
+            backgroundColor: activeTab === 'reports' ? '#8b5cf6' : undefined,
+            color: activeTab === 'reports' ? '#fff' : undefined
+          }}
+          onClick={() => setActiveTab('reports')}
+        >
+          📊 {language === 'es' ? 'Reportes' : 'Reports'}
+        </button>
       </div>
 
       {/* Filtros para tab To Repair */}
@@ -6978,6 +7209,369 @@ const DefectHospital = () => {
               ))}
             </div>
           )}
+        </div>
+      ) : activeTab === 'reports' ? (
+        /* Vista Reportes */
+        <div style={{ padding: '0' }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            border: `1px solid ${t.border}`,
+            padding: '24px'
+          }}>
+            <h2 style={{ margin: '0 0 20px 0', color: t.text, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📊 {language === 'es' ? 'Generador de Reportes' : 'Report Generator'}
+            </h2>
+
+            {/* Selector de tipo de reporte */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', color: t.textMuted, fontSize: '12px', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                {language === 'es' ? 'Tipo de Reporte' : 'Report Type'}
+              </label>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {[
+                  { value: 'lot', label: language === 'es' ? '📦 Por Lote' : '📦 By Lot', desc: language === 'es' ? 'Todos los seriales de un lote' : 'All serials from a lot' },
+                  { value: 'dateRange', label: language === 'es' ? '📅 Por Fechas' : '📅 By Date Range', desc: language === 'es' ? 'Defectos en un período' : 'Defects in a period' },
+                  { value: 'serialList', label: language === 'es' ? '📋 Lista de Seriales' : '📋 Serial List', desc: language === 'es' ? 'Pega una lista de seriales' : 'Paste a list of serials' },
+                  { value: 'currentTable', label: language === 'es' ? '📊 Tabla Actual' : '📊 Current Table', desc: language === 'es' ? 'Exportar vista actual' : 'Export current view' }
+                ].map(type => (
+                  <button
+                    key={type.value}
+                    onClick={() => setReportType(type.value)}
+                    style={{
+                      padding: '16px 20px',
+                      borderRadius: '8px',
+                      border: reportType === type.value ? `2px solid #8b5cf6` : `1px solid ${t.border}`,
+                      backgroundColor: reportType === type.value ? '#8b5cf620' : t.bgPanel,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      minWidth: '180px'
+                    }}
+                  >
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: reportType === type.value ? '#8b5cf6' : t.text }}>
+                      {type.label}
+                    </div>
+                    <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
+                      {type.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Campos según tipo de reporte */}
+            <div style={{ marginBottom: '24px' }}>
+              {reportType === 'lot' && (
+                <div>
+                  <label style={{ display: 'block', color: t.textMuted, fontSize: '12px', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    {language === 'es' ? 'Número de Lote' : 'Lot Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={reportLot}
+                    onChange={(e) => setReportLot(e.target.value)}
+                    placeholder={language === 'es' ? 'Ej: LOT-2026-001' : 'Ex: LOT-2026-001'}
+                    style={{
+                      width: '100%',
+                      maxWidth: '400px',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: `1px solid ${t.border}`,
+                      backgroundColor: t.bgInput,
+                      color: t.text,
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+              )}
+
+              {reportType === 'dateRange' && (
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <div>
+                    <label style={{ display: 'block', color: t.textMuted, fontSize: '12px', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                      {language === 'es' ? 'Fecha Inicio' : 'Start Date'}
+                    </label>
+                    <input
+                      type="date"
+                      value={reportDateFrom}
+                      onChange={(e) => setReportDateFrom(e.target.value)}
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        border: `1px solid ${t.border}`,
+                        backgroundColor: t.bgInput,
+                        color: t.text,
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: t.textMuted, fontSize: '12px', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                      {language === 'es' ? 'Fecha Fin' : 'End Date'}
+                    </label>
+                    <input
+                      type="date"
+                      value={reportDateTo}
+                      onChange={(e) => setReportDateTo(e.target.value)}
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        border: `1px solid ${t.border}`,
+                        backgroundColor: t.bgInput,
+                        color: t.text,
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {reportType === 'serialList' && (
+                <div>
+                  <label style={{ display: 'block', color: t.textMuted, fontSize: '12px', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    {language === 'es' ? 'Lista de Seriales (uno por línea o separados por coma)' : 'Serial List (one per line or comma-separated)'}
+                  </label>
+                  <textarea
+                    value={reportSerialList}
+                    onChange={(e) => setReportSerialList(e.target.value)}
+                    placeholder={language === 'es' ? 'SN001\nSN002\nSN003\n\no: SN001, SN002, SN003' : 'SN001\nSN002\nSN003\n\nor: SN001, SN002, SN003'}
+                    rows={6}
+                    style={{
+                      width: '100%',
+                      maxWidth: '500px',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: `1px solid ${t.border}`,
+                      backgroundColor: t.bgInput,
+                      color: t.text,
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+              )}
+
+              {reportType === 'currentTable' && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: t.bgPanel,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <p style={{ margin: 0, color: t.textMuted, fontSize: '13px' }}>
+                    {language === 'es'
+                      ? `Se exportarán ${generalPagination.total || allDefects.length} defectos de la tabla General con los filtros actuales.`
+                      : `Will export ${generalPagination.total || allDefects.length} defects from General table with current filters.`}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Botones de acción */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                onClick={() => generateReport('preview')}
+                disabled={reportLoading}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#8b5cf6',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: reportLoading ? 'not-allowed' : 'pointer',
+                  opacity: reportLoading ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                🔍 {language === 'es' ? 'Ver Reporte' : 'View Report'}
+              </button>
+
+              <div style={{ width: '1px', height: '30px', backgroundColor: t.border }} />
+
+              <button
+                onClick={() => generateReport('csv')}
+                disabled={reportLoading || !reportPreview}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#22c55e',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: (reportLoading || !reportPreview) ? 'not-allowed' : 'pointer',
+                  opacity: (reportLoading || !reportPreview) ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                📥 CSV
+              </button>
+              <button
+                onClick={() => generateReport('excel')}
+                disabled={reportLoading || !reportPreview}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#10b981',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: (reportLoading || !reportPreview) ? 'not-allowed' : 'pointer',
+                  opacity: (reportLoading || !reportPreview) ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                📊 Excel
+              </button>
+              <button
+                onClick={() => generateReport('raw')}
+                disabled={reportLoading || !reportPreview}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`,
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: (reportLoading || !reportPreview) ? 'not-allowed' : 'pointer',
+                  opacity: (reportLoading || !reportPreview) ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                🗃️ Raw
+              </button>
+
+              {reportPreview && (
+                <button
+                  onClick={() => setReportPreview(null)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: `1px solid ${t.border}`,
+                    backgroundColor: 'transparent',
+                    color: t.textMuted,
+                    fontSize: '13px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕ Limpiar
+                </button>
+              )}
+            </div>
+
+            {reportLoading && (
+              <div style={{ marginTop: '16px', color: t.textMuted, fontSize: '13px' }}>
+                ⏳ {language === 'es' ? 'Generando reporte...' : 'Generating report...'}
+              </div>
+            )}
+
+            {/* Tabla de previsualización */}
+            {reportPreview && reportPreview.length > 0 && (
+              <div style={{ marginTop: '24px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px'
+                }}>
+                  <h3 style={{ margin: 0, color: t.text, fontSize: '16px' }}>
+                    📋 {language === 'es' ? 'Vista Previa' : 'Preview'} ({reportPreview.length} {language === 'es' ? 'registros' : 'records'})
+                  </h3>
+                </div>
+                <div style={{
+                  maxHeight: '500px',
+                  overflowY: 'auto',
+                  overflowX: 'auto',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px'
+                }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: '12px'
+                  }}>
+                    <thead>
+                      <tr style={{ backgroundColor: t.bgPanel, position: 'sticky', top: 0 }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Entry</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Serial</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Lote</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Parte</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Defecto</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Estado</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Estación</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Capturado</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: `1px solid ${t.border}`, color: t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportPreview.slice(0, 100).map((row, idx) => (
+                        <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? t.bgCard : t.bgPanel }}>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.accent, fontWeight: '600' }}>
+                            {row.entryNumber || row.entry_number || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.text }}>
+                            {row.serialNumber || row.serial_number || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.text }}>
+                            {row.lotNumber || row.lot_number || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.text, whiteSpace: 'nowrap' }}>
+                            {row.partNumber || row.part_number || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.text }}>
+                            {row.defectTypeName || row.defect_type_name || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}` }}>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: (row.repairStatus || row.repair_status) === 'RELEASED' || (row.repairStatus || row.repair_status) === 'CLOSED' ? '#22c55e20' :
+                                             (row.repairStatus || row.repair_status) === 'OPEN' ? '#ef444420' :
+                                             (row.repairStatus || row.repair_status) === 'IN_REPAIR' ? '#f59e0b20' : '#6b728020',
+                              color: (row.repairStatus || row.repair_status) === 'RELEASED' || (row.repairStatus || row.repair_status) === 'CLOSED' ? '#22c55e' :
+                                    (row.repairStatus || row.repair_status) === 'OPEN' ? '#ef4444' :
+                                    (row.repairStatus || row.repair_status) === 'IN_REPAIR' ? '#f59e0b' : '#6b7280'
+                            }}>
+                              {row.repairStatus || row.repair_status || '-'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.text }}>
+                            {row.stationName || row.station_name || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.text }}>
+                            {row.capturedByName || row.captured_by_name || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', borderBottom: `1px solid ${t.border}`, color: t.textMuted, whiteSpace: 'nowrap' }}>
+                            {(row.capturedAt || row.captured_at) ? new Date(row.capturedAt || row.captured_at).toLocaleDateString('es-MX') : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {reportPreview.length > 100 && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontSize: '12px', backgroundColor: t.bgPanel }}>
+                      Mostrando 100 de {reportPreview.length} registros. Descarga el archivo para ver todos.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <>

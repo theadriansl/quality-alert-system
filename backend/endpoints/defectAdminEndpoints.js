@@ -4475,4 +4475,164 @@ router.post('/reopen-for-reprocess', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================================================
+// REPORT ENDPOINTS
+// ============================================================================
+
+// Helper: Query base para reportes con todos los campos
+const getReportQuery = () => `
+  SELECT
+    de.id,
+    de.entry_number,
+    de.serial_number,
+    de.lot_number,
+    de.repair_status,
+    de.repair_attempts,
+    de.is_reprocess,
+    de.notes,
+    de.repair_notes,
+    de.resolution_notes as release_notes,
+    de.created_at as captured_at,
+    de.repaired_at,
+    de.released_at,
+    dt.code as defect_code,
+    dt.name as defect_type_name,
+    dc.name as category_name,
+    cp.part_number,
+    cp.part_name,
+    s_cap.name as station_name,
+    s_rep.name as repair_station_name,
+    s_rel.name as release_station_name,
+    dep.name as department_name,
+    loc.code as location_code,
+    CONCAT(u_cap.first_name, ' ', u_cap.last_name) as captured_by_name,
+    CONCAT(u_rep.first_name, ' ', u_rep.last_name) as repaired_by_name,
+    CONCAT(u_rel.first_name, ' ', u_rel.last_name) as released_by_name
+  FROM defect_entries_v2 de
+  LEFT JOIN defect_types dt ON de.defect_type_id = dt.id
+  LEFT JOIN defect_categories dc ON dt.category_id = dc.id
+  LEFT JOIN client_parts cp ON de.part_id = cp.id
+  LEFT JOIN inspection_stations s_cap ON de.station_id = s_cap.id
+  LEFT JOIN inspection_stations s_rep ON de.repair_station_id = s_rep.id
+  LEFT JOIN inspection_stations s_rel ON de.release_station_id = s_rel.id
+  LEFT JOIN departments dep ON de.department_id = dep.id
+  LEFT JOIN locations loc ON de.location_id = loc.id
+  LEFT JOIN users u_cap ON de.captured_by_user_id = u_cap.id
+  LEFT JOIN users u_rep ON de.repaired_by = u_rep.id
+  LEFT JOIN users u_rel ON de.released_by = u_rel.id
+`;
+
+// GET /report/by-lot - Reporte por lote
+router.get('/report/by-lot', authenticateToken, async (req, res) => {
+  try {
+    const { lot, clientId } = req.query;
+
+    if (!lot) {
+      return res.status(400).json({ success: false, message: 'lot es requerido' });
+    }
+
+    let result;
+    if (clientId && clientId !== 'null') {
+      result = await query(`
+        ${getReportQuery()}
+        WHERE de.lot_number ILIKE $1 AND de.client_id = $2
+        ORDER BY de.created_at DESC
+      `, [`%${lot.trim()}%`, clientId]);
+    } else {
+      result = await query(`
+        ${getReportQuery()}
+        WHERE de.lot_number ILIKE $1
+        ORDER BY de.created_at DESC
+      `, [`%${lot.trim()}%`]);
+    }
+
+    res.json({
+      success: true,
+      data: result.rows.map(row => transformToCamelCase(row)),
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error generating lot report:', error);
+    res.status(500).json({ success: false, message: 'Error generando reporte' });
+  }
+});
+
+// GET /report/by-date-range - Reporte por rango de fechas
+router.get('/report/by-date-range', authenticateToken, async (req, res) => {
+  try {
+    const { dateFrom, dateTo, clientId } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      return res.status(400).json({ success: false, message: 'dateFrom y dateTo son requeridos' });
+    }
+
+    let result;
+    if (clientId && clientId !== 'null') {
+      result = await query(`
+        ${getReportQuery()}
+        WHERE de.created_at >= $1::date
+          AND de.created_at < ($2::date + interval '1 day')
+          AND de.client_id = $3
+        ORDER BY de.created_at DESC
+      `, [dateFrom, dateTo, clientId]);
+    } else {
+      result = await query(`
+        ${getReportQuery()}
+        WHERE de.created_at >= $1::date
+          AND de.created_at < ($2::date + interval '1 day')
+        ORDER BY de.created_at DESC
+      `, [dateFrom, dateTo]);
+    }
+
+    res.json({
+      success: true,
+      data: result.rows.map(row => transformToCamelCase(row)),
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error generating date range report:', error);
+    res.status(500).json({ success: false, message: 'Error generando reporte' });
+  }
+});
+
+// POST /report/by-serial-list - Reporte por lista de seriales
+router.post('/report/by-serial-list', authenticateToken, async (req, res) => {
+  try {
+    const { serials, clientId } = req.body;
+
+    if (!serials || !Array.isArray(serials) || serials.length === 0) {
+      return res.status(400).json({ success: false, message: 'serials (array) es requerido' });
+    }
+
+    // Limitar a 1000 seriales para evitar queries muy pesadas
+    const limitedSerials = serials.slice(0, 1000);
+
+    let result;
+    if (clientId && clientId !== 'null') {
+      result = await query(`
+        ${getReportQuery()}
+        WHERE (de.serial_number = ANY($1) OR de.lot_number = ANY($1))
+          AND de.client_id = $2
+        ORDER BY de.serial_number, de.created_at DESC
+      `, [limitedSerials, clientId]);
+    } else {
+      result = await query(`
+        ${getReportQuery()}
+        WHERE (de.serial_number = ANY($1) OR de.lot_number = ANY($1))
+        ORDER BY de.serial_number, de.created_at DESC
+      `, [limitedSerials]);
+    }
+
+    res.json({
+      success: true,
+      data: result.rows.map(row => transformToCamelCase(row)),
+      count: result.rows.length,
+      requestedSerials: limitedSerials.length
+    });
+  } catch (error) {
+    console.error('Error generating serial list report:', error);
+    res.status(500).json({ success: false, message: 'Error generando reporte' });
+  }
+});
+
 module.exports = router;
