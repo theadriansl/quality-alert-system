@@ -39,6 +39,10 @@ const SpecCatalogTab = ({ theme: t }) => {
   // Departments state
   const [departments, setDepartments] = useState([]);
 
+  // Calibration equipment state
+  const [calibrationEquipment, setCalibrationEquipment] = useState([]);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
+
   // Form state
   const [formData, setFormData] = useState({
     specNumber: '',
@@ -55,7 +59,10 @@ const SpecCatalogTab = ({ theme: t }) => {
     referencePhotoUrl: '',
     drawingRef: '',
     notes: '',
-    defaultDepartmentId: ''
+    defaultDepartmentId: '',
+    measurementInstrument: '',
+    instrumentCode: '',
+    requiresCalibration: false
   });
 
   // Load data on mount
@@ -65,6 +72,7 @@ const SpecCatalogTab = ({ theme: t }) => {
     loadClients();
     loadStations();
     loadDepartments();
+    loadCalibrationEquipment();
   }, []);
 
   const loadStations = async () => {
@@ -86,6 +94,21 @@ const SpecCatalogTab = ({ theme: t }) => {
       setDepartments(data.departments || []);
     } catch (err) {
       console.error('Error loading departments:', err);
+    }
+  };
+
+  const loadCalibrationEquipment = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/calibration/search/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCalibrationEquipment(data.equipment || []);
+      }
+    } catch (err) {
+      console.error('Error loading calibration equipment:', err);
     }
   };
 
@@ -185,9 +208,13 @@ const SpecCatalogTab = ({ theme: t }) => {
       referencePhotoUrl: '',
       drawingRef: '',
       notes: '',
-      defaultDepartmentId: ''
+      defaultDepartmentId: '',
+      measurementInstrument: '',
+      instrumentCode: '',
+      requiresCalibration: false
     });
     setSelectedStationIds([]);
+    setSelectedEquipmentId('');
     setEditingSpec(null);
     setShowModal(true);
   };
@@ -209,10 +236,16 @@ const SpecCatalogTab = ({ theme: t }) => {
       referencePhotoUrl: spec.referencePhotoUrl || '',
       drawingRef: spec.drawingRef || '',
       notes: spec.notes || '',
-      defaultDepartmentId: spec.defaultDepartmentId || ''
+      defaultDepartmentId: spec.defaultDepartmentId || '',
+      measurementInstrument: spec.measurementInstrument || '',
+      instrumentCode: spec.instrumentCode || '',
+      requiresCalibration: spec.requiresCalibration || false
     });
     // Load current stations from spec data
     setSelectedStationIds(spec.stations ? spec.stations.map(s => s.id) : []);
+    // Find equipment by code if exists
+    const matchingEquip = calibrationEquipment.find(e => e.code === spec.instrumentCode);
+    setSelectedEquipmentId(matchingEquip ? matchingEquip.id : '');
     setEditingSpec(spec);
     setShowModal(true);
   };
@@ -1088,6 +1121,110 @@ const SpecCatalogTab = ({ theme: t }) => {
                     style={styles.input}
                     placeholder="DWG-001 Det. A"
                   />
+                </div>
+              </div>
+
+              {/* Instrumento de Medición - ISO/IATF */}
+              <div style={{
+                marginTop: '16px',
+                padding: '16px',
+                backgroundColor: t.bgPanel,
+                borderRadius: '8px',
+                border: `1px solid ${t.border}`
+              }}>
+                <div style={{
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: t.textMuted,
+                  marginBottom: '12px',
+                  textTransform: 'uppercase'
+                }}>
+                  Instrumento de Medición (ISO/IATF)
+                </div>
+                <div style={styles.formGrid}>
+                  <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
+                    <label style={styles.label}>Seleccionar Equipo de Calibración</label>
+                    <select
+                      value={selectedEquipmentId}
+                      onChange={(e) => {
+                        const equipId = e.target.value;
+                        setSelectedEquipmentId(equipId);
+                        if (equipId) {
+                          const equip = calibrationEquipment.find(eq => eq.id === parseInt(equipId));
+                          if (equip) {
+                            setFormData({
+                              ...formData,
+                              measurementInstrument: equip.name,
+                              instrumentCode: equip.code,
+                              requiresCalibration: true
+                            });
+                          }
+                        } else {
+                          setFormData({
+                            ...formData,
+                            measurementInstrument: '',
+                            instrumentCode: '',
+                            requiresCalibration: false
+                          });
+                        }
+                      }}
+                      style={styles.input}
+                    >
+                      <option value="">-- Seleccionar equipo o ingresar manual --</option>
+                      {calibrationEquipment.map(equip => (
+                        <option key={equip.id} value={equip.id}>
+                          {equip.code} - {equip.name} {equip.calibrationStatus === 'WARNING' ? '⚠️' : equip.calibrationStatus === 'EXPIRED' ? '❌' : '✓'}
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: t.textMuted, fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                      Selecciona un equipo del catálogo o déjalo vacío para ingresar manualmente
+                    </small>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Instrumento</label>
+                    <input
+                      type="text"
+                      value={formData.measurementInstrument}
+                      onChange={(e) => setFormData({ ...formData, measurementInstrument: e.target.value })}
+                      style={{
+                        ...styles.input,
+                        backgroundColor: selectedEquipmentId ? t.bgPanel : t.bgCard
+                      }}
+                      placeholder="Calibrador Vernier, Gage Go/NoGo, CMM..."
+                      readOnly={!!selectedEquipmentId}
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Código Instrumento</label>
+                    <input
+                      type="text"
+                      value={formData.instrumentCode}
+                      onChange={(e) => setFormData({ ...formData, instrumentCode: e.target.value.toUpperCase() })}
+                      style={{
+                        ...styles.input,
+                        backgroundColor: selectedEquipmentId ? t.bgPanel : t.bgCard
+                      }}
+                      placeholder="CAL-001, GAGE-015..."
+                      readOnly={!!selectedEquipmentId}
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.checkbox}>
+                      <input
+                        type="checkbox"
+                        checked={formData.requiresCalibration}
+                        onChange={(e) => setFormData({ ...formData, requiresCalibration: e.target.checked })}
+                        disabled={!!selectedEquipmentId}
+                      />
+                      <span style={{ fontWeight: '500', color: t.text }}>Requiere Calibración Vigente</span>
+                    </label>
+                    <small style={{ color: t.textMuted, fontSize: '11px', marginLeft: '24px' }}>
+                      {selectedEquipmentId
+                        ? 'Vinculado al sistema de calibración'
+                        : 'El instrumento debe tener certificado de calibración activo'}
+                    </small>
+                  </div>
                 </div>
               </div>
 

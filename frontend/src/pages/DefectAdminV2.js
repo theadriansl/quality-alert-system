@@ -7,6 +7,7 @@ import SpecCatalogTab from '../components/SpecCatalogTab';
 import LocationCodesTab from '../components/LocationCodesTab';
 import HospitalRolesManager from '../components/HospitalRolesManager';
 import ProductionTab from '../components/ProductionTab';
+import CalibrationEquipmentTab from '../components/CalibrationEquipmentTab';
 
 const API_URL = 'http://localhost:5000';
 
@@ -859,10 +860,19 @@ const DefectAdminV2 = () => {
         >
           Producción
         </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === 'calibration' ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab('calibration')}
+        >
+          Calibración
+        </button>
       </div>
 
       {/* Production Tab */}
       {activeTab === 'production' && <ProductionTab theme={t} />}
+
+      {/* Calibration Tab */}
+      {activeTab === 'calibration' && <CalibrationEquipmentTab theme={t} />}
 
       {/* Stations Tab */}
       {activeTab === 'stations' && <StationConfigTab theme={t} />}

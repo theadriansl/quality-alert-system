@@ -59,6 +59,7 @@ const productionEndpoints = require('./endpoints/productionEndpoints');
 const webhookEndpoints = require('./endpoints/webhookEndpoints');
 const transferPackageEndpoints = require('./endpoints/transferPackageEndpoints');
 const { setupReleaseOkEndpoints } = require('./endpoints/releaseOkEndpoints');
+const calibrationEndpoints = require('./endpoints/calibrationEndpoints');
 const { auditEightDChanges } = require('./middleware/auditMiddleware');
 const authenticateToken = require('./middleware/auth');
 const { checkWritePermission, attachUserPermissions } = require('./middleware/permissionMiddleware');
@@ -893,6 +894,12 @@ console.log('✅ Station Configuration endpoints registered');
 // ============================================================================
 app.use('/spec-catalog', specCatalogEndpoints);
 console.log('✅ Spec Catalog endpoints registered');
+
+// ============================================================================
+// CALIBRATION EQUIPMENT ROUTES
+// ============================================================================
+app.use('/calibration', calibrationEndpoints);
+console.log('✅ Calibration Equipment endpoints registered');
 
 // ============================================================================
 // UNIT REGISTRY ROUTES (serial/lot traceability)

@@ -237,7 +237,10 @@ router.post('/parts/:partId/specs', authenticateToken, async (req, res) => {
     qarTriggerEnabled,
     qarTriggerCount,
     qarTriggerHours,
-    defaultDepartmentId
+    defaultDepartmentId,
+    measurementInstrument,
+    instrumentCode,
+    requiresCalibration
   } = req.body;
 
   try {
@@ -262,9 +265,10 @@ router.post('/parts/:partId/specs', authenticateToken, async (req, res) => {
         is_critical, requires_measurement, inspection_method, inspection_frequency, sample_size,
         photo_ok_url, photo_nok_url, reference_photo_url, drawing_ref, notes,
         qar_trigger_enabled, qar_trigger_count, qar_trigger_hours,
-        display_order, created_by, default_department_id
+        display_order, created_by, default_department_id,
+        measurement_instrument, instrument_code, requires_calibration
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
       ) RETURNING *
     `, [
       partId, clientId, specNumber, specName, specType,
@@ -273,7 +277,8 @@ router.post('/parts/:partId/specs', authenticateToken, async (req, res) => {
       isCritical || false, requiresMeasurement || false, inspectionMethod, inspectionFrequency, sampleSize,
       photoOkUrl, photoNokUrl, referencePhotoUrl, drawingRef, notes,
       qarTriggerEnabled || false, qarTriggerCount || 3, qarTriggerHours || 8,
-      maxOrder.rows[0].next_order, req.user.id, defaultDepartmentId || null
+      maxOrder.rows[0].next_order, req.user.id, defaultDepartmentId || null,
+      measurementInstrument || null, instrumentCode || null, requiresCalibration || false
     ]);
 
     res.json({
@@ -314,7 +319,10 @@ router.put('/specs/:specId', authenticateToken, async (req, res) => {
     qarTriggerCount,
     qarTriggerHours,
     displayOrder,
-    defaultDepartmentId
+    defaultDepartmentId,
+    measurementInstrument,
+    instrumentCode,
+    requiresCalibration
   } = req.body;
 
   try {
@@ -344,8 +352,11 @@ router.put('/specs/:specId', authenticateToken, async (req, res) => {
         qar_trigger_hours = COALESCE($22, qar_trigger_hours),
         display_order = COALESCE($23, display_order),
         default_department_id = $24,
+        measurement_instrument = $25,
+        instrument_code = $26,
+        requires_calibration = COALESCE($27, requires_calibration),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $25
+      WHERE id = $28
       RETURNING *
     `, [
       specNumber, specName, specType,
@@ -354,7 +365,9 @@ router.put('/specs/:specId', authenticateToken, async (req, res) => {
       isCritical, requiresMeasurement, inspectionMethod, inspectionFrequency, sampleSize,
       photoOkUrl, photoNokUrl, referencePhotoUrl, drawingRef, notes,
       qarTriggerEnabled, qarTriggerCount, qarTriggerHours, displayOrder,
-      defaultDepartmentId, specId
+      defaultDepartmentId,
+      measurementInstrument, instrumentCode, requiresCalibration,
+      specId
     ]);
 
     if (result.rows.length === 0) {

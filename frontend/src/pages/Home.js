@@ -143,6 +143,14 @@ const Home = () => {
       code: 'MGT'
     },
     {
+      id: 'calibration',
+      moduleId: 'quality_alert',
+      name: 'Equipos de Calibración',
+      description: 'Control de equipos de medición, certificados y alertas de vencimiento',
+      path: '/calibration',
+      code: 'CAL'
+    },
+    {
       id: 'user_manual',
       moduleId: 'help',
       name: 'Manual de Usuario',

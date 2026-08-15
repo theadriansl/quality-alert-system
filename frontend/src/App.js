@@ -77,6 +77,8 @@ import SkillsEvaluate from './pages/SkillsEvaluate';
 import SkillsDashboard from './pages/SkillsDashboard';
 // WI Operator Profile (ILUO)
 import WIOperatorProfile from './pages/WIOperatorProfile';
+// Calibration Equipment
+import CalibrationPage from './pages/CalibrationPage';
 // User Manual
 import UserManual from './pages/UserManual';
 
@@ -339,6 +341,13 @@ function App() {
                 <AdminRoute>
                   <DefectAdminV2 />
                 </AdminRoute>
+              } />
+
+              {/* Calibration Equipment Module */}
+              <Route path="/calibration" element={
+                <ProtectedRoute>
+                  <CalibrationPage />
+                </ProtectedRoute>
               } />
 
               {/* Defect Module - Capture Form */}
