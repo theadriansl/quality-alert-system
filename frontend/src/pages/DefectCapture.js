@@ -88,10 +88,11 @@ const DefectCapture = () => {
   const [selectedShift, setSelectedShift] = useState(null);
 
   // ============================================================================
-  // STATE - Counters
+  // STATE - Counters (persisted in sessionStorage per station)
   // ============================================================================
   const [okCount, setOkCount] = useState(0);
   const [ngCount, setNgCount] = useState(0);
+  const [countersLoaded, setCountersLoaded] = useState(false);
 
   // ============================================================================
   // STATE - Context (persist across captures)
@@ -194,6 +195,25 @@ const DefectCapture = () => {
     setDefectsPage(1);
   }, [selectedCategory]);
 
+  // Load counters when station changes
+  useEffect(() => {
+    if (selectedStation?.id) {
+      const storedOk = parseInt(sessionStorage.getItem(`defectCapture_ok_${selectedStation.id}`) || '0', 10);
+      const storedNg = parseInt(sessionStorage.getItem(`defectCapture_ng_${selectedStation.id}`) || '0', 10);
+      setOkCount(storedOk);
+      setNgCount(storedNg);
+      setCountersLoaded(true);
+    }
+  }, [selectedStation?.id]);
+
+  // Persist counters to sessionStorage (only after loaded)
+  useEffect(() => {
+    if (selectedStation?.id && countersLoaded) {
+      sessionStorage.setItem(`defectCapture_ok_${selectedStation.id}`, okCount.toString());
+      sessionStorage.setItem(`defectCapture_ng_${selectedStation.id}`, ngCount.toString());
+    }
+  }, [okCount, ngCount, selectedStation?.id, countersLoaded]);
+
   // Get paginated defects
   const getPaginatedDefects = useCallback((defects) => {
     const startIndex = (defectsPage - 1) * DEFECTS_PER_PAGE;
@@ -203,12 +223,18 @@ const DefectCapture = () => {
   // ============================================================================
   // STATE - Specs Checklist
   // ============================================================================
-  const [partSpecs, setPartSpecs] = useState([]); // All specs for selected part
+  const [partSpecs, setPartSpecs] = useState([]); // Specs for current station
+  const [allPartSpecs, setAllPartSpecs] = useState([]); // ALL specs for the part (all stations)
   const [specsWarningOpen, setSpecsWarningOpen] = useState(false); // Warning modal
   const [specsChecklistOpen, setSpecsChecklistOpen] = useState(false); // Checklist modal
   const [pendingAction, setPendingAction] = useState(null); // 'OK' | 'DEFECT' - what to do after checklist
-  const [checklistResults, setChecklistResults] = useState({}); // { specId: { result, measuredValue, qualitativeValue, notes } }
+  const [checklistResults, setChecklistResults] = useState({}); // { specId: { result, measuredValue, qualitativeValue, notes, stationName } }
   const [checklistSaving, setChecklistSaving] = useState(false);
+  const [checklistDismissed, setChecklistDismissed] = useState(false); // Track if user dismissed checklist
+  const [serialConfirmed, setSerialConfirmed] = useState(false); // Track if user pressed Enter to confirm serial
+  const [omitWarningOpen, setOmitWarningOpen] = useState(false); // Warning modal for omitting checklist
+  const [qarAlertOpen, setQarAlertOpen] = useState(false); // QAR alert modal
+  const [qarAlertData, setQarAlertData] = useState(null); // QAR threshold data for modal
 
   // ============================================================================
   // STATE - Access Control
@@ -502,6 +528,42 @@ const DefectCapture = () => {
     }
   }, [selectedPart, selectedStation]);
 
+  // Load previous results when serial is confirmed
+  useEffect(() => {
+    if (serialConfirmed && lotNumber.trim() && selectedPart?.id) {
+      loadPreviousSpecResults(lotNumber.trim(), selectedPart.id);
+    }
+  }, [serialConfirmed, lotNumber, selectedPart?.id]);
+
+  // AUTO-OPEN checklist when serial is CONFIRMED (Enter pressed) and part has specs
+  useEffect(() => {
+    // Only open if: has specs, serial confirmed with Enter, checklist not completed/skipped, not dismissed, and not already open
+    if (partSpecs.length > 0 &&
+        serialConfirmed &&
+        lotNumber.trim() &&
+        !checklistResults._completed &&
+        !checklistResults._skipped &&
+        !checklistDismissed &&
+        !specsChecklistOpen &&
+        !specsWarningOpen &&
+        selectedPart) {
+      // Small delay to let UI settle and load previous results
+      const timer = setTimeout(() => {
+        setPendingAction('OK');
+        setSpecsChecklistOpen(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [partSpecs, serialConfirmed, lotNumber, checklistResults, checklistDismissed, specsChecklistOpen, specsWarningOpen, selectedPart]);
+
+  // Reset states when serial changes (user starts typing new serial)
+  useEffect(() => {
+    setChecklistDismissed(false);
+    setSerialConfirmed(false);
+    // Reset results - they will be loaded fresh when serial is confirmed
+    setChecklistResults({});
+  }, [lotNumber]);
+
   // Reset comment when defect changes (keep department and severity - user selected them)
   useEffect(() => {
     if (selectedDefect) {
@@ -768,20 +830,58 @@ const DefectCapture = () => {
       });
       const data = await res.json();
       if (data.success) {
-        let specs = data.specs || [];
+        const allSpecs = data.specs || [];
+        // Save ALL specs for the summary panel
+        setAllPartSpecs(allSpecs);
         // Filter by current station if one is selected
+        let stationSpecs = allSpecs;
         if (stationId) {
-          specs = specs.filter(spec =>
+          stationSpecs = allSpecs.filter(spec =>
             spec.stations && spec.stations.some(st => st.id === stationId)
           );
         }
-        setPartSpecs(specs);
+        setPartSpecs(stationSpecs);
       } else {
         setPartSpecs([]);
+        setAllPartSpecs([]);
       }
     } catch (err) {
       console.error('Error loading part specs:', err);
       setPartSpecs([]);
+      setAllPartSpecs([]);
+    }
+  };
+
+  // Load previous spec inspection results for a serial (from all stations)
+  const loadPreviousSpecResults = async (serial, partId) => {
+    if (!serial || !partId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/spec-inspection/entries?serialNumber=${encodeURIComponent(serial)}&partId=${partId}&limit=100`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.entries && data.entries.length > 0) {
+        // Build checklistResults from previous inspections
+        const previousResults = {};
+        data.entries.forEach(entry => {
+          // Only keep the most recent result per spec (entries are ordered DESC)
+          if (!previousResults[entry.specId]) {
+            previousResults[entry.specId] = {
+              result: entry.result,
+              measuredValue: entry.measuredValue,
+              qualitativeValue: entry.qualitativeValue,
+              notes: entry.notes,
+              stationName: entry.stationName,
+              inspectedAt: entry.createdAt
+            };
+          }
+        });
+        setChecklistResults(prev => ({ ...previousResults, ...prev }));
+        console.log('Loaded previous spec results:', Object.keys(previousResults).length);
+      }
+    } catch (err) {
+      console.error('Error loading previous spec results:', err);
     }
   };
 
@@ -800,7 +900,8 @@ const DefectCapture = () => {
       return;
     }
 
-    if (partSpecs.length > 0) {
+    // Only show warning if specs exist AND checklist not completed/skipped
+    if (partSpecs.length > 0 && !checklistResults._completed && !checklistResults._skipped) {
       setPendingAction('OK');
       setSpecsWarningOpen(true);
     } else {
@@ -809,7 +910,7 @@ const DefectCapture = () => {
   };
 
   const handleAgregarDefectoClick = () => {
-    if (partSpecs.length > 0 && !checklistResults._completed) {
+    if (partSpecs.length > 0 && !checklistResults._completed && !checklistResults._skipped) {
       setPendingAction('DEFECT');
       setSpecsWarningOpen(true);
     } else {
@@ -820,6 +921,17 @@ const DefectCapture = () => {
   const handleSkipChecklist = async () => {
     setSpecsWarningOpen(false);
     const userName = currentUser?.firstName || currentUser?.username || 'Usuario';
+
+    // Mark as skipped in local state (prevents showing warning again)
+    setChecklistResults(prev => ({
+      ...prev,
+      _skipped: true,
+      // Also mark each spec as SKIPPED locally
+      ...partSpecs.reduce((acc, spec) => {
+        acc[spec.id] = { result: 'SKIPPED', stationName: selectedStation?.name };
+        return acc;
+      }, {})
+    }));
 
     // Register skip in spec_inspection_entries with SKIPPED result
     try {
@@ -859,7 +971,7 @@ const DefectCapture = () => {
 
   const handleOpenChecklist = () => {
     setSpecsWarningOpen(false);
-    setChecklistResults({});
+    // Don't reset checklistResults - preserve previously loaded results from other stations
     setSpecsChecklistOpen(true);
   };
 
@@ -869,32 +981,121 @@ const DefectCapture = () => {
       [specId]: {
         ...prev[specId],
         result,
-        measuredValue: value
+        measuredValue: value,
+        stationName: selectedStation?.name || prev[specId]?.stationName
       }
     }));
   };
 
+  const handleChecklistNotes = (specId, notes) => {
+    setChecklistResults(prev => ({
+      ...prev,
+      [specId]: {
+        ...prev[specId],
+        notes
+      }
+    }));
+  };
+
+  // Handle cancel with warning
+  const handleChecklistCancel = () => {
+    setOmitWarningOpen(true);
+  };
+
+  // Confirm omit checklist
+  const handleConfirmOmit = () => {
+    setOmitWarningOpen(false);
+    setSpecsChecklistOpen(false);
+    setChecklistDismissed(true);
+    setChecklistResults(prev => ({ ...prev, _skipped: true }));
+  };
+
+  // Cancel omit - go back to checklist
+  const handleCancelOmit = () => {
+    setOmitWarningOpen(false);
+  };
+
+  // Handle QAR alert - emit QAR
+  const handleEmitQar = () => {
+    if (!qarAlertData) return;
+    setQarAlertOpen(false);
+    navigate('/qar-create', {
+      state: {
+        clientId: qarAlertData.clientId,
+        clientName: qarAlertData.clientName,
+        projectId: qarAlertData.projectId,
+        partId: qarAlertData.partId,
+        partName: qarAlertData.partName,
+        severityId: qarAlertData.severityId,
+        severityName: qarAlertData.severityName,
+        severityColor: qarAlertData.severityColor,
+        departmentId: qarAlertData.departmentId,
+        departmentName: qarAlertData.departmentName,
+        defectCount: qarAlertData.defectCount,
+        thresholdCount: qarAlertData.thresholdCount,
+        thresholdHours: qarAlertData.thresholdHours,
+        defects: qarAlertData.defects,
+        defectIds: qarAlertData.defects.map(d => d.id),
+        emittedBy: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Usuario',
+        firstDefectImagePath: qarAlertData.firstDefectImagePath
+      }
+    });
+  };
+
+  // Handle QAR alert - decline
+  const handleDeclineQar = async () => {
+    if (!qarAlertData) return;
+    setQarAlertOpen(false);
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_URL}/qar/decline`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          partId: qarAlertData.partId,
+          severityId: qarAlertData.severityId,
+          departmentId: qarAlertData.departmentId,
+          defectCount: qarAlertData.defectCount,
+          thresholdCount: qarAlertData.thresholdCount,
+          thresholdHours: qarAlertData.thresholdHours,
+          defectIds: qarAlertData.defects.map(d => d.id)
+        })
+      });
+    } catch (declineErr) {
+      console.error('Error logging declined QAR:', declineErr);
+    }
+    setQarAlertData(null);
+  };
+
   const handleChecklistSubmit = async () => {
-    // Validate all specs have results
-    const specsWithResults = Object.keys(checklistResults).filter(k => k !== '_completed');
-    if (specsWithResults.length < partSpecs.length) {
-      setError('Completa todos los items del checklist');
-      return;
+    // Count specs with results
+    const specsWithResults = Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result);
+    const pendingSpecs = partSpecs.length - specsWithResults.length;
+
+    // Warn if there are pending specs but allow to continue
+    if (pendingSpecs > 0) {
+      const confirmSave = window.confirm(
+        `Hay ${pendingSpecs} especificación(es) sin evaluar. Se guardarán como "SIN EVALUACIÓN".\n\n¿Desea continuar?`
+      );
+      if (!confirmSave) return;
     }
 
     setChecklistSaving(true);
     try {
       const token = localStorage.getItem('token');
 
-      // Build entries array
+      // Build entries array - items without result get 'NOT_EVALUATED'
       const entries = partSpecs.map(spec => {
         const result = checklistResults[spec.id];
         return {
           specId: spec.id,
-          result: result?.result || 'OK',
+          result: result?.result || 'NOT_EVALUATED',
           measuredValue: result?.measuredValue || null,
           qualitativeValue: result?.qualitativeValue || null,
-          notes: result?.notes || null
+          notes: result?.notes || (result?.result ? null : 'Sin evaluación')
         };
       });
 
@@ -930,7 +1131,7 @@ const DefectCapture = () => {
           console.log('[Checklist] Processing NOK spec:', nokEntry.specId, 'Found spec:', spec);
           if (!spec) continue;
 
-          // Build defect comment with spec info
+          // Build defect comment with spec info and user notes
           let defectComment = `Spec ${spec.specNumber} - ${spec.specName}: NOK`;
           if (nokEntry.measuredValue !== null) {
             defectComment += ` (Medido: ${nokEntry.measuredValue}`;
@@ -938,6 +1139,10 @@ const DefectCapture = () => {
               defectComment += `, Límites: ${spec.lowerLimit} - ${spec.upperLimit}`;
             }
             defectComment += ')';
+          }
+          // Add user notes if provided
+          if (nokEntry.notes) {
+            defectComment += ` - ${nokEntry.notes}`;
           }
 
           // Create defect via API
@@ -974,20 +1179,87 @@ const DefectCapture = () => {
 
         setNgCount(prev => prev + nokEntries.length);
         showSuccessMessage(`Checklist completado. ${nokEntries.length} defecto(s) auto-registrado(s)`);
+
+        // Check for critical NOK specs - trigger QAR alert
+        const criticalNoks = nokEntries.filter(e => {
+          const spec = partSpecs.find(s => s.id === e.specId);
+          return spec?.isCritical;
+        });
+
+        if (criticalNoks.length > 0) {
+          const criticalSpecs = criticalNoks.map(e => {
+            const spec = partSpecs.find(s => s.id === e.specId);
+            return spec?.specName || 'Spec';
+          });
+
+          // Build QAR alert data for critical specs
+          // Get default department from first critical spec or fallback to Calidad (id=2)
+          const firstCriticalSpec = partSpecs.find(s => s.id === criticalNoks[0].specId);
+          const defaultDeptId = firstCriticalSpec?.defaultDepartmentId || selectedDepartment?.id || 2;
+          const defaultDeptName = selectedDepartment?.name || 'Calidad';
+
+          setQarAlertData({
+            message: `⚠️ ${criticalNoks.length} especificación(es) CRÍTICA(S) marcada(s) como NOK`,
+            triggered: true,
+            clientId: selectedClient?.id,
+            clientName: selectedClient?.name,
+            projectId: selectedProject?.id,
+            partId: selectedPart?.id,
+            partName: selectedPart?.captureDisplayName || selectedPart?.partNumber,
+            severityId: 3, // CRITICAL severity
+            severityName: 'Crítico',
+            severityColor: '#991b1b',
+            departmentId: defaultDeptId,
+            departmentName: defaultDeptName,
+            defectCount: criticalNoks.length,
+            thresholdCount: 1,
+            thresholdHours: 0,
+            defects: criticalNoks.map(e => ({
+              id: e.specId,
+              specName: partSpecs.find(s => s.id === e.specId)?.specName
+            })),
+            criticalSpecs: criticalSpecs,
+            isCriticalSpec: true
+          });
+          setQarAlertOpen(true);
+        }
       } else {
         showSuccessMessage('Checklist completado - Todo OK');
+      }
+
+      // Release defects for specs now marked as OK (re-verified)
+      const okEntries = entries.filter(e => e.result === 'OK');
+      if (okEntries.length > 0) {
+        for (const okEntry of okEntries) {
+          try {
+            const releaseRes = await fetch(`${API_URL}/defects-v2/release-by-spec`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                partId: selectedPart?.id,
+                specId: okEntry.specId,
+                serialNumber: lotNumber,
+                notes: okEntry.notes || 'Re-verificado como OK'
+              })
+            });
+            const releaseData = await releaseRes.json();
+            if (releaseData.released) {
+              console.log('[Checklist] Defect released:', releaseData.defect?.entryNumber);
+            }
+          } catch (releaseErr) {
+            console.error('[Checklist] Error releasing defect:', releaseErr);
+          }
+        }
       }
 
       // Mark checklist as completed
       setChecklistResults(prev => ({ ...prev, _completed: true }));
       setSpecsChecklistOpen(false);
 
-      // Proceed with original action
-      if (pendingAction === 'OK' && nokEntries.length === 0) {
-        handlePiezaOk();
-      }
-      // If there were NOK entries, don't auto-mark OK
-
+      // NO auto-mark OK - user must decide to press "PIEZA OK" or add more defects
       setPendingAction(null);
     } catch (err) {
       console.error('Error saving checklist:', err);
@@ -1301,6 +1573,7 @@ const DefectCapture = () => {
   const handleLotKeyDown = (e) => {
     if (e.key === 'Enter' && lotNumber.trim()) {
       e.preventDefault();
+      setSerialConfirmed(true); // Mark serial as confirmed for checklist auto-open
       lookupSerialInfo(lotNumber);
     }
   };
@@ -1588,58 +1861,18 @@ const DefectCapture = () => {
           const thresholdData = await thresholdRes.json();
 
           if (thresholdData.triggered) {
-            // Ask user if they want to emit QAR
-            const emitQar = window.confirm(
-              ` ALERTA DE CALIDAD\n\n` +
-              `${thresholdData.message}\n\n` +
-              `¿Desea emitir un QAR (Quality Alert Report)?`
-            );
-
-            if (emitQar) {
-              // Navigate to QAR creation with pre-filled data
-              navigate('/qar-create', {
-                state: {
-                  clientId: selectedClient.id,
-                  clientName: selectedClient.name,
-                  projectId: selectedProject.id,
-                  partId: selectedPart.id,
-                  partName: selectedPart.captureDisplayName || selectedPart.partNumber,
-                  severityId: selectedSeverity.id,
-                  severityName: thresholdData.severityName,
-                  severityColor: thresholdData.severityColor,
-                  departmentId: selectedDepartment.id,
-                  departmentName: thresholdData.departmentName,
-                  defectCount: thresholdData.defectCount,
-                  thresholdCount: thresholdData.thresholdCount,
-                  thresholdHours: thresholdData.thresholdHours,
-                  defects: thresholdData.defects,
-                  defectIds: thresholdData.defects.map(d => d.id),
-                  emittedBy: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Usuario'
-                }
-              });
-            } else {
-              // User declined - log it for history
-              try {
-                await fetch(`${API_URL}/qar/decline`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                  },
-                  body: JSON.stringify({
-                    partId: selectedPart.id,
-                    severityId: selectedSeverity.id,
-                    departmentId: selectedDepartment.id,
-                    defectCount: thresholdData.defectCount,
-                    thresholdCount: thresholdData.thresholdCount,
-                    thresholdHours: thresholdData.thresholdHours,
-                    defectIds: thresholdData.defects.map(d => d.id)
-                  })
-                });
-              } catch (declineErr) {
-                console.error('Error logging declined QAR:', declineErr);
-              }
-            }
+            // Show QAR alert modal
+            setQarAlertData({
+              ...thresholdData,
+              clientId: selectedClient.id,
+              clientName: selectedClient.name,
+              projectId: selectedProject.id,
+              partId: selectedPart.id,
+              partName: selectedPart.captureDisplayName || selectedPart.partNumber,
+              severityId: selectedSeverity.id,
+              departmentId: selectedDepartment.id
+            });
+            setQarAlertOpen(true);
           }
         } catch (thresholdErr) {
           console.error('Error checking threshold:', thresholdErr);
@@ -1734,7 +1967,7 @@ const DefectCapture = () => {
     },
     counterNg: {
       backgroundColor: '#fee2e2',
-      color: '#ef4444'
+      color: '#991b1b'
     },
     piezaOkButton: {
       padding: '12px 24px',
@@ -2020,7 +2253,7 @@ const DefectCapture = () => {
       gap: '8px'
     },
     specCardCritical: {
-      border: '2px solid #ef4444'
+      border: '2px solid #991b1b'
     },
     specHeader: {
       display: 'flex',
@@ -2845,11 +3078,11 @@ const DefectCapture = () => {
               <div style={{
                 marginTop: '8px',
                 padding: '8px 12px',
-                backgroundColor: '#f59e0b20',
-                border: '1px solid #f59e0b',
+                backgroundColor: '#f1f5f9',
+                border: '1px solid #64748b',
                 borderRadius: '6px',
                 fontSize: '13px',
-                color: '#f59e0b'
+                color: '#475569'
               }}>
                 <strong>Falta:</strong> {getMissingFields().join(', ')}
               </div>
@@ -2941,7 +3174,7 @@ const DefectCapture = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: 'rgba(0,0,0,0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2953,8 +3186,8 @@ const DefectCapture = () => {
             padding: '24px',
             maxWidth: '450px',
             width: '90%',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-            border: `2px solid #ef4444`
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            border: `2px solid #991b1b`
           }}>
             <div style={{
               display: 'flex',
@@ -2971,11 +3204,11 @@ const DefectCapture = () => {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <XCircle size={28} color="#ef4444" />
+                <XCircle size={28} color="#991b1b" />
               </div>
               <div>
-                <h3 style={{ margin: 0, color: '#ef4444', fontSize: '18px', fontWeight: '700' }}>
-                  SERIAL EN SCRAP
+                <h3 style={{ margin: 0, color: '#991b1b', fontSize: '18px', fontWeight: '700' }}>
+                  Serial en Scrap
                 </h3>
                 <p style={{ margin: '4px 0 0 0', color: currentTheme.textMuted, fontSize: '13px' }}>
                   No se pueden capturar defectos
@@ -3049,7 +3282,7 @@ const DefectCapture = () => {
               lineHeight: '1.5',
               margin: '0 0 20px 0'
             }}>
-              Este serial ya fue enviado a <strong style={{ color: '#ef4444' }}>SCRAP</strong> y no puede recibir nuevos defectos.
+              Este serial ya fue enviado a <strong style={{ color: '#991b1b' }}>SCRAP</strong> y no puede recibir nuevos defectos.
             </p>
 
             <button
@@ -3057,7 +3290,7 @@ const DefectCapture = () => {
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: '#ef4444',
+                backgroundColor: '#991b1b',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -3066,7 +3299,7 @@ const DefectCapture = () => {
                 cursor: 'pointer'
               }}
             >
-              ENTENDIDO
+              Entendido
             </button>
           </div>
         </div>
@@ -3080,7 +3313,7 @@ const DefectCapture = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: 'rgba(0,0,0,0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3092,8 +3325,8 @@ const DefectCapture = () => {
             padding: '24px',
             maxWidth: '450px',
             width: '90%',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-            border: `2px solid #f59e0b`
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            border: `2px solid #1e40af`
           }}>
             <div style={{
               display: 'flex',
@@ -3105,16 +3338,16 @@ const DefectCapture = () => {
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                backgroundColor: '#fffbeb',
+                backgroundColor: '#dbeafe',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <AlertTriangle size={28} color="#f59e0b" />
+                <AlertTriangle size={28} color="#1e40af" />
               </div>
               <div>
-                <h3 style={{ margin: 0, color: '#f59e0b', fontSize: '18px', fontWeight: '700' }}>
-                  SERIAL YA LIBERADO
+                <h3 style={{ margin: 0, color: '#1e40af', fontSize: '18px', fontWeight: '700' }}>
+                  Serial Ya Liberado
                 </h3>
                 <p style={{ margin: '4px 0 0 0', color: currentTheme.textMuted, fontSize: '13px' }}>
                   ¿Es un reproceso?
@@ -3177,7 +3410,7 @@ const DefectCapture = () => {
               lineHeight: '1.5',
               margin: '0 0 20px 0'
             }}>
-              Este serial ya fue <strong style={{ color: '#22c55e' }}>LIBERADO</strong>. Si es un reproceso, los nuevos defectos se marcarán como <strong style={{ color: '#f59e0b' }}>reprocess</strong>.
+              Este serial ya fue <strong style={{ color: '#1e40af' }}>LIBERADO</strong>. Si es un reproceso, los nuevos defectos se marcarán como <strong style={{ color: '#64748b' }}>reproceso</strong>.
             </p>
 
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -3204,7 +3437,7 @@ const DefectCapture = () => {
                 style={{
                   flex: 1,
                   padding: '12px',
-                  backgroundColor: '#f59e0b',
+                  backgroundColor: '#1e40af',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -3214,7 +3447,7 @@ const DefectCapture = () => {
                   opacity: reprocessLoading ? 0.7 : 1
                 }}
               >
-                {reprocessLoading ? 'PROCESANDO...' : 'CONFIRMAR REPROCESO'}
+                {reprocessLoading ? 'Procesando...' : 'Confirmar Reproceso'}
               </button>
             </div>
           </div>
@@ -3260,7 +3493,7 @@ const DefectCapture = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: 'rgba(0,0,0,0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3272,7 +3505,7 @@ const DefectCapture = () => {
             padding: '24px',
             maxWidth: '450px',
             width: '90%',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
           }}>
             <div style={{
               display: 'flex',
@@ -3280,7 +3513,7 @@ const DefectCapture = () => {
               gap: '12px',
               marginBottom: '16px'
             }}>
-              <AlertTriangle size={28} style={{ color: '#f59e0b' }} />
+              <AlertTriangle size={28} style={{ color: '#1e40af' }} />
               <h3 style={{ margin: 0, color: t.text, fontSize: '18px' }}>
                 Verificación de Especificaciones
               </h3>
@@ -3308,14 +3541,14 @@ const DefectCapture = () => {
                   cursor: 'pointer'
                 }}
               >
-                OMITIR
+                Omitir
               </button>
               <button
                 onClick={handleOpenChecklist}
                 style={{
                   flex: 1,
                   padding: '12px',
-                  backgroundColor: '#3b82f6',
+                  backgroundColor: '#1e40af',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -3324,14 +3557,14 @@ const DefectCapture = () => {
                   cursor: 'pointer'
                 }}
               >
-                VERIFICAR
+                Verificar
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Checklist de Especificaciones */}
+      {/* Modal Checklist de Especificaciones - Dos Columnas */}
       {specsChecklistOpen && (
         <div style={{
           position: 'fixed',
@@ -3339,7 +3572,7 @@ const DefectCapture = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: 'rgba(0,0,0,0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3349,217 +3582,432 @@ const DefectCapture = () => {
           <div style={{
             backgroundColor: t.bgCard,
             borderRadius: '12px',
-            maxWidth: '700px',
+            maxWidth: '1200px',
             width: '100%',
             maxHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
           }}>
             {/* Header */}
             <div style={{
-              padding: '20px',
+              padding: '16px 20px',
               borderBottom: `1px solid ${t.border}`,
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              backgroundColor: '#475569',
+              borderRadius: '12px 12px 0 0'
             }}>
               <div>
-                <h3 style={{ margin: '0 0 4px 0', color: t.text, fontSize: '18px' }}>
-                  Checklist de Especificaciones
+                <h3 style={{ margin: '0 0 4px 0', color: 'white', fontSize: '18px', fontWeight: '600' }}>
+                  Hoja de Especificaciones
                 </h3>
-                <p style={{ margin: 0, color: t.textMuted, fontSize: '13px' }}>
-                  Serial: {lotNumber} | Parte: {selectedPart?.partNumber || selectedPart?.captureDisplayName}
+                <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
+                  Serial: <strong>{lotNumber}</strong> | Parte: <strong>{selectedPart?.partNumber || selectedPart?.captureDisplayName}</strong> | Estación: <strong>{selectedStation?.name}</strong>
                 </p>
               </div>
               <button
-                onClick={() => setSpecsChecklistOpen(false)}
+                onClick={handleChecklistCancel}
                 style={{
-                  background: 'none',
+                  background: 'rgba(255,255,255,0.1)',
                   border: 'none',
                   cursor: 'pointer',
                   padding: '8px',
-                  color: t.textMuted
+                  color: 'white',
+                  borderRadius: '6px'
                 }}
               >
                 <X size={24} />
               </button>
             </div>
 
-            {/* Specs List */}
+            {/* Two Column Layout */}
             <div style={{
               flex: 1,
-              overflowY: 'auto',
-              padding: '16px'
+              display: 'flex',
+              overflow: 'hidden'
             }}>
-              {partSpecs.map((spec, idx) => {
-                const result = checklistResults[spec.id];
-                const isDimensional = spec.specType === 'DIMENSIONAL';
-                const isQualitative = spec.specType === 'QUALITATIVE';
+              {/* LEFT COLUMN - Current Station Specs to Evaluate */}
+              <div style={{
+                flex: '1 1 60%',
+                borderRight: `1px solid ${t.border}`,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: t.bgPanel,
+                  borderBottom: `1px solid ${t.border}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontWeight: '600', color: t.text, fontSize: '14px' }}>
+                    Evaluar en {selectedStation?.name || 'Esta Estación'}
+                  </span>
+                  <span style={{ fontSize: '12px', color: t.textMuted }}>
+                    {partSpecs.length} specs
+                  </span>
+                </div>
+                <div style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '12px'
+                }}>
+                  {partSpecs.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+                      <CheckCircle size={48} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                      <p>No hay specs pendientes en esta estación</p>
+                    </div>
+                  ) : (
+                    partSpecs.map((spec) => {
+                      const result = checklistResults[spec.id];
+                      const isDimensional = spec.specType === 'DIMENSIONAL';
+                      const isQualitative = spec.specType === 'QUALITATIVE';
+                      const isFromOtherStation = result?.stationName && result.stationName !== selectedStation?.name;
 
-                return (
-                  <div
-                    key={spec.id}
-                    style={{
-                      padding: '16px',
-                      marginBottom: '12px',
-                      backgroundColor: t.bgPanel,
-                      borderRadius: '8px',
-                      border: `1px solid ${
-                        result?.result === 'OK' ? '#10b981' :
-                        result?.result === 'NOK' ? '#ef4444' : t.border
-                      }`
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: '12px'
-                    }}>
-                      <div>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          marginBottom: '4px'
-                        }}>
-                          <span style={{
-                            backgroundColor: t.bgCard,
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontFamily: 'monospace',
-                            color: t.textMuted
+                      return (
+                        <div
+                          key={spec.id}
+                          style={{
+                            padding: '14px',
+                            marginBottom: '10px',
+                            backgroundColor: isFromOtherStation ? t.bg : t.bgPanel,
+                            borderRadius: '8px',
+                            border: `2px solid ${
+                              result?.result === 'OK' ? '#047857' :
+                              result?.result === 'NOK' ? '#991b1b' :
+                              result?.result === 'SKIPPED' ? '#d97706' : t.border
+                            }`,
+                            opacity: isFromOtherStation ? 0.7 : 1
+                          }}
+                        >
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: '12px'
                           }}>
-                            {spec.specNumber}
-                          </span>
-                          {spec.isCritical && (
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                <span style={{
+                                  backgroundColor: t.bgCard,
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontFamily: 'monospace',
+                                  color: t.textMuted
+                                }}>
+                                  {spec.specNumber}
+                                </span>
+                                {spec.isCritical && (
+                                  <span style={{
+                                    backgroundColor: '#fee2e2',
+                                    color: '#991b1b',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: '600'
+                                  }}>
+                                    CRÍTICO
+                                  </span>
+                                )}
+                                {isFromOtherStation && (
+                                  <span style={{
+                                    backgroundColor: '#dbeafe',
+                                    color: '#1e40af',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: '500'
+                                  }}>
+                                    Ya evaluado en {result.stationName}
+                                  </span>
+                                )}
+                              </div>
+                              <p style={{ margin: 0, color: t.text, fontWeight: '500', fontSize: '14px' }}>
+                                {spec.specName}
+                              </p>
+                              {isDimensional && (
+                                <p style={{ margin: '4px 0 0 0', color: t.textMuted, fontSize: '12px' }}>
+                                  {spec.lowerLimit} - <strong>{spec.nominalValue}</strong> - {spec.upperLimit} {spec.unitSymbol || ''}
+                                </p>
+                              )}
+                              {isQualitative && spec.acceptableValues && (
+                                <p style={{ margin: '4px 0 0 0', color: t.textMuted, fontSize: '12px' }}>
+                                  Valores: {spec.acceptableValues}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* OK/NOK/Skip Buttons */}
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                              <button
+                                onClick={() => handleChecklistResult(spec.id, 'OK')}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: result?.result === 'OK' ? '#047857' : t.bgCard,
+                                  color: result?.result === 'OK' ? 'white' : '#047857',
+                                  border: `2px solid #047857`,
+                                  borderRadius: '6px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '13px'
+                                }}
+                              >
+                                <CheckCircle size={14} />
+                                OK
+                              </button>
+                              <button
+                                onClick={() => handleChecklistResult(spec.id, 'NOK')}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: result?.result === 'NOK' ? '#991b1b' : t.bgCard,
+                                  color: result?.result === 'NOK' ? 'white' : '#991b1b',
+                                  border: `2px solid #991b1b`,
+                                  borderRadius: '6px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '13px'
+                                }}
+                              >
+                                <XCircle size={14} />
+                                NOK
+                              </button>
+                              <button
+                                onClick={() => handleChecklistResult(spec.id, 'SKIPPED')}
+                                style={{
+                                  padding: '6px 10px',
+                                  backgroundColor: result?.result === 'SKIPPED' ? '#92400e' : t.bgCard,
+                                  color: result?.result === 'SKIPPED' ? 'white' : '#92400e',
+                                  border: `2px solid #d97706`,
+                                  borderRadius: '6px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  fontSize: '11px'
+                                }}
+                                title="Omitir esta spec"
+                              >
+                                N/A
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Measured Value Input */}
+                          {isDimensional && (
+                            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <label style={{ fontSize: '12px', color: t.textMuted }}>Medido:</label>
+                              <input
+                                type="number"
+                                step="any"
+                                value={result?.measuredValue || ''}
+                                onChange={(e) => handleChecklistResult(spec.id, result?.result || null, e.target.value ? parseFloat(e.target.value) : null)}
+                                placeholder={spec.nominalValue || '0.00'}
+                                style={{
+                                  width: '120px',
+                                  padding: '6px 10px',
+                                  backgroundColor: t.bgCard,
+                                  color: t.text,
+                                  border: `1px solid ${t.border}`,
+                                  borderRadius: '6px',
+                                  fontSize: '13px'
+                                }}
+                              />
+                              <span style={{ color: t.textMuted, fontSize: '12px' }}>{spec.unitSymbol || ''}</span>
+                            </div>
+                          )}
+
+                          {/* Notes Input - Shows for NOK or SKIPPED */}
+                          {(result?.result === 'NOK' || result?.result === 'SKIPPED') && (
+                            <div style={{ marginTop: '10px' }}>
+                              <input
+                                type="text"
+                                value={result?.notes || ''}
+                                onChange={(e) => handleChecklistNotes(spec.id, e.target.value)}
+                                placeholder={result?.result === 'NOK' ? '¿Por qué NOK? (opcional)' : '¿Por qué N/A? (opcional)'}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  backgroundColor: t.bgCard,
+                                  color: t.text,
+                                  border: `1px solid ${result?.result === 'NOK' ? '#991b1b' : '#d97706'}`,
+                                  borderRadius: '6px',
+                                  fontSize: '13px'
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN - Complete Spec Summary */}
+              <div style={{
+                flex: '1 1 40%',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                backgroundColor: t.bg
+              }}>
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: t.bgPanel,
+                  borderBottom: `1px solid ${t.border}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontWeight: '600', color: t.text, fontSize: '14px' }}>
+                    Resumen Completo
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px', fontSize: '11px' }}>
+                    <span style={{ color: '#047857', fontWeight: '600' }}>
+                      OK: {Object.values(checklistResults).filter(r => r?.result === 'OK').length}
+                    </span>
+                    <span style={{ color: '#991b1b', fontWeight: '600' }}>
+                      NOK: {Object.values(checklistResults).filter(r => r?.result === 'NOK').length}
+                    </span>
+                    <span style={{ color: t.textMuted }}>
+                      Pend: {allPartSpecs.length - Object.keys(checklistResults).filter(k => k !== '_completed' && k !== '_skipped' && checklistResults[k]?.result).length}
+                    </span>
+                  </div>
+                </div>
+                <div style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '8px'
+                }}>
+                  {allPartSpecs.map((spec) => {
+                    const result = checklistResults[spec.id];
+                    const stationNames = spec.stations?.map(s => s.name).join(', ') || '-';
+
+                    return (
+                      <div
+                        key={spec.id}
+                        style={{
+                          padding: '10px 12px',
+                          marginBottom: '6px',
+                          backgroundColor: t.bgCard,
+                          borderRadius: '6px',
+                          borderLeft: `4px solid ${
+                            result?.result === 'OK' ? '#047857' :
+                            result?.result === 'NOK' ? '#991b1b' : '#94a3b8'
+                          }`,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '10px', color: t.textMuted, fontFamily: 'monospace' }}>
+                              {spec.specNumber}
+                            </span>
+                            {spec.isCritical && (
+                              <span style={{ fontSize: '9px', color: '#991b1b', fontWeight: '600' }}>●</span>
+                            )}
+                          </div>
+                          <p style={{
+                            margin: 0,
+                            color: t.text,
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {spec.specName}
+                          </p>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: t.textMuted }}>
+                            {stationNames}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          {result?.result ? (
+                            <>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                backgroundColor: result.result === 'OK' ? '#dcfce7' :
+                                                 result.result === 'SKIPPED' ? '#fef3c7' : '#fee2e2',
+                                color: result.result === 'OK' ? '#047857' :
+                                       result.result === 'SKIPPED' ? '#92400e' : '#991b1b'
+                              }}>
+                                {result.result === 'SKIPPED' ? 'Omitido' : result.result}
+                              </span>
+                              {result.stationName && (
+                                <p style={{ margin: '3px 0 0 0', fontSize: '9px', color: t.textMuted }}>
+                                  {result.stationName}
+                                </p>
+                              )}
+                            </>
+                          ) : (
                             <span style={{
-                              backgroundColor: '#fee2e2',
-                              color: '#dc2626',
-                              padding: '2px 6px',
+                              display: 'inline-block',
+                              padding: '3px 8px',
                               borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: '600'
+                              fontSize: '11px',
+                              fontWeight: '500',
+                              backgroundColor: t.bgPanel,
+                              color: t.textMuted
                             }}>
-                              CRÍTICO
+                              Pendiente
                             </span>
                           )}
                         </div>
-                        <p style={{ margin: 0, color: t.text, fontWeight: '500' }}>
-                          {spec.specName}
-                        </p>
-                        {isDimensional && (
-                          <p style={{ margin: '4px 0 0 0', color: t.textMuted, fontSize: '12px' }}>
-                            {spec.lowerLimit} - <strong>{spec.nominalValue}</strong> - {spec.upperLimit} {spec.unitSymbol || ''}
-                          </p>
-                        )}
-                        {isQualitative && spec.acceptableValues && (
-                          <p style={{ margin: '4px 0 0 0', color: t.textMuted, fontSize: '12px' }}>
-                            Valores: {spec.acceptableValues}
-                          </p>
-                        )}
                       </div>
-
-                      {/* OK/NOK Buttons */}
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          onClick={() => handleChecklistResult(spec.id, 'OK')}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: result?.result === 'OK' ? '#10b981' : t.bgCard,
-                            color: result?.result === 'OK' ? 'white' : '#10b981',
-                            border: `2px solid #10b981`,
-                            borderRadius: '6px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <CheckCircle size={16} />
-                          OK
-                        </button>
-                        <button
-                          onClick={() => handleChecklistResult(spec.id, 'NOK')}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: result?.result === 'NOK' ? '#ef4444' : t.bgCard,
-                            color: result?.result === 'NOK' ? 'white' : '#ef4444',
-                            border: `2px solid #ef4444`,
-                            borderRadius: '6px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <XCircle size={16} />
-                          NOK
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Measured Value Input (for dimensional specs) */}
-                    {isDimensional && (
-                      <div style={{ marginTop: '8px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>
-                          Valor Medido:
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          value={result?.measuredValue || ''}
-                          onChange={(e) => handleChecklistResult(spec.id, result?.result || null, e.target.value ? parseFloat(e.target.value) : null)}
-                          placeholder={`Ej: ${spec.nominalValue || '0.00'}`}
-                          style={{
-                            width: '150px',
-                            padding: '8px 12px',
-                            backgroundColor: t.bgCard,
-                            color: t.text,
-                            border: `1px solid ${t.border}`,
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                        />
-                        <span style={{ marginLeft: '8px', color: t.textMuted, fontSize: '13px' }}>
-                          {spec.unitSymbol || ''}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Footer */}
             <div style={{
-              padding: '16px 20px',
+              padding: '12px 20px',
               borderTop: `1px solid ${t.border}`,
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              backgroundColor: t.bgPanel
             }}>
               <div style={{ color: t.textMuted, fontSize: '13px' }}>
-                <span style={{ color: '#10b981' }}>
-                  OK: {Object.values(checklistResults).filter(r => r?.result === 'OK').length}
+                <strong>Esta estación:</strong>{' '}
+                <span style={{ color: '#047857' }}>
+                  {partSpecs.filter(s => checklistResults[s.id]?.result === 'OK').length} OK
                 </span>
                 {' | '}
-                <span style={{ color: '#ef4444' }}>
-                  NOK: {Object.values(checklistResults).filter(r => r?.result === 'NOK').length}
+                <span style={{ color: '#991b1b' }}>
+                  {partSpecs.filter(s => checklistResults[s.id]?.result === 'NOK').length} NOK
                 </span>
                 {' | '}
-                Pendientes: {partSpecs.length - Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length}
+                <span style={{ color: '#92400e' }}>
+                  {partSpecs.filter(s => checklistResults[s.id]?.result === 'SKIPPED').length} N/A
+                </span>
+                {' | '}
+                {partSpecs.length - partSpecs.filter(s => checklistResults[s.id]?.result).length} pendientes
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
-                  onClick={() => setSpecsChecklistOpen(false)}
+                  onClick={handleChecklistCancel}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: t.bgPanel,
+                    backgroundColor: t.bgCard,
                     color: t.text,
                     border: `1px solid ${t.border}`,
                     borderRadius: '6px',
@@ -3567,24 +4015,275 @@ const DefectCapture = () => {
                     cursor: 'pointer'
                   }}
                 >
-                  Cancelar
+                  Omitir
                 </button>
                 <button
                   onClick={handleChecklistSubmit}
-                  disabled={checklistSaving || Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length < partSpecs.length}
+                  disabled={checklistSaving || partSpecs.filter(s => checklistResults[s.id]?.result).length < partSpecs.length}
                   style={{
                     padding: '10px 24px',
-                    backgroundColor: Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length < partSpecs.length ? '#94a3b8' : '#3b82f6',
+                    backgroundColor: partSpecs.filter(s => checklistResults[s.id]?.result).length < partSpecs.length ? '#94a3b8' : '#1e40af',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     fontWeight: '600',
-                    cursor: Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result).length < partSpecs.length ? 'not-allowed' : 'pointer'
+                    cursor: partSpecs.filter(s => checklistResults[s.id]?.result).length < partSpecs.length ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {checklistSaving ? 'Guardando...' : 'CONFIRMAR'}
+                  {checklistSaving ? 'Guardando...' : 'Confirmar'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Warning - Omitir Evaluación */}
+      {omitWarningOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: '#dbeafe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <AlertTriangle size={32} style={{ color: '#1e40af' }} />
+            </div>
+            <h3 style={{ color: t.text, fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+              Omitir Evaluación
+            </h3>
+            <p style={{ color: t.textMuted, fontSize: '14px', lineHeight: '1.5', marginBottom: '8px' }}>
+              {(() => {
+                const specsWithResults = Object.keys(checklistResults).filter(k => k !== '_completed' && checklistResults[k]?.result);
+                const pendingSpecs = partSpecs.length - specsWithResults.length;
+                return pendingSpecs === partSpecs.length
+                  ? 'No se evaluó ninguna especificación.'
+                  : `Hay ${pendingSpecs} de ${partSpecs.length} especificación(es) sin evaluar.`;
+              })()}
+            </p>
+            <p style={{ color: '#64748b', fontSize: '13px', fontWeight: '500', marginBottom: '20px' }}>
+              Se registrará como "OMITIDO" para este serial.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={handleCancelOmit}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#1e40af',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Continuar Evaluando
+              </button>
+              <button
+                onClick={handleConfirmOmit}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#64748b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Omitir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - QAR Alert */}
+      {qarAlertOpen && qarAlertData && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '480px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              backgroundColor: '#fef2f2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              border: '3px solid #991b1b'
+            }}>
+              <AlertTriangle size={36} style={{ color: '#991b1b' }} />
+            </div>
+            <h3 style={{
+              color: '#991b1b',
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}>
+              Alerta de Calidad
+            </h3>
+            <p style={{
+              color: t.text,
+              fontSize: '15px',
+              lineHeight: '1.6',
+              marginBottom: '16px',
+              fontWeight: '500'
+            }}>
+              {qarAlertData.message}
+            </p>
+
+            <div style={{
+              backgroundColor: t.bgPanel,
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '20px',
+              textAlign: 'left'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: t.textMuted, fontSize: '13px' }}>Parte:</span>
+                <span style={{ color: t.text, fontSize: '13px', fontWeight: '600' }}>{qarAlertData.partName}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: t.textMuted, fontSize: '13px' }}>Severidad:</span>
+                <span style={{
+                  color: '#991b1b',
+                  fontSize: '13px',
+                  fontWeight: '600'
+                }}>
+                  {qarAlertData.severityName}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: t.textMuted, fontSize: '13px' }}>Departamento:</span>
+                <span style={{ color: t.text, fontSize: '13px', fontWeight: '600' }}>{qarAlertData.departmentName}</span>
+              </div>
+              {qarAlertData.isCriticalSpec ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: t.textMuted, fontSize: '13px' }}>Specs Críticos NOK:</span>
+                    <span style={{ color: '#991b1b', fontSize: '13px', fontWeight: '700' }}>
+                      {qarAlertData.defectCount}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${t.border}` }}>
+                    <span style={{ color: t.textMuted, fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+                      Especificaciones afectadas:
+                    </span>
+                    {qarAlertData.criticalSpecs?.map((specName, idx) => (
+                      <div key={idx} style={{
+                        color: '#991b1b',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        padding: '4px 8px',
+                        backgroundColor: '#fef2f2',
+                        borderRadius: '4px',
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        {specName}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: t.textMuted, fontSize: '13px' }}>Defectos:</span>
+                  <span style={{ color: '#991b1b', fontSize: '13px', fontWeight: '700' }}>
+                    {qarAlertData.defectCount} / {qarAlertData.thresholdCount} en {qarAlertData.thresholdHours}h
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p style={{
+              color: t.textMuted,
+              fontSize: '14px',
+              marginBottom: '20px'
+            }}>
+              ¿Desea emitir un <strong style={{ color: t.text }}>QAR (Quality Alert Report)</strong>?
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={handleDeclineQar}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                No, continuar
+              </button>
+              <button
+                onClick={handleEmitQar}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#991b1b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Emitir QAR
+              </button>
             </div>
           </div>
         </div>

@@ -19,10 +19,9 @@ const QARCreate = () => {
   // Redirect if no edit permissions
   useEffect(() => {
     if (!canEdit) {
-      alert('No tienes permisos para crear QARs');
-      navigate('/qar-list');
+      setPermissionModalOpen(true);
     }
-  }, [canEdit, navigate]);
+  }, [canEdit]);
 
   // Get pre-filled data from navigation state
   const prefillData = location.state || {};
@@ -38,6 +37,16 @@ const QARCreate = () => {
   const [photoOkPreview, setPhotoOkPreview] = useState(null);
   const [photoNokFile, setPhotoNokFile] = useState(null);
   const [photoOkFile, setPhotoOkFile] = useState(null);
+  const [photoNokFromDefect, setPhotoNokFromDefect] = useState(null); // URL de foto de defecto
+
+  // Precargar foto NOK desde defecto si existe
+  useEffect(() => {
+    if (prefillData.firstDefectImagePath) {
+      const imgUrl = `${API_URL}/uploads/${prefillData.firstDefectImagePath}`;
+      setPhotoNokPreview(imgUrl);
+      setPhotoNokFromDefect(imgUrl);
+    }
+  }, [prefillData.firstDefectImagePath]);
 
   // Recipients
   const [responseRecipients, setResponseRecipients] = useState([]);
@@ -127,6 +136,11 @@ const QARCreate = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  // Modal states
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successData, setSuccessData] = useState(null);
+  const [permissionModalOpen, setPermissionModalOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -446,6 +460,9 @@ const QARCreate = () => {
       }
       if (photoNokFile) {
         photoNokUrl = await uploadPhoto(photoNokFile, token);
+      } else if (photoNokFromDefect && photoNokPreview) {
+        // Usar foto de defecto precargada (solo si no fue quitada)
+        photoNokUrl = `/uploads/${prefillData.firstDefectImagePath}`;
       }
 
       const qarData = {
@@ -507,13 +524,17 @@ const QARCreate = () => {
         `Este correo fue generado automáticamente por el Sistema de Alertas de Calidad.`
       );
 
-      const mailtoLink = `mailto:${responseEmails.join(',')}?cc=${validationEmails.join(',')}&subject=${mailtoSubject}&body=${mailtoBody}`;
+      const mailtoLink = `mailto:${responseEmails.join('; ')}?cc=${validationEmails.join('; ')}&subject=${mailtoSubject}&body=${mailtoBody}`;
 
       // Open mail client
       window.open(mailtoLink, '_blank');
 
-      alert(`QAR Emitido Exitosamente\n\nNúmero: ${result.qar.alertNumber}`);
-      navigate(`/qar-detail/${result.qar.id}`);
+      // Show success modal
+      setSuccessData({
+        alertNumber: result.qar.alertNumber,
+        qarId: result.qar.id
+      });
+      setSuccessModalOpen(true);
 
     } catch (err) {
       setError(err.message);
@@ -538,9 +559,9 @@ const QARCreate = () => {
       backgroundColor: t.bg,
       padding: '24px'
     },
-    // Header impactante
+    // Header corporativo
     header: {
-      backgroundColor: triggerInfo.severityColor || t.error,
+      backgroundColor: '#475569',
       color: 'white',
       padding: '24px',
       borderRadius: '12px',
@@ -691,7 +712,7 @@ const QARCreate = () => {
     submitButton: {
       width: '100%',
       padding: '16px 24px',
-      backgroundColor: t.error,
+      backgroundColor: '#1e40af',
       color: 'white',
       border: 'none',
       borderRadius: '8px',
@@ -755,7 +776,7 @@ const QARCreate = () => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -880,7 +901,7 @@ const QARCreate = () => {
         </div>
         <h1 style={styles.headerTitle}>
           <AlertTriangle size={28} />
-          {triggerInfo.departmentName?.toUpperCase()} RESPONSABLE - Alerta de Calidad - {triggerInfo.partName} - {triggerInfo.severityName?.toUpperCase()}
+          {triggerInfo.departmentName} | Quality Alert Report | {triggerInfo.partName}
         </h1>
         <div style={styles.headerMeta}>
           <User size={16} />
@@ -1103,19 +1124,25 @@ const QARCreate = () => {
           <FileText size={20} />
           Detalles de la Alerta
         </div>
-        <input
-          type="text"
-          style={styles.input}
-          placeholder="Título de la alerta..."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <textarea
-          style={styles.textarea}
-          placeholder="Descripción detallada del problema..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+        <div style={{ marginBottom: '12px' }}>
+          <label style={styles.label}>Título *</label>
+          <input
+            type="text"
+            style={styles.input}
+            placeholder="Título de la alerta..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <div>
+          <label style={styles.label}>Descripción / Comentarios del Inspector</label>
+          <textarea
+            style={styles.textarea}
+            placeholder="Descripción detallada del problema, observaciones, comentarios del inspector..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* ====== FOTOS (NOK izquierda, OK derecha) ====== */}
@@ -1126,27 +1153,75 @@ const QARCreate = () => {
         </div>
         <div style={styles.photoGrid}>
           {/* Photo NOK - IZQUIERDA */}
-          <label style={{ ...styles.photoBox, ...styles.photoBoxNok }}>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handlePhotoUpload('nok', e)}
-              style={{ display: 'none' }}
-            />
-            {photoNokPreview ? (
-              <img src={photoNokPreview} alt="NOK" style={styles.photoPreview} />
-            ) : (
-              <>
-                <X size={40} color="#B00020" />
-                <p style={{ margin: '8px 0 0', color: '#B00020', fontWeight: '600' }}>
-                  Foto NOK (Defecto)
-                </p>
-                <p style={{ margin: '4px 0 0', color: t.textDim, fontSize: '12px' }}>
-                  Clic para subir
-                </p>
-              </>
+          <div style={{ position: 'relative' }}>
+            <label style={{ ...styles.photoBox, ...styles.photoBoxNok }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handlePhotoUpload('nok', e)}
+                style={{ display: 'none' }}
+              />
+              {photoNokPreview ? (
+                <>
+                  <img src={photoNokPreview} alt="NOK" style={styles.photoPreview} />
+                  {photoNokFromDefect && !photoNokFile && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      left: '8px',
+                      backgroundColor: 'rgba(0,0,0,0.7)',
+                      color: 'white',
+                      fontSize: '10px',
+                      padding: '2px 6px',
+                      borderRadius: '4px'
+                    }}>
+                      📷 Foto del defecto
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <X size={40} color="#B00020" />
+                  <p style={{ margin: '8px 0 0', color: '#B00020', fontWeight: '600' }}>
+                    Foto NOK (Defecto)
+                  </p>
+                  <p style={{ margin: '4px 0 0', color: t.textDim, fontSize: '12px' }}>
+                    Clic para subir
+                  </p>
+                </>
+              )}
+            </label>
+            {photoNokPreview && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPhotoNokPreview(null);
+                  setPhotoNokFile(null);
+                  setPhotoNokFromDefect(null);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px'
+                }}
+                title="Quitar foto"
+              >
+                ✕
+              </button>
             )}
-          </label>
+          </div>
 
           {/* Photo OK - DERECHA */}
           <label style={{ ...styles.photoBox, ...styles.photoBoxOk }}>
@@ -1160,8 +1235,8 @@ const QARCreate = () => {
               <img src={photoOkPreview} alt="OK" style={styles.photoPreview} />
             ) : (
               <>
-                <Check size={40} color="#22c55e" />
-                <p style={{ margin: '8px 0 0', color: '#22c55e', fontWeight: '600' }}>
+                <Check size={40} color="#047857" />
+                <p style={{ margin: '8px 0 0', color: '#047857', fontWeight: '600' }}>
                   Foto OK (Referencia)
                 </p>
                 <p style={{ margin: '4px 0 0', color: t.textDim, fontSize: '12px' }}>
@@ -1258,7 +1333,7 @@ const QARCreate = () => {
           disabled={submitting}
         >
           <Send size={20} />
-          {submitting ? 'EMITIENDO QAR...' : 'EMITIR QAR'}
+          {submitting ? 'Emitiendo QAR...' : 'Emitir QAR'}
         </button>
         <button
           style={styles.cancelButton}
@@ -1491,11 +1566,11 @@ const QARCreate = () => {
                         </td>
                         <td style={styles.tdModal}>
                           {defect.hasQar ? (
-                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '600', backgroundColor: '#22c55e', color: 'white' }}>
+                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '600', backgroundColor: '#047857', color: 'white' }}>
                               {defect.qarNumber || 'Sí'}
                             </span>
                           ) : (
-                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '600', backgroundColor: '#C77700', color: 'white' }}>
+                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '600', backgroundColor: '#64748b', color: 'white' }}>
                               No
                             </span>
                           )}
@@ -1545,6 +1620,165 @@ const QARCreate = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Éxito QAR */}
+      {successModalOpen && successData && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              backgroundColor: '#dbeafe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: '3px solid #1e40af'
+            }}>
+              <Check size={36} style={{ color: '#1e40af' }} />
+            </div>
+            <h3 style={{
+              color: '#1e40af',
+              fontSize: '22px',
+              fontWeight: '700',
+              marginBottom: '12px'
+            }}>
+              QAR Emitido Exitosamente
+            </h3>
+            <p style={{
+              color: t.text,
+              fontSize: '16px',
+              marginBottom: '8px'
+            }}>
+              Número de Alerta:
+            </p>
+            <p style={{
+              color: '#1e40af',
+              fontSize: '24px',
+              fontWeight: '700',
+              marginBottom: '24px',
+              padding: '12px',
+              backgroundColor: '#f1f5f9',
+              borderRadius: '8px'
+            }}>
+              {successData.alertNumber}
+            </p>
+            <button
+              onClick={() => {
+                setSuccessModalOpen(false);
+                navigate(`/qar-detail/${successData.qarId}`);
+              }}
+              style={{
+                padding: '14px 32px',
+                backgroundColor: '#1e40af',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '15px'
+              }}
+            >
+              Ver Detalles del QAR
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Sin Permisos */}
+      {permissionModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '400px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              backgroundColor: '#fef2f2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: '3px solid #991b1b'
+            }}>
+              <X size={36} style={{ color: '#991b1b' }} />
+            </div>
+            <h3 style={{
+              color: '#991b1b',
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '12px'
+            }}>
+              Acceso Denegado
+            </h3>
+            <p style={{
+              color: t.textMuted,
+              fontSize: '15px',
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              No tienes permisos para crear QARs.<br/>
+              Contacta al administrador si necesitas acceso.
+            </p>
+            <button
+              onClick={() => {
+                setPermissionModalOpen(false);
+                navigate('/qar-list');
+              }}
+              style={{
+                padding: '14px 32px',
+                backgroundColor: t.accent,
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '15px'
+              }}
+            >
+              Volver a la Lista
+            </button>
           </div>
         </div>
       )}

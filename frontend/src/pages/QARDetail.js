@@ -40,6 +40,20 @@ const QARDetail = () => {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // Modal states for alerts
+  const [alertModal, setAlertModal] = useState({ open: false, type: 'info', title: '', message: '', onConfirm: null });
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null });
+
+  // Helper functions for modals
+  const showAlert = (type, title, message) => {
+    setAlertModal({ open: true, type, title, message, onConfirm: null });
+  };
+  const showConfirm = (title, message, onConfirm) => {
+    setConfirmModal({ open: true, title, message, onConfirm });
+  };
+  const closeAlert = () => setAlertModal({ ...alertModal, open: false });
+  const closeConfirm = () => setConfirmModal({ ...confirmModal, open: false });
+
   useEffect(() => {
     loadQar();
     loadCurrentUser();
@@ -89,10 +103,10 @@ const QARDetail = () => {
       if (data.success) {
         setResponseFiles(prev => [...prev, data.file]);
       } else {
-        alert(data.message || 'Error al subir archivo');
+        showAlert('error', 'Error', data.message || 'Error al subir archivo');
       }
     } catch (err) {
-      alert('Error al subir archivo');
+      showAlert('error', 'Error', 'Error al subir archivo');
     } finally {
       setUploadingFile(false);
       e.target.value = '';
@@ -100,18 +114,20 @@ const QARDetail = () => {
   };
 
   const handleDeleteResponseFile = async (fileId) => {
-    if (!window.confirm('¿Eliminar este archivo?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/qar/${id}/response-files/${fileId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (data.success) setResponseFiles(prev => prev.filter(f => f.id !== fileId));
-    } catch (err) {
-      alert('Error al eliminar archivo');
-    }
+    showConfirm('Eliminar Archivo', '¿Estás seguro de eliminar este archivo?', async () => {
+      closeConfirm();
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/qar/${id}/response-files/${fileId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) setResponseFiles(prev => prev.filter(f => f.id !== fileId));
+      } catch (err) {
+        showAlert('error', 'Error', 'Error al eliminar archivo');
+      }
+    });
   };
 
   const loadQar = async () => {
@@ -141,9 +157,17 @@ const QARDetail = () => {
     }
   };
 
+  // Helper para generar mailto de notificación
+  const openMailto = (toEmails, subject, body) => {
+    const to = toEmails.filter(e => e).join('; ');
+    if (!to) return;
+    const mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoUrl, '_blank');
+  };
+
   const handleSubmitResponse = async () => {
     if (!rootCause.trim() || !correctiveAction.trim()) {
-      alert('Causa raíz y acción correctiva son requeridas');
+      showAlert('warning', 'Campos Requeridos', 'Causa raíz y acción correctiva son requeridas');
       return;
     }
 
@@ -166,13 +190,30 @@ const QARDetail = () => {
 
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
+        showAlert('success', 'Respuesta Enviada', data.message);
         loadQar();
+
+        // Mailto a validadores para que revisen la respuesta
+        const validatorEmails = validationRecipients.map(r => r.email);
+        if (validatorEmails.length > 0) {
+          const subject = `QAR ${qar?.alertNumber} - Respuesta Enviada - Pendiente de Validación`;
+          const body = `Se ha enviado respuesta al QAR ${qar?.alertNumber}.
+
+Título: ${qar?.title || 'N/A'}
+Parte: ${qar?.partNumber || 'N/A'} - ${qar?.partName || ''}
+
+Causa Raíz: ${rootCause}
+
+Acción Correctiva: ${correctiveAction}
+
+Por favor revisa y valida la respuesta en el sistema.`;
+          openMailto(validatorEmails, subject, body);
+        }
       } else {
-        alert(data.message || 'Error al enviar respuesta');
+        showAlert('error', 'Error', data.message || 'Error al enviar respuesta');
       }
     } catch (err) {
-      alert('Error al enviar respuesta');
+      showAlert('error', 'Error', 'Error al enviar respuesta');
     } finally {
       setSubmitting(false);
     }
@@ -180,7 +221,7 @@ const QARDetail = () => {
 
   const handleValidation = async (approved) => {
     if (!approved && !rejectionReason.trim()) {
-      alert('Por favor indica el motivo del rechazo');
+      showAlert('warning', 'Campo Requerido', 'Por favor indica el motivo del rechazo');
       return;
     }
 
@@ -202,14 +243,43 @@ const QARDetail = () => {
 
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
+        showAlert('success', approved ? 'QAR Aprobado' : 'QAR Rechazado', data.message);
         setRejectionReason('');
         loadQar();
+
+        // Mailto según acción
+        const allEmails = [...responseRecipients, ...validationRecipients].map(r => r.email);
+        const responseEmails = responseRecipients.map(r => r.email);
+
+        if (approved) {
+          // Aprobado: notificar a todos
+          const subject = `QAR ${qar?.alertNumber} - APROBADO Y CERRADO`;
+          const body = `El QAR ${qar?.alertNumber} ha sido aprobado y cerrado.
+
+Título: ${qar?.title || 'N/A'}
+Parte: ${qar?.partNumber || 'N/A'} - ${qar?.partName || ''}
+
+El QAR ha sido cerrado exitosamente. Gracias por su colaboración.`;
+          openMailto(allEmails, subject, body);
+        } else {
+          // Rechazado: notificar a responsables de respuesta
+          const subject = `QAR ${qar?.alertNumber} - RECHAZADO - Requiere Corrección`;
+          const body = `El QAR ${qar?.alertNumber} ha sido rechazado y requiere corrección.
+
+Título: ${qar?.title || 'N/A'}
+Parte: ${qar?.partNumber || 'N/A'} - ${qar?.partName || ''}
+
+Motivo del Rechazo:
+${rejectionReason}
+
+Por favor revisa y corrige la respuesta en el sistema.`;
+          openMailto(responseEmails, subject, body);
+        }
       } else {
-        alert(data.message || 'Error en validación');
+        showAlert('error', 'Error', data.message || 'Error en validación');
       }
     } catch (err) {
-      alert('Error en validación');
+      showAlert('error', 'Error', 'Error en validación');
     } finally {
       setSubmitting(false);
     }
@@ -235,7 +305,7 @@ const QARDetail = () => {
         loadQar();
       }
     } catch (err) {
-      alert('Error al agregar comentario');
+      showAlert('error', 'Error', 'Error al agregar comentario');
     }
   };
 
@@ -293,7 +363,7 @@ const QARDetail = () => {
       fontSize: '14px'
     },
     header: {
-      backgroundColor: qar?.severityColor || t.error,
+      backgroundColor: '#475569',
       color: 'white',
       padding: '24px',
       borderRadius: '12px',
@@ -556,13 +626,17 @@ const QARDetail = () => {
       padding: '16px'
     },
     fileZone: {
-      border: `2px dashed ${t.border}`,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      border: `2px dashed ${t.textMuted}`,
       borderRadius: '8px',
-      padding: '16px',
+      padding: '20px 16px',
       textAlign: 'center',
       cursor: 'pointer',
-      backgroundColor: t.bgPanel,
-      transition: 'border-color 0.2s'
+      backgroundColor: t.bgCard,
+      transition: 'border-color 0.2s, background-color 0.2s'
     },
     fileChip: {
       display: 'flex',
@@ -602,8 +676,8 @@ const QARDetail = () => {
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: '#dbeafe',
+          border: '1px solid #1e40af',
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -612,7 +686,7 @@ const QARDetail = () => {
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: '#1e3a8a', fontWeight: '500' }}>
             Este QAR está cerrado y es de solo lectura
           </span>
         </div>
@@ -760,23 +834,114 @@ const QARDetail = () => {
                   <tr>
                     <th style={styles.th}>Folio</th>
                     <th style={styles.th}>Defecto</th>
+                    <th style={styles.th}>Comentario</th>
                     <th style={styles.th}>Estación</th>
                     <th style={styles.th}>Inspector</th>
                     <th style={styles.th}>Fecha</th>
+                    <th style={styles.th}>Adjuntos</th>
                   </tr>
                 </thead>
                 <tbody>
                   {defects.map((d, idx) => (
                     <tr key={idx}>
                       <td style={{ ...styles.td, fontWeight: '600', color: t.accent }}>{d.entryNumber}</td>
-                      <td style={styles.td}>{d.defectName}</td>
+                      <td style={{ ...styles.td, maxWidth: '150px', wordWrap: 'break-word' }}>{d.defectName}</td>
+                      <td style={{ ...styles.td, maxWidth: '200px', wordWrap: 'break-word', fontSize: '12px', color: t.textMuted }}>
+                        {d.notes || '-'}
+                      </td>
                       <td style={styles.td}>{d.stationName || '-'}</td>
                       <td style={styles.td}>{d.inspectorName || '-'}</td>
                       <td style={styles.td}>{formatDate(d.createdAt)}</td>
+                      <td style={styles.td}>
+                        {d.attachments && d.attachments.length > 0 ? (
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {d.attachments.map((att, i) => (
+                              <a
+                                key={i}
+                                href={`${API_URL}/uploads/${att.filePath}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={att.originalName}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2px 6px',
+                                  backgroundColor: `${t.accent}22`,
+                                  color: t.accent,
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  textDecoration: 'none'
+                                }}
+                              >
+                                {att.mimetype?.startsWith('image/') ? <Image size={12} /> : <File size={12} />}
+                                {i + 1}
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ color: t.textMuted, fontSize: '12px' }}>-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+
+              {/* Galería de fotos de defectos */}
+              {defects.some(d => d.attachments && d.attachments.length > 0) && (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: t.textMuted, marginBottom: '10px' }}>
+                    <Image size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                    Evidencia Fotográfica de Defectos
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {defects.flatMap((d, dIdx) =>
+                      (d.attachments || [])
+                        .filter(att => att.mimetype?.startsWith('image/'))
+                        .map((att, aIdx) => (
+                          <a
+                            key={`${dIdx}-${aIdx}`}
+                            href={`${API_URL}/uploads/${att.filePath}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ display: 'block', textDecoration: 'none' }}
+                          >
+                            <div style={{
+                              width: '120px',
+                              height: '90px',
+                              borderRadius: '8px',
+                              overflow: 'hidden',
+                              border: `2px solid ${t.border}`,
+                              position: 'relative'
+                            }}>
+                              <img
+                                src={`${API_URL}/uploads/${att.filePath}`}
+                                alt={att.originalName}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                backgroundColor: 'rgba(0,0,0,0.6)',
+                                color: 'white',
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}>
+                                {d.entryNumber}
+                              </div>
+                            </div>
+                          </a>
+                        ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1186,6 +1351,171 @@ const QARDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Alerta */}
+      {alertModal.open && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              backgroundColor: alertModal.type === 'success' ? '#dbeafe' : alertModal.type === 'error' ? '#fef2f2' : '#dbeafe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: `3px solid ${alertModal.type === 'success' ? '#1e40af' : alertModal.type === 'error' ? '#991b1b' : '#1e40af'}`
+            }}>
+              {alertModal.type === 'success' ? (
+                <CheckCircle size={36} style={{ color: '#1e40af' }} />
+              ) : alertModal.type === 'error' ? (
+                <XCircle size={36} style={{ color: '#991b1b' }} />
+              ) : (
+                <AlertTriangle size={36} style={{ color: '#1e40af' }} />
+              )}
+            </div>
+            <h3 style={{
+              color: alertModal.type === 'success' ? '#1e40af' : alertModal.type === 'error' ? '#991b1b' : '#1e40af',
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '12px'
+            }}>
+              {alertModal.title}
+            </h3>
+            <p style={{
+              color: t.textMuted,
+              fontSize: '15px',
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              {alertModal.message}
+            </p>
+            <button
+              onClick={closeAlert}
+              style={{
+                padding: '14px 32px',
+                backgroundColor: alertModal.type === 'success' ? '#1e40af' : alertModal.type === 'error' ? '#991b1b' : '#1e40af',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '15px'
+              }}
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación */}
+      {confirmModal.open && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              backgroundColor: '#dbeafe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: '3px solid #1e40af'
+            }}>
+              <AlertTriangle size={36} style={{ color: '#1e40af' }} />
+            </div>
+            <h3 style={{
+              color: t.text,
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '12px'
+            }}>
+              {confirmModal.title}
+            </h3>
+            <p style={{
+              color: t.textMuted,
+              fontSize: '15px',
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              {confirmModal.message}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={closeConfirm}
+                style={{
+                  padding: '14px 24px',
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '15px'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                style={{
+                  padding: '14px 24px',
+                  backgroundColor: '#1e40af',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '15px'
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

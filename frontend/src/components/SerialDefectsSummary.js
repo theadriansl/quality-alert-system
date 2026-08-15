@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { CheckCircle, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 const SerialDefectsSummary = ({
   counts = { open: 0, repaired: 0, released: 0, total: 0 },
@@ -19,24 +19,9 @@ const SerialDefectsSummary = ({
     border: '#e5e7eb'
   };
 
-  // Sin defectos
+  // Sin defectos - no mostrar nada
   if (counts.total === 0) {
-    return (
-      <div style={{
-        padding: '10px 12px',
-        backgroundColor: '#f0fdf4',
-        borderRadius: '8px',
-        border: '1px solid #bbf7d0',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
-        <CheckCircle size={16} color="#22c55e" />
-        <span style={{ color: '#166534', fontWeight: '500', fontSize: '13px' }}>
-          0 defectos
-        </span>
-      </div>
-    );
+    return null;
   }
 
   // Determinar color de fondo según estado

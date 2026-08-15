@@ -1318,6 +1318,41 @@ router.post('/from-spec', authenticateToken, async (req, res) => {
   }
 
   try {
+    // Check for duplicate - same part, spec, serial, and still OPEN
+    if (lotNumber) {
+      const duplicateCheck = await query(`
+        SELECT id, entry_number, notes FROM defect_entries_v2
+        WHERE part_id = $1 AND spec_id = $2 AND serial_number = $3 AND repair_status = 'OPEN'
+        LIMIT 1
+      `, [partId, specId, lotNumber]);
+
+      if (duplicateCheck.rows.length > 0) {
+        const existingDefect = duplicateCheck.rows[0];
+        console.log('[from-spec] Duplicate defect found:', existingDefect.entry_number);
+
+        // If new notes provided, append to existing
+        if (notes && notes.trim()) {
+          const existingNotes = existingDefect.notes || '';
+          const newNotes = existingNotes
+            ? `${existingNotes}\n[Re-inspección]: ${notes}`
+            : notes;
+
+          await query(
+            'UPDATE defect_entries_v2 SET notes = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [newNotes, existingDefect.id]
+          );
+          console.log('[from-spec] Updated notes on existing defect');
+        }
+
+        return res.json({
+          success: true,
+          duplicate: true,
+          existingDefect: { id: existingDefect.id, entry_number: existingDefect.entry_number },
+          message: `Defecto ya registrado: ${existingDefect.entry_number}${notes ? ' (nota agregada)' : ''}`
+        });
+      }
+    }
+
     // Get part info
     const partResult = await query('SELECT client_id, project_id FROM client_parts WHERE id = $1', [partId]);
     if (partResult.rows.length === 0) {
@@ -1415,9 +1450,9 @@ router.post('/from-spec', authenticateToken, async (req, res) => {
         // Buscar si existe en production_entries para vincular
         const prodEntry = await query(`
           SELECT id FROM production_entries
-          WHERE serial_number = $1 AND part_id = $2 AND client_id = $3
+          WHERE serial_number = $1 AND part_id = $2
           LIMIT 1
-        `, [lotNumber.trim(), partId, client_id]);
+        `, [lotNumber.trim(), partId]);
 
         const productionEntryId = prodEntry.rows.length > 0 ? prodEntry.rows[0].id : null;
         const source = productionEntryId ? 'PRODUCTION' : 'INSPECTION';
@@ -1563,6 +1598,71 @@ router.post('/from-spec', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating defect from spec:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================================================
+// POST /release-by-spec - Release defect when spec is re-verified as OK
+// ============================================================================
+router.post('/release-by-spec', authenticateToken, async (req, res) => {
+  const { partId, specId, serialNumber, notes } = req.body;
+
+  if (!partId || !specId || !serialNumber) {
+    return res.status(400).json({
+      success: false,
+      message: 'partId, specId y serialNumber son requeridos'
+    });
+  }
+
+  try {
+    // Find OPEN defect for this part/spec/serial
+    const defectResult = await query(`
+      SELECT id, entry_number, notes FROM defect_entries_v2
+      WHERE part_id = $1 AND spec_id = $2 AND serial_number = $3 AND repair_status = 'OPEN'
+      LIMIT 1
+    `, [partId, specId, serialNumber]);
+
+    if (defectResult.rows.length === 0) {
+      // No open defect found - that's OK, nothing to release
+      return res.json({
+        success: true,
+        released: false,
+        message: 'No hay defecto abierto para esta spec/serial'
+      });
+    }
+
+    const defect = defectResult.rows[0];
+    const releaseNotes = notes || 'Re-verificado como OK por inspector';
+
+    // Update defect to RELEASED
+    await query(`
+      UPDATE defect_entries_v2
+      SET repair_status = 'RELEASED',
+          released_at = CURRENT_TIMESTAMP,
+          released_by = $1,
+          resolution_notes = COALESCE(resolution_notes, '') || $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+    `, [req.user.id, `\n[Liberado en re-inspección]: ${releaseNotes}`, defect.id]);
+
+    // Register event
+    await query(`
+      INSERT INTO defect_events (
+        defect_id, event_type, old_status, new_status, performed_by, comments
+      ) VALUES ($1, 'RELEASED', 'OPEN', 'RELEASED', $2, $3)
+    `, [defect.id, req.user.id, `Re-verificado como OK: ${releaseNotes}`]);
+
+    console.log('[release-by-spec] Defect released:', defect.entry_number);
+
+    res.json({
+      success: true,
+      released: true,
+      defect: { id: defect.id, entryNumber: defect.entry_number },
+      message: `Defecto ${defect.entry_number} liberado por re-verificación OK`
+    });
+  } catch (error) {
+    console.error('Error releasing defect by spec:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
