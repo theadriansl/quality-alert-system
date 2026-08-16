@@ -36,7 +36,7 @@
 | 2 | Export Excel MRB Dashboard | 27-Jun | ⏳ |
 | 3 | Export Excel 8D Consultation | 27-Jun | ⏳ |
 | 4 | PRINT_LABELS implementar (Kanban) | 02-Jul | ⏳ |
-| 5 | ~~8D generación PDF~~ | Arrastrado | ✅ 15-Ago |
+| 5 | ~~8D generación PDF refactorizada~~ | Arrastrado | ✅ 15-Ago |
 | 6 | ECR pruebas aprobaciones | Arrastrado | ⏳ |
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
@@ -66,6 +66,9 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ 8D: Generación PDF mejorada y refactorizada | 15-Ago |
+| ✅ 8D: Workflow expandido con funcionalidad adicional | 15-Ago |
+| ✅ 8D: D5D6D7Countermeasures componente mejorado | 15-Ago |
 | ✅ RepairStation: Vista simplificada 3 columnas (Partes/Defectos/Detalle) | 15-Ago |
 | ✅ RepairStation: Selector ubicación persistente por turno | 15-Ago |
 | ✅ RepairStation: Badge tipo estación (REPARACIÓN/LIBERACIÓN) en header | 15-Ago |
