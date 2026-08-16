@@ -499,29 +499,33 @@ const HospitalRolesManager = () => {
                 <td style={styles.td}>{user.department || '-'}</td>
                 <td style={styles.td}>
                   {user.hospitalRoles && user.hospitalRoles.length > 0 ? (
-                    user.hospitalRoles.map(role => (
-                      <span
-                        key={role}
-                        style={{ ...styles.badge, ...getRoleBadgeStyle(role) }}
-                      >
-                        {getRoleLabel(role)}
-                        <button
-                          onClick={() => handleRemoveRole(user, role)}
-                          style={{
-                            marginLeft: '4px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'inherit',
-                            fontSize: '12px',
-                            padding: 0
-                          }}
-                          title="Quitar rol"
+                    user.hospitalRoles.map((roleItem, idx) => {
+                      // Soportar tanto string como objeto {role: 'repairer', ...}
+                      const roleName = typeof roleItem === 'string' ? roleItem : roleItem.role;
+                      return (
+                        <span
+                          key={roleName || idx}
+                          style={{ ...styles.badge, ...getRoleBadgeStyle(roleName) }}
                         >
-                          ×
-                        </button>
-                      </span>
-                    ))
+                          {getRoleLabel(roleName)}
+                          <button
+                            onClick={() => handleRemoveRole(user, roleName)}
+                            style={{
+                              marginLeft: '4px',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'inherit',
+                              fontSize: '12px',
+                              padding: 0
+                            }}
+                            title="Quitar rol"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })
                   ) : (
                     <span style={{ color: t.textMuted, fontSize: '12px' }}>Sin roles</span>
                   )}

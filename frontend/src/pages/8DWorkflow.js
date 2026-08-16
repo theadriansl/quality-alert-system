@@ -2,7 +2,10 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { pdf } from '@react-pdf/renderer';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import EightDPDF from '../components/8D/EightDPDF';
 import eightDService from '../services/eightDService';
 import { useToast } from '../context/ToastContext';
@@ -964,6 +967,7 @@ const EightDWorkflow = () => {
 
   // ===================== PDF EXPORT FUNCTION =====================
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   const handleExportPDF = async () => {
     if (!workflowData || !workflowData.id) {
@@ -1116,6 +1120,431 @@ const EightDWorkflow = () => {
       showError('Error al exportar PDF: ' + error.message);
     } finally {
       setIsExportingPDF(false);
+    }
+  };
+
+  // ===================== PDF CAPTURE FUNCTION (Captura cada tab) =====================
+  const [isCapturingPDF, setIsCapturingPDF] = useState(false);
+  const [captureProgress, setCaptureProgress] = useState('');
+
+  const handleExportPDFCapture = async () => {
+    if (!workflowData || !workflowData.id) {
+      showWarning('Guarda el reporte primero antes de exportar');
+      return;
+    }
+
+    if (!contentRef.current) {
+      showError('No se encontró el área de contenido');
+      return;
+    }
+
+    setIsCapturingPDF(true);
+    const originalTab = currentTab;
+
+    try {
+      // Usar landscape para más espacio horizontal
+      const pdf = new jsPDF('l', 'mm', 'a4'); // 'l' = landscape
+      const pageWidth = pdf.internal.pageSize.getWidth(); // 297mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
+      const margin = 5; // Margen mínimo
+      let isFirstPage = true;
+
+      // Recorrer todos los tabs
+      for (let i = 0; i < tabs.length; i++) {
+        setCaptureProgress(`Capturando ${tabs[i].label} (${i + 1}/${tabs.length})...`);
+
+        // Cambiar al tab
+        setCurrentTab(i);
+
+        // Esperar a que se renderice
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Capturar el contenido a escala 1:1
+        const canvas = await html2canvas(contentRef.current, {
+          scale: 1.5, // Buena calidad sin ser excesivo
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false
+        });
+
+        const imgData = canvas.toDataURL('image/png', 1.0);
+
+        // Calcular dimensiones para llenar la página (casi sin márgenes)
+        const availableWidth = pageWidth - (margin * 2);
+        const availableHeight = pageHeight - 20 - margin; // 20mm para header
+
+        // Escalar para llenar el ancho disponible
+        const imgWidth = availableWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        // Header de la página
+        if (!isFirstPage) {
+          pdf.addPage('l'); // landscape
+        }
+        isFirstPage = false;
+
+        // Header
+        pdf.setFillColor(44, 82, 130);
+        pdf.rect(0, 0, pageWidth, 12, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${workflowData.reportId || '8D Report'} - ${tabs[i].label}`, margin, 8);
+        pdf.setFontSize(9);
+        pdf.text(tabs[i].subtitle || '', pageWidth - margin, 8, { align: 'right' });
+
+        const startY = 15;
+
+        // Si la imagen cabe en una página
+        if (imgHeight <= availableHeight) {
+          pdf.addImage(imgData, 'PNG', margin, startY, imgWidth, imgHeight);
+        } else {
+          // Dividir en múltiples páginas
+          let yPosition = 0;
+          let pagesNeeded = Math.ceil(imgHeight / availableHeight);
+
+          for (let p = 0; p < pagesNeeded; p++) {
+            if (p > 0) {
+              pdf.addPage('l');
+              // Mini header en páginas de continuación
+              pdf.setFillColor(44, 82, 130);
+              pdf.rect(0, 0, pageWidth, 8, 'F');
+              pdf.setTextColor(255, 255, 255);
+              pdf.setFontSize(9);
+              pdf.text(`${tabs[i].label} (cont.)`, margin, 5);
+            }
+
+            const clipY = p * availableHeight;
+            const clipHeight = Math.min(availableHeight, imgHeight - clipY);
+            const headerOffset = p === 0 ? startY : 10;
+
+            // Crear canvas recortado para esta porción
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = (clipHeight / imgHeight) * canvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            ctx.drawImage(
+              canvas,
+              0, (clipY / imgHeight) * canvas.height,
+              canvas.width, tempCanvas.height,
+              0, 0,
+              tempCanvas.width, tempCanvas.height
+            );
+
+            const portionData = tempCanvas.toDataURL('image/png', 1.0);
+            pdf.addImage(portionData, 'PNG', margin, headerOffset, imgWidth, clipHeight);
+          }
+        }
+      }
+
+      // Footer en todas las páginas
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Quality Alert System - Generado: ${new Date().toLocaleString('es-MX')}`, margin, pageHeight - 5);
+        pdf.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+      }
+
+      // Descargar
+      const sanitizedTitle = (workflowData.title || 'Report')
+        .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 50);
+      pdf.save(`${workflowData.reportId || '8D-Report'}_${sanitizedTitle}_COMPLETO.pdf`);
+
+      showSuccess('PDF completo exportado exitosamente');
+
+    } catch (error) {
+      console.error('Error capturing PDF:', error);
+      showError('Error al capturar PDF: ' + error.message);
+    } finally {
+      // Restaurar tab original
+      setCurrentTab(originalTab);
+      setIsCapturingPDF(false);
+      setCaptureProgress('');
+    }
+  };
+
+  // ===================== EXCEL EXPORT FUNCTION =====================
+  const handleExportExcel = async () => {
+    if (!workflowData || !workflowData.id) {
+      showWarning('Guarda el reporte primero antes de exportar');
+      return;
+    }
+
+    setIsExportingExcel(true);
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'QMS System';
+      workbook.created = new Date();
+
+      // Helper to add image to worksheet
+      const addImageToSheet = async (worksheet, imageUrl, startRow, startCol) => {
+        if (!imageUrl) return;
+        try {
+          let fullUrl = imageUrl;
+          if (imageUrl.startsWith('/uploads') || imageUrl.startsWith('uploads')) {
+            const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+            fullUrl = imageUrl.startsWith('/') ? `${backendUrl}${imageUrl}` : `${backendUrl}/${imageUrl}`;
+          }
+          const response = await fetch(fullUrl);
+          if (!response.ok) return;
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+          const extension = blob.type.includes('png') ? 'png' : 'jpeg';
+          const imageId = workbook.addImage({ base64, extension });
+          worksheet.addImage(imageId, {
+            tl: { col: startCol, row: startRow },
+            ext: { width: 200, height: 150 }
+          });
+        } catch (err) {
+          console.warn('Could not add image:', err);
+        }
+      };
+
+      // Style helpers
+      const headerStyle = { font: { bold: true, size: 12, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } }, alignment: { horizontal: 'center' } };
+      const subHeaderStyle = { font: { bold: true, size: 11 }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } } };
+      const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-MX') : '-';
+      const getUserName = (userId) => {
+        if (!userId) return '-';
+        const user = users.find(u => u.id === userId);
+        return user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : `ID: ${userId}`;
+      };
+
+      // ============= SHEET 1: Info General =============
+      const ws1 = workbook.addWorksheet('Info General');
+      ws1.columns = [{ width: 25 }, { width: 40 }, { width: 25 }, { width: 40 }];
+      ws1.addRow(['REPORTE 8D - INFORMACIÓN GENERAL']).font = { bold: true, size: 16 };
+      ws1.mergeCells('A1:D1');
+      ws1.addRow([]);
+      ws1.addRow(['Número de Reporte:', workflowData.reportId || workflowData.id, 'Estado:', workflowData.status || '-']);
+      ws1.addRow(['Título:', workflowData.title || '-', 'Severidad:', workflowData.severity || '-']);
+      ws1.addRow(['Cliente:', workflowData.supplierName || '-', 'Cuenta:', workflowData.supplierAccount || '-']);
+      ws1.addRow(['Número de Parte:', workflowData.partNumber || '-', 'Nombre de Parte:', workflowData.partName || '-']);
+      ws1.addRow(['Fecha de Issue:', formatDate(workflowData.issueDate), 'Fecha Objetivo:', formatDate(workflowData.targetCloseDate)]);
+      ws1.addRow(['Tipo de Issue:', workflowData.tipoIssue || '-', 'Tipo Resp:', workflowData.tipoResp || '-']);
+      ws1.addRow(['Creado Por:', getUserName(workflowData.createdBy), 'Fecha Creación:', formatDate(workflowData.createdAt)]);
+      ws1.addRow([]);
+      ws1.addRow(['PARTES AFECTADAS']).font = { bold: true, size: 12 };
+      ws1.addRow(['Número', 'Nombre', 'Cantidad Afectada', 'Costo Impacto']);
+      (workflowData.selectedParts || []).forEach(p => {
+        ws1.addRow([p.partNumber, p.partName, p.totalAffectedQty || 0, p.totalCostImpact || 0]);
+      });
+
+      // ============= SHEET 2: D1 - Equipo =============
+      const ws2 = workbook.addWorksheet('D1 - Equipo');
+      ws2.columns = [{ width: 30 }, { width: 40 }, { width: 20 }];
+      ws2.addRow(['D1 - FORMACIÓN DEL EQUIPO']).font = { bold: true, size: 14 };
+      ws2.mergeCells('A1:C1');
+      ws2.addRow([]);
+      ws2.addRow(['Rol', 'Nombre', 'Departamento']);
+      const escalation = workflowData.escalationPath || {};
+      const issueUsers = escalation.issue_users || [];
+      issueUsers.forEach((u, i) => {
+        const userName = typeof u === 'object' ? u.name : getUserName(u);
+        ws2.addRow([i === 0 ? 'Champion / Líder' : `Aprobador ${i}`, userName, '-']);
+      });
+      ws2.addRow([]);
+      ws2.addRow(['Estado D1:', workflowData.d1Completed ? 'Completado' : 'Pendiente']);
+      ws2.addRow(['Fecha Completado:', formatDate(workflowData.d1CompletedAt)]);
+
+      // ============= SHEET 3: D2 - Descripción =============
+      const ws3 = workbook.addWorksheet('D2 - Descripción');
+      ws3.columns = [{ width: 25 }, { width: 60 }];
+      ws3.addRow(['D2 - DESCRIPCIÓN DEL PROBLEMA']).font = { bold: true, size: 14 };
+      ws3.mergeCells('A1:B1');
+      ws3.addRow([]);
+      ws3.addRow(['Descripción:', workflowData.description || workflowData.d2ProblemDescription || '-']);
+      ws3.getRow(3).height = 60;
+      ws3.addRow([]);
+      ws3.addRow(['Estado D2:', workflowData.d2Completed ? 'Completado' : 'Pendiente']);
+      ws3.addRow(['Fecha Completado:', formatDate(workflowData.d2CompletedAt)]);
+      ws3.addRow([]);
+      ws3.addRow(['EVIDENCIA FOTOGRÁFICA']).font = { bold: true };
+      ws3.addRow(['Foto NO GOOD:', '(ver imagen abajo)']);
+      const photoNoGoodUrl = workflowData.photoNoGood?.url || workflowData.photoNoGood;
+      if (photoNoGoodUrl) await addImageToSheet(ws3, photoNoGoodUrl, 10, 0);
+      ws3.addRow([]); ws3.addRow([]); ws3.addRow([]); ws3.addRow([]); ws3.addRow([]);
+      ws3.addRow(['Foto OK (Referencia):', '(ver imagen abajo)']);
+      const photoOkUrl = workflowData.photoOK?.url || workflowData.photoOK;
+      if (photoOkUrl) await addImageToSheet(ws3, photoOkUrl, 18, 0);
+
+      // ============= SHEET 4: D3 - Contención =============
+      const ws4 = workbook.addWorksheet('D3 - Contención');
+      ws4.columns = [{ width: 30 }, { width: 50 }];
+      ws4.addRow(['D3 - ACCIONES DE CONTENCIÓN']).font = { bold: true, size: 14 };
+      ws4.mergeCells('A1:B1');
+      ws4.addRow([]);
+      const d3 = workflowData.d3Data || {};
+      ws4.addRow(['Disposición Material Sospechoso:', d3.suspectMaterialDisposal || '-']);
+      ws4.addRow(['Garantía de Conformidad:', d3.conformanceMaterialGuarantee || '-']);
+      ws4.addRow(['Requiere Retrabajo:', d3.requiresRework === true ? 'Sí' : d3.requiresRework === false ? 'No' : '-']);
+      ws4.addRow(['Costo Unitario Retrabajo:', d3.reworkUnitCost || 0]);
+      ws4.addRow(['Costo Real Impacto:', d3.realImpactCost || 0]);
+      ws4.addRow([]);
+      ws4.addRow(['PUNTOS DE DETECCIÓN']).font = { bold: true };
+      const dp = d3.detectionPoints || {};
+      ws4.addRow(['Durante Proceso:', dp.duringProcess?.yes ? 'Sí' : dp.duringProcess?.no ? 'No' : '-']);
+      ws4.addRow(['Después de Manufactura:', dp.afterManufacture?.yes ? 'Sí' : dp.afterManufacture?.no ? 'No' : '-']);
+      ws4.addRow(['Antes de Envío:', dp.priorDespatch?.yes ? 'Sí' : dp.priorDespatch?.no ? 'No' : '-']);
+      ws4.addRow([]);
+      ws4.addRow(['Estado D3:', workflowData.d3Completed ? 'Completado' : 'Pendiente']);
+
+      // ============= SHEET 5: D4 - Causa Raíz =============
+      const ws5 = workbook.addWorksheet('D4 - Causa Raíz');
+      ws5.columns = [{ width: 20 }, { width: 60 }];
+      ws5.addRow(['D4 - ANÁLISIS DE CAUSA RAÍZ']).font = { bold: true, size: 14 };
+      ws5.mergeCells('A1:B1');
+      ws5.addRow([]);
+      ws5.addRow(['Técnica de Análisis:', workflowData.d4AnalysisTechnique || '-']);
+      ws5.addRow(['Causa Raíz:', workflowData.d4RootCause || '-']);
+      ws5.addRow([]);
+      ws5.addRow(['ANÁLISIS 5 PORQUÉS']).font = { bold: true };
+      const fiveWhys = workflowData.d4FiveWhysAnalysis || workflowData.d45whysAnalysis || [];
+      fiveWhys.forEach((why, i) => {
+        ws5.addRow([`Por qué ${i + 1}:`, why || '-']);
+      });
+      ws5.addRow([]);
+      ws5.addRow(['Estado D4:', workflowData.d4Completed ? 'Completado' : 'Pendiente']);
+      ws5.addRow(['Fecha Completado:', formatDate(workflowData.d4CompletedAt)]);
+
+      // ============= SHEET 6: D5 - Acciones Correctivas =============
+      const ws6 = workbook.addWorksheet('D5 - Correctivas');
+      ws6.columns = [{ width: 40 }, { width: 20 }, { width: 20 }, { width: 15 }];
+      ws6.addRow(['D5 - ACCIONES CORRECTIVAS PERMANENTES']).font = { bold: true, size: 14 };
+      ws6.mergeCells('A1:D1');
+      ws6.addRow([]);
+      ws6.addRow(['Causa Raíz Final:', workflowData.d5FinalRootCause || '-']);
+      ws6.addRow([]);
+      ws6.addRow(['Acción', 'Responsable', 'Fecha', 'Estado']);
+      const d5Actions = workflowData.d5CorrectiveActions || [];
+      d5Actions.forEach(a => {
+        ws6.addRow([a.action || a.description, getUserName(a.responsible), formatDate(a.dueDate), a.status || '-']);
+      });
+      ws6.addRow([]);
+      ws6.addRow(['Estado D5:', workflowData.d5Completed ? 'Completado' : 'Pendiente']);
+
+      // ============= SHEET 7: D6 - Implementación =============
+      const ws7 = workbook.addWorksheet('D6 - Implementación');
+      ws7.columns = [{ width: 30 }, { width: 50 }];
+      ws7.addRow(['D6 - IMPLEMENTACIÓN Y VALIDACIÓN']).font = { bold: true, size: 14 };
+      ws7.mergeCells('A1:B1');
+      ws7.addRow([]);
+      ws7.addRow(['Descripción Contramedida:', workflowData.d6CountermeasureDescription || '-']);
+      ws7.addRow(['Plan de Implementación:', workflowData.d6ImplementationPlan || '-']);
+      ws7.addRow(['Plan de Validación:', workflowData.d6ValidationPlan || '-']);
+      ws7.addRow([]);
+      ws7.addRow(['EVIDENCIA ANTES/DESPUÉS']).font = { bold: true };
+      ws7.addRow(['Condición Antes:', workflowData.beforeCondition || '-']);
+      // Load D7 validation data for before/after photos
+      let d7ValidationFiles = [];
+      try {
+        const token = localStorage.getItem('token');
+        const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const resp = await fetch(`${backendUrl}/api/8d/reports/${workflowData.id}/d7-validation`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await resp.json();
+        if (result.success && result.data?.validationFiles) {
+          d7ValidationFiles = result.data.validationFiles;
+        }
+      } catch (e) { console.warn('Could not load D7 files'); }
+      const beforePhoto = d7ValidationFiles.find(f => f.file_type === 'before_photo');
+      if (beforePhoto) await addImageToSheet(ws7, beforePhoto.url || beforePhoto.file_url, 9, 0);
+      ws7.addRow([]); ws7.addRow([]); ws7.addRow([]); ws7.addRow([]); ws7.addRow([]);
+      ws7.addRow(['Condición Después:', workflowData.afterCondition || '-']);
+      const afterPhoto = d7ValidationFiles.find(f => f.file_type === 'after_photo');
+      if (afterPhoto) await addImageToSheet(ws7, afterPhoto.url || afterPhoto.file_url, 17, 0);
+      ws7.addRow([]);
+      ws7.addRow(['Estado D6:', workflowData.d6Completed ? 'Completado' : 'Pendiente']);
+
+      // ============= SHEET 8: D7 - Preventivas =============
+      const ws8 = workbook.addWorksheet('D7 - Preventivas');
+      ws8.columns = [{ width: 40 }, { width: 20 }, { width: 20 }, { width: 15 }];
+      ws8.addRow(['D7 - ACCIONES PREVENTIVAS']).font = { bold: true, size: 14 };
+      ws8.mergeCells('A1:D1');
+      ws8.addRow([]);
+      ws8.addRow(['Acción', 'Responsable', 'Fecha', 'Estado']);
+      const d7Actions = workflowData.d7PreventiveActions || [];
+      d7Actions.forEach(a => {
+        ws8.addRow([a.action || a.description, getUserName(a.responsible), formatDate(a.dueDate), a.status || '-']);
+      });
+      ws8.addRow([]);
+      ws8.addRow(['Lecciones Aprendidas:', workflowData.d7LessonsLearned || '-']);
+      ws8.addRow([]);
+      ws8.addRow(['Estado D7:', workflowData.d7Completed ? 'Completado' : 'Pendiente']);
+
+      // ============= SHEET 9: D8 - Cierre =============
+      const ws9 = workbook.addWorksheet('D8 - Cierre');
+      ws9.columns = [{ width: 30 }, { width: 50 }];
+      ws9.addRow(['D8 - CIERRE Y RECONOCIMIENTO']).font = { bold: true, size: 14 };
+      ws9.mergeCells('A1:B1');
+      ws9.addRow([]);
+      ws9.addRow(['Reconocimiento del Equipo:', workflowData.d8TeamRecognition || '-']);
+      ws9.addRow(['Lecciones Aprendidas:', workflowData.d8LessonsLearned || '-']);
+      ws9.addRow(['Notas de Cierre:', workflowData.d8ClosureNotes || '-']);
+      ws9.addRow([]);
+      ws9.addRow(['Cerrado Por:', getUserName(workflowData.d8ClosedBy)]);
+      ws9.addRow(['Fecha de Cierre:', formatDate(workflowData.d8ClosedAt)]);
+      ws9.addRow([]);
+      ws9.addRow(['Estado D8:', workflowData.d8Completed ? 'Completado' : 'Pendiente']);
+
+      // ============= SHEET 10: Historial =============
+      const ws10 = workbook.addWorksheet('Historial');
+      ws10.columns = [{ width: 20 }, { width: 15 }, { width: 25 }, { width: 50 }];
+      ws10.addRow(['HISTORIAL DE CAMBIOS Y APROBACIONES']).font = { bold: true, size: 14 };
+      ws10.mergeCells('A1:D1');
+      ws10.addRow([]);
+      ws10.addRow(['Fecha', 'Etapa', 'Usuario', 'Acción/Comentarios']);
+      // Load audit log
+      try {
+        const token = localStorage.getItem('token');
+        const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const resp = await fetch(`${backendUrl}/api/8d/reports/${workflowData.id}/audit-log`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await resp.json();
+        if (result.success && result.data) {
+          result.data.forEach(log => {
+            ws10.addRow([formatDate(log.createdAt), log.step || '-', log.userName || getUserName(log.userId), log.action || log.changes || '-']);
+          });
+        }
+      } catch (e) {
+        ws10.addRow(['-', '-', '-', 'No se pudo cargar el historial']);
+      }
+      // Add approval history
+      ws10.addRow([]);
+      ws10.addRow(['APROBACIONES D1-D2-D3']).font = { bold: true };
+      if (workflowData.approval_1At) ws10.addRow([formatDate(workflowData.approval_1At), 'Aprobación 1', getUserName(workflowData.approval_1By), workflowData.approval_1Comments || 'Aprobado']);
+      if (workflowData.approval_2At) ws10.addRow([formatDate(workflowData.approval_2At), 'Aprobación 2', getUserName(workflowData.approval_2By), workflowData.approval_2Comments || 'Aprobado']);
+      if (workflowData.approval_3At) ws10.addRow([formatDate(workflowData.approval_3At), 'Aprobación 3', getUserName(workflowData.approval_3By), workflowData.approval_3Comments || 'Aprobado']);
+
+      // Generate and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const sanitizedTitle = (workflowData.title || 'Report').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s-]/g, '').replace(/\s+/g, '_').substring(0, 50);
+      link.href = url;
+      link.download = `${workflowData.reportId || '8D-Report'}_${sanitizedTitle}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showSuccess('Excel exportado exitosamente');
+
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      showError('Error al exportar Excel: ' + error.message);
+    } finally {
+      setIsExportingExcel(false);
     }
   };
 
@@ -1747,20 +2176,20 @@ const EightDWorkflow = () => {
           
           {/* Navigation Buttons */}
           <div style={styles.headerNavigation}>
-            {/* Export PDF Button */}
+            {/* Export Button */}
             {workflowData?.id && (
               <button
-                onClick={handleExportPDF}
-                disabled={isExportingPDF}
+                onClick={handleExportPDFCapture}
+                disabled={isCapturingPDF}
                 style={{
                   ...styles.headerButton,
-                  backgroundColor: '#805AD5',
+                  backgroundColor: '#dc2626',
                   color: 'white',
-                  opacity: isExportingPDF ? 0.7 : 1
+                  opacity: isCapturingPDF ? 0.7 : 1
                 }}
-                title="Exportar reporte completo a PDF"
+                title="Exportar PDF completo (captura todas las pestañas)"
               >
-                {isExportingPDF ? '⏳ Generando...' : '📄 Exportar PDF'}
+                {isCapturingPDF ? `⏳ ${captureProgress}` : '📄 Exportar PDF'}
               </button>
             )}
 
@@ -2006,7 +2435,7 @@ const EightDWorkflow = () => {
       )}
 
       {/* Content Area */}
-      <div style={styles.contentArea} data-tab-content="true">
+      <div ref={contentRef} style={styles.contentArea} data-tab-content="true">
         {/* D1-D2-D3 Approval Stepper (MEJORA 2) */}
         {workflowData?.id && !loading && ['d1', 'd2', 'd3'].includes(tabs[currentTab]?.id) && workflowData?.escalationPath && (
           <ApprovalStepper

@@ -153,19 +153,6 @@ const styles = StyleSheet.create({
     color: '#2d3748',
     marginBottom: 5
   },
-  listItem: {
-    flexDirection: 'row',
-    marginBottom: 2,
-    paddingLeft: 10
-  },
-  bullet: {
-    width: 10,
-    fontSize: 8
-  },
-  listText: {
-    flex: 1,
-    fontSize: 8
-  },
   imageContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -217,26 +204,30 @@ const styles = StyleSheet.create({
     marginBottom: 3
   },
   approvalBox: {
-    border: '1px solid #cbd5e0',
-    padding: 8,
     marginTop: 8,
-    backgroundColor: '#f7fafc',
-    borderRadius: 3
+    padding: 6,
+    backgroundColor: '#f0f4f8',
+    borderRadius: 3,
+    borderLeft: '3px solid #2c5282'
   },
   approvalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 3
+    marginBottom: 2
   },
   statusApproved: {
     color: '#22543d',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    fontSize: 8
   },
   statusPending: {
-    color: '#92400e'
+    color: '#c05621',
+    fontWeight: 'bold',
+    fontSize: 8
   },
   statusDraft: {
-    color: '#718096'
+    color: '#718096',
+    fontSize: 8
   }
 });
 
@@ -244,28 +235,19 @@ const formatDate = (dateString) => {
   if (!dateString) return '-';
   try {
     return new Date(dateString).toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+      year: 'numeric', month: '2-digit', day: '2-digit'
     });
-  } catch {
-    return '-';
-  }
+  } catch { return '-'; }
 };
 
 const formatDateTime = (dateString) => {
   if (!dateString) return '-';
   try {
     return new Date(dateString).toLocaleString('es-MX', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
     });
-  } catch {
-    return '-';
-  }
+  } catch { return '-'; }
 };
 
 const getStatusText = (status) => {
@@ -290,99 +272,60 @@ const getUserName = (user, users = []) => {
   return found ? `${found.firstName || ''} ${found.lastName || ''}`.trim() || found.email : '-';
 };
 
-// eslint-disable-next-line no-unused-vars
-const EightDPDF = ({ data, users = [], attachments = [], images = {} }) => {
+// Page Header Component
+const PageHeader = ({ data }) => (
+  <View style={styles.header}>
+    <View style={styles.headerTop}>
+      <Text style={styles.logo}>QUALITY ALERT SYSTEM</Text>
+      <Text style={styles.reportId}>{data.reportId || 'NUEVO'}</Text>
+    </View>
+    <Text style={styles.title}>REPORTE 8D</Text>
+    <Text style={styles.subtitle}>Estado: {data.status?.toUpperCase() || 'EN PROCESO'}</Text>
+  </View>
+);
+
+// Page Footer Component
+const PageFooter = ({ data }) => (
+  <>
+    <View style={styles.footer}>
+      <Text>Quality Alert System - {data.reportId}</Text>
+      <Text>Generado: {formatDateTime(new Date())}</Text>
+    </View>
+    <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
+  </>
+);
+
+const EightDPDF = ({ data, users = [], images = {} }) => {
   if (!data) return null;
 
-  // Helper to find user by ID
   const findUserById = (userId) => {
     if (!userId) return null;
     if (typeof userId === 'object') return userId;
     return users.find(u => u.id === userId || u.id === parseInt(userId));
   };
 
-  // Get escalation data - check both backend and frontend formats
-  const escalationPath = data.escalationPath || data.escalation_path || {};
-
-  // Try to get users from escalationPath (backend format - array of IDs)
-  let issueUsers = [];
-  let countermeasureUsers = [];
-  let confirmationUsers = [];
-
-  // Check if escalationPath has user arrays (IDs)
+  const escalationPath = data.escalationPath || {};
   const epIssue = escalationPath.issue_users || escalationPath.issueUsers || [];
   const epCounter = escalationPath.countermeasure_users || escalationPath.countermeasureUsers || [];
   const epConfirm = escalationPath.confirmation_users || escalationPath.confirmationUsers || [];
 
-  // Convert IDs to user objects
-  if (epIssue.length > 0) {
-    issueUsers = epIssue.map(u => typeof u === 'object' ? u : findUserById(u)).filter(Boolean);
-  }
-  if (epCounter.length > 0) {
-    countermeasureUsers = epCounter.map(u => typeof u === 'object' ? u : findUserById(u)).filter(Boolean);
-  }
-  if (epConfirm.length > 0) {
-    confirmationUsers = epConfirm.map(u => typeof u === 'object' ? u : findUserById(u)).filter(Boolean);
-  }
+  const issueUsers = epIssue.map(u => typeof u === 'object' ? u : findUserById(u)).filter(Boolean);
+  const countermeasureUsers = epCounter.map(u => typeof u === 'object' ? u : findUserById(u)).filter(Boolean);
+  const confirmationUsers = epConfirm.map(u => typeof u === 'object' ? u : findUserById(u)).filter(Boolean);
 
-  // Also check for issueSection/countermeasureSection/confirmationSection format (frontend state)
-  if (issueUsers.length === 0 && data.issueSection) {
-    const section = data.issueSection;
-    if (section.primary) issueUsers.push(typeof section.primary === 'object' ? section.primary : findUserById(section.primary));
-    if (section.approvers) {
-      section.approvers.forEach(a => {
-        if (a) issueUsers.push(typeof a === 'object' ? a : findUserById(a));
-      });
-    }
-    issueUsers = issueUsers.filter(Boolean);
-  }
-
-  if (countermeasureUsers.length === 0 && data.countermeasureSection) {
-    const section = data.countermeasureSection;
-    if (section.primary) countermeasureUsers.push(typeof section.primary === 'object' ? section.primary : findUserById(section.primary));
-    if (section.approvers) {
-      section.approvers.forEach(a => {
-        if (a) countermeasureUsers.push(typeof a === 'object' ? a : findUserById(a));
-      });
-    }
-    countermeasureUsers = countermeasureUsers.filter(Boolean);
-  }
-
-  if (confirmationUsers.length === 0 && data.confirmationSection) {
-    const section = data.confirmationSection;
-    if (section.primary) confirmationUsers.push(typeof section.primary === 'object' ? section.primary : findUserById(section.primary));
-    if (section.approvers) {
-      section.approvers.forEach(a => {
-        if (a) confirmationUsers.push(typeof a === 'object' ? a : findUserById(a));
-      });
-    }
-    confirmationUsers = confirmationUsers.filter(Boolean);
-  }
-
-  // Images are now passed as base64 to avoid CORS issues
   const hasPhotos = images.photo_no_good || images.photo_ok;
-
-  // Get 4M and 5Whys data
-  const fourMData = data.d44mEvaluation || data.d4_4mEvaluation || [];
+  const hasD6Photos = images.d6_before || images.d6_after;
   const fiveWhysData = data.d45whysAnalysis || data.d4_5whysAnalysis || [];
-
-  // Parts data
   const partsData = data.parts || data.selectedParts || [];
+  const hasD4Data = fiveWhysData.length > 0 || data.d4RootCause;
+  const hasD5Data = data.d5CorrectiveActions?.length > 0;
+  const hasD8Data = data.d8LessonsLearned || data.d8ClosureNotes || data.d8FollowupActions?.length > 0;
 
   return (
     <Document>
-      {/* PAGE 1 - Info General, D1, D2 */}
+      {/* PAGE 1 - Info General + D1 + D2 */}
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Text style={styles.logo}>QUALITY ALERT SYSTEM</Text>
-            <Text style={styles.reportId}>{data.reportId || 'NUEVO'}</Text>
-          </View>
-          <Text style={styles.title}>REPORTE 8D - SOLUCIÓN DE PROBLEMAS</Text>
-          <Text style={styles.subtitle}>
-            Generado: {formatDateTime(new Date())} | Estado General: {data.status?.toUpperCase() || 'EN PROCESO'}
-          </Text>
-        </View>
+        <PageHeader data={data} />
 
         {/* Info General */}
         <View style={styles.section}>
@@ -398,86 +341,79 @@ const EightDPDF = ({ data, users = [], attachments = [], images = {} }) => {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Cliente:</Text>
-                  <Text style={styles.infoValue}>{data.selectedClient?.name || data.clientName || '-'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Proyecto:</Text>
-                  <Text style={styles.infoValue}>{data.selectedProject?.projectName || data.projectName || '-'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Proveedor:</Text>
                   <Text style={styles.infoValue}>{data.supplierName || '-'}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Severidad:</Text>
-                  <Text style={[styles.infoValue, { color: data.severity === 'High' ? '#c53030' : data.severity === 'Medium' ? '#d69e2e' : '#38a169' }]}>
-                    {data.severity || '-'}
-                  </Text>
+                  <Text style={styles.infoLabel}>Número de Parte:</Text>
+                  <Text style={styles.infoValue}>{data.partNumber || '-'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Nombre de Parte:</Text>
+                  <Text style={styles.infoValue}>{data.partName || '-'}</Text>
                 </View>
               </View>
               <View style={styles.col}>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Fecha Emisión:</Text>
-                  <Text style={styles.infoValue}>{formatDate(data.issueDate || data.createdAt)}</Text>
+                  <Text style={styles.infoLabel}>Severidad:</Text>
+                  <Text style={styles.infoValue}>{data.severity || '-'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Fecha Issue:</Text>
+                  <Text style={styles.infoValue}>{formatDate(data.issueDate)}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Fecha Objetivo:</Text>
-                  <Text style={styles.infoValue}>{formatDate(data.targetCloseDate || data.targetClosureDate)}</Text>
+                  <Text style={styles.infoValue}>{formatDate(data.targetCloseDate)}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Tipo Issue:</Text>
                   <Text style={styles.infoValue}>{data.tipoIssue || '-'}</Text>
                 </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Tipo Responsable:</Text>
-                  <Text style={styles.infoValue}>{data.tipoResp || '-'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Costo Estimado:</Text>
-                  <Text style={styles.infoValue}>${Number(data.estimatedCost || 0).toLocaleString()}</Text>
-                </View>
               </View>
             </View>
+            {partsData.length > 0 && (
+              <View style={styles.subsection}>
+                <Text style={styles.subsectionTitle}>Partes Afectadas</Text>
+                <View style={styles.table}>
+                  <View style={styles.tableHeader}>
+                    <Text style={{ width: '25%' }}>Número</Text>
+                    <Text style={{ width: '35%' }}>Nombre</Text>
+                    <Text style={{ width: '20%', textAlign: 'right' }}>Cantidad</Text>
+                    <Text style={{ width: '20%', textAlign: 'right' }}>Costo</Text>
+                  </View>
+                  {partsData.slice(0, 5).map((part, idx) => (
+                    <View key={idx} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                      <Text style={{ width: '25%' }}>{part.partNumber || '-'}</Text>
+                      <Text style={{ width: '35%' }}>{part.partName || '-'}</Text>
+                      <Text style={{ width: '20%', textAlign: 'right' }}>{part.totalAffectedQty || 0}</Text>
+                      <Text style={{ width: '20%', textAlign: 'right' }}>${part.totalCostImpact || 0}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
         {/* D1 - Equipo */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>D1 - ESTABLECER EQUIPO</Text>
+            <Text style={styles.sectionTitle}>D1 - FORMACIÓN DEL EQUIPO</Text>
           </View>
           <View style={styles.sectionContent}>
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <Text style={{ width: '25%' }}>Sección</Text>
-                <Text style={{ width: '20%' }}>Rol</Text>
-                <Text style={{ width: '35%' }}>Nombre</Text>
-                <Text style={{ width: '20%' }}>Email/Depto</Text>
+            <View style={styles.twoCol}>
+              <View style={styles.col}>
+                <Text style={styles.subsectionTitle}>Issue/Escalación</Text>
+                {issueUsers.length > 0 ? issueUsers.map((u, i) => (
+                  <Text key={i} style={{ fontSize: 8, marginBottom: 2 }}>• {getUserName(u, users)}</Text>
+                )) : <Text style={styles.small}>Sin asignar</Text>}
               </View>
-              {issueUsers.map((user, idx) => (
-                <View key={`issue-${idx}`} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                  <Text style={{ width: '25%' }}>{idx === 0 ? 'Issue (D1-D3)' : ''}</Text>
-                  <Text style={{ width: '20%' }}>{idx === 0 ? 'Responsable' : `Aprobador ${idx}`}</Text>
-                  <Text style={{ width: '35%' }}>{getUserName(user, users)}</Text>
-                  <Text style={{ width: '20%', fontSize: 6 }}>{typeof user === 'object' ? (user.department || user.email || '') : ''}</Text>
-                </View>
-              ))}
-              {countermeasureUsers.map((user, idx) => (
-                <View key={`counter-${idx}`} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                  <Text style={{ width: '25%' }}>{idx === 0 ? 'Contramedidas (D4-D7)' : ''}</Text>
-                  <Text style={{ width: '20%' }}>{idx === 0 ? 'Responsable' : `Aprobador ${idx}`}</Text>
-                  <Text style={{ width: '35%' }}>{getUserName(user, users)}</Text>
-                  <Text style={{ width: '20%', fontSize: 6 }}>{typeof user === 'object' ? (user.department || user.email || '') : ''}</Text>
-                </View>
-              ))}
-              {confirmationUsers.map((user, idx) => (
-                <View key={`confirm-${idx}`} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                  <Text style={{ width: '25%' }}>{idx === 0 ? 'Confirmación (D8)' : ''}</Text>
-                  <Text style={{ width: '20%' }}>{idx === 0 ? 'Responsable' : `Aprobador ${idx}`}</Text>
-                  <Text style={{ width: '35%' }}>{getUserName(user, users)}</Text>
-                  <Text style={{ width: '20%', fontSize: 6 }}>{typeof user === 'object' ? (user.department || user.email || '') : ''}</Text>
-                </View>
-              ))}
+              <View style={styles.col}>
+                <Text style={styles.subsectionTitle}>Contramedidas</Text>
+                {countermeasureUsers.length > 0 ? countermeasureUsers.map((u, i) => (
+                  <Text key={i} style={{ fontSize: 8, marginBottom: 2 }}>• {getUserName(u, users)}</Text>
+                )) : <Text style={styles.small}>Sin asignar</Text>}
+              </View>
             </View>
           </View>
         </View>
@@ -488,9 +424,7 @@ const EightDPDF = ({ data, users = [], attachments = [], images = {} }) => {
             <Text style={styles.sectionTitle}>D2 - DESCRIPCIÓN DEL PROBLEMA</Text>
           </View>
           <View style={styles.sectionContent}>
-            <Text style={{ fontSize: 9, marginBottom: 8 }}>{data.description || 'Sin descripción'}</Text>
-
-            {/* Images as base64 */}
+            <Text style={{ fontSize: 9, marginBottom: 8 }}>{data.description || data.d2ProblemDescription || 'Sin descripción'}</Text>
             {hasPhotos && (
               <View style={styles.imageContainer}>
                 {images.photo_no_good && (
@@ -501,64 +435,62 @@ const EightDPDF = ({ data, users = [], attachments = [], images = {} }) => {
                 )}
                 {images.photo_ok && (
                   <View style={styles.imageBox}>
-                    <Text style={[styles.imageTitle, { color: '#2f855a' }]}>OK (Referencia)</Text>
+                    <Text style={[styles.imageTitle, { color: '#22543d' }]}>OK (Referencia)</Text>
                     <Image style={styles.image} src={images.photo_ok} />
                   </View>
                 )}
               </View>
             )}
-
-            {partsData.length > 0 && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Partes Afectadas ({partsData.length})</Text>
-                <View style={styles.table}>
-                  <View style={styles.tableHeader}>
-                    <Text style={{ width: '15%' }}>Número</Text>
-                    <Text style={{ width: '20%' }}>Nombre</Text>
-                    <Text style={{ width: '10%', textAlign: 'center' }}>Almacén</Text>
-                    <Text style={{ width: '10%', textAlign: 'center' }}>Proceso</Text>
-                    <Text style={{ width: '10%', textAlign: 'center' }}>Tránsito</Text>
-                    <Text style={{ width: '10%', textAlign: 'center' }}>Cliente</Text>
-                    <Text style={{ width: '10%', textAlign: 'right' }}>Total</Text>
-                    <Text style={{ width: '15%', textAlign: 'right' }}>Impacto</Text>
-                  </View>
-                  {partsData.slice(0, 8).map((part, idx) => (
-                    <View key={idx} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                      <Text style={{ width: '15%', fontSize: 7 }}>{part.partNumber || '-'}</Text>
-                      <Text style={{ width: '20%', fontSize: 7 }}>{part.partName || '-'}</Text>
-                      <Text style={{ width: '10%', textAlign: 'center', fontSize: 7 }}>{Number(part.qtyWarehouse || part.qty_warehouse || 0).toLocaleString()}</Text>
-                      <Text style={{ width: '10%', textAlign: 'center', fontSize: 7 }}>{Number(part.qtyInProcess || part.qty_in_process || 0).toLocaleString()}</Text>
-                      <Text style={{ width: '10%', textAlign: 'center', fontSize: 7 }}>{Number(part.qtyInTransit || part.qty_in_transit || 0).toLocaleString()}</Text>
-                      <Text style={{ width: '10%', textAlign: 'center', fontSize: 7 }}>{Number(part.qtyWithCustomer || part.qty_with_customer || 0).toLocaleString()}</Text>
-                      <Text style={{ width: '10%', textAlign: 'right', fontSize: 7, fontWeight: 'bold' }}>{Number(part.totalAffectedQty || 0).toLocaleString()}</Text>
-                      <Text style={{ width: '15%', textAlign: 'right', fontSize: 7 }}>${Number(part.totalCostImpact || 0).toLocaleString()}</Text>
-                    </View>
-                  ))}
-                </View>
+            <View style={styles.approvalBox}>
+              <View style={styles.approvalRow}>
+                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D1-D2-D3:</Text>
+                <Text style={getStatusStyle(data.d1D2D3ApprovalStatus)}>{getStatusText(data.d1D2D3ApprovalStatus)}</Text>
               </View>
-            )}
+            </View>
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text>Quality Alert System - {data.reportId}</Text>
-          <Text>Generado: {formatDateTime(new Date())}</Text>
-        </View>
-        <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
+        <PageFooter data={data} />
       </Page>
 
-      {/* PAGE 2 - D3, D3-MFG */}
+      {/* PAGE 2 - D3 Contención */}
       <Page size="A4" style={styles.page}>
+        <PageHeader data={data} />
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>D3 - ACCIONES DE CONTENCIÓN INMEDIATA</Text>
           </View>
           <View style={styles.sectionContent}>
-            {data.d3DetectionPoints ? (
-              <>
+            <View style={styles.twoCol}>
+              <View style={styles.col}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Disposición Material:</Text>
+                  <Text style={styles.infoValue}>{data.d3SuspectMaterialDisposal || '-'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Garantía Conformidad:</Text>
+                  <Text style={styles.infoValue}>{data.d3ConformanceGuarantee || '-'}</Text>
+                </View>
+              </View>
+              <View style={styles.col}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Requiere Retrabajo:</Text>
+                  <Text style={styles.infoValue}>{data.d3RequiresRework ? `Sí - $${data.d3ReworkUnitCost}/unidad` : 'No'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Costo Impacto Real:</Text>
+                  <Text style={styles.infoValue}>${data.d3RealImpactCost || 0}</Text>
+                </View>
+              </View>
+            </View>
+
+            {data.d3DetectionPoints && (
+              <View style={styles.subsection}>
+                <Text style={styles.subsectionTitle}>Puntos de Detección</Text>
                 <View style={styles.table}>
                   <View style={styles.tableHeader}>
-                    <Text style={{ width: '60%' }}>Punto de Detección</Text>
+                    <Text style={{ width: '60%' }}>Punto</Text>
                     <Text style={{ width: '20%', textAlign: 'center' }}>SÍ</Text>
                     <Text style={{ width: '20%', textAlign: 'center' }}>NO</Text>
                   </View>
@@ -578,397 +510,161 @@ const EightDPDF = ({ data, users = [], attachments = [], images = {} }) => {
                     <Text style={{ width: '20%', textAlign: 'center' }}>{data.d3DetectionPoints?.priorDespatch?.no ? '✓' : ''}</Text>
                   </View>
                 </View>
-
-                {data.d3NonDetectionReasons?.filter(r => r).length > 0 && (
-                  <View style={styles.subsection}>
-                    <Text style={styles.subsectionTitle}>5 Por Qué No Detectado</Text>
-                    {data.d3NonDetectionReasons.filter(r => r).map((reason, idx) => (
-                      <View key={idx} style={styles.whyRow}>
-                        <Text style={styles.whyLabel}>¿Por qué {idx + 1}?</Text>
-                        <Text style={styles.whyText}>{String(reason)}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                <View style={styles.subsection}>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Disposición Material:</Text>
-                    <Text style={styles.infoValue}>{data.d3SuspectMaterialDisposal || '-'}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Garantía Conformidad:</Text>
-                    <Text style={styles.infoValue}>{data.d3ConformanceGuarantee || '-'}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Requiere Retrabajo:</Text>
-                    <Text style={styles.infoValue}>{data.d3RequiresRework ? `Sí - $${data.d3ReworkUnitCost}/unidad` : 'No'}</Text>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <Text style={styles.small}>Sin datos de contención</Text>
-            )}
-
-            <View style={styles.approvalBox}>
-              <View style={styles.approvalRow}>
-                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D1-D2-D3:</Text>
-                <Text style={getStatusStyle(data.d1D2D3ApprovalStatus)}>{getStatusText(data.d1D2D3ApprovalStatus)}</Text>
-              </View>
-              <View style={styles.approvalRow}>
-                <Text style={styles.small}>Paso de aprobación:</Text>
-                <Text style={styles.small}>{data.currentApprovalStep || 0} de 4</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* D3-MFG */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>D3-MFG - ACCIONES DE MANUFACTURA</Text>
-          </View>
-          <View style={styles.sectionContent}>
-            {data.d3MfgTemporaryControls?.length > 0 && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Controles Temporales</Text>
-                <View style={styles.table}>
-                  <View style={styles.tableHeader}>
-                    <Text style={{ width: '50%' }}>Descripción</Text>
-                    <Text style={{ width: '50%' }}>Comentarios</Text>
-                  </View>
-                  {data.d3MfgTemporaryControls.map((item, idx) => (
-                    <View key={idx} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                      <Text style={{ width: '50%' }}>{typeof item === 'string' ? item : (item.description || '-')}</Text>
-                      <Text style={{ width: '50%' }}>{typeof item === 'object' ? (item.comments || '-') : '-'}</Text>
-                    </View>
-                  ))}
-                </View>
               </View>
             )}
-
-            {data.d3MfgPokaYokeDevices?.length > 0 && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Dispositivos Poka-Yoke</Text>
-                <View style={styles.table}>
-                  <View style={styles.tableHeader}>
-                    <Text style={{ width: '25%' }}>Dispositivo</Text>
-                    <Text style={{ width: '25%' }}>Propósito</Text>
-                    <Text style={{ width: '20%' }}>Ubicación</Text>
-                    <Text style={{ width: '30%' }}>Comentarios</Text>
-                  </View>
-                  {data.d3MfgPokaYokeDevices.map((item, idx) => (
-                    <View key={idx} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                      <Text style={{ width: '25%' }}>{typeof item === 'string' ? item : (item.device || '-')}</Text>
-                      <Text style={{ width: '25%' }}>{typeof item === 'object' ? (item.purpose || '-') : '-'}</Text>
-                      <Text style={{ width: '20%' }}>{typeof item === 'object' ? (item.location || '-') : '-'}</Text>
-                      <Text style={{ width: '30%' }}>{typeof item === 'object' ? (item.comments || '-') : '-'}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Fecha Implementación:</Text>
-              <Text style={styles.infoValue}>{formatDate(data.d3MfgImplementationDate)}</Text>
-            </View>
 
             <View style={styles.approvalBox}>
               <View style={styles.approvalRow}>
                 <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D3-MFG:</Text>
                 <Text style={getStatusStyle(data.d3MfgStatus)}>{getStatusText(data.d3MfgStatus)}</Text>
               </View>
-              <View style={styles.approvalRow}>
-                <Text style={styles.small}>Paso:</Text>
-                <Text style={styles.small}>{data.d3MfgCurrentApprovalStep || 0} de 4</Text>
-              </View>
             </View>
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text>Quality Alert System - {data.reportId}</Text>
-          <Text>Generado: {formatDateTime(new Date())}</Text>
-        </View>
-        <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
+        <PageFooter data={data} />
       </Page>
 
-      {/* PAGE 3 - D4 */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>D4 - ANÁLISIS DE CAUSA RAÍZ</Text>
-          </View>
-          <View style={styles.sectionContent}>
-            {fourMData.length > 0 && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Evaluación 4M</Text>
-                <View style={styles.table}>
-                  <View style={styles.tableHeader}>
-                    <Text style={{ width: '15%' }}>Categoría</Text>
-                    <Text style={{ width: '22%' }}>Estándar</Text>
-                    <Text style={{ width: '22%' }}>Realidad</Text>
-                    <Text style={{ width: '10%' }}>Std</Text>
-                    <Text style={{ width: '10%' }}>Qty</Text>
-                    <Text style={{ width: '21%' }}>Comentario</Text>
-                  </View>
-                  {fourMData.map((item, idx) => (
-                    <View key={idx} style={item.standardJudgment === 'NG' ? styles.tableRowNG : (idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt)}>
-                      <Text style={{ width: '15%', fontWeight: item.standardJudgment === 'NG' ? 'bold' : 'normal' }}>
-                        {String(item.category || '-')}
-                      </Text>
-                      <Text style={{ width: '22%' }}>{String(item.standard || '-')}</Text>
-                      <Text style={{ width: '22%' }}>{String(item.reality || '-')}</Text>
-                      <Text style={{ width: '10%', textAlign: 'center', fontWeight: 'bold', color: item.standardJudgment === 'NG' ? '#c53030' : '#2f855a' }}>
-                        {item.standardJudgment || '-'}
-                      </Text>
-                      <Text style={{ width: '10%', textAlign: 'center' }}>{item.qualityJudgment || '-'}</Text>
-                      <Text style={{ width: '21%', fontSize: 6 }}>{String(item.comment || '-')}</Text>
+      {/* PAGE 3 - D4 Causa Raíz (solo si hay datos) */}
+      {hasD4Data && (
+        <Page size="A4" style={styles.page}>
+          <PageHeader data={data} />
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>D4 - ANÁLISIS DE CAUSA RAÍZ</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {fiveWhysData.length > 0 && fiveWhysData.map((whySet, setIdx) => (
+                <View key={setIdx} style={styles.mBox}>
+                  <Text style={[styles.mTitle, { color: '#92400e' }]}>
+                    {whySet.factorNG ? `Factor NG: ${String(whySet.factorNG)}` : `Análisis #${setIdx + 1}`}
+                  </Text>
+                  {[1, 2, 3, 4, 5].map(n => whySet[`why${n}`] && (
+                    <View key={n} style={styles.whyRow}>
+                      <Text style={styles.whyLabel}>¿Por qué {n}?</Text>
+                      <Text style={styles.whyText}>{String(whySet[`why${n}`])}</Text>
                     </View>
                   ))}
+                  {whySet.rootCause && (
+                    <View style={[styles.whyRow, { backgroundColor: '#fef3c7', padding: 4, marginTop: 3, borderRadius: 2 }]}>
+                      <Text style={[styles.whyLabel, { color: '#92400e' }]}>CAUSA RAÍZ:</Text>
+                      <Text style={[styles.whyText, { fontWeight: 'bold' }]}>{String(whySet.rootCause)}</Text>
+                    </View>
+                  )}
                 </View>
-              </View>
-            )}
+              ))}
 
-            {fiveWhysData.length > 0 && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Análisis 5 Por Qué</Text>
-                {fiveWhysData.map((whySet, setIdx) => (
-                  <View key={setIdx} style={styles.mBox}>
-                    <Text style={[styles.mTitle, { color: '#92400e' }]}>
-                      {whySet.factorNG ? `Factor NG: ${String(whySet.factorNG)}` : `Análisis #${setIdx + 1}`}
-                    </Text>
-                    {[1, 2, 3, 4, 5].map(n => whySet[`why${n}`] && (
-                      <View key={n} style={styles.whyRow}>
-                        <Text style={styles.whyLabel}>¿Por qué {n}?</Text>
-                        <Text style={styles.whyText}>{String(whySet[`why${n}`])}</Text>
-                      </View>
-                    ))}
-                    {whySet.rootCause && (
-                      <View style={[styles.whyRow, { backgroundColor: '#fef3c7', padding: 4, marginTop: 3, borderRadius: 2 }]}>
-                        <Text style={[styles.whyLabel, { color: '#92400e' }]}>CAUSA RAÍZ:</Text>
-                        <Text style={[styles.whyText, { fontWeight: 'bold' }]}>{String(whySet.rootCause)}</Text>
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {data.d4RootCause && (
-              <View style={[styles.mBox, { backgroundColor: '#fef3c7', borderColor: '#d69e2e' }]}>
-                <Text style={[styles.mTitle, { color: '#92400e', fontSize: 9 }]}>CAUSA RAÍZ PRINCIPAL</Text>
-                <Text style={{ fontSize: 10, fontWeight: 'bold' }}>{String(data.d4RootCause)}</Text>
-              </View>
-            )}
-
-            <View style={styles.approvalBox}>
-              <View style={styles.approvalRow}>
-                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D4:</Text>
-                <Text style={getStatusStyle(data.d4Status)}>{getStatusText(data.d4Status)}</Text>
-              </View>
-              <View style={styles.approvalRow}>
-                <Text style={styles.small}>Paso:</Text>
-                <Text style={styles.small}>{data.d4CurrentApprovalStep || 0} de 4</Text>
-              </View>
-              {data.d4Completed && (
-                <View style={styles.approvalRow}>
-                  <Text style={styles.small}>Completado:</Text>
-                  <Text style={[styles.small, styles.statusApproved]}>✓ SÍ</Text>
+              {data.d4RootCause && (
+                <View style={[styles.mBox, { backgroundColor: '#fef3c7', borderColor: '#d69e2e' }]}>
+                  <Text style={[styles.mTitle, { color: '#92400e', fontSize: 9 }]}>CAUSA RAÍZ PRINCIPAL</Text>
+                  <Text style={{ fontSize: 10, fontWeight: 'bold' }}>{String(data.d4RootCause)}</Text>
                 </View>
               )}
+
+              <View style={styles.approvalBox}>
+                <View style={styles.approvalRow}>
+                  <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D4:</Text>
+                  <Text style={getStatusStyle(data.d4Status)}>{getStatusText(data.d4Status)}</Text>
+                </View>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.footer}>
-          <Text>Quality Alert System - {data.reportId}</Text>
-          <Text>Generado: {formatDateTime(new Date())}</Text>
-        </View>
-        <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
-      </Page>
+          <PageFooter data={data} />
+        </Page>
+      )}
 
-      {/* PAGE 4 - D5, D6 */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>D5 - ACCIONES CORRECTIVAS PERMANENTES</Text>
-          </View>
-          <View style={styles.sectionContent}>
-            {data.d5CorrectiveActions?.length > 0 ? (
-              data.d5CorrectiveActions.map((actionGroup, groupIdx) => (
-                <View key={groupIdx} style={styles.mBox}>
-                  {actionGroup.linkedRootCause && (
-                    <Text style={[styles.mTitle, { color: '#92400e' }]}>Causa: {String(actionGroup.linkedRootCause)}</Text>
-                  )}
-                  {actionGroup.actionPlans?.length > 0 ? (
-                    actionGroup.actionPlans.map((plan, planIdx) => (
+      {/* PAGE 4 - D5 + D6 (solo si hay datos) */}
+      {(hasD5Data || hasD6Photos || data.d6CountermeasureDescription) && (
+        <Page size="A4" style={styles.page}>
+          <PageHeader data={data} />
+
+          {/* D5 */}
+          {hasD5Data && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>D5 - ACCIONES CORRECTIVAS PERMANENTES</Text>
+              </View>
+              <View style={styles.sectionContent}>
+                {data.d5CorrectiveActions.map((actionGroup, groupIdx) => (
+                  <View key={groupIdx} style={styles.mBox}>
+                    {actionGroup.linkedRootCause && (
+                      <Text style={[styles.mTitle, { color: '#92400e' }]}>Causa: {String(actionGroup.linkedRootCause)}</Text>
+                    )}
+                    {actionGroup.actionPlans?.map((plan, planIdx) => (
                       <View key={planIdx}>
                         <Text style={{ fontSize: 8, fontWeight: 'bold', marginBottom: 3, color: '#2c5282' }}>
                           {String(plan.planName || `Plan ${planIdx + 1}`)}
                         </Text>
-                        <View style={styles.table}>
-                          <View style={styles.tableHeader}>
-                            <Text style={{ width: '25%' }}>Actividad</Text>
-                            <Text style={{ width: '30%' }}>Descripción</Text>
-                            <Text style={{ width: '20%' }}>Fecha</Text>
-                            <Text style={{ width: '25%' }}>Efecto Esperado</Text>
-                          </View>
-                          {plan.activities?.map((activity, actIdx) => (
-                            <View key={actIdx} style={actIdx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                              <Text style={{ width: '25%' }}>{String(activity.activity || '-')}</Text>
-                              <Text style={{ width: '30%', fontSize: 6 }}>{String(activity.detailedDescription || '-')}</Text>
-                              <Text style={{ width: '20%' }}>{formatDate(activity.deadline)}</Text>
-                              <Text style={{ width: '25%', fontSize: 6 }}>{String(activity.expectedEffect || '-')}</Text>
-                            </View>
-                          ))}
-                        </View>
+                        {plan.actions?.map((action, actIdx) => (
+                          <Text key={actIdx} style={{ fontSize: 7, marginLeft: 10, marginBottom: 2 }}>
+                            • {action.action || '-'} ({action.status || 'Pendiente'})
+                          </Text>
+                        ))}
                       </View>
-                    ))
-                  ) : (
-                    <Text style={{ fontSize: 8 }}>{String(actionGroup.action || actionGroup.description || '-')}</Text>
-                  )}
-                </View>
-              ))
-            ) : (
-              <Text style={styles.small}>Sin acciones correctivas</Text>
-            )}
-
-            <View style={styles.approvalBox}>
-              <View style={styles.approvalRow}>
-                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D5:</Text>
-                <Text style={getStatusStyle(data.d5Status)}>{getStatusText(data.d5Status)}</Text>
-              </View>
-              <View style={styles.approvalRow}>
-                <Text style={styles.small}>Paso:</Text>
-                <Text style={styles.small}>{data.d5CurrentApprovalStep || 0} de 4</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* D6 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>D6 - IMPLEMENTAR ACCIONES DEFINITIVAS</Text>
-          </View>
-          <View style={styles.sectionContent}>
-            {/* Descripción de Contramedida */}
-            {data.d6CountermeasureDescription && (
-              <View style={[styles.mBox, { backgroundColor: '#f0fdf4', borderColor: '#22c55e' }]}>
-                <Text style={[styles.mTitle, { color: '#166534' }]}>Descripción de la Contramedida</Text>
-                <Text style={{ fontSize: 9 }}>{String(data.d6CountermeasureDescription)}</Text>
-              </View>
-            )}
-
-            {/* Tabla de Acciones Definitivas */}
-            {data.d6DefinitiveActions?.length > 0 && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Plan de Acciones Definitivas ({data.d6DefinitiveActions.length})</Text>
-                <View style={styles.table}>
-                  <View style={styles.tableHeader}>
-                    <Text style={{ width: '25%' }}>Acción</Text>
-                    <Text style={{ width: '18%' }}>Resultado</Text>
-                    <Text style={{ width: '17%' }}>Responsable</Text>
-                    <Text style={{ width: '10%' }}>Inicio</Text>
-                    <Text style={{ width: '10%' }}>Fin</Text>
-                    <Text style={{ width: '10%', textAlign: 'center' }}>Plan%</Text>
-                    <Text style={{ width: '10%', textAlign: 'center' }}>Real%</Text>
+                    ))}
                   </View>
-                  {data.d6DefinitiveActions.map((action, idx) => {
-                    const responsibleName = action.responsible
-                      ? (typeof action.responsible === 'object'
-                          ? `${action.responsible.firstName || ''} ${action.responsible.lastName || ''}`.trim() || action.responsible.email
-                          : getUserName(action.responsible, users))
-                      : '-';
-                    return (
-                      <View key={idx} style={action.actualProgress >= 100 ? styles.tableRowApproved : (idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt)}>
-                        <Text style={{ width: '25%', fontSize: 7 }}>{String(action.action || '-')}</Text>
-                        <Text style={{ width: '18%', fontSize: 6 }}>{String(action.result || '-')}</Text>
-                        <Text style={{ width: '17%', fontSize: 6 }}>{responsibleName}</Text>
-                        <Text style={{ width: '10%', fontSize: 7 }}>{formatDate(action.startDate || action.start_date)}</Text>
-                        <Text style={{ width: '10%', fontSize: 7 }}>{formatDate(action.endDate || action.end_date)}</Text>
-                        <Text style={{ width: '10%', textAlign: 'center', fontSize: 7 }}>{action.plannedProgress || action.planned_progress || 0}%</Text>
-                        <Text style={{ width: '10%', textAlign: 'center', fontSize: 7, fontWeight: 'bold', color: (action.actualProgress || action.actual_progress || 0) >= 100 ? '#166534' : '#718096' }}>
-                          {action.actualProgress || action.actual_progress || 0}%
-                        </Text>
-                      </View>
-                    );
-                  })}
+                ))}
+                <View style={styles.approvalBox}>
+                  <View style={styles.approvalRow}>
+                    <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D5:</Text>
+                    <Text style={getStatusStyle(data.d5Status)}>{getStatusText(data.d5Status)}</Text>
+                  </View>
                 </View>
               </View>
-            )}
-
-            {/* Evidencia Antes/Después */}
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-              {/* ANTES */}
-              <View style={{ flex: 1, border: '2px solid #ef4444', borderRadius: 4, padding: 8 }}>
-                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#991b1b', marginBottom: 6 }}>ANTES de la Contramedida</Text>
-                {(data.beforeCondition || data.before_condition) && (
-                  <View style={{ marginBottom: 6 }}>
-                    <Text style={{ fontSize: 7, color: '#718096', marginBottom: 2 }}>Condición Anterior:</Text>
-                    <Text style={{ fontSize: 8 }}>{String(data.beforeCondition || data.before_condition)}</Text>
-                  </View>
-                )}
-                {images.d6_before && (
-                  <Image style={{ width: '100%', maxHeight: 100, objectFit: 'contain' }} src={images.d6_before} />
-                )}
-                {!images.d6_before && !(data.beforeCondition || data.before_condition) && (
-                  <Text style={{ fontSize: 7, color: '#9ca3af', fontStyle: 'italic' }}>Sin evidencia</Text>
-                )}
-              </View>
-
-              {/* DESPUÉS */}
-              <View style={{ flex: 1, border: '2px solid #22c55e', borderRadius: 4, padding: 8 }}>
-                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#166534', marginBottom: 6 }}>DESPUÉS de la Contramedida</Text>
-                {(data.afterCondition || data.after_condition) && (
-                  <View style={{ marginBottom: 6 }}>
-                    <Text style={{ fontSize: 7, color: '#718096', marginBottom: 2 }}>Condición Posterior:</Text>
-                    <Text style={{ fontSize: 8 }}>{String(data.afterCondition || data.after_condition)}</Text>
-                  </View>
-                )}
-                {images.d6_after && (
-                  <Image style={{ width: '100%', maxHeight: 100, objectFit: 'contain' }} src={images.d6_after} />
-                )}
-                {!images.d6_after && !(data.afterCondition || data.after_condition) && (
-                  <Text style={{ fontSize: 7, color: '#9ca3af', fontStyle: 'italic' }}>Sin evidencia</Text>
-                )}
-              </View>
             </View>
+          )}
 
-            <View style={styles.approvalBox}>
-              <View style={styles.approvalRow}>
-                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D6:</Text>
-                <Text style={getStatusStyle(data.d6Status)}>{getStatusText(data.d6Status)}</Text>
-              </View>
-              <View style={styles.approvalRow}>
-                <Text style={styles.small}>Paso:</Text>
-                <Text style={styles.small}>{data.d6CurrentApprovalStep || 0} de 4</Text>
-              </View>
-              {(data.d6Completed || data.d6CompletedAt) && (
-                <View style={styles.approvalRow}>
-                  <Text style={styles.small}>Completado:</Text>
-                  <Text style={[styles.small, styles.statusApproved]}>{data.d6CompletedAt ? formatDateTime(data.d6CompletedAt) : '✓ SÍ'}</Text>
+          {/* D6 */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>D6 - IMPLEMENTACIÓN Y VALIDACIÓN</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {data.d6CountermeasureDescription && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Contramedida:</Text>
+                  <Text style={styles.infoValue}>{data.d6CountermeasureDescription}</Text>
                 </View>
               )}
+              {hasD6Photos && (
+                <View style={styles.imageContainer}>
+                  {images.d6_before && (
+                    <View style={styles.imageBox}>
+                      <Text style={[styles.imageTitle, { color: '#c53030' }]}>ANTES</Text>
+                      <Image style={styles.image} src={images.d6_before} />
+                    </View>
+                  )}
+                  {images.d6_after && (
+                    <View style={styles.imageBox}>
+                      <Text style={[styles.imageTitle, { color: '#22543d' }]}>DESPUÉS</Text>
+                      <Image style={styles.image} src={images.d6_after} />
+                    </View>
+                  )}
+                </View>
+              )}
+              <View style={styles.approvalBox}>
+                <View style={styles.approvalRow}>
+                  <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D6:</Text>
+                  <Text style={getStatusStyle(data.d6Status)}>{getStatusText(data.d6Status)}</Text>
+                </View>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.footer}>
-          <Text>Quality Alert System - {data.reportId}</Text>
-          <Text>Generado: {formatDateTime(new Date())}</Text>
-        </View>
-        <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
-      </Page>
+          <PageFooter data={data} />
+        </Page>
+      )}
 
-      {/* PAGE 5 - D7, D8, Resumen */}
+      {/* PAGE 5 - D7 + D8 + Resumen (siempre se muestra) */}
       <Page size="A4" style={styles.page}>
+        <PageHeader data={data} />
+
         {/* D7 */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>D7 - PREVENIR RECURRENCIA / VALIDACIÓN</Text>
+            <Text style={styles.sectionTitle}>D7 - PREVENIR RECURRENCIA</Text>
           </View>
           <View style={styles.sectionContent}>
             <View style={styles.infoRow}>
@@ -977,163 +673,80 @@ const EightDPDF = ({ data, users = [], attachments = [], images = {} }) => {
                 {data.d7IsEffective ? 'SÍ - Verificado' : 'Pendiente de validación'}
               </Text>
             </View>
-
             <View style={styles.approvalBox}>
               <View style={styles.approvalRow}>
                 <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D7:</Text>
                 <Text style={getStatusStyle(data.d7Status)}>{getStatusText(data.d7Status)}</Text>
               </View>
-              <View style={styles.approvalRow}>
-                <Text style={styles.small}>Paso:</Text>
-                <Text style={styles.small}>{data.d7CurrentApprovalStep || 0} de 4</Text>
-              </View>
-              {data.d7CompletedAt && (
-                <View style={styles.approvalRow}>
-                  <Text style={styles.small}>Completado:</Text>
-                  <Text style={styles.small}>{formatDateTime(data.d7CompletedAt)}</Text>
-                </View>
-              )}
             </View>
           </View>
         </View>
 
         {/* D8 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>D8 - CIERRE Y RECONOCIMIENTO</Text>
-          </View>
-          <View style={styles.sectionContent}>
-            {data.d8FollowupActions?.length > 0 && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Acciones de Seguimiento</Text>
-                <View style={styles.table}>
-                  <View style={styles.tableHeader}>
-                    <Text style={{ width: '60%' }}>Acción</Text>
-                    <Text style={{ width: '20%' }}>Fecha</Text>
-                    <Text style={{ width: '20%' }}>Estado</Text>
-                  </View>
-                  {data.d8FollowupActions.map((action, idx) => (
-                    <View key={idx} style={idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                      <Text style={{ width: '60%' }}>{String(action.item || action.action || '-')}</Text>
-                      <Text style={{ width: '20%' }}>{formatDate(action.dueDate)}</Text>
-                      <Text style={{ width: '20%' }}>{String(action.status || 'Pendiente')}</Text>
-                    </View>
-                  ))}
+        {hasD8Data && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>D8 - CIERRE Y RECONOCIMIENTO</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {data.d8LessonsLearned && (
+                <View style={[styles.mBox, { backgroundColor: '#e6fffa' }]}>
+                  <Text style={[styles.mTitle, { color: '#234e52' }]}>Lecciones Aprendidas</Text>
+                  <Text style={{ fontSize: 8 }}>{String(data.d8LessonsLearned)}</Text>
                 </View>
-              </View>
-            )}
-
-            {data.d8LessonsLearned && (
-              <View style={[styles.mBox, { backgroundColor: '#e6fffa' }]}>
-                <Text style={[styles.mTitle, { color: '#234e52' }]}>Lecciones Aprendidas</Text>
-                <Text style={{ fontSize: 8 }}>{String(data.d8LessonsLearned)}</Text>
-              </View>
-            )}
-
-            {data.d8ClosureNotes && (
-              <View style={styles.subsection}>
-                <Text style={styles.subsectionTitle}>Notas de Cierre</Text>
-                <Text style={{ fontSize: 8 }}>{String(data.d8ClosureNotes)}</Text>
-              </View>
-            )}
-
-            <View style={styles.approvalBox}>
-              <View style={styles.approvalRow}>
-                <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D8:</Text>
-                <Text style={getStatusStyle(data.d8Status)}>{getStatusText(data.d8Status)}</Text>
-              </View>
-              <View style={styles.approvalRow}>
-                <Text style={styles.small}>Paso:</Text>
-                <Text style={styles.small}>{data.d8CurrentApprovalStep || 0} de 4</Text>
+              )}
+              {data.d8ClosureNotes && (
+                <View style={styles.subsection}>
+                  <Text style={styles.subsectionTitle}>Notas de Cierre</Text>
+                  <Text style={{ fontSize: 8 }}>{String(data.d8ClosureNotes)}</Text>
+                </View>
+              )}
+              <View style={styles.approvalBox}>
+                <View style={styles.approvalRow}>
+                  <Text style={{ fontSize: 8, fontWeight: 'bold' }}>Estado D8:</Text>
+                  <Text style={getStatusStyle(data.d8Status)}>{getStatusText(data.d8Status)}</Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        )}
 
-        {/* RESUMEN DE APROBACIONES */}
+        {/* RESUMEN */}
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { backgroundColor: '#1a365d' }]}>
-            <Text style={styles.sectionTitle}>RESUMEN DE ESTADO POR SECCIÓN</Text>
+            <Text style={styles.sectionTitle}>RESUMEN DE ESTADO</Text>
           </View>
           <View style={styles.sectionContent}>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
                 <Text style={{ width: '20%' }}>Sección</Text>
-                <Text style={{ width: '20%' }}>Estado</Text>
-                <Text style={{ width: '40%' }}>Responsables Asignados</Text>
-                <Text style={{ width: '20%', textAlign: 'center' }}>Completado</Text>
+                <Text style={{ width: '25%' }}>Estado</Text>
+                <Text style={{ width: '40%' }}>Responsables</Text>
+                <Text style={{ width: '15%', textAlign: 'center' }}>OK</Text>
               </View>
-
-              {/* D1-D2-D3 */}
-              <View style={data.d1D2D3ApprovalStatus === 'approved' ? styles.tableRowApproved : styles.tableRow}>
-                <Text style={{ width: '20%', fontWeight: 'bold' }}>D1-D2-D3</Text>
-                <Text style={{ width: '20%', ...getStatusStyle(data.d1D2D3ApprovalStatus) }}>{getStatusText(data.d1D2D3ApprovalStatus)}</Text>
-                <Text style={{ width: '40%', fontSize: 7 }}>{issueUsers.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
-                <Text style={{ width: '20%', textAlign: 'center', fontWeight: 'bold', color: data.d1D2D3ApprovalStatus === 'approved' ? '#22543d' : '#718096' }}>{data.d1D2D3ApprovalStatus === 'approved' ? '✓ SÍ' : 'NO'}</Text>
-              </View>
-
-              {/* D3-MFG */}
-              <View style={data.d3MfgStatus === 'approved' ? styles.tableRowApproved : styles.tableRowAlt}>
-                <Text style={{ width: '20%', fontWeight: 'bold' }}>D3-MFG</Text>
-                <Text style={{ width: '20%', ...getStatusStyle(data.d3MfgStatus) }}>{getStatusText(data.d3MfgStatus)}</Text>
-                <Text style={{ width: '40%', fontSize: 7 }}>{countermeasureUsers.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
-                <Text style={{ width: '20%', textAlign: 'center', fontWeight: 'bold', color: data.d3MfgStatus === 'approved' ? '#22543d' : '#718096' }}>{data.d3MfgStatus === 'approved' ? '✓ SÍ' : 'NO'}</Text>
-              </View>
-
-              {/* D4 */}
-              <View style={data.d4Status === 'approved' ? styles.tableRowApproved : styles.tableRow}>
-                <Text style={{ width: '20%', fontWeight: 'bold' }}>D4</Text>
-                <Text style={{ width: '20%', ...getStatusStyle(data.d4Status) }}>{getStatusText(data.d4Status)}</Text>
-                <Text style={{ width: '40%', fontSize: 7 }}>{countermeasureUsers.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
-                <Text style={{ width: '20%', textAlign: 'center', fontWeight: 'bold', color: data.d4Status === 'approved' ? '#22543d' : '#718096' }}>{data.d4Status === 'approved' ? '✓ SÍ' : 'NO'}</Text>
-              </View>
-
-              {/* D5 */}
-              <View style={data.d5Status === 'approved' ? styles.tableRowApproved : styles.tableRowAlt}>
-                <Text style={{ width: '20%', fontWeight: 'bold' }}>D5</Text>
-                <Text style={{ width: '20%', ...getStatusStyle(data.d5Status) }}>{getStatusText(data.d5Status)}</Text>
-                <Text style={{ width: '40%', fontSize: 7 }}>{countermeasureUsers.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
-                <Text style={{ width: '20%', textAlign: 'center', fontWeight: 'bold', color: data.d5Status === 'approved' ? '#22543d' : '#718096' }}>{data.d5Status === 'approved' ? '✓ SÍ' : 'NO'}</Text>
-              </View>
-
-              {/* D6 */}
-              <View style={data.d6Status === 'approved' ? styles.tableRowApproved : styles.tableRow}>
-                <Text style={{ width: '20%', fontWeight: 'bold' }}>D6</Text>
-                <Text style={{ width: '20%', ...getStatusStyle(data.d6Status) }}>{getStatusText(data.d6Status)}</Text>
-                <Text style={{ width: '40%', fontSize: 7 }}>{countermeasureUsers.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
-                <Text style={{ width: '20%', textAlign: 'center', fontWeight: 'bold', color: data.d6Status === 'approved' ? '#22543d' : '#718096' }}>{data.d6Status === 'approved' ? '✓ SÍ' : 'NO'}</Text>
-              </View>
-
-              {/* D7 */}
-              <View style={data.d7Status === 'approved' ? styles.tableRowApproved : styles.tableRowAlt}>
-                <Text style={{ width: '20%', fontWeight: 'bold' }}>D7</Text>
-                <Text style={{ width: '20%', ...getStatusStyle(data.d7Status) }}>{getStatusText(data.d7Status)}</Text>
-                <Text style={{ width: '40%', fontSize: 7 }}>{countermeasureUsers.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
-                <Text style={{ width: '20%', textAlign: 'center', fontWeight: 'bold', color: data.d7Status === 'approved' ? '#22543d' : '#718096' }}>{data.d7Status === 'approved' ? '✓ SÍ' : 'NO'}</Text>
-              </View>
-
-              {/* D8 */}
-              <View style={data.d8Status === 'approved' ? styles.tableRowApproved : styles.tableRow}>
-                <Text style={{ width: '20%', fontWeight: 'bold' }}>D8</Text>
-                <Text style={{ width: '20%', ...getStatusStyle(data.d8Status) }}>{getStatusText(data.d8Status)}</Text>
-                <Text style={{ width: '40%', fontSize: 7 }}>{confirmationUsers.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
-                <Text style={{ width: '20%', textAlign: 'center', fontWeight: 'bold', color: data.d8Status === 'approved' ? '#22543d' : '#718096' }}>{data.d8Status === 'approved' ? '✓ SÍ' : 'NO'}</Text>
-              </View>
-            </View>
-
-            <View style={{ marginTop: 10, padding: 8, backgroundColor: '#f7fafc', borderRadius: 3 }}>
-              <Text style={{ fontSize: 7, color: '#718096' }}>
-                Los responsables mostrados son los asignados a cada sección del proceso 8D.
-              </Text>
+              {[
+                { name: 'D1-D2-D3', status: data.d1D2D3ApprovalStatus, users: issueUsers },
+                { name: 'D3-MFG', status: data.d3MfgStatus, users: countermeasureUsers },
+                { name: 'D4', status: data.d4Status, users: countermeasureUsers },
+                { name: 'D5', status: data.d5Status, users: countermeasureUsers },
+                { name: 'D6', status: data.d6Status, users: countermeasureUsers },
+                { name: 'D7', status: data.d7Status, users: countermeasureUsers },
+                { name: 'D8', status: data.d8Status, users: confirmationUsers }
+              ].map((row, idx) => (
+                <View key={idx} style={row.status === 'approved' ? styles.tableRowApproved : (idx % 2 === 0 ? styles.tableRow : styles.tableRowAlt)}>
+                  <Text style={{ width: '20%', fontWeight: 'bold' }}>{row.name}</Text>
+                  <Text style={{ width: '25%', ...getStatusStyle(row.status) }}>{getStatusText(row.status)}</Text>
+                  <Text style={{ width: '40%', fontSize: 6 }}>{row.users.map(u => getUserName(u, users)).join(', ') || '-'}</Text>
+                  <Text style={{ width: '15%', textAlign: 'center', fontWeight: 'bold', color: row.status === 'approved' ? '#22543d' : '#718096' }}>
+                    {row.status === 'approved' ? '✓' : '-'}
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text>Quality Alert System - {data.reportId}</Text>
-          <Text>Generado: {formatDateTime(new Date())}</Text>
-        </View>
-        <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
+        <PageFooter data={data} />
       </Page>
     </Document>
   );

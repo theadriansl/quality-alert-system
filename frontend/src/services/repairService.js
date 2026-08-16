@@ -772,6 +772,20 @@ export const rejectInline = async (defectId, data = {}) => {
   return res.json();
 };
 
+/**
+ * Check if a serial can receive disposition (MRB validation)
+ * Verifies no pending MRB campaign inspections
+ * @returns { success, canDispose, reason?, pendingCampaigns? }
+ */
+export const checkCanDispose = async (serialNumber = null, defectId = null) => {
+  const res = await fetch(`${API_URL}/mrb/check-can-dispose`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ serialNumber, defectId })
+  });
+  return res.json();
+};
+
 export default {
   getDefectsBySerial,
   getDefectEvents,

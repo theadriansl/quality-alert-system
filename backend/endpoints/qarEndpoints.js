@@ -131,7 +131,7 @@ router.post('/check-threshold', authenticateToken, async (req, res) => {
         SELECT de.id, de.entry_number, dt.name as defect_name, de.created_at,
                st.code as station_code, st.name as station_name,
                u.first_name || ' ' || u.last_name as inspector_name,
-               de.lot_number
+               de.lot_number, de.notes
         FROM defect_entries_v2 de
         JOIN defect_types dt ON de.defect_type_id = dt.id
         LEFT JOIN inspection_stations st ON de.station_id = st.id
@@ -143,6 +143,38 @@ router.post('/check-threshold', authenticateToken, async (req, res) => {
         ORDER BY de.created_at DESC
       `, [partId, severityId, departmentId]);
 
+      // Get attachments for these defects
+      const defectIds = defectsResult.rows.map(d => d.id);
+      let attachmentsMap = {};
+      if (defectIds.length > 0) {
+        const attachResult = await query(`
+          SELECT defect_id, file_path, mimetype, original_name
+          FROM defect_attachments
+          WHERE defect_id = ANY($1)
+          ORDER BY uploaded_at ASC
+        `, [defectIds]);
+        attachResult.rows.forEach(att => {
+          if (!attachmentsMap[att.defect_id]) attachmentsMap[att.defect_id] = [];
+          attachmentsMap[att.defect_id].push(att);
+        });
+      }
+
+      // Add attachments to each defect
+      const defectsWithAttachments = defectsResult.rows.map(d => ({
+        ...d,
+        attachments: attachmentsMap[d.id] || []
+      }));
+
+      // Find first image attachment for NOK photo
+      let firstImagePath = null;
+      for (const d of defectsWithAttachments) {
+        const img = d.attachments.find(a => a.mimetype?.startsWith('image/'));
+        if (img) {
+          firstImagePath = img.file_path;
+          break;
+        }
+      }
+
       return res.json({
         triggered: true,
         defectCount,
@@ -153,7 +185,8 @@ router.post('/check-threshold', authenticateToken, async (req, res) => {
         severityColor: severity.color,
         departmentId,
         departmentName,
-        defects: transformToCamelCase(defectsResult.rows),
+        defects: transformToCamelCase(defectsWithAttachments),
+        firstDefectImagePath: firstImagePath,
         message: `Se alcanzó el umbral: ${defectCount} defectos ${severity.name} de ${departmentName} en ${thresholdHours}h (límite: ${thresholdCount})`
       });
     }
@@ -1049,6 +1082,26 @@ router.get('/:id', authenticateToken, async (req, res) => {
       ORDER BY de.created_at DESC
     `, [id]);
 
+    // Get attachments for all defects in this QAR
+    const defectIds = defectsResult.rows.map(d => d.id);
+    let defectAttachments = [];
+    if (defectIds.length > 0) {
+      const attachResult = await query(`
+        SELECT da.*, u.first_name || ' ' || u.last_name as uploaded_by_name
+        FROM defect_attachments da
+        LEFT JOIN users u ON da.uploaded_by = u.id
+        WHERE da.defect_id = ANY($1)
+        ORDER BY da.uploaded_at DESC
+      `, [defectIds]);
+      defectAttachments = attachResult.rows;
+    }
+
+    // Attach attachments to each defect
+    const defectsWithAttachments = defectsResult.rows.map(d => ({
+      ...d,
+      attachments: defectAttachments.filter(a => a.defect_id === d.id)
+    }));
+
     // Get recipients with type (use frozen name or fallback to JOIN)
     const recipientsResult = await query(`
       SELECT qr.*,
@@ -1073,7 +1126,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       qar: transformToCamelCase(qar),
-      defects: transformToCamelCase(defectsResult.rows),
+      defects: transformToCamelCase(defectsWithAttachments),
       recipients: transformToCamelCase(recipientsResult.rows),
       comments: transformToCamelCase(commentsResult.rows)
     });
@@ -1394,9 +1447,11 @@ router.post('/:id/validate', authenticateToken, async (req, res) => {
   const { approved, rejectionReason } = req.body;
 
   try {
-    // Verify user is authorized to validate QARs
-    const userCheck = await query('SELECT can_validate_qar FROM users WHERE id = $1', [req.user.id]);
-    const canValidate = userCheck.rows[0]?.can_validate_qar || false;
+    // Verify user is authorized to validate QARs (admins always can)
+    const userCheck = await query('SELECT can_validate_qar, role, system_role FROM users WHERE id = $1', [req.user.id]);
+    const user = userCheck.rows[0];
+    const isAdmin = user?.role === 'admin' || user?.system_role === 'admin';
+    const canValidate = isAdmin || user?.can_validate_qar || false;
 
     if (!canValidate) {
       return res.status(403).json({

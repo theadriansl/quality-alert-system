@@ -9,7 +9,7 @@ import * as XLSX from 'xlsx';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
-const COLORS = ['#0072CE', '#2E7D32', '#C77700', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
+const COLORS = ['#1e40af', '#374151', '#0369a1', '#6b7280', '#1e3a5f', '#475569', '#0c4a6e', '#64748b', '#1f2937', '#334155'];
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 0]; // 0 = All
 
 const DEPARTMENTS = [
@@ -316,7 +316,7 @@ const DefectQuery = () => {
   const getParetoData = () => {
     const counts = {};
     allFilteredEntries.forEach(e => {
-      const name = e.defectName || 'Sin tipo';
+      const name = e.defectTypeName || e.defectName || 'Sin tipo';
       counts[name] = (counts[name] || 0) + 1;
     });
     const sorted = Object.entries(counts)
@@ -406,7 +406,7 @@ const DefectQuery = () => {
         'Parte': e.partNumber || '',
         'Nombre Parte': e.partName || '',
         'Categoria': e.categoryName || '',
-        'Defecto': e.defectName || '',
+        'Defecto': e.defectTypeName || e.defectName || '',
         'Codigo Defecto': e.defectCode || '',
         'Severidad': e.severityName || '',
         'Estacion': e.stationName || '',
@@ -1006,7 +1006,7 @@ const DefectQuery = () => {
                             backgroundColor: entry.defectColor, display: 'inline-block'
                           }} />
                         )}
-                        {entry.defectName || '-'}
+                        {entry.defectTypeName || entry.defectName || '-'}
                       </span>
                     </td>
                     <td style={styles.td}>{renderSeverityBadge(entry)}</td>

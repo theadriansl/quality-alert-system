@@ -3924,12 +3924,18 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
               );
             }
 
-            const getUserInfo = (userId, role) => {
-              if (!userId) return null;
-              const user = users.find(u => u.id === userId);
+            const getUserInfo = (userIdOrObj, role) => {
+              if (!userIdOrObj) return null;
+              // Si ya es un objeto con name, usarlo directamente
+              if (typeof userIdOrObj === 'object' && userIdOrObj.name) {
+                return { name: userIdOrObj.name, email: '', position: '', role };
+              }
+              // Extraer ID si es objeto
+              const actualId = typeof userIdOrObj === 'object' ? userIdOrObj.id : userIdOrObj;
+              const user = users.find(u => u.id === actualId);
               const name = user
                 ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email
-                : `ID: ${userId}`;
+                : `ID: ${actualId}`;
               const email = user?.email || '';
               const position = user?.position || user?.cargo || '';
               return { name, email, position, role };
