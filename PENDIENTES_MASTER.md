@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-14
+> Última actualización: 2026-08-15 (Sesión 2)
 
 ---
 
@@ -32,11 +32,11 @@
 ## Prioridad Media - Funcionalidades
 | # | Tarea | Origen | Estado |
 |---|-------|--------|--------|
-| 1 | PDF Export con fotos verificar | 01-Jul | ⏳ |
+| 1 | ~~PDF Export con fotos verificar~~ | 01-Jul | ✅ 15-Ago |
 | 2 | Export Excel MRB Dashboard | 27-Jun | ⏳ |
 | 3 | Export Excel 8D Consultation | 27-Jun | ⏳ |
 | 4 | PRINT_LABELS implementar (Kanban) | 02-Jul | ⏳ |
-| 5 | 8D generación PDF | Arrastrado | ⏳ |
+| 5 | ~~8D generación PDF~~ | Arrastrado | ✅ 15-Ago |
 | 6 | ECR pruebas aprobaciones | Arrastrado | ⏳ |
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
@@ -66,6 +66,20 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ RepairStation: Vista simplificada 3 columnas (Partes/Defectos/Detalle) | 15-Ago |
+| ✅ RepairStation: Selector ubicación persistente por turno | 15-Ago |
+| ✅ RepairStation: Badge tipo estación (REPARACIÓN/LIBERACIÓN) en header | 15-Ago |
+| ✅ RepairStation: Resumen defectos abiertos/cerrados por serial | 15-Ago |
+| ✅ RepairStation: Detalle estilo InlineDefectDetailModal con secciones | 15-Ago |
+| ✅ RepairStation: Lightbox para fotos (navegación teclado + descarga) | 15-Ago |
+| ✅ RepairStation: Botones acción Reparar/Liberar/Cuarentena/Scrap | 15-Ago |
+| ✅ RepairStation: Navegación por teclado entre columnas | 15-Ago |
+| ✅ Módulo Calibración: Gestión equipos CRUD + estados | 15-Ago |
+| ✅ Módulo Calibración: Historial calibraciones con certificados | 15-Ago |
+| ✅ Módulo Calibración: Correlación con specs vía instrument_code | 15-Ago |
+| ✅ Módulo Calibración: Derivación estaciones desde specs | 15-Ago |
+| ✅ Módulo Calibración: Tab Costos con filtros y gráfica | 15-Ago |
+| ✅ ISO 9001:2015 §7.1.5.2 / IATF 16949 §7.1.5.2.1 compliance | 15-Ago |
 | ✅ Spec Checklist: Acumulación resultados entre estaciones | 14-Ago |
 | ✅ Spec Checklist: Layout dos columnas (evaluar izq + resumen der) | 14-Ago |
 | ✅ Spec Checklist: Botón N/A para omitir specs individuales | 14-Ago |

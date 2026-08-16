@@ -103,6 +103,14 @@ const Home = () => {
       code: 'REP'
     },
     {
+      id: 'repair_station',
+      moduleId: 'quality_alert',
+      name: 'Estación de Reparación',
+      description: 'Vista simplificada para reparadores e inspectores por parte',
+      path: '/repair-station',
+      code: 'EST'
+    },
+    {
       id: 'skills',
       moduleId: 'skills',
       name: 'Skills & Training',
@@ -117,14 +125,6 @@ const Home = () => {
       description: 'Certificaciones de operadores en Work Instructions con matriz de cobertura',
       path: '/work-instructions-dashboard',
       code: 'ILUO'
-    },
-    {
-      id: 'hospital_dashboard',
-      moduleId: 'hospital',
-      name: 'Hospital Dashboard',
-      description: 'Analytics de reparación y liberación de defectos',
-      path: '/hospital-dashboard',
-      code: 'HOS'
     },
     {
       id: 'release_ok',
@@ -508,6 +508,51 @@ const Home = () => {
 
       {/* Main Content */}
       <main style={styles.main}>
+        {/* Quick Access - Operator Stations */}
+        <div style={{
+          display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={() => navigate('/defect-capture')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '14px 24px', backgroundColor: t.primary,
+              color: 'white', border: 'none', borderRadius: '8px',
+              cursor: 'pointer', fontWeight: '600', fontSize: '14px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>🔍</span>
+            {language === 'es' ? 'Inspección' : 'Inspection'}
+          </button>
+          <button
+            onClick={() => navigate('/repair-station')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '14px 24px', backgroundColor: '#0369a1',
+              color: 'white', border: 'none', borderRadius: '8px',
+              cursor: 'pointer', fontWeight: '600', fontSize: '14px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>🔧</span>
+            {language === 'es' ? 'Estación de Reparación' : 'Repair Station'}
+          </button>
+          <button
+            onClick={() => navigate('/release-ok')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '14px 24px', backgroundColor: '#059669',
+              color: 'white', border: 'none', borderRadius: '8px',
+              cursor: 'pointer', fontWeight: '600', fontSize: '14px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>✅</span>
+            {language === 'es' ? 'Liberación Final' : 'Final Release'}
+          </button>
+        </div>
+
         <div style={styles.pageTitle}>
           <h1 style={styles.title}>{tr('common.modules')}</h1>
           <p style={styles.subtitle}>{visibleApps.length} {language === 'es' ? 'módulos disponibles' : 'modules available'}</p>

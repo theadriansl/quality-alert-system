@@ -54,7 +54,9 @@ import {
   getPendingSerials,
   getTransferPackageDetails,
   receiveTransferPackage,
-  getHospitalPendingSummary
+  getHospitalPendingSummary,
+  // MRB validation
+  checkCanDispose
 } from '../services/repairService';
 import {
   getDeviations,
@@ -707,6 +709,11 @@ const DefectHospital = () => {
   // Modal de detalle/historia
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailDefect, setDetailDefect] = useState(null);
+
+  // Modal de advertencia MRB (campañas pendientes de inspección)
+  const [mrbWarningOpen, setMrbWarningOpen] = useState(false);
+  const [mrbPendingCampaigns, setMrbPendingCampaigns] = useState([]);
+  const [mrbWarningDefect, setMrbWarningDefect] = useState(null);
 
   // Form data para modal
   const [formData, setFormData] = useState({
@@ -1700,8 +1707,48 @@ const DefectHospital = () => {
     }
   };
 
+  // Verificar campañas MRB pendientes antes de disposición
+  const checkMrbBeforeDispose = async (defect) => {
+    try {
+      const serial = defect.serialNumber || defect.serial_number;
+      const result = await checkCanDispose(serial, defect.id);
+      if (result.success && !result.canDispose) {
+        setMrbPendingCampaigns(result.pendingCampaigns || []);
+        setMrbWarningDefect(defect);
+        setMrbWarningOpen(true);
+        return false; // No puede disponer
+      }
+      return true; // Puede continuar
+    } catch (err) {
+      console.error('Error checking MRB:', err);
+      return true; // Si falla, permitir continuar
+    }
+  };
+
+  // Enviar a Cuarentena (desde modal de advertencia MRB)
+  const sendToMrbFromWarning = async () => {
+    if (!mrbWarningDefect) return;
+    setMrbWarningOpen(false);
+    setLoading(true);
+    try {
+      const result = await quarantineDefect(mrbWarningDefect.id, 'Enviado a cuarentena - Pendiente inspección MRB');
+      if (result?.success) {
+        setSuccess(language === 'es' ? 'Enviado a Cuarentena' : 'Sent to Quarantine');
+        setActiveTab('mrb');
+        loadData();
+      } else {
+        setError(result?.message || 'Error al enviar a cuarentena');
+      }
+    } catch (err) {
+      setError('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+      setMrbWarningDefect(null);
+    }
+  };
+
   // Abrir modal de acción
-  const openActionModal = (action, defect) => {
+  const openActionModal = async (action, defect) => {
     // Validación de permisos según acción
     if ((action === 'start' || action === 'complete') && !canDoRepairActions) {
       setError(language === 'es' ? 'No tienes permisos para acciones de reparación' : 'You do not have repair permissions');
@@ -1710,6 +1757,12 @@ const DefectHospital = () => {
     if ((action === 'release' || action === 'reject') && !canDoReleaseActions) {
       setError(language === 'es' ? 'No tienes permisos para acciones de liberación' : 'You do not have release permissions');
       return;
+    }
+
+    // Verificar campañas MRB pendientes antes de disposición (release/reject)
+    if (action === 'release' || action === 'reject') {
+      const canProceed = await checkMrbBeforeDispose(defect);
+      if (!canProceed) return;
     }
 
     // Verificar si necesita estación de sesión
@@ -2047,6 +2100,10 @@ const DefectHospital = () => {
       setError(language === 'es' ? 'No tienes permisos para acciones de reparación' : 'You do not have repair permissions');
       return;
     }
+    // Verificar campañas MRB pendientes
+    const canProceed = await checkMrbBeforeDispose(defect);
+    if (!canProceed) return;
+
     const notes = window.prompt('Motivo de cuarentena (no se puede reparar):');
     if (notes !== null) {
       setLoading(true);
@@ -2073,6 +2130,10 @@ const DefectHospital = () => {
       setError(language === 'es' ? 'No tienes permisos para enviar a SCRAP' : 'You do not have SCRAP permissions');
       return;
     }
+    // Verificar campañas MRB pendientes
+    const canProceed = await checkMrbBeforeDispose(defect);
+    if (!canProceed) return;
+
     const confirmed = window.confirm('¿Confirmas enviar a SCRAP? Esta acción no se puede deshacer.');
     if (confirmed) {
       const notes = window.prompt('Motivo del scrap:');
@@ -3964,12 +4025,23 @@ const DefectHospital = () => {
       }
 
       return (
-        <button
-          style={{ ...styles.actionButton, ...styles.btnPrimary }}
-          onClick={(e) => { e.stopPropagation(); quickStartRepair(defect); }}
-        >
-          {language === 'es' ? 'Iniciar' : 'Start'}
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            style={{ ...styles.actionButton, ...styles.btnPrimary }}
+            onClick={(e) => { e.stopPropagation(); quickStartRepair(defect); }}
+          >
+            {language === 'es' ? 'Iniciar' : 'Start'}
+          </button>
+          {canDoScrapActions && (
+            <button
+              style={{ ...styles.actionButton, backgroundColor: '#991b1b', color: '#fff' }}
+              onClick={(e) => { e.stopPropagation(); handleScrap(defect); }}
+              title={language === 'es' ? 'Enviar directo a SCRAP' : 'Send directly to SCRAP'}
+            >
+              🗑️
+            </button>
+          )}
+        </div>
       );
     }
 
@@ -3978,15 +4050,26 @@ const DefectHospital = () => {
       if (!effectiveRepairAccess) return null;
       const elapsedMin = getElapsedMinutes(defect);
       return (
-        <button
-          style={{ ...styles.actionButton, ...styles.btnSuccess }}
-          onClick={(e) => { e.stopPropagation(); openActionModal('complete', defect); }}
-          title={language === 'es' ? 'Más acciones: seleccionar y usar barra superior' : 'More actions: select and use top bar'}
-        >
-          {elapsedMin !== null
-            ? (language === 'es' ? `Completar (${elapsedMin}m)` : `Complete (${elapsedMin}m)`)
-            : (language === 'es' ? 'Completar' : 'Complete')}
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            style={{ ...styles.actionButton, ...styles.btnSuccess }}
+            onClick={(e) => { e.stopPropagation(); openActionModal('complete', defect); }}
+            title={language === 'es' ? 'Más acciones: seleccionar y usar barra superior' : 'More actions: select and use top bar'}
+          >
+            {elapsedMin !== null
+              ? (language === 'es' ? `Completar (${elapsedMin}m)` : `Complete (${elapsedMin}m)`)
+              : (language === 'es' ? 'Completar' : 'Complete')}
+          </button>
+          {canDoScrapActions && (
+            <button
+              style={{ ...styles.actionButton, backgroundColor: '#991b1b', color: '#fff' }}
+              onClick={(e) => { e.stopPropagation(); handleScrap(defect); }}
+              title={language === 'es' ? 'No se puede reparar - SCRAP' : 'Cannot repair - SCRAP'}
+            >
+              🗑️
+            </button>
+          )}
+        </div>
       );
     }
 
@@ -5782,6 +5865,12 @@ const DefectHospital = () => {
           >
             {language === 'es' ? 'Captura' : 'Capture'}
           </button>
+          <button
+            style={{ ...styles.refreshButton, backgroundColor: '#0369a1', color: 'white' }}
+            onClick={() => navigate('/repair-station')}
+          >
+            {language === 'es' ? 'Estación' : 'Station'}
+          </button>
           {canAccessAdmin && (
             <button
               style={{ ...styles.refreshButton, backgroundColor: t.textMuted, color: 'white' }}
@@ -5823,17 +5912,91 @@ const DefectHospital = () => {
         )}
       </div>
 
-      {/* Alerts */}
+      {/* Alerts - Modal estilo QAR */}
       {error && (
-        <div style={{ ...styles.alert, ...styles.alertError }}>
-          {error}
-          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              backgroundColor: '#fef2f2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: '3px solid #991b1b',
+              fontSize: '32px'
+            }}>✕</div>
+            <h3 style={{ color: '#991b1b', fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>Error</h3>
+            <p style={{ color: t.textMuted, fontSize: '15px', marginBottom: '24px', lineHeight: '1.5' }}>{error}</p>
+            <button
+              onClick={() => setError(null)}
+              style={{ padding: '14px 32px', backgroundColor: '#991b1b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '15px' }}
+            >Aceptar</button>
+          </div>
         </div>
       )}
       {success && (
-        <div style={{ ...styles.alert, ...styles.alertSuccess }}>
-          {success}
-          <button onClick={() => setSuccess(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              backgroundColor: '#dbeafe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: '3px solid #1e40af',
+              fontSize: '32px'
+            }}>✓</div>
+            <h3 style={{ color: '#1e40af', fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>Éxito</h3>
+            <p style={{ color: t.textMuted, fontSize: '15px', marginBottom: '24px', lineHeight: '1.5' }}>{success}</p>
+            <button
+              onClick={() => setSuccess(null)}
+              style={{ padding: '14px 32px', backgroundColor: '#1e40af', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '15px' }}
+            >Aceptar</button>
+          </div>
         </div>
       )}
 
@@ -10894,6 +11057,54 @@ const DefectHospital = () => {
                 {loading
                   ? (language === 'es' ? 'Procesando...' : 'Processing...')
                   : (language === 'es' ? 'Confirmar' : 'Confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Advertencia MRB - Campañas Pendientes */}
+      {mrbWarningOpen && (
+        <div style={styles.modal} onClick={() => setMrbWarningOpen(false)}>
+          <div style={{ ...styles.modalContent, maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ ...styles.modalTitle, margin: 0, color: '#dc2626' }}>
+                {language === 'es' ? 'Inspecciones MRB Pendientes' : 'Pending MRB Inspections'}
+              </h3>
+              <button
+                onClick={() => setMrbWarningOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: t.textMuted }}
+              >×</button>
+            </div>
+            <div style={{ padding: '16px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '16px' }}>
+              <p style={{ margin: '0 0 12px 0', color: '#991b1b', fontWeight: '500' }}>
+                {language === 'es'
+                  ? 'Este serial tiene campañas MRB pendientes. Complete las inspecciones antes de aplicar disposición.'
+                  : 'This serial has pending MRB campaigns. Complete inspections before applying disposition.'}
+              </p>
+              <div style={{ fontWeight: '600', marginBottom: '8px', color: '#7f1d1d' }}>
+                {language === 'es' ? 'Campañas pendientes:' : 'Pending campaigns:'}
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {mrbPendingCampaigns.map((c, idx) => (
+                  <li key={idx} style={{ color: '#991b1b', marginBottom: '4px' }}>
+                    <strong>{c.campaignNumber}</strong>: {c.title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setMrbWarningOpen(false)}
+                style={{ padding: '10px 20px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+              >
+                {language === 'es' ? 'Entendido' : 'OK'}
+              </button>
+              <button
+                onClick={sendToMrbFromWarning}
+                style={{ padding: '10px 20px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+              >
+                {language === 'es' ? 'Enviar a Cuarentena' : 'Send to Quarantine'}
               </button>
             </div>
           </div>

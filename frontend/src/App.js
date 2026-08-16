@@ -29,6 +29,7 @@ import DefectConfig from './pages/DefectConfig';
 import DefectQuery from './pages/DefectQuery';
 import DefectHospital from './pages/DefectHospital';
 import ReleaseOK from './pages/ReleaseOK';
+import RepairStation from './pages/RepairStation';
 import HospitalDashboard from './pages/HospitalDashboard';
 import QARCreate from './pages/QARCreate';
 import QARList from './pages/QARList';
@@ -389,6 +390,13 @@ function App() {
               <Route path="/hospital-dashboard" element={
                 <ProtectedRoute>
                   <HospitalDashboard />
+                </ProtectedRoute>
+              } />
+
+              {/* Repair Station - Simplified repair/release for operators */}
+              <Route path="/repair-station" element={
+                <ProtectedRoute>
+                  <RepairStation />
                 </ProtectedRoute>
               } />
 
