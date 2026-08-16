@@ -20,6 +20,8 @@ const RepairStation = () => {
   const { language } = useLanguage();
   const { user } = useAuth();
   const serialInputRef = useRef(null);
+  const defectsListRef = useRef(null);
+  const partsListRef = useRef(null);
 
   // ============================================================================
   // STATE - Location & Shift (persisted in sessionStorage)
@@ -61,6 +63,13 @@ const RepairStation = () => {
   // ============================================================================
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // ============================================================================
+  // STATE - MRB Warning (check-can-dispose)
+  // ============================================================================
+  const [mrbWarningOpen, setMrbWarningOpen] = useState(false);
+  const [mrbWarningDefect, setMrbWarningDefect] = useState(null);
+  const [mrbPendingCampaigns, setMrbPendingCampaigns] = useState([]);
 
   // ============================================================================
   // STATE - Permissions & Loading
@@ -162,54 +171,45 @@ const RepairStation = () => {
   }, [selectedLocation, stationType]);
 
   // ============================================================================
-  // LOAD PENDING PARTS - When location is selected
+  // LOAD PENDING PARTS - When location is selected (loads ALL active defects)
   // ============================================================================
   useEffect(() => {
     if (selectedLocation && !locationSelectorOpen) {
       loadPendingParts();
     }
-  }, [selectedLocation, stationType, locationSelectorOpen]);
+  }, [selectedLocation, locationSelectorOpen]);
 
   const loadPendingParts = async () => {
     setPartsLoading(true);
     try {
-      let defectsData;
-      if (stationType === 'REPAIR') {
-        defectsData = await repairService.getPendingRepairs();
-      } else {
-        defectsData = await repairService.getPendingReleases();
-      }
+      // Usar endpoint optimizado que devuelve seriales con contadores ya calculados
+      const result = await repairService.getActiveSerials();
 
-      const defects = defectsData.defects || defectsData || [];
-      setAllPendingDefects(defects);
+      if (result.success && result.serials) {
+        // El endpoint ya devuelve los datos agrupados con contadores
+        const partsArray = result.serials.map(s => ({
+          serial: s.serial,
+          partNumber: s.partNumber,
+          partName: s.partName,
+          latestDate: new Date(s.latestDate),
+          pendingCount: s.pendingCount,
+          repairedCount: s.repairedCount,
+          releasedCount: s.releasedCount,
+          quarantineCount: s.quarantineCount,
+          totalCount: s.totalCount,
+          defects: s.defects || []
+        }));
 
-      // Group by serial, sort by most recent first
-      const grouped = {};
-      defects.forEach(d => {
-        const serial = d.serialNumber || d.serial_number || d.lotNumber || d.lot_number || 'SIN-SERIAL';
-        if (!grouped[serial]) {
-          grouped[serial] = {
-            serial,
-            partNumber: d.partNumber || d.part_number,
-            partName: d.partName || d.part_name,
-            defects: [],
-            latestDate: null
-          };
+        setPartsWithDefects(partsArray);
+
+        // Flatten defects for allPendingDefects
+        const allDefects = partsArray.flatMap(p => p.defects);
+        setAllPendingDefects(allDefects);
+
+        // Auto-select first part if none selected
+        if (partsArray.length > 0 && !selectedPart) {
+          selectPart(partsArray[0]);
         }
-        grouped[serial].defects.push(d);
-        const defectDate = new Date(d.createdAt || d.created_at || d.updatedAt || d.updated_at);
-        if (!grouped[serial].latestDate || defectDate > grouped[serial].latestDate) {
-          grouped[serial].latestDate = defectDate;
-        }
-      });
-
-      // Convert to array and sort by date (newest first)
-      const partsArray = Object.values(grouped).sort((a, b) => b.latestDate - a.latestDate);
-      setPartsWithDefects(partsArray);
-
-      // Auto-select first part if none selected
-      if (partsArray.length > 0 && !selectedPart) {
-        selectPart(partsArray[0]);
       }
     } catch (err) {
       console.error('Error loading parts:', err);
@@ -219,15 +219,30 @@ const RepairStation = () => {
   };
 
   // ============================================================================
-  // SELECT PART - Load defects for that part
+  // SELECT PART - Load ALL defects for that serial (including released)
   // ============================================================================
-  const selectPart = (part) => {
+  const selectPart = async (part) => {
     setSelectedPart(part);
     setPartDefects(part.defects || []);
     setSelectedDefect(null);
     setActionSuccess({});
     setActionMinutes({});
     setActionError(null);
+
+    // Load ALL defects for this serial (trazabilidad completa)
+    try {
+      const result = await repairService.getDefectsBySerial(part.serial, { includeHistory: true });
+      if (result.success && result.defects?.length > 0) {
+        setPartDefects(result.defects);
+        // Update the part in partsWithDefects to show correct counters
+        setPartsWithDefects(prev => prev.map(p =>
+          p.serial === part.serial ? { ...p, defects: result.defects } : p
+        ));
+        setSelectedPart(prev => ({ ...prev, defects: result.defects }));
+      }
+    } catch (err) {
+      console.error('Error loading full defect history:', err);
+    }
   };
 
   // ============================================================================
@@ -242,6 +257,43 @@ const RepairStation = () => {
       p.partName?.toUpperCase().includes(search)
     );
   });
+
+  // ============================================================================
+  // AUTO-SCROLL - Keep selected items visible in their containers
+  // ============================================================================
+  // Scroll para lista de seriales
+  useEffect(() => {
+    if (partsListRef.current && filteredParts.length > 0) {
+      const element = document.getElementById(`part-item-${selectedPartIndex}`);
+      const container = partsListRef.current;
+      if (element && container) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        if (elementRect.top < containerRect.top + 10) {
+          container.scrollTop -= (containerRect.top - elementRect.top) + 20;
+        } else if (elementRect.bottom > containerRect.bottom - 10) {
+          container.scrollTop += (elementRect.bottom - containerRect.bottom) + 20;
+        }
+      }
+    }
+  }, [selectedPartIndex, filteredParts.length]);
+
+  // Scroll para lista de defectos
+  useEffect(() => {
+    if (defectsListRef.current && partDefects.length > 0) {
+      const element = document.getElementById(`defect-item-${selectedDefectIndex}`);
+      const container = defectsListRef.current;
+      if (element && container) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        if (elementRect.top < containerRect.top + 10) {
+          container.scrollTop -= (containerRect.top - elementRect.top) + 20;
+        } else if (elementRect.bottom > containerRect.bottom - 10) {
+          container.scrollTop += (elementRect.bottom - containerRect.bottom) + 20;
+        }
+      }
+    }
+  }, [selectedDefectIndex, partDefects.length]);
 
   const handleManualSearch = async () => {
     if (!searchFilter.trim()) return;
@@ -268,19 +320,20 @@ const RepairStation = () => {
   // ============================================================================
   // ACTIONS - Repair / Release
   // ============================================================================
-  const handleRepair = async (defect) => {
-    const defectId = defect.id || defect.defectId;
-    const minutes = parseInt(actionMinutes[defectId] || '0', 10);
-    if (!minutes || minutes <= 0) {
-      setActionError(language === 'es' ? 'Ingresa los minutos' : 'Enter minutes');
-      return;
+  const handleRepair = async (defect, skipMrbCheck = false) => {
+    // Verificar MRB antes de completar reparación
+    if (!skipMrbCheck) {
+      const canProceed = await checkMrbBeforeScrap(defect);
+      if (!canProceed) return;
     }
+    const defectId = defect.id || defect.defectId;
+    const minutes = parseInt(actionMinutes[defectId] || '1', 10);
     setActionLoading(prev => ({ ...prev, [defectId]: true }));
     setActionError(null);
     try {
       const result = await repairService.repairInline(defectId, {
         repairTimeMinutes: minutes,
-        repairStationId: selectedLocation?.id,
+        repairLocationId: selectedLocation?.id,
         notes: ''
       });
       if (result.success) {
@@ -296,23 +349,68 @@ const RepairStation = () => {
     }
   };
 
-  const handleRelease = async (defect) => {
-    const defectId = defect.id || defect.defectId;
-    const minutes = parseInt(actionMinutes[defectId] || '0', 10);
-    if (!minutes || minutes <= 0) {
-      setActionError(language === 'es' ? 'Ingresa los minutos' : 'Enter minutes');
-      return;
+  const handleRelease = async (defect, skipMrbCheck = false) => {
+    // Verificar MRB antes de liberar
+    if (!skipMrbCheck) {
+      const canProceed = await checkMrbBeforeScrap(defect);
+      if (!canProceed) return;
     }
+    const defectId = defect.id || defect.defectId;
+    const minutes = parseInt(actionMinutes[defectId] || '1', 10);
     setActionLoading(prev => ({ ...prev, [defectId]: true }));
     setActionError(null);
     try {
       const result = await repairService.releaseInline(defectId, {
         releaseTimeMinutes: minutes,
-        releaseStationId: selectedLocation?.id,
+        releaseLocationId: selectedLocation?.id,
         notes: ''
       });
       if (result.success) {
         setActionSuccess(prev => ({ ...prev, [defectId]: 'released' }));
+        setTimeout(() => loadPendingParts(), 800);
+      } else {
+        setActionError(result.error || 'Error');
+      }
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [defectId]: false }));
+    }
+  };
+
+  // ============================================================================
+  // CHECK MRB BEFORE SCRAP - Verify no pending campaigns
+  // ============================================================================
+  const checkMrbBeforeScrap = async (defect) => {
+    try {
+      const serial = defect.serialNumber || defect.serial_number;
+      const result = await repairService.checkCanDispose(serial, defect.id);
+      if (result.success && !result.canDispose) {
+        setMrbPendingCampaigns(result.pendingCampaigns || []);
+        setMrbWarningDefect(defect);
+        setMrbWarningOpen(true);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Error checking MRB:', err);
+      return true; // Si falla, permitir continuar
+    }
+  };
+
+  const handleScrap = async (defect, skipMrbCheck = false) => {
+    // Solo verificar MRB si no se hizo antes
+    if (!skipMrbCheck) {
+      const canProceed = await checkMrbBeforeScrap(defect);
+      if (!canProceed) return;
+    }
+
+    const defectId = defect.id || defect.defectId;
+    setActionLoading(prev => ({ ...prev, [defectId]: true }));
+    try {
+      const result = await repairService.scrapDefect(defectId, '');
+      if (result.success) {
+        setActionSuccess(prev => ({ ...prev, [defectId]: 'scrap' }));
         setTimeout(() => loadPendingParts(), 800);
       } else {
         setActionError(result.error || 'Error');
@@ -700,7 +798,7 @@ const RepairStation = () => {
           </div>
 
           {/* Parts List */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div ref={partsListRef} style={{ flex: 1, overflowY: 'auto' }}>
             {partsLoading ? (
               <div style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
                 {language === 'es' ? 'Cargando...' : 'Loading...'}
@@ -711,23 +809,21 @@ const RepairStation = () => {
               </div>
             ) : (
               filteredParts.map((part, idx) => {
-                // Count open vs closed defects
-                const openStatuses = ['OPEN', 'IN_REPAIR', 'IN_VALIDATION'];
-                const closedStatuses = ['REPAIRED', 'RELEASED', 'CLOSED'];
-                const openCount = part.defects.filter(d => {
-                  const status = d.repairStatus || d.repair_status || d.status || 'OPEN';
-                  return openStatuses.includes(status);
-                }).length;
-                const closedCount = part.defects.filter(d => {
-                  const status = d.repairStatus || d.repair_status || d.status || 'OPEN';
-                  return closedStatuses.includes(status);
-                }).length;
-                const totalCount = part.defects.length;
+                // Use precalculated counts from backend
+                const pendingCount = part.pendingCount ?? 0;
+                const repairedCount = part.repairedCount ?? 0;
+                const releasedCount = part.releasedCount ?? 0;
+                const quarantineCount = part.quarantineCount ?? 0;
+                const totalCount = part.totalCount ?? part.defects?.length ?? 0;
 
                 return (
                   <button
                     key={part.serial + idx}
-                    onClick={() => selectPart(part)}
+                    id={`part-item-${idx}`}
+                    onClick={() => {
+                      setSelectedPartIndex(idx);
+                      selectPart(part);
+                    }}
                     style={{
                       width: '100%', padding: '14px 12px', textAlign: 'left',
                       backgroundColor: selectedPart?.serial === part.serial ? (t.accent + '10') : 'transparent',
@@ -742,20 +838,36 @@ const RepairStation = () => {
                         {part.serial}
                       </div>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        {openCount > 0 && (
+                        {pendingCount > 0 && (
                           <span style={{
                             padding: '2px 6px', backgroundColor: '#fef2f2', color: '#dc2626',
                             borderRadius: '6px', fontSize: '10px', fontWeight: '600'
                           }}>
-                            🔴 {openCount}
+                            🔴 {pendingCount}
                           </span>
                         )}
-                        {closedCount > 0 && (
+                        {repairedCount > 0 && (
+                          <span style={{
+                            padding: '2px 6px', backgroundColor: '#eff6ff', color: '#2563eb',
+                            borderRadius: '6px', fontSize: '10px', fontWeight: '600'
+                          }}>
+                            🔵 {repairedCount}
+                          </span>
+                        )}
+                        {quarantineCount > 0 && (
+                          <span style={{
+                            padding: '2px 6px', backgroundColor: '#fef3c7', color: '#d97706',
+                            borderRadius: '6px', fontSize: '10px', fontWeight: '600'
+                          }}>
+                            🟠 {quarantineCount}
+                          </span>
+                        )}
+                        {releasedCount > 0 && (
                           <span style={{
                             padding: '2px 6px', backgroundColor: '#f0fdf4', color: '#16a34a',
                             borderRadius: '6px', fontSize: '10px', fontWeight: '600'
                           }}>
-                            🟢 {closedCount}
+                            🟢 {releasedCount}
                           </span>
                         )}
                       </div>
@@ -807,8 +919,8 @@ const RepairStation = () => {
               </div>
 
               {/* Defects List */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-                {partDefects.map((defect) => {
+              <div ref={defectsListRef} style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+                {partDefects.map((defect, idx) => {
                   const defectId = defect.id || defect.defectId;
                   const status = defect.repairStatus || defect.repair_status || defect.status || 'OPEN';
                   const statusInfo = getStatusInfo(status);
@@ -821,7 +933,11 @@ const RepairStation = () => {
                   return (
                     <div
                       key={defectId}
-                      onClick={() => loadDefectDetail(defect)}
+                      id={`defect-item-${idx}`}
+                      onClick={() => {
+                        setSelectedDefectIndex(idx);
+                        loadDefectDetail(defect);
+                      }}
                       style={{
                         padding: '14px', marginBottom: '10px', borderRadius: '10px',
                         backgroundColor: t.bgCard, border: isSelected ? `2px solid ${t.accent}` : `1px solid ${t.border}`,
@@ -850,7 +966,7 @@ const RepairStation = () => {
                           <input
                             type="number"
                             placeholder="min"
-                            value={actionMinutes[defectId] || ''}
+                            value={actionMinutes[defectId] ?? '1'}
                             onChange={(e) => setActionMinutes(prev => ({ ...prev, [defectId]: e.target.value }))}
                             style={{
                               width: '60px', padding: '8px', border: `1px solid ${t.border}`,
@@ -1050,7 +1166,7 @@ const RepairStation = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <MapPin size={14} color={t.textMuted} />
                     <span style={{ fontSize: '13px', color: t.text }}>
-                      {selectedDefect.locationDescription || selectedDefect.location_description || selectedDefect.locationCode || selectedDefect.location_code || '(Sin ubicación)'}
+                      {selectedDefect.stationName || selectedDefect.station_name || '(Estación no registrada)'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1079,7 +1195,7 @@ const RepairStation = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <MapPin size={14} color="#d97706" />
                       <span style={{ fontSize: '13px', color: '#92400e' }}>
-                        {selectedDefect.repairStationName || selectedDefect.repair_station_name || selectedDefect.repairLocationName || selectedDefect.repair_location_name || '(Estación no registrada)'}
+                        {selectedDefect.repairLocationName || selectedDefect.repair_location_name || selectedDefect.repairStationName || selectedDefect.repair_station_name || '(Ubicación no registrada)'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1115,7 +1231,7 @@ const RepairStation = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <MapPin size={14} color="#16a34a" />
                       <span style={{ fontSize: '13px', color: '#166534' }}>
-                        {selectedDefect.releaseStationName || selectedDefect.release_station_name || selectedDefect.releaseLocationName || selectedDefect.release_location_name || '(Estación no registrada)'}
+                        {selectedDefect.releaseLocationName || selectedDefect.release_location_name || selectedDefect.releaseStationName || selectedDefect.release_station_name || '(Ubicación no registrada)'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1218,7 +1334,7 @@ const RepairStation = () => {
                         <input
                           type="number"
                           placeholder="min"
-                          value={actionMinutes[defectId] || ''}
+                          value={actionMinutes[defectId] ?? '1'}
                           onChange={(e) => setActionMinutes(prev => ({ ...prev, [defectId]: e.target.value }))}
                           style={{
                             width: '100%', padding: '10px', border: `1px solid ${t.border}`,
@@ -1296,21 +1412,12 @@ const RepairStation = () => {
                         {canDoScrap && (
                           <button
                             onClick={async () => {
+                              // Primero verificar MRB antes del confirm
+                              const canProceed = await checkMrbBeforeScrap(selectedDefect);
+                              if (!canProceed) return; // Modal MRB se muestra automáticamente
+                              // Si pasa el check MRB, pedir confirmación
                               if (!window.confirm(language === 'es' ? '¿Confirmar SCRAP? Esta acción no se puede deshacer.' : 'Confirm SCRAP? This action cannot be undone.')) return;
-                              setActionLoading(prev => ({ ...prev, [defectId]: true }));
-                              try {
-                                const result = await repairService.scrapDefect(defectId, '');
-                                if (result.success) {
-                                  setActionSuccess(prev => ({ ...prev, [defectId]: 'scrap' }));
-                                  setTimeout(() => loadPendingParts(), 800);
-                                } else {
-                                  setActionError(result.error || 'Error');
-                                }
-                              } catch (err) {
-                                setActionError(err.message);
-                              } finally {
-                                setActionLoading(prev => ({ ...prev, [defectId]: false }));
-                              }
+                              await handleScrap(selectedDefect, true); // true = skip MRB check (ya se hizo)
                             }}
                             disabled={isLoading}
                             style={{
@@ -1448,6 +1555,92 @@ const RepairStation = () => {
                 {lightboxIndex + 1} / {defectDetail.photos.length}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MRB Warning Modal - Pending Campaigns */}
+      {mrbWarningOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '12px', padding: '24px',
+            maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <AlertTriangle size={32} color="#d97706" />
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#92400e' }}>
+                {language === 'es' ? 'Campañas MRB Pendientes' : 'Pending MRB Campaigns'}
+              </h3>
+            </div>
+
+            <p style={{ color: '#78350f', marginBottom: '16px' }}>
+              {language === 'es'
+                ? 'Esta pieza tiene campañas MRB pendientes de inspección. Debe completar las inspecciones antes de enviar a SCRAP.'
+                : 'This part has pending MRB campaigns. You must complete inspections before sending to SCRAP.'}
+            </p>
+
+            {mrbPendingCampaigns.length > 0 && (
+              <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+                  {language === 'es' ? 'Campañas pendientes:' : 'Pending campaigns:'}
+                </div>
+                {mrbPendingCampaigns.map((c, i) => (
+                  <div key={i} style={{ fontSize: '13px', color: '#78350f', padding: '4px 0' }}>
+                    • {c.campaignNumber || c.campaign_number} - {c.description || c.campaignDescription}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setMrbWarningOpen(false);
+                  setMrbWarningDefect(null);
+                  setMrbPendingCampaigns([]);
+                }}
+                style={{
+                  padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#374151',
+                  border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer'
+                }}
+              >
+                {language === 'es' ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!mrbWarningDefect) return;
+                  setMrbWarningOpen(false);
+                  const defectId = mrbWarningDefect.id || mrbWarningDefect.defectId;
+                  setActionLoading(prev => ({ ...prev, [defectId]: true }));
+                  try {
+                    const result = await repairService.quarantineDefect(defectId, 'Enviado a cuarentena - Pendiente inspección MRB');
+                    if (result.success) {
+                      setActionSuccess(prev => ({ ...prev, [defectId]: 'quarantine' }));
+                      setTimeout(() => loadPendingParts(), 800);
+                    } else {
+                      setActionError(result.error || 'Error al enviar a cuarentena');
+                    }
+                  } catch (err) {
+                    setActionError(err.message);
+                  } finally {
+                    setActionLoading(prev => ({ ...prev, [defectId]: false }));
+                    setMrbWarningDefect(null);
+                    setMrbPendingCampaigns([]);
+                  }
+                }}
+                style={{
+                  padding: '10px 20px', backgroundColor: '#f59e0b', color: 'white',
+                  border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                <AlertTriangle size={16} />
+                {language === 'es' ? 'Enviar a Cuarentena' : 'Send to Quarantine'}
+              </button>
+            </div>
           </div>
         </div>
       )}

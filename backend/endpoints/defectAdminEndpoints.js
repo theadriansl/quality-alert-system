@@ -1821,6 +1821,12 @@ router.get('/by-serial/:serial', authenticateToken, async (req, res) => {
              sev.name as severity_name, sev.code as severity_code, sev.color as severity_color,
              dep.name as department_name,
              st.name as station_name,
+             st_rep.name as repair_station_name,
+             st_rel.name as release_station_name,
+             loc_rep.description as repair_location_name,
+             loc_rep.code as repair_location_code,
+             loc_rel.description as release_location_name,
+             loc_rel.code as release_location_code,
              CONCAT(u_cap.first_name, ' ', u_cap.last_name) as captured_by_name,
              CONCAT(u_rep.first_name, ' ', u_rep.last_name) as repaired_by_name,
              CONCAT(u_rel.first_name, ' ', u_rel.last_name) as released_by_name,
@@ -1844,6 +1850,10 @@ router.get('/by-serial/:serial', authenticateToken, async (req, res) => {
       LEFT JOIN inspection_severities sev ON de.severity_id = sev.id
       LEFT JOIN departments dep ON de.department_id = dep.id
       LEFT JOIN inspection_stations st ON de.station_id = st.id
+      LEFT JOIN inspection_stations st_rep ON de.repair_station_id = st_rep.id
+      LEFT JOIN inspection_stations st_rel ON de.release_station_id = st_rel.id
+      LEFT JOIN location_codes loc_rep ON de.repair_location_id = loc_rep.id
+      LEFT JOIN location_codes loc_rel ON de.release_location_id = loc_rel.id
       LEFT JOIN users u_cap ON de.captured_by_user_id = u_cap.id
       LEFT JOIN users u_rep ON de.repaired_by = u_rep.id
       LEFT JOIN users u_rel ON de.released_by = u_rel.id
@@ -2164,7 +2174,7 @@ router.get('/serial-lookup/:serial', authenticateToken, async (req, res) => {
 // REPAIR INLINE - Reparador marca defecto como reparado directamente (sin IN_REPAIR)
 router.post('/entries/:id/repair-inline', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { repairStationId, repairNotes } = req.body;
+  const { repairStationId, repairLocationId, repairNotes } = req.body;
 
   try {
     const defect = await query('SELECT * FROM defect_entries_v2 WHERE id = $1', [id]);
@@ -2180,18 +2190,21 @@ router.post('/entries/:id/repair-inline', authenticateToken, async (req, res) =>
       });
     }
 
+    // Usar repairLocationId si viene, sino repairStationId para compatibilidad
+    const locationId = repairLocationId || repairStationId || null;
+
     // Marcar como REPAIRED directamente (flujo simplificado de línea)
     const result = await query(`
       UPDATE defect_entries_v2 SET
         repair_status = 'REPAIRED',
-        repair_station_id = $2,
+        repair_location_id = $2,
         repaired_at = CURRENT_TIMESTAMP,
         repaired_by = $3,
         repair_notes = $4,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
-    `, [id, repairStationId || null, req.user.id, repairNotes || null]);
+    `, [id, locationId, req.user.id, repairNotes || null]);
 
     // Log event
     const oldStatus = defect.rows[0].repair_status;
@@ -2222,7 +2235,7 @@ router.post('/entries/:id/repair-inline', authenticateToken, async (req, res) =>
 // RELEASE INLINE - Inspector libera defecto reparado directamente
 router.post('/entries/:id/release-inline', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { releaseStationId, releaseNotes } = req.body;
+  const { releaseStationId, releaseLocationId, releaseNotes } = req.body;
 
   try {
     const defect = await query('SELECT * FROM defect_entries_v2 WHERE id = $1', [id]);
@@ -2237,18 +2250,21 @@ router.post('/entries/:id/release-inline', authenticateToken, async (req, res) =
       });
     }
 
+    // Usar releaseLocationId si viene, sino releaseStationId para compatibilidad
+    const locationId = releaseLocationId || releaseStationId || null;
+
     // Marcar como RELEASED/CLOSED
     const result = await query(`
       UPDATE defect_entries_v2 SET
         repair_status = 'CLOSED',
-        release_station_id = $2,
+        release_location_id = $2,
         released_at = CURRENT_TIMESTAMP,
         released_by = $3,
         resolution_notes = COALESCE(resolution_notes || ' | ', '') || $4,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
-    `, [id, releaseStationId || null, req.user.id, releaseNotes || 'Liberado en línea']);
+    `, [id, locationId, req.user.id, releaseNotes || 'Liberado en línea']);
 
     // Log event
     await query(`
@@ -3481,6 +3497,73 @@ router.get('/all', authenticateToken, async (req, res) => {
   }
 });
 
+// GET active serials with defect counts by status (for RepairStation)
+router.get('/active-serials', authenticateToken, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        de.serial_number,
+        MAX(cp.part_number) as part_number,
+        MAX(cp.part_name) as part_name,
+        MAX(de.updated_at) as latest_date,
+        COUNT(*) FILTER (WHERE de.repair_status IN ('OPEN', 'IN_REPAIR')) as pending_count,
+        COUNT(*) FILTER (WHERE de.repair_status IN ('REPAIRED', 'IN_VALIDATION')) as repaired_count,
+        COUNT(*) FILTER (WHERE de.repair_status IN ('RELEASED', 'CLOSED')) as released_count,
+        COUNT(*) FILTER (WHERE de.repair_status = 'QUARANTINE') as quarantine_count,
+        COUNT(*) as total_count,
+        json_agg(json_build_object(
+          'id', de.id,
+          'entry_number', de.entry_number,
+          'repair_status', de.repair_status,
+          'defect_type_name', dt.name,
+          'captured_by_name', CONCAT(uc.first_name, ' ', uc.last_name),
+          'repaired_by_name', CONCAT(ur.first_name, ' ', ur.last_name),
+          'released_by_name', CONCAT(urel.first_name, ' ', urel.last_name),
+          'created_at', de.created_at,
+          'repaired_at', de.repaired_at,
+          'released_at', de.released_at,
+          'repair_time_minutes', de.repair_time_minutes,
+          'station_name', st.name,
+          'repair_location_name', rl.description,
+          'release_location_name', rell.description,
+          'photo_count', (SELECT COUNT(*) FROM defect_attachments da WHERE da.defect_id = de.id AND da.mimetype LIKE 'image/%')
+        ) ORDER BY de.created_at DESC) as defects
+      FROM defect_entries_v2 de
+      LEFT JOIN client_parts cp ON de.part_id = cp.id
+      LEFT JOIN defect_types dt ON de.defect_type_id = dt.id
+      LEFT JOIN users uc ON de.captured_by_user_id = uc.id
+      LEFT JOIN users ur ON de.repaired_by = ur.id
+      LEFT JOIN users urel ON de.released_by = urel.id
+      LEFT JOIN inspection_stations st ON de.station_id = st.id
+      LEFT JOIN location_codes rl ON de.repair_location_id = rl.id
+      LEFT JOIN location_codes rell ON de.release_location_id = rell.id
+      WHERE de.repair_status NOT IN ('SCRAPPED', 'MRB')
+      GROUP BY de.serial_number
+      HAVING COUNT(*) FILTER (WHERE de.repair_status NOT IN ('RELEASED', 'CLOSED', 'SCRAPPED')) > 0
+      ORDER BY MAX(de.updated_at) DESC
+      LIMIT 200
+    `);
+
+    const serials = result.rows.map(row => ({
+      serial: row.serial_number,
+      partNumber: row.part_number,
+      partName: row.part_name,
+      latestDate: row.latest_date,
+      pendingCount: parseInt(row.pending_count) || 0,
+      repairedCount: parseInt(row.repaired_count) || 0,
+      releasedCount: parseInt(row.released_count) || 0,
+      quarantineCount: parseInt(row.quarantine_count) || 0,
+      totalCount: parseInt(row.total_count) || 0,
+      defects: transformToCamelCase(row.defects || [])
+    }));
+
+    res.json({ success: true, serials });
+  } catch (error) {
+    console.error('Error fetching active serials:', error);
+    res.status(500).json({ success: false, message: 'Error fetching active serials' });
+  }
+});
+
 // GET pending repairs (hospital dashboard)
 router.get('/pending-repairs', authenticateToken, async (req, res) => {
   const { clientId } = req.query;
@@ -4141,7 +4224,20 @@ router.get('/quarantine', authenticateToken, async (req, res) => {
         -- 8D info (via campaign or direct)
         mc.source_8d_id AS eightd_id,
         ed.report_id AS eightd_number,
-        ed.title AS eightd_title
+        ed.title AS eightd_title,
+        -- Pending MRB campaigns for this serial
+        (
+          SELECT json_agg(json_build_object(
+            'campaignNumber', pmc.campaign_number,
+            'title', pmc.title,
+            'id', pmc.id
+          ))
+          FROM mrb_affected_serials pmas
+          JOIN mrb_campaigns pmc ON pmas.mrb_campaign_id = pmc.id
+          WHERE pmas.serial_number = d.serial_number
+            AND NOT pmas.inspected
+            AND pmc.status IN ('ABIERTA', 'EN_PROCESO')
+        ) AS pending_mrb_campaigns
       FROM defect_entries_v2 d
       LEFT JOIN users uc ON d.captured_by_user_id = uc.id
       LEFT JOIN users ur ON d.repaired_by = ur.id
@@ -4199,7 +4295,20 @@ router.get('/scrapped', authenticateToken, async (req, res) => {
         -- 8D info (via campaign)
         mc.source_8d_id AS eightd_id,
         ed.report_id AS eightd_number,
-        ed.title AS eightd_title
+        ed.title AS eightd_title,
+        -- Pending MRB campaigns for this serial
+        (
+          SELECT json_agg(json_build_object(
+            'campaignNumber', pmc.campaign_number,
+            'title', pmc.title,
+            'id', pmc.id
+          ))
+          FROM mrb_affected_serials pmas
+          JOIN mrb_campaigns pmc ON pmas.mrb_campaign_id = pmc.id
+          WHERE pmas.serial_number = d.serial_number
+            AND NOT pmas.inspected
+            AND pmc.status IN ('ABIERTA', 'EN_PROCESO')
+        ) AS pending_mrb_campaigns
       FROM defect_entries_v2 d
       LEFT JOIN users uc ON d.captured_by_user_id = uc.id
       LEFT JOIN users ur ON d.repaired_by = ur.id
@@ -4241,8 +4350,9 @@ router.post('/quarantine/:id/return-to-repair', authenticateToken, async (req, r
       return res.status(400).json({ success: false, message: 'El defecto no está en cuarentena' });
     }
 
-    // Verificar inspecciones pendientes de campañas MRB
+    // Obtener campañas MRB pendientes para incluir en notas (informativo, no bloquea)
     const serial = defect.rows[0].serial_number;
+    let pendingCampaignsInfo = '';
     if (serial) {
       const pendingRes = await query(`
         SELECT mc.campaign_number, mc.title
@@ -4251,11 +4361,7 @@ router.post('/quarantine/:id/return-to-repair', authenticateToken, async (req, r
         WHERE mas.serial_number = $1 AND NOT mas.inspected AND mc.status IN ('ABIERTA', 'EN_PROCESO')
       `, [serial]);
       if (pendingRes.rows.length > 0) {
-        const campaigns = pendingRes.rows.map(r => r.campaign_number).join(', ');
-        return res.status(400).json({
-          success: false,
-          message: `No se puede aplicar disposición. Inspecciones pendientes en campañas: ${campaigns}`
-        });
+        pendingCampaignsInfo = ` [Campañas pendientes: ${pendingRes.rows.map(r => r.campaign_number).join(', ')}]`;
       }
     }
 
@@ -4268,11 +4374,12 @@ router.post('/quarantine/:id/return-to-repair', authenticateToken, async (req, r
       WHERE id = $1
     `, [id, repairStationId || null]);
 
-    // Log event
+    // Log event con info de campañas pendientes
+    const eventNotes = (notes || 'Devuelto a reparación desde MRB') + pendingCampaignsInfo;
     await query(`
-      INSERT INTO defect_events (defect_id, event_type, performed_by, comments, created_at)
-      VALUES ($1, 'MRB_RETURN_TO_REPAIR', $2, $3, CURRENT_TIMESTAMP)
-    `, [id, userId, notes || 'Devuelto a reparación desde MRB']);
+      INSERT INTO defect_events (defect_id, event_type, performed_by, comments)
+      VALUES ($1, 'MRB_RETURN_TO_REPAIR', $2, $3)
+    `, [id, userId, eventNotes]);
 
     // Update unit_registry if exists
     await query(`

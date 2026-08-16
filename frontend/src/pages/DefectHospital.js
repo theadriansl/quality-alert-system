@@ -6650,9 +6650,29 @@ const DefectHospital = () => {
                         <td style={{ padding: '10px 8px', color: t.text }}>
                           {defect.defectTypeName}
                         </td>
-                        {/* Campaña MRB */}
+                        {/* Campaña MRB - Pendientes de inspección */}
                         <td style={{ padding: '10px 8px' }}>
-                          {defect.mrbCampaignNumber ? (
+                          {defect.pendingMrbCampaigns && defect.pendingMrbCampaigns.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              {defect.pendingMrbCampaigns.map((c, idx) => (
+                                <span key={idx} style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  backgroundColor: '#dc262620',
+                                  color: '#dc2626',
+                                  cursor: 'pointer',
+                                  display: 'inline-block'
+                                }}
+                                onClick={() => navigate(`/mrb/${c.id}`)}
+                                title={`⚠️ Pendiente: ${c.title}`}
+                                >
+                                  ⚠️ {c.campaignNumber}
+                                </span>
+                              ))}
+                            </div>
+                          ) : defect.mrbCampaignNumber ? (
                             <span style={{
                               padding: '3px 8px',
                               borderRadius: '4px',

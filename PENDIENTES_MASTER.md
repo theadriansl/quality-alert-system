@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-15 (Sesión 2)
+> Última actualización: 2026-08-16 (Sesión 3)
 
 ---
 
@@ -9,7 +9,7 @@
 |---|-------|--------|--------|
 | 1 | ~~BUG: Defectos de Spec NOK no se crean~~ | 04-Jul | ✅ 14-Ago |
 | 2 | ~~Test flujo re-verificación completo~~ | 04-Jul | ✅ 14-Ago |
-| 3 | Integrar check-can-dispose en UI Hospital | 23-Jul | ⏳ |
+| 3 | ~~Integrar check-can-dispose en UI Hospital~~ | 23-Jul | ✅ 16-Ago |
 | 4 | Test end-to-end Hospital → MRB → Hospital | 23-Jul | ⏳ |
 | 5 | MRBDashboard no refleja partes en MRB | 26-Jul | ⏳ |
 | 6 | Estaciones MRB mal configuradas | 26-Jul | ⏳ |
@@ -19,9 +19,9 @@
 ## Prioridad Media - Testing
 | # | Tarea | Origen | Estado |
 |---|-------|--------|--------|
-| 1 | Testing flujo reparador completo | 26-Jun | ⏳ |
-| 2 | Testing flujo liberador completo | 26-Jun | ⏳ |
-| 3 | Dashboard Hospital pruebas | 30-Jun | ⏳ |
+| 1 | ~~Testing flujo reparador completo~~ | 26-Jun | ✅ 16-Ago |
+| 2 | ~~Testing flujo liberador completo~~ | 26-Jun | ✅ 16-Ago |
+| 3 | ~~Dashboard Hospital pruebas~~ | 30-Jun | ✅ 16-Ago |
 | 4 | Testing formal Auditorías | Arrastrado | ⏳ |
 | 5 | Testing Reportes/Dashboard | Arrastrado | ⏳ |
 | 6 | Control 360° MRB (ubicaciones) - SIN PROBAR | 26-Jul | ⏳ |
@@ -66,6 +66,16 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ RepairStation: Auto-scroll navegación teclado | 16-Ago |
+| ✅ RepairStation: Check MRB antes de reparar/liberar/scrap | 16-Ago |
+| ✅ RepairStation: Modal cuarentena para campañas pendientes | 16-Ago |
+| ✅ RepairStation: Tracking ubicación reparación/liberación | 16-Ago |
+| ✅ RepairStation: Contadores pre-calculados (pending/repaired/released/quarantine) | 16-Ago |
+| ✅ Hospital: Lista cuarentena muestra campañas MRB pendientes | 16-Ago |
+| ✅ Hospital: Return-to-repair permite salir con campañas pendientes | 16-Ago |
+| ✅ Testing flujo reparador completo | 16-Ago |
+| ✅ Testing flujo liberador completo | 16-Ago |
+| ✅ Dashboard Hospital pruebas | 16-Ago |
 | ✅ 8D: Generación PDF mejorada y refactorizada | 15-Ago |
 | ✅ 8D: Workflow expandido con funcionalidad adicional | 15-Ago |
 | ✅ 8D: D5D6D7Countermeasures componente mejorado | 15-Ago |

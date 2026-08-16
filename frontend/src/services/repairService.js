@@ -312,6 +312,17 @@ export const getPendingRepairs = async (clientId) => {
 };
 
 /**
+ * Get active serials with defect counts (for RepairStation)
+ * Returns serials grouped with pending/repaired/released counts
+ */
+export const getActiveSerials = async () => {
+  const res = await fetch(`${API_URL}/defects-v2/active-serials`, {
+    headers: getHeaders()
+  });
+  return res.json();
+};
+
+/**
  * Get pending releases
  */
 export const getPendingReleases = async (clientId) => {
