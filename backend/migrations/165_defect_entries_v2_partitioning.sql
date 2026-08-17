@@ -1,0 +1,5 @@
+-- Migration 165
+-- Particionamiento defect_entries_v2 por RANGE(created_at)
+-- Aplicado: 2026-08-16
+-- Registros: 586
+-- Particiones: 28 (Oct 2025 - Dic 2027 + default)

@@ -314,9 +314,16 @@ export const getPendingRepairs = async (clientId) => {
 /**
  * Get active serials with defect counts (for RepairStation)
  * Returns serials grouped with pending/repaired/released counts
+ * @param {object} options - Optional parameters
+ * @param {number} options.limit - Max serials to return (default: 100)
+ * @param {string} options.search - Search by serial/part number
  */
-export const getActiveSerials = async () => {
-  const res = await fetch(`${API_URL}/defects-v2/active-serials`, {
+export const getActiveSerials = async (options = {}) => {
+  const params = new URLSearchParams();
+  if (options.limit) params.append('limit', options.limit);
+  if (options.search) params.append('search', options.search);
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_URL}/defects-v2/active-serials${queryString}`, {
     headers: getHeaders()
   });
   return res.json();

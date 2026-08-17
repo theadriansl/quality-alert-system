@@ -144,13 +144,6 @@ const MANAGEMENT_ACTIONS = {
     icon: '📄',
     validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'QUARANTINE', 'IN_VALIDATION'],
     requiresModal: true
-  },
-  PRINT_LABELS: {
-    id: 'PRINT_LABELS',
-    labelEs: 'Imprimir Etiquetas',
-    labelEn: 'Print Labels',
-    icon: '🏷️',
-    validStatuses: ['OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'QUARANTINE', 'SCRAPPED']
   }
 };
 

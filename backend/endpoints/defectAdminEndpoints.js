@@ -3498,8 +3498,29 @@ router.get('/all', authenticateToken, async (req, res) => {
 });
 
 // GET active serials with defect counts by status (for RepairStation)
+// Supports: ?limit=100 (default 100, 0=unlimited) &search=SERIAL
 router.get('/active-serials', authenticateToken, async (req, res) => {
   try {
+    const { limit = 100, search } = req.query;
+    const limitNum = parseInt(limit) || 100;
+    const params = [];
+    let paramIndex = 1;
+
+    // Build WHERE clause
+    let whereClause = `WHERE de.repair_status NOT IN ('SCRAPPED', 'MRB')`;
+    if (search && search.trim()) {
+      whereClause += ` AND (
+        UPPER(de.serial_number) LIKE $${paramIndex} OR
+        UPPER(cp.part_number) LIKE $${paramIndex} OR
+        UPPER(cp.part_name) LIKE $${paramIndex}
+      )`;
+      params.push(`%${search.trim().toUpperCase()}%`);
+      paramIndex++;
+    }
+
+    // Build LIMIT clause (0 = no limit for search)
+    const limitClause = limitNum > 0 ? `LIMIT ${limitNum}` : '';
+
     const result = await query(`
       SELECT
         de.serial_number,
@@ -3537,12 +3558,12 @@ router.get('/active-serials', authenticateToken, async (req, res) => {
       LEFT JOIN inspection_stations st ON de.station_id = st.id
       LEFT JOIN location_codes rl ON de.repair_location_id = rl.id
       LEFT JOIN location_codes rell ON de.release_location_id = rell.id
-      WHERE de.repair_status NOT IN ('SCRAPPED', 'MRB')
+      ${whereClause}
       GROUP BY de.serial_number
       HAVING COUNT(*) FILTER (WHERE de.repair_status NOT IN ('RELEASED', 'CLOSED', 'SCRAPPED')) > 0
       ORDER BY MAX(de.updated_at) DESC
-      LIMIT 200
-    `);
+      ${limitClause}
+    `, params);
 
     const serials = result.rows.map(row => ({
       serial: row.serial_number,

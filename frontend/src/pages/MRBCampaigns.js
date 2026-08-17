@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
+import * as XLSX from 'xlsx';
+import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw, FileText, List } from 'lucide-react';
+import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw, FileText, List, ChevronDown, Download, Calendar } from 'lucide-react';
 
-const API_URL_CAMPAIGNS = 'http://localhost:5000';
 
 const fmtShiftDate = d => {
   const s = typeof d === 'string' ? d.substring(0, 10) : d;
@@ -76,7 +76,7 @@ const UnregisteredRow = ({ item, rowKey, edit, selected, t, onEditChange, onTogg
 const MRBCampaigns = () => {
   const navigate = useNavigate();
   const { theme: currentTheme } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  const { language } = useLanguage();
   const API_URL = 'http://localhost:5000';
 
   // Traducciones locales
@@ -104,26 +104,40 @@ const MRBCampaigns = () => {
   // Initialize filters from localStorage for memory persistence
   const savedFilters = JSON.parse(localStorage.getItem('mrbCampaignsFilters') || '{}');
   const [filterStatus, setFilterStatus] = useState(savedFilters.status || '');
-  const [filterClient, setFilterClient] = useState(savedFilters.client || '');
-  const [clients, setClients] = useState([]);
   const [unregisteredShifts, setUnregisteredShifts] = useState([]);
   const [shiftEdits, setShiftEdits] = useState({});
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [bulkRegistering, setBulkRegistering] = useState(false);
   const [activeTab, setActiveTab] = useState(savedFilters.tab || 'campaigns');
-  const [sortField, setSortField] = useState(savedFilters.sortField || 'campaignNumber');
-  const [sortDir, setSortDir] = useState(savedFilters.sortDir || 'asc');
+
+  // Period & date filters
+  const [periodo, setPeriodo] = useState('todos');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+
+  // Column filters (inline Excel-style)
+  const [colFilters, setColFilters] = useState({
+    campaignNumber: '',
+    sourceType: '',
+    title: '',
+    clientName: '',
+    partNumber: '',
+    departmentName: '',
+    severityCode: '',
+    status: '',
+    createdAt: '',
+    reportedByName: ''
+  });
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // Save filters to localStorage when they change
   useEffect(() => {
     localStorage.setItem('mrbCampaignsFilters', JSON.stringify({
       status: filterStatus,
-      client: filterClient,
-      tab: activeTab,
-      sortField,
-      sortDir
+      tab: activeTab
     }));
-  }, [filterStatus, filterClient, activeTab, sortField, sortDir]);
+  }, [filterStatus, activeTab]);
 
   useEffect(() => {
     if (!unregisteredShifts.length) return;
@@ -188,7 +202,8 @@ const MRBCampaigns = () => {
 
   useEffect(() => {
     loadData();
-  }, [filterStatus, filterClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatus]);
 
   const loadData = async () => {
     try {
@@ -198,23 +213,19 @@ const MRBCampaigns = () => {
 
       const params = new URLSearchParams();
       if (filterStatus) params.set('status', filterStatus);
-      if (filterClient) params.set('clientId', filterClient);
 
-      const [mrbsRes, allMrbsRes, clientsRes, unregRes] = await Promise.all([
+      const [mrbsRes, allMrbsRes, unregRes] = await Promise.all([
         fetch(`${API_URL}/mrb?${params.toString()}`, { headers }),
         fetch(`${API_URL}/mrb`, { headers }),
-        fetch(`${API_URL}/clients/list`, { headers }),
         fetch(`${API_URL}/mrb/unregistered-shifts`, { headers })
       ]);
 
       const mrbsData = await mrbsRes.json();
       const allMrbsData = await allMrbsRes.json();
-      const clientsData = await clientsRes.json();
       const unregData = await unregRes.json();
 
       setMrbs(mrbsData.mrbs || mrbsData.campaigns || []);
       setAllMrbs(allMrbsData.mrbs || allMrbsData.campaigns || []);
-      setClients(clientsData.clients || []);
       setUnregisteredShifts(unregData.unregistered || []);
 
     } catch (err) {
@@ -225,51 +236,206 @@ const MRBCampaigns = () => {
   };
 
 
-  // Count MRBs by status
-  const statusCounts = {
-    BORRADOR: allMrbs.filter(m => m.status === 'BORRADOR').length,
-    ABIERTA: allMrbs.filter(m => m.status === 'ABIERTA').length,
-    EN_PROCESO: allMrbs.filter(m => m.status === 'EN_PROCESO').length,
-    CANCELADA: allMrbs.filter(m => m.status === 'CANCELADA').length,
-    CERRADA: allMrbs.filter(m => m.status === 'CERRADA').length
+  // Calculate date range based on period
+  const getDateRange = useCallback((period) => {
+    const today = new Date();
+    let desde = '';
+    let hasta = today.toISOString().split('T')[0];
+    if (period === 'semana') {
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay());
+      desde = startOfWeek.toISOString().split('T')[0];
+    } else if (period === 'mes') {
+      desde = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    } else if (period === 'trimestre') {
+      const quarter = Math.floor(today.getMonth() / 3);
+      desde = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split('T')[0];
+    } else if (period === 'year') {
+      desde = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0];
+    } else {
+      desde = '';
+      hasta = '';
+    }
+    return { desde, hasta };
+  }, []);
+
+  const handlePeriodChange = (newPeriod) => {
+    setPeriodo(newPeriod);
+    const { desde, hasta } = getDateRange(newPeriod);
+    setFechaDesde(desde);
+    setFechaHasta(hasta);
   };
 
-  const SORT_FIELDS = {
-    campaignNumber: m => m.campaignNumber || '',
-    sourceType:     m => m.sourceType || '',
-    title:          m => m.title || '',
-    clientName:     m => m.clientName || '',
-    partNumber:     m => m.partNumber || '',
-    departmentName: m => m.departmentName || '',
-    severityCode:   m => m.severityCode || m.severityName || '',
-    status:         m => m.status || '',
-    createdAt:      m => m.createdAt || '',
-    reportedByName: m => m.reportedByName || ''
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenDropdown(null);
+    if (openDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openDropdown]);
+
+  // Get unique values for column filters
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const uniqueValues = useMemo(() => ({
+    campaignNumber: [...new Set(allMrbs.map(m => m.campaignNumber).filter(Boolean))].sort(),
+    sourceType: [...new Set(allMrbs.map(m => m.sourceType).filter(Boolean))].sort(),
+    title: [...new Set(allMrbs.map(m => m.title).filter(Boolean))].sort(),
+    clientName: [...new Set(allMrbs.map(m => m.clientName).filter(Boolean))].sort(),
+    partNumber: [...new Set(allMrbs.map(m => m.partNumber).filter(Boolean))].sort(),
+    departmentName: [...new Set(allMrbs.map(m => m.departmentName).filter(Boolean))].sort(),
+    severityCode: [...new Set(allMrbs.map(m => m.severityCode || m.severityName).filter(Boolean))].sort(),
+    status: Object.keys(STATUS_CONFIG),
+    createdAt: [...new Set(allMrbs.map(m => m.createdAt ? new Date(m.createdAt).toLocaleDateString('es-MX') : null).filter(Boolean))].sort(),
+    reportedByName: [...new Set(allMrbs.map(m => m.reportedByName).filter(Boolean))].sort()
+  }), [allMrbs]);
+
+  // Filtered data
+  const filteredMrbs = useMemo(() => {
+    return allMrbs.filter(mrb => {
+      // Date filter
+      if (fechaDesde || fechaHasta) {
+        const mrbDate = mrb.createdAt ? new Date(mrb.createdAt).toISOString().split('T')[0] : '';
+        if (fechaDesde && mrbDate < fechaDesde) return false;
+        if (fechaHasta && mrbDate > fechaHasta) return false;
+      }
+      // Column filters
+      if (colFilters.campaignNumber && mrb.campaignNumber !== colFilters.campaignNumber) return false;
+      if (colFilters.sourceType && mrb.sourceType !== colFilters.sourceType) return false;
+      if (colFilters.title && mrb.title !== colFilters.title) return false;
+      if (colFilters.clientName && mrb.clientName !== colFilters.clientName) return false;
+      if (colFilters.partNumber && mrb.partNumber !== colFilters.partNumber) return false;
+      if (colFilters.departmentName && mrb.departmentName !== colFilters.departmentName) return false;
+      if (colFilters.severityCode && (mrb.severityCode || mrb.severityName) !== colFilters.severityCode) return false;
+      if (colFilters.status && mrb.status !== colFilters.status) return false;
+      if (colFilters.createdAt) {
+        const mrbDateStr = mrb.createdAt ? new Date(mrb.createdAt).toLocaleDateString('es-MX') : '';
+        if (mrbDateStr !== colFilters.createdAt) return false;
+      }
+      if (colFilters.reportedByName && mrb.reportedByName !== colFilters.reportedByName) return false;
+      return true;
+    });
+  }, [allMrbs, fechaDesde, fechaHasta, colFilters]);
+
+  // Alias for filtered data (sin sort)
+  const sortedMrbs = filteredMrbs;
+
+  // Status counts from filtered data
+  const filteredStatusCounts = useMemo(() => ({
+    BORRADOR: filteredMrbs.filter(m => m.status === 'BORRADOR').length,
+    ABIERTA: filteredMrbs.filter(m => m.status === 'ABIERTA').length,
+    EN_PROCESO: filteredMrbs.filter(m => m.status === 'EN_PROCESO').length,
+    CANCELADA: filteredMrbs.filter(m => m.status === 'CANCELADA').length,
+    CERRADA: filteredMrbs.filter(m => m.status === 'CERRADA').length
+  }), [filteredMrbs]);
+
+  // Export to Excel
+  const exportToExcel = useCallback(() => {
+    setExportingExcel(true);
+    try {
+      const dataToExport = sortedMrbs.map(m => ({
+        'Número': m.campaignNumber || '',
+        'Origen': m.sourceType || '',
+        'Título': m.title || '',
+        'Cliente': m.clientName || '',
+        'Parte': m.partNumber || '',
+        'Departamento': m.departmentName || '',
+        'Severidad': m.severityCode || m.severityName || '',
+        'Estado': m.status || '',
+        'Fecha Creación': m.createdAt ? new Date(m.createdAt).toLocaleDateString('es-MX') : '',
+        'Emitida por': m.reportedByName || ''
+      }));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      ws['!cols'] = [
+        { wch: 15 }, { wch: 10 }, { wch: 40 }, { wch: 20 }, { wch: 15 },
+        { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 20 }
+      ];
+      XLSX.utils.book_append_sheet(wb, ws, 'MRB Campaigns');
+      const fileName = `MRB_Campaigns_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    } catch (err) {
+      console.error('Error exporting to Excel:', err);
+      alert('Error al exportar a Excel');
+    } finally {
+      setExportingExcel(false);
+    }
+  }, [sortedMrbs]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setPeriodo('todos');
+    setFechaDesde('');
+    setFechaHasta('');
+    setColFilters({
+      campaignNumber: '', sourceType: '', title: '', clientName: '', partNumber: '',
+      departmentName: '', severityCode: '', status: '', createdAt: '', reportedByName: ''
+    });
+    setFilterStatus('');
   };
 
-  const handleSort = field => {
-    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortField(field); setSortDir('asc'); }
-  };
+  const hasActiveFilters = fechaDesde || fechaHasta || filterStatus || Object.values(colFilters).some(v => v);
 
-  const sortedMrbs = [...mrbs].sort((a, b) => {
-    const fn = SORT_FIELDS[sortField] || (m => '');
-    const av = fn(a).toLowerCase(), bv = fn(b).toLowerCase();
-    return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
+  // Column filter component - Excel style (sin sort)
+  const ColumnFilter = ({ field, label, align = 'left' }) => {
+    const isOpen = openDropdown === field;
+    const hasFilter = colFilters[field];
 
-  const SortTh = ({ field, label, align = 'left' }) => {
-    const active = sortField === field;
     return (
-      <th onClick={() => handleSort(field)} style={{
-        ...styles.th, textAlign: align, cursor: 'pointer', userSelect: 'none',
-        color: active ? currentTheme.accent : currentTheme.textDim,
-        whiteSpace: 'nowrap'
-      }}>
-        {label} {active ? (sortDir === 'asc' ? '▲' : '▼') : <span style={{ opacity: 0.3 }}>⇅</span>}
+      <th style={{ ...styles.th, position: 'relative', userSelect: 'none', textAlign: align }}>
+        <div
+          onClick={(e) => { e.stopPropagation(); setOpenDropdown(isOpen ? null : field); }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: align === 'center' ? 'center' : 'space-between', gap: '4px', cursor: 'pointer', padding: '2px 0' }}
+        >
+          <span style={{ color: hasFilter ? currentTheme.accent : currentTheme.textDim }}>{label}</span>
+          <ChevronDown
+            size={14}
+            color={hasFilter ? currentTheme.accent : currentTheme.textDim}
+            style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}
+          />
+        </div>
+
+        {isOpen && (
+          <div
+            style={{
+              position: 'absolute', top: '100%', left: 0, minWidth: '150px', maxHeight: '250px',
+              overflowY: 'auto', backgroundColor: currentTheme.bgCard, border: `1px solid ${currentTheme.border}`,
+              borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, marginTop: '4px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              onClick={() => { setColFilters(prev => ({ ...prev, [field]: '' })); setOpenDropdown(null); }}
+              style={{
+                padding: '8px 12px', fontSize: '12px', color: currentTheme.textDim, cursor: 'pointer',
+                borderBottom: `1px solid ${currentTheme.border}`, backgroundColor: !hasFilter ? currentTheme.bgPanel : 'transparent'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = currentTheme.bgPanel}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = !hasFilter ? currentTheme.bgPanel : 'transparent'}
+            >
+              (Todos)
+            </div>
+            {uniqueValues[field]?.map(val => (
+              <div
+                key={val}
+                onClick={() => { setColFilters(prev => ({ ...prev, [field]: val })); setOpenDropdown(null); }}
+                style={{
+                  padding: '8px 12px', fontSize: '12px', color: currentTheme.text, cursor: 'pointer',
+                  backgroundColor: colFilters[field] === val ? currentTheme.accent + '20' : 'transparent',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = currentTheme.bgPanel}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colFilters[field] === val ? currentTheme.accent + '20' : 'transparent'}
+              >
+                {val}
+              </div>
+            ))}
+          </div>
+        )}
       </th>
     );
   };
+
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -555,43 +721,96 @@ const MRBCampaigns = () => {
               </span>
             </div>
             <div style={{ fontSize: '28px', fontWeight: '700', color: filterStatus === key ? 'white' : '#F4F6F8' }}>
-              {statusCounts[key]}
+              {filteredStatusCounts[key]}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={styles.filters}>
-        <select
-          style={styles.filterSelect}
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="">Todos los estados</option>
-          {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-            <option key={key} value={key}>{config.label}</option>
+      {/* Period Filters + Date Range + Excel Export */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        backgroundColor: currentTheme.bgCard, padding: '16px 20px', borderRadius: '12px',
+        marginBottom: '16px', border: `1px solid ${currentTheme.border}`
+      }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <Calendar size={18} color={currentTheme.textDim} />
+          {[
+            { key: 'semana', label: 'Semana' },
+            { key: 'mes', label: 'Mes' },
+            { key: 'trimestre', label: 'Trimestre' },
+            { key: 'year', label: 'Año' },
+            { key: 'todos', label: 'Todos' }
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => handlePeriodChange(key)}
+              style={{
+                padding: '8px 16px', backgroundColor: periodo === key ? currentTheme.accent : currentTheme.bgCard,
+                color: periodo === key ? 'white' : currentTheme.text,
+                border: `1px solid ${periodo === key ? currentTheme.accent : currentTheme.border}`,
+                borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', transition: 'all 0.15s'
+              }}
+            >
+              {label}
+            </button>
           ))}
-        </select>
+        </div>
 
-        <select
-          style={styles.filterSelect}
-          value={filterClient}
-          onChange={(e) => setFilterClient(e.target.value)}
-        >
-          <option value="">Todos los clientes</option>
-          {clients.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', color: currentTheme.textDim }}>Desde:</span>
+            <input
+              type="date" value={fechaDesde}
+              onChange={(e) => { setFechaDesde(e.target.value); setPeriodo(''); }}
+              style={{ padding: '8px 12px', border: `1px solid ${currentTheme.border}`, borderRadius: '6px', backgroundColor: currentTheme.bgCard, color: currentTheme.text, fontSize: '13px' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', color: currentTheme.textDim }}>Hasta:</span>
+            <input
+              type="date" value={fechaHasta}
+              onChange={(e) => { setFechaHasta(e.target.value); setPeriodo(''); }}
+              style={{ padding: '8px 12px', border: `1px solid ${currentTheme.border}`, borderRadius: '6px', backgroundColor: currentTheme.bgCard, color: currentTheme.text, fontSize: '13px' }}
+            />
+          </div>
 
-        <button
-          style={{ ...styles.filterSelect, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-          onClick={loadData}
-        >
-          <RefreshCw size={16} />
-          Actualizar
-        </button>
+          {hasActiveFilters && (
+            <button onClick={clearFilters} style={{
+              padding: '8px 14px', backgroundColor: 'transparent', color: '#ef4444',
+              border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600'
+            }}>
+              ✕ Limpiar
+            </button>
+          )}
+
+          <button onClick={loadData} style={{
+            padding: '8px 14px', backgroundColor: currentTheme.bgPanel, color: currentTheme.text,
+            border: `1px solid ${currentTheme.border}`, borderRadius: '6px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px'
+          }}>
+            <RefreshCw size={14} />
+          </button>
+
+          <button
+            onClick={exportToExcel}
+            disabled={exportingExcel || sortedMrbs.length === 0}
+            style={{
+              padding: '8px 16px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px',
+              cursor: (exportingExcel || sortedMrbs.length === 0) ? 'not-allowed' : 'pointer',
+              opacity: (exportingExcel || sortedMrbs.length === 0) ? 0.6 : 1,
+              display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600'
+            }}
+          >
+            <Download size={14} />
+            {exportingExcel ? '...' : 'Excel'}
+          </button>
+        </div>
+      </div>
+
+      {/* Results count */}
+      <div style={{ marginBottom: '12px', fontSize: '13px', color: currentTheme.textDim }}>
+        Mostrando <strong style={{ color: currentTheme.text }}>{sortedMrbs.length}</strong> de <strong style={{ color: currentTheme.text }}>{allMrbs.length}</strong> campañas MRB
       </div>
 
       {/* Table */}
@@ -607,16 +826,16 @@ const MRBCampaigns = () => {
           <table style={styles.table}>
             <thead>
               <tr>
-                <SortTh field="campaignNumber" label="Número" />
-                <SortTh field="sourceType"     label="Origen" />
-                <SortTh field="title"          label="Título" />
-                <SortTh field="clientName"     label="Cliente" />
-                <SortTh field="partNumber"     label="Parte" />
-                <SortTh field="departmentName" label="Depto" />
-                <SortTh field="severityCode"   label="Sev" align="center" />
-                <SortTh field="status"         label="Estado" align="center" />
-                <SortTh field="createdAt"      label="Fecha" />
-                <SortTh field="reportedByName" label="Emitida por" />
+                <ColumnFilter field="campaignNumber" label="Número" />
+                <ColumnFilter field="sourceType" label="Origen" />
+                <ColumnFilter field="title" label="Título" />
+                <ColumnFilter field="clientName" label="Cliente" />
+                <ColumnFilter field="partNumber" label="Parte" />
+                <ColumnFilter field="departmentName" label="Depto" />
+                <ColumnFilter field="severityCode" label="Sev" align="center" />
+                <ColumnFilter field="status" label="Estado" align="center" />
+                <ColumnFilter field="createdAt" label="Fecha" />
+                <ColumnFilter field="reportedByName" label="Emitida por" />
                 <th style={styles.th}>Acción</th>
               </tr>
             </thead>

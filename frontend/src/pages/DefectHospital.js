@@ -3021,10 +3021,6 @@ const DefectHospital = () => {
         openDeviationModal(null);
         break;
 
-      case 'PRINT_LABELS':
-        // TODO: Implementar impresión de etiquetas tipo Kanban
-        setSuccess(language === 'es' ? 'Función en desarrollo' : 'Feature in development');
-        break;
 
       // TOOLS ACTIONS
       case 'VIEW_TRACEABILITY':

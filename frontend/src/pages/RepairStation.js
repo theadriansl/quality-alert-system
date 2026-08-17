@@ -41,6 +41,8 @@ const RepairStation = () => {
   const [selectedPart, setSelectedPart] = useState(null);
   const [partsLoading, setPartsLoading] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  const [isLimitedView, setIsLimitedView] = useState(true);  // true = showing limited
+  const [currentLimit, setCurrentLimit] = useState(100);  // 100, 200, 300, 400, 500
 
   // ============================================================================
   // STATE - Defects for selected part (center column)
@@ -179,11 +181,18 @@ const RepairStation = () => {
     }
   }, [selectedLocation, locationSelectorOpen]);
 
-  const loadPendingParts = async () => {
+  const loadPendingParts = async (search = '', limit = currentLimit) => {
     setPartsLoading(true);
     try {
       // Usar endpoint optimizado que devuelve seriales con contadores ya calculados
-      const result = await repairService.getActiveSerials();
+      // Limitar por defecto, búsqueda sin límite
+      const hasSearch = search && search.trim().length > 0;
+      const result = await repairService.getActiveSerials({
+        limit: hasSearch ? 0 : limit,  // Sin límite si hay búsqueda
+        search: hasSearch ? search : undefined
+      });
+
+      setIsLimitedView(!hasSearch);  // Si no hay búsqueda, estamos viendo limitado
 
       if (result.success && result.serials) {
         // El endpoint ya devuelve los datos agrupados con contadores
@@ -296,25 +305,28 @@ const RepairStation = () => {
   }, [selectedDefectIndex, partDefects.length]);
 
   const handleManualSearch = async () => {
-    if (!searchFilter.trim()) return;
-    try {
-      const result = await repairService.getDefectsBySerial(searchFilter.trim(), { includeHistory: true });
-      if (result.success && result.defects?.length > 0) {
-        const serial = searchFilter.trim().toUpperCase();
-        const part = {
-          serial,
-          partNumber: result.defects[0].partNumber || result.defects[0].part_number,
-          partName: result.defects[0].partName || result.defects[0].part_name,
-          defects: result.defects,
-          latestDate: new Date()
-        };
-        selectPart(part);
-      } else {
-        setActionError(language === 'es' ? 'No se encontraron defectos' : 'No defects found');
-      }
-    } catch (err) {
-      setActionError(err.message);
+    if (!searchFilter.trim()) {
+      // Si se borró la búsqueda, recargar los últimos 100
+      loadPendingParts('');
+      return;
     }
+    // Buscar en backend sin límite
+    await loadPendingParts(searchFilter.trim());
+  };
+
+  // Limpiar búsqueda y recargar
+  const clearSearch = () => {
+    setSearchFilter('');
+    setCurrentLimit(100);
+    loadPendingParts('', 100);
+  };
+
+  // Cargar más (incrementar límite de 100 en 100 hasta 500)
+  const loadMore = () => {
+    if (currentLimit >= 500) return;
+    const newLimit = Math.min(currentLimit + 100, 500);
+    setCurrentLimit(newLimit);
+    loadPendingParts('', newLimit);
   };
 
   // ============================================================================
@@ -794,6 +806,63 @@ const RepairStation = () => {
                   }}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Results indicator */}
+          <div style={{
+            padding: '6px 12px',
+            fontSize: '11px',
+            color: t.textMuted,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: `1px solid ${t.border}`
+          }}>
+            <span>
+              {isLimitedView
+                ? (language === 'es' ? `Últimos ${filteredParts.length} seriales` : `Last ${filteredParts.length} serials`)
+                : (language === 'es' ? `${filteredParts.length} resultados` : `${filteredParts.length} results`)
+              }
+            </span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {isLimitedView && !searchFilter && currentLimit < 500 && filteredParts.length >= currentLimit && (
+                <button
+                  onClick={loadMore}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '10px',
+                    backgroundColor: t.accent,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  + {language === 'es' ? 'Cargar más' : 'Load more'}
+                </button>
+              )}
+              {isLimitedView && !searchFilter && currentLimit >= 500 && (
+                <span style={{ fontSize: '10px', color: t.warning }}>
+                  {language === 'es' ? 'Usa búsqueda para más' : 'Use search for more'}
+                </span>
+              )}
+              {searchFilter && (
+                <button
+                  onClick={clearSearch}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '10px',
+                    backgroundColor: 'transparent',
+                    color: t.error,
+                    border: `1px solid ${t.error}`,
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕ {language === 'es' ? 'Limpiar' : 'Clear'}
+                </button>
+              )}
             </div>
           </div>
 

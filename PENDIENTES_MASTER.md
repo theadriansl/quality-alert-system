@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-16 (Sesión 3)
+> Última actualización: 2026-08-16 (Sesión 4)
 
 ---
 
@@ -33,13 +33,15 @@
 | # | Tarea | Origen | Estado |
 |---|-------|--------|--------|
 | 1 | ~~PDF Export con fotos verificar~~ | 01-Jul | ✅ 15-Ago |
-| 2 | Export Excel MRB Dashboard | 27-Jun | ⏳ |
-| 3 | Export Excel 8D Consultation | 27-Jun | ⏳ |
-| 4 | PRINT_LABELS implementar (Kanban) | 02-Jul | ⏳ |
+| 2 | ~~Export Excel MRB Campaigns + Filtros~~ | 27-Jun | ✅ 16-Ago |
+| 3 | ~~Export Excel 8D Consultation~~ | 27-Jun | ✅ 16-Ago |
+| 4 | ~~PRINT_LABELS (Kanban)~~ | 02-Jul | ❌ Descartado |
 | 5 | ~~8D generación PDF refactorizada~~ | Arrastrado | ✅ 15-Ago |
 | 6 | ECR pruebas aprobaciones | Arrastrado | ⏳ |
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
+| 9 | **ARQUITECTURA: Particionamiento PostgreSQL por mes** | 16-Ago | ⏳ Planear |
+| 10 | **ARQUITECTURA: Módulo Reportes Masivos (async servidor)** | 16-Ago | ⏳ Planear |
 | 9 | Vista inventario WIP por ubicación | 26-Jul | ⏳ |
 | 10 | Alertas paquetes no recibidos | 26-Jul | ⏳ |
 
@@ -66,6 +68,11 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ RepairStation: Optimización carga (límite 100 + búsqueda backend) | 16-Ago |
+| ✅ MRBCampaigns: Export Excel + Filtros inline estilo Excel + Periodo | 16-Ago |
+| ✅ QARList: Export Excel + Filtros inline estilo Excel en headers | 16-Ago |
+| ✅ QARList: Filtros de periodo (Semana/Mes/Trimestre/Año/Todos) + rango fechas | 16-Ago |
+| ✅ 8DConsultation: Export Excel (ya existía, verificado) | 16-Ago |
 | ✅ RepairStation: Auto-scroll navegación teclado | 16-Ago |
 | ✅ RepairStation: Check MRB antes de reparar/liberar/scrap | 16-Ago |
 | ✅ RepairStation: Modal cuarentena para campañas pendientes | 16-Ago |
