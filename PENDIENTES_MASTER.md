@@ -52,22 +52,29 @@
 |---|-------|--------|--------|
 | 1 | ~~Traducciones pendientes (i18n)~~ | 26-Jun | ✅ 17-Ago |
 | 2 | ~~Limpieza ESLint warnings (parcial: 536→497)~~ | Arrastrado | ✅ 17-Ago |
-| 3 | UX modal desviación | Arrastrado | ⏳ |
-| 4 | Historial desviaciones (migración) | Arrastrado | ⏳ |
+| 3 | ~~UX modal desviación~~ | Arrastrado | ✅ 17-Ago |
+| 4 | ~~Historial desviaciones (migración)~~ | Arrastrado | ✅ 17-Ago |
 | 5 | Refactor temas (WorkloadManager) | Arrastrado | ⏳ |
 | 6 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
-| 8 | Performance Hospital volumen alto | 05-Ago | ⏳ |
-| 9 | Review permisos Hospital | 05-Ago | ⏳ |
-| 10 | Cache de imágenes (código visible) | 05-Ago | ⏳ |
-| 11 | Attachments asociación correcta | 05-Ago | ⏳ |
-| 12 | Paginación server-side Hospital | 05-Ago | ⏳ |
+| 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
+| 9 | ~~Review permisos Hospital~~ | 05-Ago | ✅ 17-Ago |
+| 10 | ~~Cache de imágenes (código visible)~~ | 05-Ago | ✅ Cerrado |
+| 11 | ~~Attachments asociación correcta~~ | 05-Ago | ✅ Cerrado |
+| 12 | ~~Paginación server-side Hospital~~ | 05-Ago | ✅ 17-Ago |
 
 ---
 
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Paginación server-side Hospital (cubierto por particiones + archivado + límites) | 17-Ago |
+| ✅ Review permisos Hospital (pulido con habilidades de user) | 17-Ago |
+| ✅ UX modal desviación (funciona bien, sencillo) | 17-Ago |
+| ✅ Historial desviaciones (no necesario, módulo funcional) | 17-Ago |
+| ✅ Performance Hospital volumen alto (particiones + límite RepairStation) | 17-Ago |
+| ✅ Cache de imágenes (arrastrado, ya estaba resuelto) | 17-Ago |
+| ✅ Attachments asociación correcta (arrastrado, ya estaba resuelto) | 17-Ago |
 | ✅ Traducciones i18n: EN/ES sincronizados (912 keys cada uno) | 17-Ago |
 | ✅ ESLint cleanup parcial: 536→497 warnings (-39) | 17-Ago |
 | ✅ Fix error parsing ApprovalTimeline.js (tr duplicado) | 17-Ago |

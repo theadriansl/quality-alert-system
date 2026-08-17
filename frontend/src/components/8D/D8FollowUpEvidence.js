@@ -17,7 +17,7 @@ const D8FollowUpEvidence = ({
   isReadOnly = false
 }) => {
   const { theme: themeColors } = useTheme();
-  useLanguage(); // mantener hook activo
+  const { language } = useLanguage();
   const { showSuccess, showError, showWarning } = useToast();
 
   // Check if current user is admin - admins can ALWAYS edit
