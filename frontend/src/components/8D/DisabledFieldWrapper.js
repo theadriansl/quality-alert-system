@@ -3,7 +3,7 @@
  * Wraps form fields with a tooltip explaining why they are disabled
  * Shows contextual messages based on approval status, permissions, etc.
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Clock, User, CheckCircle, AlertCircle, Shield } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';

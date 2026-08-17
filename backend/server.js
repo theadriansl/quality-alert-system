@@ -986,6 +986,38 @@ app.listen(PORT, async () => {
     console.log('✅ Quality Alert System ready for use');
     console.log(`📱 Frontend URL: http://localhost:3000`);
     console.log('============================================\n');
+
+    // ========================================================================
+    // AUTO-PARTITIONING SCHEDULER
+    // ========================================================================
+    // Ejecutar verificación de particiones al iniciar
+    try {
+      const partitionResult = await query('SELECT * FROM ensure_future_partitions(3)');
+      const created = partitionResult.rows.filter(r => r.status.startsWith('CREATED'));
+      if (created.length > 0) {
+        console.log(`📊 Auto-partitioning: ${created.length} new partitions created`);
+        created.forEach(p => console.log(`   - ${p.partition_name}`));
+      } else {
+        console.log('📊 Auto-partitioning: All partitions up to date');
+      }
+    } catch (partErr) {
+      // La función puede no existir aún si no se ejecutó la migración
+      console.log('⚠️  Auto-partitioning: Functions not yet installed (run migration 166)');
+    }
+
+    // Scheduler: verificar particiones cada 24 horas
+    setInterval(async () => {
+      try {
+        const result = await query('SELECT * FROM ensure_future_partitions(3)');
+        const created = result.rows.filter(r => r.status.startsWith('CREATED'));
+        if (created.length > 0) {
+          console.log(`[${new Date().toISOString()}] Auto-partitioning: ${created.length} partitions created`);
+        }
+      } catch (err) {
+        // Silencioso si falla
+      }
+    }, 1000 * 60 * 60 * 24); // cada 24 horas
+
   } catch (error) {
     console.error('❌ Failed to connect to database:', error);
     process.exit(1);

@@ -17,7 +17,7 @@ const FormGrid = ({
   className,
   style
 }) => {
-  const { theme: t } = useTheme();
+  useTheme(); // mantener hook activo
 
   const getGridTemplateColumns = () => {
     if (columns === 'auto') {

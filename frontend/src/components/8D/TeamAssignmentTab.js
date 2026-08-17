@@ -5,14 +5,10 @@ import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import PartsInventoryTable from './PartsInventoryTable';
 import { isUserAdmin } from '../../utils/permissions';
-// UX Improvements (MEJORAS)
-import CollapsibleSection from './CollapsibleSection';
-import ApprovalStepper from './ApprovalStepper';
-import SectionProgressIndicator from './SectionProgressIndicator';
 
 const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isReadOnly = false }) => {
   const { theme: themeColors } = useTheme();
-  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
 

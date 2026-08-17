@@ -11,7 +11,8 @@ import { useLanguage } from '../../context/LanguageContext';
 
 const ApprovalTimeline = ({ approvalHistory, language = 'es' }) => {
   const { theme: t } = useTheme();
-  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
+  // eslint-disable-next-line no-unused-vars
+  const { language: ctxLanguage, changeLanguage } = useLanguage();
 
   const translations = {
     es: {

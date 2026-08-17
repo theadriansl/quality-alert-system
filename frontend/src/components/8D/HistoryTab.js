@@ -4,7 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 
 const HistoryTab = ({ data }) => {
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const styles = getStyles(t);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);

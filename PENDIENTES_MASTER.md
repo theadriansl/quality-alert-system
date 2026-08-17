@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-16 (Sesión 5 - Final del día)
+> Última actualización: 2026-08-17 (Sesión 6)
 
 ---
 
@@ -40,7 +40,7 @@
 | 6 | ECR pruebas aprobaciones | Arrastrado | ⏳ |
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
-| 9 | **ARQUITECTURA: Particionamiento PostgreSQL por mes** | 16-Ago | ⏳ Planear |
+| 9 | ~~**ARQUITECTURA: Particionamiento PostgreSQL por mes**~~ | 16-Ago | ✅ 17-Ago |
 | 10 | **ARQUITECTURA: Módulo Reportes Masivos (async servidor)** | 16-Ago | ⏳ Planear |
 | 9 | Vista inventario WIP por ubicación | 26-Jul | ⏳ |
 | 10 | Alertas paquetes no recibidos | 26-Jul | ⏳ |
@@ -50,8 +50,8 @@
 ## Prioridad Baja / Tech Debt
 | # | Tarea | Origen | Estado |
 |---|-------|--------|--------|
-| 1 | Traducciones pendientes (i18n) | 26-Jun | ⏳ |
-| 2 | Limpieza ESLint warnings | Arrastrado | ⏳ |
+| 1 | ~~Traducciones pendientes (i18n)~~ | 26-Jun | ✅ 17-Ago |
+| 2 | ~~Limpieza ESLint warnings (parcial: 536→497)~~ | Arrastrado | ✅ 17-Ago |
 | 3 | UX modal desviación | Arrastrado | ⏳ |
 | 4 | Historial desviaciones (migración) | Arrastrado | ⏳ |
 | 5 | Refactor temas (WorkloadManager) | Arrastrado | ⏳ |
@@ -68,6 +68,12 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Traducciones i18n: EN/ES sincronizados (912 keys cada uno) | 17-Ago |
+| ✅ ESLint cleanup parcial: 536→497 warnings (-39) | 17-Ago |
+| ✅ Fix error parsing ApprovalTimeline.js (tr duplicado) | 17-Ago |
+| ✅ Limpieza imports no usados en 12+ componentes 8D | 17-Ago |
+| ✅ Auto-partitioning: Funciones PostgreSQL + Scheduler server.js | 17-Ago |
+| ✅ Migraciones 166 + 167 + 168: 4 tablas particionadas | 17-Ago |
 | ✅ RepairStation: Optimización carga (límite 100 + búsqueda backend) | 16-Ago |
 | ✅ MRBCampaigns: Export Excel + Filtros inline estilo Excel + Periodo | 16-Ago |
 | ✅ QARList: Export Excel + Filtros inline estilo Excel en headers | 16-Ago |

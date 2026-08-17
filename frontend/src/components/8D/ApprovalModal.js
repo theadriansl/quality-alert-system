@@ -12,7 +12,7 @@ const ApprovalModal = ({
   onSuccess
 }) => {
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const [action, setAction] = useState(null); // 'approve' or 'reject'
   const [comments, setComments] = useState('');
   const [loading, setLoading] = useState(false);

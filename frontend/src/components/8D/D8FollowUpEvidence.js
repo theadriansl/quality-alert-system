@@ -3,10 +3,6 @@ import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { isUserAdmin } from '../../utils/permissions';
-// UX Improvements (MEJORAS)
-import CollapsibleSection from './CollapsibleSection';
-import ApprovalStepper from './ApprovalStepper';
-import SectionProgressIndicator from './SectionProgressIndicator';
 
 const D8FollowUpEvidence = ({
   data,
@@ -21,7 +17,7 @@ const D8FollowUpEvidence = ({
   isReadOnly = false
 }) => {
   const { theme: themeColors } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const { showSuccess, showError, showWarning } = useToast();
 
   // Check if current user is admin - admins can ALWAYS edit

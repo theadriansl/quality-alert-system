@@ -5,7 +5,7 @@
  */
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { HelpCircle, AlertCircle, CheckCircle, Upload, X, Eye } from 'lucide-react';
+import { HelpCircle, AlertCircle, CheckCircle, Upload } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
 const FormField = ({

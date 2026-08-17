@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { ChevronDown, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 

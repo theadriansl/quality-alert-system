@@ -17,7 +17,7 @@ const D7Validation = ({
   isSending
 }) => {
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const { showSuccess, showError } = useToast();
   const styles = getStyles(t);
 

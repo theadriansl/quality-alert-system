@@ -5,7 +5,7 @@ import { useLanguage } from '../../context/LanguageContext';
 
 const StatusBadge = ({ status }) => {
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const description = getStatusDescription(status);
   const colorClass = getStatusBadgeColor(status);
 

@@ -8,7 +8,7 @@ import { useLanguage } from '../../context/LanguageContext';
 
 const ApprovalPanel = ({ reportId, currentUser, onStatusChange, section = 'issue' }) => {
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const [approvalStatus, setApprovalStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);

@@ -5,14 +5,10 @@ import { useLanguage } from '../../context/LanguageContext';
 import GanttChart from './GanttChart';
 import D7Validation from './D7Validation';
 import { getCurrentUser, isUserAdmin } from '../../utils/permissions';
-// UX Improvements (MEJORAS)
-import CollapsibleSection from './CollapsibleSection';
-import ApprovalStepper from './ApprovalStepper';
-import SectionProgressIndicator from './SectionProgressIndicator';
 
 const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked = false, activeSection, isReadOnly = false }) => {
   const { theme: themeColors } = useTheme();
-  const { t: tr, language: ctxLanguage, changeLanguage } = useLanguage();
+  useLanguage(); // mantener hook activo
   const { showSuccess, showError, showWarning } = useToast();
 
   // Get current user from centralized utility
