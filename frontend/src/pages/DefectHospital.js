@@ -12,6 +12,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { ChevronDown, ChevronRight, Package } from 'lucide-react';
 import ActionBar from '../components/ActionBar';
 // Permisos vienen del backend via hospitalRolesService
 import { checkMyHospitalPermissions, cacheHospitalPermissions, getCachedHospitalPermissions } from '../services/hospitalRolesService';
@@ -508,6 +509,40 @@ const DefectHospital = () => {
   const [mrbDeviationId, setMrbDeviationId] = useState('');
   const [mrbStationId, setMrbStationId] = useState('');
 
+  // Filtros inline estilo Excel para tabla MRB
+  // Arrays para soportar selección múltiple
+  const [mrbColFilters, setMrbColFilters] = useState({
+    entryNumber: [],
+    serialNumber: [],
+    partNumber: [],
+    defectCode: [],
+    mrbCampaignNumber: [],
+    qarNumber: [],
+    eightDNumber: [],
+    hours: [],
+    mrbType: []
+  });
+  const [mrbOpenDropdown, setMrbOpenDropdown] = useState(null);
+  const [mrbFilterSearch, setMrbFilterSearch] = useState(''); // Búsqueda dentro del dropdown
+
+  // Filtros inline estilo Excel para tabla principal (repairs/releases/handoff/general/inRepair)
+  // Arrays para soportar selección múltiple
+  const [mainColFilters, setMainColFilters] = useState({
+    entryNumber: [],
+    serialNumber: [],
+    partNumber: [],
+    locationName: [],
+    departmentName: [],
+    defectTypeName: [],
+    repairStatus: [],
+    repairCount: [],
+    lastAction: [],
+    capturedAt: [],
+    updatedAt: []
+  });
+  const [mainOpenDropdown, setMainOpenDropdown] = useState(null);
+  const [mainFilterSearch, setMainFilterSearch] = useState(''); // Búsqueda dentro del dropdown
+
   // Modal de Envío a Validación (QA/MRB/Scrap)
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [handoffDestination, setHandoffDestination] = useState('QA');
@@ -526,7 +561,7 @@ const DefectHospital = () => {
   const [package8dId, setPackage8dId] = useState(null);
   const [packageCampaignId, setPackageCampaignId] = useState(null);
   const [packageNotes, setPackageNotes] = useState('');
-  const [packageAlertHours, setPackageAlertHours] = useState(24);
+  const [packageAlertMinutes, setPackageAlertMinutes] = useState(60); // Minutos para alerta (default 1 hora)
   const [packageDestinationLocationId, setPackageDestinationLocationId] = useState(null); // Ubicación MRB destino
   const [availableQars, setAvailableQars] = useState([]);
   const [available8Ds, setAvailable8Ds] = useState([]);
@@ -944,7 +979,7 @@ const DefectHospital = () => {
         defectIds,
         {
           notes: packageNotes,
-          alertHours: packageAlertHours,
+          alertMinutes: packageAlertMinutes,
           destinationLocationId: packageDestinationLocationId
         }
       );
@@ -1310,6 +1345,47 @@ const DefectHospital = () => {
     return pendingRepairs.filter(d => !d.currentLocationId && !d.current_location_id);
   }, [pendingRepairs]);
 
+  // Todos los defectos combinados para calcular valores únicos de filtros
+  const allDefectsForFilters = useMemo(() => [
+    ...allDefects, ...pendingRepairs, ...inRepairDefects, ...pendingReleases, ...pendingHandoff
+  ], [allDefects, pendingRepairs, inRepairDefects, pendingReleases, pendingHandoff]);
+
+  // Valores únicos para filtros de columna (tabla principal)
+  // Helper para obtener nombre de última acción de un defecto
+  const getLastActionName = (d) => {
+    const clean = (val) => val && val.trim() ? val.trim() : null;
+    const status = d.repairStatus || d.repair_status || 'OPEN';
+    const scrappedBy = clean(d.scrappedByName || d.scrapped_by_name);
+    const quarantinedBy = clean(d.quarantinedByName || d.quarantined_by_name);
+    const releasedBy = clean(d.releasedByName || d.released_by_name);
+    const repairedBy = clean(d.repairedByName || d.repaired_by_name || d.repairingByName || d.repairing_by_name);
+    const capturedBy = clean(d.capturedByName || d.captured_by_name);
+
+    if (status === 'SCRAPPED' || status === 'SCRAP_CONFIRMED') return scrappedBy || releasedBy || repairedBy || capturedBy;
+    if (status === 'QUARANTINE') return quarantinedBy || repairedBy || capturedBy;
+    if (status === 'RELEASED' || status === 'CLOSED') return releasedBy || repairedBy || capturedBy;
+    if (status === 'IN_REPAIR') return repairedBy || capturedBy;
+    if (status === 'REPAIRED' || status === 'IN_VALIDATION') return repairedBy || capturedBy;
+    return capturedBy;
+  };
+
+  const mainUniqueValues = useMemo(() => ({
+    entryNumber: [...new Set(allDefectsForFilters.map(d => d.entryNumber || d.entry_number).filter(Boolean))].sort(),
+    serialNumber: [...new Set(allDefectsForFilters.map(d => d.serialNumber || d.serial_number || d.lotNumber || d.lot_number).filter(Boolean))].sort(),
+    partNumber: [...new Set(allDefectsForFilters.map(d => d.partNumber || d.part_number).filter(Boolean))].sort(),
+    locationName: [...new Set(allDefectsForFilters.map(d => d.locationCode || d.location_code || d.currentLocationCode || d.current_location_code).filter(Boolean))].sort(),
+    departmentName: [...new Set(allDefectsForFilters.map(d => d.departmentName || d.department_name).filter(Boolean))].sort(),
+    defectTypeName: [...new Set(allDefectsForFilters.map(d => d.defectTypeName || d.defect_type_name).filter(Boolean))].sort(),
+    repairStatus: [...new Set(allDefectsForFilters.map(d => d.repairStatus || d.repair_status).filter(Boolean))].sort(),
+    repairCount: ['0', '1', '2', '3+'],
+    lastAction: [...new Set(allDefectsForFilters.map(d => getLastActionName(d)).filter(Boolean))].sort(),
+    capturedAt: [...new Set(allDefectsForFilters.map(d => d.capturedByName || d.captured_by_name).filter(Boolean))].sort(),
+    updatedAt: [...new Set(allDefectsForFilters.map(d => {
+      const dt = d.updatedAt || d.updated_at;
+      return dt ? new Date(dt).toLocaleDateString('es-MX') : null;
+    }).filter(Boolean))].sort().reverse().slice(0, 30)
+  }), [allDefectsForFilters]);
+
   // Filtrar y agrupar datos según tab activo
   const filteredGroups = useMemo(() => {
     let data;
@@ -1420,8 +1496,50 @@ const DefectHospital = () => {
       });
     }
 
+    // Filtros de columna estilo Excel (arrays para selección múltiple)
+    if (mainColFilters.entryNumber.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.entryNumber.includes(d.entryNumber || d.entry_number));
+    }
+    if (mainColFilters.serialNumber.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.serialNumber.includes(d.serialNumber || d.serial_number || d.lotNumber || d.lot_number));
+    }
+    if (mainColFilters.partNumber.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.partNumber.includes(d.partNumber || d.part_number));
+    }
+    if (mainColFilters.locationName.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.locationName.includes(d.locationCode || d.location_code || d.currentLocationCode || d.current_location_code));
+    }
+    if (mainColFilters.departmentName.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.departmentName.includes(d.departmentName || d.department_name));
+    }
+    if (mainColFilters.defectTypeName.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.defectTypeName.includes(d.defectTypeName || d.defect_type_name));
+    }
+    if (mainColFilters.repairStatus.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.repairStatus.includes(d.repairStatus || d.repair_status));
+    }
+    if (mainColFilters.repairCount.length > 0) {
+      filtered = filtered.filter(d => {
+        const count = d.repairAttempts || d.repair_attempts || 0;
+        const countStr = count >= 3 ? '3+' : String(count);
+        return mainColFilters.repairCount.includes(countStr);
+      });
+    }
+    if (mainColFilters.lastAction.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.lastAction.includes(getLastActionName(d)));
+    }
+    if (mainColFilters.capturedAt.length > 0) {
+      filtered = filtered.filter(d => mainColFilters.capturedAt.includes(d.capturedByName || d.captured_by_name));
+    }
+    if (mainColFilters.updatedAt.length > 0) {
+      filtered = filtered.filter(d => {
+        const dt = d.updatedAt || d.updated_at;
+        return dt && mainColFilters.updatedAt.includes(new Date(dt).toLocaleDateString('es-MX'));
+      });
+    }
+
     return groupBySerial(filtered);
-  }, [activeTab, repairsSubTab, allDefects, pendingRepairs, pendingWithLocation, pendingWithoutLocation, inRepairDefects, pendingReleases, pendingHandoff, serialHistory, searchFilter, defectTypeFilter, statusFilter, dateFilter, captureDateFrom, captureDateTo, groupBySerial]);
+  }, [activeTab, repairsSubTab, allDefects, pendingRepairs, pendingWithLocation, pendingWithoutLocation, inRepairDefects, pendingReleases, pendingHandoff, serialHistory, searchFilter, defectTypeFilter, statusFilter, dateFilter, captureDateFrom, captureDateTo, groupBySerial, mainColFilters]);
 
   // Toggle expandir serial
   const toggleExpand = (serial) => {
@@ -2988,7 +3106,7 @@ const DefectHospital = () => {
       case 'CREATE_MRB_PACKAGE':
         // Abrir modal para crear paquete de transferencia a MRB
         setPackageNotes('');
-        setPackageAlertHours(24);
+        setPackageAlertMinutes(24);
         setSelectedForMrb(new Set(defectIds));
         setShowCreatePackageModal(true);
         break;
@@ -3117,6 +3235,70 @@ const DefectHospital = () => {
 
     return Object.values(groupedByPart);
   }, [quarantineDefects, scrappedDefects, selectedForMrb]);
+
+  // Valores únicos para filtros MRB (estilo Excel)
+  const mrbAllDefects = useMemo(() => [
+    ...quarantineDefects.map(d => ({ ...d, _mrbType: 'quarantine' })),
+    ...scrappedDefects.map(d => ({ ...d, _mrbType: 'scrap' }))
+  ], [quarantineDefects, scrappedDefects]);
+
+  const mrbUniqueValues = useMemo(() => ({
+    entryNumber: [...new Set(mrbAllDefects.map(d => d.entryNumber).filter(Boolean))].sort(),
+    serialNumber: [...new Set(mrbAllDefects.map(d => d.serialNumber || d.lotNumber).filter(Boolean))].sort(),
+    partNumber: [...new Set(mrbAllDefects.map(d => d.partNumber).filter(Boolean))].sort(),
+    defectCode: [...new Set(mrbAllDefects.map(d => d.defectTypeName || d.defect_type_name).filter(Boolean))].sort(),
+    mrbCampaignNumber: [...new Set(mrbAllDefects.map(d => d.mrbCampaignNumber).filter(Boolean))].sort(),
+    qarNumber: [...new Set(mrbAllDefects.map(d => d.qarNumber).filter(Boolean))].sort(),
+    eightDNumber: [...new Set(mrbAllDefects.map(d => d.eightdNumber).filter(Boolean))].sort(),
+    hours: [...new Set(mrbAllDefects.map(d => {
+      const h = d._mrbType === 'quarantine' ? d.hoursInQuarantine : d.hoursInScrap;
+      return h > 72 ? '>72h' : h > 24 ? '24-72h' : '<24h';
+    }))].sort(),
+    mrbType: ['quarantine', 'scrap']
+  }), [mrbAllDefects]);
+
+  // Defectos MRB filtrados
+  const mrbFilteredDefects = useMemo(() => {
+    let data = mrbAllDefects;
+    // Filtrar por subTab
+    if (mrbSubTab === 'quarantine') data = data.filter(d => d._mrbType === 'quarantine');
+    if (mrbSubTab === 'scrap') data = data.filter(d => d._mrbType === 'scrap');
+    // Aplicar filtros de columna (arrays para selección múltiple)
+    if (mrbColFilters.entryNumber.length > 0) data = data.filter(d => mrbColFilters.entryNumber.includes(d.entryNumber));
+    if (mrbColFilters.serialNumber.length > 0) data = data.filter(d => mrbColFilters.serialNumber.includes(d.serialNumber || d.lotNumber));
+    if (mrbColFilters.partNumber.length > 0) data = data.filter(d => mrbColFilters.partNumber.includes(d.partNumber));
+    if (mrbColFilters.defectCode.length > 0) data = data.filter(d => mrbColFilters.defectCode.includes(d.defectTypeName || d.defect_type_name));
+    if (mrbColFilters.mrbCampaignNumber.length > 0) data = data.filter(d => mrbColFilters.mrbCampaignNumber.includes(d.mrbCampaignNumber));
+    if (mrbColFilters.qarNumber.length > 0) data = data.filter(d => mrbColFilters.qarNumber.includes(d.qarNumber));
+    if (mrbColFilters.eightDNumber.length > 0) data = data.filter(d => mrbColFilters.eightDNumber.includes(d.eightdNumber));
+    if (mrbColFilters.hours.length > 0) {
+      data = data.filter(d => {
+        const h = d._mrbType === 'quarantine' ? d.hoursInQuarantine : d.hoursInScrap;
+        const cat = h > 72 ? '>72h' : h > 24 ? '24-72h' : '<24h';
+        return mrbColFilters.hours.includes(cat);
+      });
+    }
+    if (mrbColFilters.mrbType.length > 0) data = data.filter(d => mrbColFilters.mrbType.includes(d._mrbType));
+    return data;
+  }, [mrbAllDefects, mrbSubTab, mrbColFilters]);
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    if (mrbOpenDropdown) {
+      const handleClick = () => setMrbOpenDropdown(null);
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [mrbOpenDropdown]);
+
+  // Cerrar dropdown principal al hacer click fuera
+  useEffect(() => {
+    if (mainOpenDropdown) {
+      const handleClick = () => setMainOpenDropdown(null);
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [mainOpenDropdown]);
 
   // Seleccionar por tipo de defecto
   const selectByDefectType = (defectTypeId) => {
@@ -3980,6 +4162,245 @@ const DefectHospital = () => {
     return colors[color] || colors.GREEN;
   };
 
+  // Componente de filtro de columna estilo Excel para tabla principal (selección múltiple)
+  const MainColumnFilter = ({ field, label, align = 'left', style = {} }) => {
+    const isOpen = mainOpenDropdown === field;
+    const selectedValues = mainColFilters[field] || [];
+    const hasFilter = selectedValues.length > 0;
+    const allValues = mainUniqueValues[field] || [];
+
+    // Filtrar valores por búsqueda
+    const filteredValues = mainFilterSearch
+      ? allValues.filter(v => String(v).toLowerCase().includes(mainFilterSearch.toLowerCase()))
+      : allValues;
+
+    const toggleValue = (val) => {
+      setMainColFilters(prev => {
+        const current = prev[field] || [];
+        if (current.includes(val)) {
+          return { ...prev, [field]: current.filter(v => v !== val) };
+        } else {
+          return { ...prev, [field]: [...current, val] };
+        }
+      });
+    };
+
+    const selectAll = () => {
+      setMainColFilters(prev => ({ ...prev, [field]: [...filteredValues] }));
+    };
+
+    const clearAll = () => {
+      setMainColFilters(prev => ({ ...prev, [field]: [] }));
+      setMainFilterSearch('');
+    };
+
+    return (
+      <th style={{ ...style, position: 'relative', userSelect: 'none', textAlign: align }}>
+        <div
+          onClick={(e) => { e.stopPropagation(); setMainOpenDropdown(isOpen ? null : field); if (!isOpen) setMainFilterSearch(''); }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: align === 'center' ? 'center' : 'flex-start', gap: '4px', cursor: 'pointer' }}
+        >
+          <span style={{ color: hasFilter ? t.accent : t.textMuted, fontWeight: '600', whiteSpace: 'nowrap' }}>
+            {label} {hasFilter && <span style={{ fontSize: '10px' }}>({selectedValues.length})</span>}
+          </span>
+          <ChevronDown size={12} color={hasFilter ? t.accent : t.textMuted} style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s', flexShrink: 0 }} />
+        </div>
+        {isOpen && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: '100%', left: align === 'center' ? '50%' : 0,
+              transform: align === 'center' ? 'translateX(-50%)' : 'none',
+              minWidth: '200px', maxHeight: '320px', display: 'flex', flexDirection: 'column',
+              backgroundColor: t.bgCard, border: `1px solid ${t.border}`,
+              borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, marginTop: '4px'
+            }}
+          >
+            {/* Búsqueda */}
+            <div style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>
+              <input
+                type="text"
+                placeholder={language === 'es' ? 'Buscar...' : 'Search...'}
+                value={mainFilterSearch}
+                onChange={(e) => setMainFilterSearch(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: '100%', padding: '6px 10px', fontSize: '12px',
+                  border: `1px solid ${t.border}`, borderRadius: '4px',
+                  backgroundColor: t.bgPanel, color: t.text, outline: 'none'
+                }}
+              />
+            </div>
+            {/* Acciones rápidas */}
+            <div style={{ display: 'flex', gap: '8px', padding: '6px 8px', borderBottom: `1px solid ${t.border}` }}>
+              <button onClick={selectAll} style={{ flex: 1, padding: '4px', fontSize: '11px', cursor: 'pointer', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', color: t.text }}>
+                {language === 'es' ? 'Todos' : 'All'}
+              </button>
+              <button onClick={clearAll} style={{ flex: 1, padding: '4px', fontSize: '11px', cursor: 'pointer', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', color: t.text }}>
+                {language === 'es' ? 'Ninguno' : 'None'}
+              </button>
+            </div>
+            {/* Lista de valores con checkboxes */}
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '220px' }}>
+              {filteredValues.length === 0 ? (
+                <div style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontSize: '12px' }}>
+                  {language === 'es' ? 'Sin resultados' : 'No results'}
+                </div>
+              ) : (
+                filteredValues.map(val => (
+                  <label
+                    key={val}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '6px 10px', fontSize: '12px', color: t.text, cursor: 'pointer',
+                      backgroundColor: selectedValues.includes(val) ? t.accent + '15' : 'transparent'
+                    }}
+                    onMouseEnter={(e) => { if (!selectedValues.includes(val)) e.currentTarget.style.backgroundColor = t.bgPanel; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selectedValues.includes(val) ? t.accent + '15' : 'transparent'; }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedValues.includes(val)}
+                      onChange={() => toggleValue(val)}
+                      style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: t.accent }}
+                    />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{val}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            {/* Footer con contador */}
+            <div style={{ padding: '6px 10px', borderTop: `1px solid ${t.border}`, fontSize: '11px', color: t.textMuted, textAlign: 'center' }}>
+              {filteredValues.length} {language === 'es' ? 'de' : 'of'} {allValues.length} | {selectedValues.length} {language === 'es' ? 'seleccionados' : 'selected'}
+            </div>
+          </div>
+        )}
+      </th>
+    );
+  };
+
+  // Componente de filtro de columna estilo Excel para MRB (selección múltiple)
+  const MrbColumnFilter = ({ field, label, align = 'left' }) => {
+    const isOpen = mrbOpenDropdown === field;
+    const selectedValues = mrbColFilters[field] || [];
+    const hasFilter = selectedValues.length > 0;
+    const allValues = mrbUniqueValues[field] || [];
+
+    // Filtrar valores por búsqueda
+    const filteredValues = mrbFilterSearch
+      ? allValues.filter(v => String(v).toLowerCase().includes(mrbFilterSearch.toLowerCase()))
+      : allValues;
+
+    const toggleValue = (val) => {
+      setMrbColFilters(prev => {
+        const current = prev[field] || [];
+        if (current.includes(val)) {
+          return { ...prev, [field]: current.filter(v => v !== val) };
+        } else {
+          return { ...prev, [field]: [...current, val] };
+        }
+      });
+    };
+
+    const selectAll = () => {
+      setMrbColFilters(prev => ({ ...prev, [field]: [...filteredValues] }));
+    };
+
+    const clearAll = () => {
+      setMrbColFilters(prev => ({ ...prev, [field]: [] }));
+      setMrbFilterSearch('');
+    };
+
+    const getDisplayValue = (val) => {
+      if (field === 'mrbType') return val === 'quarantine' ? '🔒 Cuarentena' : '🗑️ Scrap';
+      return val;
+    };
+
+    return (
+      <th style={{ padding: '12px 8px', textAlign: align, color: t.textMuted, fontWeight: '600', position: 'relative', userSelect: 'none' }}>
+        <div
+          onClick={(e) => { e.stopPropagation(); setMrbOpenDropdown(isOpen ? null : field); if (!isOpen) setMrbFilterSearch(''); }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: align === 'center' ? 'center' : 'flex-start', gap: '4px', cursor: 'pointer' }}
+        >
+          <span style={{ color: hasFilter ? t.accent : t.textMuted }}>
+            {label} {hasFilter && <span style={{ fontSize: '10px' }}>({selectedValues.length})</span>}
+          </span>
+          <ChevronDown size={12} color={hasFilter ? t.accent : t.textMuted} style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
+        </div>
+        {isOpen && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: '100%', left: align === 'center' ? '50%' : 0,
+              transform: align === 'center' ? 'translateX(-50%)' : 'none',
+              minWidth: '200px', maxHeight: '320px', display: 'flex', flexDirection: 'column',
+              backgroundColor: t.bgCard, border: `1px solid ${t.border}`,
+              borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, marginTop: '4px'
+            }}
+          >
+            {/* Búsqueda */}
+            <div style={{ padding: '8px', borderBottom: `1px solid ${t.border}` }}>
+              <input
+                type="text"
+                placeholder={language === 'es' ? 'Buscar...' : 'Search...'}
+                value={mrbFilterSearch}
+                onChange={(e) => setMrbFilterSearch(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: '100%', padding: '6px 10px', fontSize: '12px',
+                  border: `1px solid ${t.border}`, borderRadius: '4px',
+                  backgroundColor: t.bgPanel, color: t.text, outline: 'none'
+                }}
+              />
+            </div>
+            {/* Acciones rápidas */}
+            <div style={{ display: 'flex', gap: '8px', padding: '6px 8px', borderBottom: `1px solid ${t.border}` }}>
+              <button onClick={selectAll} style={{ flex: 1, padding: '4px', fontSize: '11px', cursor: 'pointer', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', color: t.text }}>
+                {language === 'es' ? 'Todos' : 'All'}
+              </button>
+              <button onClick={clearAll} style={{ flex: 1, padding: '4px', fontSize: '11px', cursor: 'pointer', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', color: t.text }}>
+                {language === 'es' ? 'Ninguno' : 'None'}
+              </button>
+            </div>
+            {/* Lista de valores con checkboxes */}
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '220px' }}>
+              {filteredValues.length === 0 ? (
+                <div style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontSize: '12px' }}>
+                  {language === 'es' ? 'Sin resultados' : 'No results'}
+                </div>
+              ) : (
+                filteredValues.map(val => (
+                  <label
+                    key={val}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '6px 10px', fontSize: '12px', color: t.text, cursor: 'pointer',
+                      backgroundColor: selectedValues.includes(val) ? t.accent + '15' : 'transparent'
+                    }}
+                    onMouseEnter={(e) => { if (!selectedValues.includes(val)) e.currentTarget.style.backgroundColor = t.bgPanel; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selectedValues.includes(val) ? t.accent + '15' : 'transparent'; }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedValues.includes(val)}
+                      onChange={() => toggleValue(val)}
+                      style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: t.accent }}
+                    />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getDisplayValue(val)}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            {/* Footer con contador */}
+            <div style={{ padding: '6px 10px', borderTop: `1px solid ${t.border}`, fontSize: '11px', color: t.textMuted, textAlign: 'center' }}>
+              {filteredValues.length} {language === 'es' ? 'de' : 'of'} {allValues.length} | {selectedValues.length} {language === 'es' ? 'seleccionados' : 'selected'}
+            </div>
+          </div>
+        )}
+      </th>
+    );
+  };
+
   // Render acciones para un defecto individual (según modo)
   const renderDefectActions = (defect) => {
     const status = defect.repairStatus || defect.repair_status || 'OPEN';
@@ -4667,17 +5088,17 @@ const DefectHospital = () => {
           <thead>
             <tr>
               <th style={{ ...thBase, width: '40px', textAlign: 'center' }}>✓</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>Entry</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>Serial</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Parte' : 'Part'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Ubicación' : 'Location'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Depto' : 'Dept'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Tipo Defecto' : 'Defect Type'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Estado' : 'Status'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Rep' : 'Rep'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Últ. Acción' : 'Last Action'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Capturado' : 'Captured'}</th>
-              <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Últ. Mov' : 'Last Upd'}</th>
+              <MainColumnFilter field="entryNumber" label="Entry" style={thBase} />
+              <MainColumnFilter field="serialNumber" label="Serial" style={thBase} />
+              <MainColumnFilter field="partNumber" label={language === 'es' ? 'Parte' : 'Part'} style={thBase} />
+              <MainColumnFilter field="locationName" label={language === 'es' ? 'Ubicación' : 'Location'} style={thBase} />
+              <MainColumnFilter field="departmentName" label={language === 'es' ? 'Depto' : 'Dept'} style={thBase} />
+              <MainColumnFilter field="defectTypeName" label={language === 'es' ? 'Tipo Defecto' : 'Defect Type'} style={thBase} />
+              <MainColumnFilter field="repairStatus" label={language === 'es' ? 'Estado' : 'Status'} style={thBase} />
+              <MainColumnFilter field="repairCount" label={language === 'es' ? 'Rep' : 'Rep'} style={thBase} />
+              <MainColumnFilter field="lastAction" label={language === 'es' ? 'Últ. Acción' : 'Last Action'} style={thBase} />
+              <MainColumnFilter field="capturedAt" label={language === 'es' ? 'Capturado' : 'Captured'} style={thBase} />
+              <MainColumnFilter field="updatedAt" label={language === 'es' ? 'Últ. Mov' : 'Last Upd'} style={thBase} />
               <th style={{ ...thBase, whiteSpace: 'nowrap' }}>{language === 'es' ? 'Acciones' : 'Actions'}</th>
             </tr>
           </thead>
@@ -6371,6 +6792,36 @@ const DefectHospital = () => {
       {activeTab === 'mrb' ? (
         /* Vista MRB - Cuarentena y Scrap */
         <div style={{ padding: '0' }}>
+          {/* Banner link a Transferencias Hospital */}
+          <div
+            onClick={() => navigate('/hospital-packages')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              backgroundColor: `${t.primary}15`,
+              borderRadius: '8px',
+              border: `1px solid ${t.primary}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Package size={20} color={t.primary} />
+              <div>
+                <div style={{ fontWeight: '600', color: t.primary, fontSize: '14px' }}>
+                  {language === 'es' ? 'Transferencias Hospital' : 'Hospital Transfers'}
+                </div>
+                <div style={{ fontSize: '12px', color: t.textMuted }}>
+                  {language === 'es' ? 'Ver paquetes enviados, recibir de MRB, alertas' : 'View sent packages, receive from MRB, alerts'}
+                </div>
+              </div>
+            </div>
+            <ChevronRight size={20} color={t.primary} />
+          </div>
+
           {/* Filtros MRB */}
           <div style={{
             display: 'flex',
@@ -6436,6 +6887,24 @@ const DefectHospital = () => {
             >
               🗑️ Scrap ({scrappedDefects.length})
             </button>
+
+            {/* Indicador de filtros activos */}
+            {Object.values(mrbColFilters).some(v => v.length > 0) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '12px', color: t.accent, fontWeight: '600' }}>
+                  {Object.values(mrbColFilters).filter(v => v.length > 0).length} {language === 'es' ? 'filtro(s)' : 'filter(s)'}
+                </span>
+                <button
+                  onClick={() => setMrbColFilters({ entryNumber: [], serialNumber: [], partNumber: [], defectCode: [], mrbCampaignNumber: [], qarNumber: [], eightDNumber: [], hours: [], mrbType: [] })}
+                  style={{
+                    padding: '4px 10px', borderRadius: '12px', cursor: 'pointer', fontSize: '11px', fontWeight: '600',
+                    backgroundColor: 'transparent', color: t.accent, border: `1px solid ${t.accent}`, transition: 'all 0.2s'
+                  }}
+                >
+                  ✕ {language === 'es' ? 'Limpiar' : 'Clear'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Indicador de selección MRB con guía hacia ActionBar */}
@@ -6475,11 +6944,10 @@ const DefectHospital = () => {
                   <th style={{ padding: '12px 8px', textAlign: 'center', width: '40px' }}>
                     <input
                       type="checkbox"
-                      checked={selectedForMrb.size === (mrbSubTab === 'all' ? [...quarantineDefects, ...scrappedDefects] : (mrbSubTab === 'quarantine' ? quarantineDefects : scrappedDefects)).length && selectedForMrb.size > 0}
+                      checked={selectedForMrb.size === mrbFilteredDefects.length && selectedForMrb.size > 0}
                       onChange={(e) => {
-                        const defects = mrbSubTab === 'all' ? [...quarantineDefects, ...scrappedDefects] : (mrbSubTab === 'quarantine' ? quarantineDefects : scrappedDefects);
                         if (e.target.checked) {
-                          setSelectedForMrb(new Set(defects.map(d => d.id)));
+                          setSelectedForMrb(new Set(mrbFilteredDefects.map(d => d.id)));
                         } else {
                           setSelectedForMrb(new Set());
                         }
@@ -6487,39 +6955,39 @@ const DefectHospital = () => {
                       style={{ cursor: 'pointer' }}
                     />
                   </th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>Entry #</th>
-                  {mrbSubTab === 'all' && <th style={{ padding: '12px 8px', textAlign: 'center', color: t.textMuted, fontWeight: '600' }}>Status</th>}
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>Serial/Lote</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Parte' : 'Part'}</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Defecto' : 'Defect'}</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Campaña' : 'Campaign'}</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>QAR</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600' }}>8D</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'center', color: t.textMuted, fontWeight: '600' }}>{language === 'es' ? 'Horas' : 'Hours'}</th>
+                  <MrbColumnFilter field="entryNumber" label="Entry #" />
+                  {mrbSubTab === 'all' && <MrbColumnFilter field="mrbType" label="Status" align="center" />}
+                  <MrbColumnFilter field="serialNumber" label="Serial/Lote" />
+                  <MrbColumnFilter field="partNumber" label={language === 'es' ? 'Parte' : 'Part'} />
+                  <MrbColumnFilter field="defectCode" label={language === 'es' ? 'Defecto' : 'Defect'} />
+                  <MrbColumnFilter field="mrbCampaignNumber" label={language === 'es' ? 'Campaña' : 'Campaign'} />
+                  <MrbColumnFilter field="qarNumber" label="QAR" />
+                  <MrbColumnFilter field="eightDNumber" label="8D" />
+                  <MrbColumnFilter field="hours" label={language === 'es' ? 'Horas' : 'Hours'} align="center" />
                 </tr>
               </thead>
               <tbody>
                 {(() => {
-                  const mrbDefects = mrbSubTab === 'all'
-                    ? [...quarantineDefects.map(d => ({...d, _mrbType: 'quarantine'})), ...scrappedDefects.map(d => ({...d, _mrbType: 'scrap'}))]
-                    : (mrbSubTab === 'quarantine' ? quarantineDefects.map(d => ({...d, _mrbType: 'quarantine'})) : scrappedDefects.map(d => ({...d, _mrbType: 'scrap'})));
+                  const hasActiveFilters = Object.values(mrbColFilters).some(v => v.length > 0);
 
-                  if (mrbDefects.length === 0) {
+                  if (mrbFilteredDefects.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={mrbSubTab === 'all' ? 11 : 10} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
-                          {mrbSubTab === 'all'
-                            ? (language === 'es' ? 'No hay defectos en MRB' : 'No defects in MRB')
-                            : mrbSubTab === 'quarantine'
-                              ? (language === 'es' ? 'No hay defectos en cuarentena' : 'No defects in quarantine')
-                              : (language === 'es' ? 'No hay defectos en scrap pendientes' : 'No pending scrap defects')
+                        <td colSpan={mrbSubTab === 'all' ? 10 : 9} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
+                          {hasActiveFilters
+                            ? (language === 'es' ? 'No hay resultados con los filtros aplicados' : 'No results with applied filters')
+                            : mrbSubTab === 'all'
+                              ? (language === 'es' ? 'No hay defectos en MRB' : 'No defects in MRB')
+                              : mrbSubTab === 'quarantine'
+                                ? (language === 'es' ? 'No hay defectos en cuarentena' : 'No defects in quarantine')
+                                : (language === 'es' ? 'No hay defectos en scrap pendientes' : 'No pending scrap defects')
                           }
                         </td>
                       </tr>
                     );
                   }
 
-                  return mrbDefects.map(defect => {
+                  return mrbFilteredDefects.map(defect => {
                     const hours = defect._mrbType === 'quarantine' ? defect.hoursInQuarantine : defect.hoursInScrap;
                     const hoursColor = hours > 72 ? '#dc2626' : hours > 24 ? '#f59e0b' : t.success;
                     const defectSerial = defect.serialNumber || defect.lotNumber;
@@ -8072,6 +8540,41 @@ const DefectHospital = () => {
               </>
             )}
           </div>
+
+          {/* Indicador de filtros de columna activos */}
+          {Object.values(mainColFilters).some(v => v.length > 0) && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '10px 16px',
+              backgroundColor: t.accent + '15',
+              borderRadius: '8px',
+              marginBottom: '12px',
+              border: `1px solid ${t.accent}40`
+            }}>
+              <span style={{ fontSize: '13px', color: t.accent, fontWeight: '600' }}>
+                {Object.values(mainColFilters).filter(v => v.length > 0).length} {language === 'es' ? 'filtro(s) de columna activo(s)' : 'column filter(s) active'}
+              </span>
+              <button
+                onClick={() => setMainColFilters({ entryNumber: [], serialNumber: [], partNumber: [], locationName: [], departmentName: [], defectTypeName: [], repairStatus: [], repairCount: [], lastAction: [], capturedAt: [], updatedAt: [] })}
+                style={{
+                  marginLeft: 'auto',
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  backgroundColor: 'transparent',
+                  color: t.accent,
+                  border: `1px solid ${t.accent}`,
+                  transition: 'all 0.2s'
+                }}
+              >
+                ✕ {language === 'es' ? 'Limpiar filtros' : 'Clear filters'}
+              </button>
+            </div>
+          )}
 
           {/* Content - Cards agrupadas */}
           {renderGroupedCards()}
@@ -10402,27 +10905,32 @@ const DefectHospital = () => {
               )}
             </div>
 
-            {/* Horas de alerta */}
+            {/* Minutos de alerta */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                {language === 'es' ? '⏰ Alerta si no se recibe en (horas)' : '⏰ Alert if not received in (hours)'}
+                {language === 'es' ? '⏰ Alerta si no se recibe en (minutos)' : '⏰ Alert if not received in (minutes)'}
               </label>
-              <input
-                type="number"
-                value={packageAlertHours}
-                onChange={(e) => setPackageAlertHours(parseInt(e.target.value) || 24)}
-                min="1"
-                max="168"
-                style={{
-                  width: '100px',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${t.border}`,
-                  backgroundColor: t.bgPanel,
-                  color: t.text,
-                  fontSize: '13px'
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="number"
+                  value={packageAlertMinutes}
+                  onChange={(e) => setPackageAlertMinutes(parseInt(e.target.value) || 60)}
+                  min="1"
+                  max="10080"
+                  style={{
+                    width: '100px',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: `1px solid ${t.border}`,
+                    backgroundColor: t.bgPanel,
+                    color: t.text,
+                    fontSize: '13px'
+                  }}
+                />
+                <span style={{ fontSize: '12px', color: t.textMuted }}>
+                  ({packageAlertMinutes >= 60 ? `${Math.floor(packageAlertMinutes / 60)}h ${packageAlertMinutes % 60}m` : `${packageAlertMinutes}m`})
+                </span>
+              </div>
             </div>
 
             {/* Notas */}
@@ -10560,11 +11068,11 @@ const DefectHospital = () => {
                         backgroundColor: pkg.alertTriggered ? '#dc262620' : '#f59e0b20',
                         color: pkg.alertTriggered ? '#dc2626' : '#f59e0b'
                       }}>
-                        {pkg.hoursElapsed < 1
-                          ? `${Math.round(pkg.hoursElapsed * 60)}m`
-                          : pkg.hoursElapsed < 24
-                            ? `${Math.round(pkg.hoursElapsed)}h`
-                            : `${Math.round(pkg.hoursElapsed / 24)}d`}
+                        {pkg.minutesElapsed < 60
+                          ? `${Math.round(pkg.minutesElapsed)}m`
+                          : pkg.minutesElapsed < 1440
+                            ? `${Math.round(pkg.minutesElapsed / 60)}h`
+                            : `${Math.round(pkg.minutesElapsed / 1440)}d`}
                       </span>
                     </div>
                   </div>

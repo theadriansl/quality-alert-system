@@ -86,6 +86,9 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
   const [bufferLocations, setBufferLocations] = useState([]);
   const [exitingOk, setExitingOk] = useState(false);
 
+  // ========== ALERTS MODE STATE ==========
+  const [alertPackages, setAlertPackages] = useState([]);
+
   // ========== LOAD RECEIVE DATA ==========
   const loadReceiveData = useCallback(async () => {
     setLoading(true);
@@ -202,6 +205,30 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
     }
   }, []);
 
+  // ========== LOAD ALERTS DATA ==========
+  const loadAlertsData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      // Paquetes pendientes de recibir (Hospital -> MRB) con alerta
+      const pendingRes = await getPendingTransferPackages('MRB');
+      // Paquetes enviados (MRB -> Hospital) pendientes con alerta
+      const sentRes = await fetch(`${API_URL}/transfer-packages?originType=MRB&status=PENDING`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+
+      const pendingAlerts = (pendingRes.packages || []).filter(p => p.alertTriggered).map(p => ({ ...p, direction: 'incoming' }));
+      const sentAlerts = (sentRes.packages || []).filter(p => p.alertTriggered).map(p => ({ ...p, direction: 'sent' }));
+
+      setAlertPackages([...pendingAlerts, ...sentAlerts]);
+      setAlertCount(pendingAlerts.length + sentAlerts.length);
+    } catch (err) {
+      setError(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Load data based on mode
   useEffect(() => {
     if (mode === 'receive') {
@@ -210,8 +237,10 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
       loadSendData();
     } else if (mode === 'exit-ok') {
       loadExitOkData();
+    } else if (mode === 'alerts') {
+      loadAlertsData();
     }
-  }, [mode, loadReceiveData, loadSendData, loadExitOkData]);
+  }, [mode, loadReceiveData, loadSendData, loadExitOkData, loadAlertsData]);
 
   // Load counts for all tabs on mount (for badge display)
   useEffect(() => {
@@ -473,6 +502,14 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
   };
 
   // ========== HELPERS ==========
+  // Para paquetes: ahora el backend devuelve minutos
+  const formatMinutes = (minutes) => {
+    if (minutes < 60) return `${Math.round(minutes)}m`;
+    if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
+    return `${Math.round(minutes / 1440)}d`;
+  };
+
+  // Mantener formatHours para campos que aún usan horas
   const formatHours = (hours) => {
     if (hours < 1) return `${Math.round(hours * 60)}m`;
     if (hours < 24) return `${Math.round(hours)}h`;
@@ -699,7 +736,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               backgroundColor: mode === 'exit-ok' ? '#0072CE' : t.bgCard,
               color: mode === 'exit-ok' ? '#fff' : t.text,
               border: `1px solid ${mode === 'exit-ok' ? '#0072CE' : t.border}`,
-              borderRadius: '0 8px 8px 0',
+              borderRadius: '0',
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: '600',
@@ -718,6 +755,35 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                 fontSize: '11px'
               }}>
                 {okSerials.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setMode('alerts')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: mode === 'alerts' ? '#dc2626' : t.bgCard,
+              color: mode === 'alerts' ? '#fff' : t.text,
+              border: `1px solid ${mode === 'alerts' ? '#dc2626' : t.border}`,
+              borderRadius: '0 8px 8px 0',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {language === 'es' ? 'Alertas' : 'Alerts'}
+            {alertCount > 0 && (
+              <span style={{
+                padding: '2px 8px',
+                backgroundColor: mode === 'alerts' ? 'rgba(255,255,255,0.3)' : '#dc2626',
+                color: '#fff',
+                borderRadius: '10px',
+                fontSize: '11px'
+              }}>
+                {alertCount}
               </span>
             )}
           </button>
@@ -872,7 +938,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         backgroundColor: pkg.alertTriggered ? '#dc262620' : '#3b82f620',
                         color: pkg.alertTriggered ? '#dc2626' : '#3b82f6'
                       }}>
-                        {formatHours(pkg.hoursElapsed)}
+                        {formatMinutes(pkg.minutesElapsed)}
                       </span>
                       {pkg.alertTriggered && (
                         <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '2px' }}>
@@ -1159,7 +1225,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             </div>
           )}
         </>
-      ) : (
+      ) : mode === 'send' ? (
         /* ==================== SEND MODE ==================== */
         <>
           {/* Action bar */}
@@ -1366,7 +1432,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             ))
           )}
         </>
-      )}
+      ) : null}
 
       {/* ==================== EXIT-OK MODE ==================== */}
       {mode === 'exit-ok' && (
@@ -1505,6 +1571,124 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             </div>
           )}
         </>
+      )}
+
+      {/* ==================== ALERTS MODE ==================== */}
+      {mode === 'alerts' && (
+        <div>
+          <div style={{
+            padding: '16px 20px',
+            backgroundColor: alertPackages.length > 0 ? '#dc262610' : t.bgCard,
+            borderRadius: '8px',
+            border: `1px solid ${alertPackages.length > 0 ? '#dc2626' : t.border}`,
+            marginBottom: '20px'
+          }}>
+            <h3 style={{ margin: 0, color: alertPackages.length > 0 ? '#dc2626' : t.text }}>
+              {alertPackages.length > 0
+                ? (language === 'es' ? `${alertPackages.length} paquete(s) con alerta` : `${alertPackages.length} package(s) with alerts`)
+                : (language === 'es' ? 'Sin alertas' : 'No alerts')}
+            </h3>
+            <p style={{ margin: '4px 0 0 0', color: t.textMuted, fontSize: '13px' }}>
+              {language === 'es'
+                ? 'Paquetes que excedieron el tiempo límite de transferencia'
+                : 'Packages that exceeded the transfer time limit'}
+            </p>
+          </div>
+
+          {alertPackages.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {alertPackages.map(pkg => {
+                const targetMinutes = pkg.alertHours || 60;
+                const elapsed = pkg.minutesElapsed || 0;
+                const exceeded = Math.max(0, elapsed - targetMinutes);
+
+                return (
+                  <div
+                    key={pkg.id}
+                    onClick={async () => {
+                      if (pkg.direction === 'incoming') {
+                        // Ir a recibir el paquete
+                        setMode('receive');
+                        const result = await getTransferPackageDetails(pkg.id);
+                        if (result.success) {
+                          setPackageDetails(result);
+                          setSelectedPackage(pkg);
+                        }
+                      } else {
+                        // Mostrar detalle del paquete enviado
+                        const result = await getTransferPackageDetails(pkg.id);
+                        if (result.success) {
+                          setPackageDetails(result);
+                        }
+                      }
+                    }}
+                    style={{
+                      padding: '16px',
+                      backgroundColor: t.bgCard,
+                      borderRadius: '8px',
+                      border: '1px solid #dc2626',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: '600', color: t.text, fontSize: '15px' }}>
+                        {pkg.packageNumber}
+                      </div>
+                      <div style={{ fontSize: '12px', color: t.textMuted }}>
+                        {pkg.direction === 'sent'
+                          ? (language === 'es' ? 'Enviado a Hospital → Ver detalle' : 'Sent to Hospital → View details')
+                          : (language === 'es' ? 'Desde Hospital → Recibir' : 'From Hospital → Receive')}
+                        {' • '}{pkg.itemCount} item(s)
+                        {pkg.campaignNumber && ` • ${pkg.campaignNumber}`}
+                      </div>
+                    </div>
+
+                    {/* Tiempos: Target / Transcurrido / Excedido */}
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'center', padding: '8px 12px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
+                        <div style={{ fontSize: '10px', color: t.textMuted, textTransform: 'uppercase' }}>
+                          {language === 'es' ? 'Target' : 'Target'}
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>
+                          {formatMinutes(targetMinutes)}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '8px 12px', backgroundColor: '#f59e0b20', borderRadius: '6px' }}>
+                        <div style={{ fontSize: '10px', color: '#f59e0b', textTransform: 'uppercase' }}>
+                          {language === 'es' ? 'Transcurrido' : 'Elapsed'}
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#f59e0b' }}>
+                          {formatMinutes(elapsed)}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '8px 12px', backgroundColor: '#dc262620', borderRadius: '6px' }}>
+                        <div style={{ fontSize: '10px', color: '#dc2626', textTransform: 'uppercase' }}>
+                          {language === 'es' ? 'Excedido' : 'Exceeded'}
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626' }}>
+                          +{formatMinutes(exceeded)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '12px', color: t.textMuted }}>
+                        {pkg.createdByName}
+                      </div>
+                      <div style={{ fontSize: '11px', color: t.textMuted }}>
+                        {new Date(pkg.createdAt).toLocaleString('es-MX')}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ==================== MODALS ==================== */}

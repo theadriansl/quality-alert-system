@@ -44,6 +44,7 @@ import MRBDefectCapture from './pages/MRBDefectCapture';
 import MRBConfig from './pages/MRBConfig';
 import MRBBuffer from './pages/MRBBuffer';
 import MRBTransferPackages from './pages/MRBTransferPackages';
+import HospitalTransferPackages from './pages/HospitalTransferPackages';
 import MRBInventory from './pages/MRBInventory';
 // Audit Module
 import AuditDashboard from './pages/AuditDashboard';
@@ -479,6 +480,12 @@ function App() {
               <Route path="/mrb-packages" element={
                 <ProtectedRoute>
                   <MRBTransferPackages />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/hospital-packages" element={
+                <ProtectedRoute>
+                  <HospitalTransferPackages />
                 </ProtectedRoute>
               } />
 

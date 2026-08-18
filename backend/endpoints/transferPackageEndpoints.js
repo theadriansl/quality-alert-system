@@ -25,8 +25,8 @@ router.get('/', authenticateToken, async (req, res) => {
         qa.alert_number,
         (SELECT COUNT(*) FROM transfer_package_items WHERE package_id = tp.id) as item_count,
         (SELECT STRING_AGG(DISTINCT part_number, ', ') FROM transfer_package_items WHERE package_id = tp.id) as parts_summary,
-        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 as hours_elapsed,
-        CASE WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 > tp.alert_hours THEN true ELSE false END as alert_triggered
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 as minutes_elapsed,
+        CASE WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 > tp.alert_hours THEN true ELSE false END as alert_triggered
       FROM transfer_packages tp
       LEFT JOIN users uc ON tp.created_by = uc.id
       LEFT JOIN users ur ON tp.received_by = ur.id
@@ -118,15 +118,15 @@ router.get('/pending/:destination', authenticateToken, async (req, res) => {
         (SELECT COUNT(*) FROM transfer_package_items WHERE package_id = tp.id) as item_count,
         (SELECT STRING_AGG(DISTINCT part_number, ', ') FROM transfer_package_items WHERE package_id = tp.id) as parts_summary,
         (SELECT STRING_AGG(DISTINCT defect_summary, '; ') FROM transfer_package_items WHERE package_id = tp.id) as defects_summary,
-        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 as hours_elapsed,
-        CASE WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 > tp.alert_hours THEN true ELSE false END as alert_triggered
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 as minutes_elapsed,
+        CASE WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 > tp.alert_hours THEN true ELSE false END as alert_triggered
       FROM transfer_packages tp
       LEFT JOIN users uc ON tp.created_by = uc.id
       LEFT JOIN mrb_campaigns mc ON tp.mrb_campaign_id = mc.id
       LEFT JOIN quality_alerts qa ON tp.qar_id = qa.id
       WHERE tp.destination_type = $1 AND tp.status = 'PENDING'
       ORDER BY
-        CASE WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 > tp.alert_hours THEN 0 ELSE 1 END,
+        CASE WHEN EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 > tp.alert_hours THEN 0 ELSE 1 END,
         tp.created_at ASC
     `, [destination]);
 
@@ -315,7 +315,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         CONCAT(ur.first_name, ' ', ur.last_name) as received_by_name,
         mc.campaign_number, mc.status as campaign_status,
         qa.alert_number, qa.title as qar_title,
-        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 as hours_elapsed
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 as minutes_elapsed
       FROM transfer_packages tp
       LEFT JOIN users uc ON tp.created_by = uc.id
       LEFT JOIN users ur ON tp.received_by = ur.id
@@ -370,7 +370,7 @@ router.post('/', authenticateToken, async (req, res) => {
     alertUserId,       // Usuario a notificar si excede alerta (opcional)
     destinationLocationId, // Ubicación MRB destino (para control 360°)
     notes,
-    alertHours = 24
+    alertMinutes = 60   // Tiempo en minutos antes de alertar (default 1 hora)
   } = req.body;
 
   const userId = req.user.id;
@@ -422,7 +422,7 @@ router.post('/', authenticateToken, async (req, res) => {
         alert_user_id, created_by, notes, alert_hours, destination_location_id, status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING')
       RETURNING *
-    `, [originType, destinationType, mrbCampaignId || null, qarId || null, source8dId || null, alertUserId || null, userId, notes || null, alertHours, destinationLocationId || null]);
+    `, [originType, destinationType, mrbCampaignId || null, qarId || null, source8dId || null, alertUserId || null, userId, notes || null, alertMinutes, destinationLocationId || null]);
 
     const packageId = packageResult.rows[0].id;
     const packageNumber = packageResult.rows[0].package_number;
@@ -584,13 +584,13 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
       FROM transfer_package_items WHERE package_id = $3
     `, [userId, `Paquete ${pkg.package_number} recibido`, id]);
 
-    // Calcular tiempo de transferencia
-    const transferHours = (new Date() - new Date(pkg.created_at)) / (1000 * 60 * 60);
+    // Calcular tiempo de transferencia en minutos
+    const transferMinutes = (new Date() - new Date(pkg.created_at)) / (1000 * 60);
 
     res.json({
       success: true,
       package: transformToCamelCase(updateResult.rows[0]),
-      transferHours: Math.round(transferHours * 10) / 10,
+      transferMinutes: Math.round(transferMinutes),
       message: `Paquete ${pkg.package_number} recibido exitosamente`
     });
   } catch (error) {
@@ -658,12 +658,12 @@ router.get('/status/alerts', authenticateToken, async (req, res) => {
         CONCAT(uc.first_name, ' ', uc.last_name) as created_by_name,
         mc.campaign_number,
         (SELECT COUNT(*) FROM transfer_package_items WHERE package_id = tp.id) as item_count,
-        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 as hours_elapsed
+        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 as minutes_elapsed
       FROM transfer_packages tp
       LEFT JOIN users uc ON tp.created_by = uc.id
       LEFT JOIN mrb_campaigns mc ON tp.mrb_campaign_id = mc.id
       WHERE tp.status = 'PENDING'
-        AND EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 3600 > tp.alert_hours
+        AND EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tp.created_at)) / 60 > tp.alert_hours
       ORDER BY tp.created_at ASC
     `);
 
@@ -690,8 +690,8 @@ router.get('/status/stats', authenticateToken, async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'CANCELLED') as cancelled_count,
         COUNT(*) FILTER (WHERE status = 'PENDING' AND origin_type = 'HOSPITAL') as pending_from_hospital,
         COUNT(*) FILTER (WHERE status = 'PENDING' AND origin_type = 'MRB') as pending_from_mrb,
-        COUNT(*) FILTER (WHERE status = 'PENDING' AND EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) / 3600 > alert_hours) as alert_count,
-        AVG(CASE WHEN status = 'RECEIVED' THEN EXTRACT(EPOCH FROM (received_at - created_at)) / 3600 END) as avg_transfer_hours
+        COUNT(*) FILTER (WHERE status = 'PENDING' AND EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) / 60 > alert_hours) as alert_count,
+        AVG(CASE WHEN status = 'RECEIVED' THEN EXTRACT(EPOCH FROM (received_at - created_at)) / 60 END) as avg_transfer_minutes
       FROM transfer_packages
     `);
 
@@ -877,7 +877,7 @@ router.get('/hospital/pending-summary', authenticateToken, async (req, res) => {
       SELECT
         COUNT(*) FILTER (WHERE destination_type = 'HOSPITAL' AND status = 'PENDING') as pending_from_mrb,
         COUNT(*) FILTER (WHERE destination_type = 'HOSPITAL' AND status = 'PENDING'
-          AND EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) / 3600 > alert_hours) as alerts_from_mrb
+          AND EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) / 60 > alert_hours) as alerts_from_mrb
       FROM transfer_packages
     `);
 

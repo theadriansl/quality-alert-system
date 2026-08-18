@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-17 (Sesión 7)
+> Última actualización: 2026-08-18 (Sesión 8)
 
 ---
 
@@ -44,7 +44,7 @@
 | 9 | ~~**ARQUITECTURA: Particionamiento PostgreSQL por mes**~~ | 16-Ago | ✅ 17-Ago |
 | ~~10~~ | ~~ARQUITECTURA: Módulo Reportes Masivos~~ | 16-Ago | ↑ Movido a Alta |
 | 9 | ~~Vista inventario WIP por ubicación~~ | 26-Jul | ✅ 17-Ago |
-| 10 | Alertas paquetes no recibidos | 26-Jul | ⏳ |
+| 10 | ~~Alertas paquetes no recibidos~~ | 26-Jul | ✅ 18-Ago |
 
 ---
 
@@ -69,6 +69,13 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ HospitalTransferPackages: Nueva página /hospital-packages (espejo de MRB) | 18-Ago |
+| ✅ Tab Alertas en Hospital y MRB con tiempos Target/Transcurrido/Excedido | 18-Ago |
+| ✅ Click en alerta navega directo al paquete para recibir/ver detalle | 18-Ago |
+| ✅ Backend: alertHours → alertMinutes (industria requiere precisión en minutos) | 18-Ago |
+| ✅ Filtros Excel multi-select en DefectHospital (todas las columnas, todos los tabs) | 18-Ago |
+| ✅ DefectHospital: Banner link a Transferencias Hospital en tab MRB | 18-Ago |
+| ✅ Fix bug: contenido SEND se mostraba al refrescar en otros tabs MRBTransferPackages | 18-Ago |
 | ✅ Home: Rediseño treemap heatmap estilo bolsa de valores | 17-Ago |
 | ✅ Home: Soporte temas claro/oscuro en treemap | 17-Ago |
 | ✅ Vista inventario WIP por ubicación (dashboard compacto + desglose status) | 17-Ago |
