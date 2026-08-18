@@ -82,9 +82,17 @@ router.get('/wip', authenticateToken, async (req, res) => {
         stationId: row.station_id,
         stationName: row.station_name,
         wipCount: parseInt(row.wip_count) || 0,
+        pendingRepair: parseInt(row.pending_repair) || 0,
+        inRepair: parseInt(row.in_repair) || 0,
+        pendingQa: parseInt(row.pending_qa) || 0,
+        inValidation: parseInt(row.in_validation) || 0,
+        quarantine: parseInt(row.quarantine) || 0,
         avgHoursWaiting: parseFloat(row.avg_hours_waiting) || 0,
         oldestEntry: row.oldest_entry,
-        newestEntry: row.newest_entry
+        newestEntry: row.newest_entry,
+        agingGreen: parseInt(row.aging_green) || 0,
+        agingYellow: parseInt(row.aging_yellow) || 0,
+        agingRed: parseInt(row.aging_red) || 0
       }))
     });
   } catch (error) {

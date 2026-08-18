@@ -4480,198 +4480,144 @@ const DefectHospital = () => {
     const maxWip = Math.max(...wipData.map(w => w.wipCount || 0), 1);
     const totalWip = wipData.reduce((sum, w) => sum + (w.wipCount || 0), 0);
 
-    // Separar por tipo
-    const repairLocations = wipData.filter(w => w.locationType === 'REPAIR');
-    const releaseLocations = wipData.filter(w => w.locationType === 'RELEASE');
-
-    const getAgingColor = (hours) => {
-      if (hours <= 2) return { bg: t.bgPanel, bar: t.success, text: t.success };
-      if (hours <= 8) return { bg: t.bgPanel, bar: t.warning, text: t.warning };
-      return { bg: t.bgPanel, bar: t.error, text: t.error };
+    // Color por tipo de ubicación
+    const getTypeColor = (type) => {
+      switch(type) {
+        case 'REPAIR': return t.warning;
+        case 'RELEASE': return t.success;
+        case 'MRB': return t.error;
+        case 'BUFFER': return t.info;
+        case 'INCOMING': return '#9b59b6'; // Morado para en proceso
+        default: return t.textMuted;
+      }
     };
 
-    const renderLocationCard = (loc) => {
-      const barWidth = maxWip > 0 ? (loc.wipCount / maxWip) * 100 : 0;
-      const agingColor = getAgingColor(loc.avgHoursWaiting || 0);
-
-      return (
-        <div
-          key={loc.locationId}
-          style={{
-            backgroundColor: t.bgCard,
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            border: loc.wipCount === 0 ? '1px dashed ${t.border}' : '1px solid ${t.border}'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <div>
-              <span style={{ fontWeight: '600', fontSize: '16px', color: t.text }}>
-                {loc.locationCode}
-              </span>
-              <span style={{ marginLeft: '12px', fontSize: '13px', color: t.textMuted }}>
-                {loc.locationDescription || loc.stationName || ''}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <span style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                color: loc.wipCount > 0 ? t.text : t.textDim
-              }}>
-                {loc.wipCount}
-              </span>
-              <span style={{ fontSize: '12px', color: t.textMuted }}>piezas</span>
-            </div>
-          </div>
-
-          {/* Barra de progreso */}
-          <div style={{
-            height: '24px',
-            backgroundColor: t.bgPanel,
-            borderRadius: '4px',
-            overflow: 'hidden',
-            marginBottom: '8px'
-          }}>
-            <div style={{
-              width: `${barWidth}%`,
-              height: '100%',
-              backgroundColor: loc.wipCount === 0 ? '${t.border}' : agingColor.bar,
-              transition: 'width 0.3s ease',
-              borderRadius: '4px'
-            }} />
-          </div>
-
-          {/* Stats */}
-          <div style={{ display: 'flex', gap: '24px', fontSize: '12px' }}>
-            <div style={{
-              padding: '4px 8px',
-              backgroundColor: agingColor.bg,
-              borderRadius: '4px',
-              color: agingColor.text
-            }}>
-              Promedio: {(loc.avgHoursWaiting || 0).toFixed(1)}h
-            </div>
-            {loc.oldestEntry && (
-              <div style={{ color: t.textMuted }}>
-                Mas antigua: {new Date(loc.oldestEntry).toLocaleString()}
-              </div>
-            )}
-          </div>
-        </div>
-      );
+    // Intensidad del color basada en proporción del total
+    const getIntensity = (count) => {
+      if (totalWip === 0) return 0.1;
+      const ratio = count / totalWip;
+      return Math.max(0.15, Math.min(1, ratio * 2 + 0.15));
     };
 
     return (
       <div>
-        {/* Resumen general */}
+        {/* Header con total */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '16px',
-          marginBottom: '24px'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '20px',
+          padding: '16px 20px',
+          backgroundColor: t.bgCard,
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
-          <div style={{
-            backgroundColor: t.bgCard,
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: t.accent }}>{totalWip}</div>
-            <div style={{ fontSize: '13px', color: t.textMuted }}>Total WIP</div>
-          </div>
-          <div style={{
-            backgroundColor: t.bgCard,
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: t.warning }}>
-              {repairLocations.reduce((sum, w) => sum + (w.wipCount || 0), 0)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div>
+              <div style={{ fontSize: '36px', fontWeight: '700', color: t.accent }}>{totalWip}</div>
+              <div style={{ fontSize: '12px', color: t.textMuted, textTransform: 'uppercase' }}>Total WIP</div>
             </div>
-            <div style={{ fontSize: '13px', color: t.textMuted }}>{language === 'es' ? 'En Reparación' : 'In Repair'}</div>
-          </div>
-          <div style={{
-            backgroundColor: t.bgCard,
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: t.success }}>
-              {releaseLocations.reduce((sum, w) => sum + (w.wipCount || 0), 0)}
+            <div style={{ width: '1px', height: '40px', backgroundColor: t.border }} />
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: t.warning }}>
+                  {wipData.filter(w => w.locationType === 'REPAIR').reduce((s, w) => s + (w.wipCount || 0), 0)}
+                </div>
+                <div style={{ fontSize: '10px', color: t.textMuted }}>REPAIR</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: t.success }}>
+                  {wipData.filter(w => w.locationType === 'RELEASE').reduce((s, w) => s + (w.wipCount || 0), 0)}
+                </div>
+                <div style={{ fontSize: '10px', color: t.textMuted }}>RELEASE</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: t.error }}>
+                  {wipData.filter(w => w.locationType === 'MRB').reduce((s, w) => s + (w.wipCount || 0), 0)}
+                </div>
+                <div style={{ fontSize: '10px', color: t.textMuted }}>MRB</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#9b59b6' }}>
+                  {wipData.filter(w => w.locationType === 'INCOMING').reduce((s, w) => s + (w.wipCount || 0), 0)}
+                </div>
+                <div style={{ fontSize: '10px', color: t.textMuted }}>EN PROCESO</div>
+              </div>
             </div>
-            <div style={{ fontSize: '13px', color: t.textMuted }}>{language === 'es' ? 'En Liberación' : 'In Release'}</div>
           </div>
-          <div style={{
-            backgroundColor: t.bgCard,
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: t.info }}>
-              {wipData.length}
-            </div>
-            <div style={{ fontSize: '13px', color: t.textMuted }}>Ubicaciones</div>
+          <div style={{ fontSize: '11px', color: t.textMuted }}>
+            {wipData.length} {language === 'es' ? 'ubicaciones' : 'locations'}
           </div>
         </div>
 
-        {/* Sección Reparación */}
-        {repairLocations.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: t.warning,
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              ESTACIONES DE REPARACION
-              <span style={{
-                backgroundColor: t.bgPanel,
-                padding: '2px 8px',
-                borderRadius: '10px',
-                fontSize: '12px'
-              }}>
-                {repairLocations.reduce((sum, w) => sum + (w.wipCount || 0), 0)} piezas
-              </span>
-            </h3>
-            {repairLocations.map(renderLocationCard)}
-          </div>
-        )}
+        {/* Grid compacto de ubicaciones */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+          gap: '12px'
+        }}>
+          {wipData.map(loc => {
+            const typeColor = getTypeColor(loc.locationType);
+            const intensity = getIntensity(loc.wipCount);
+            const percentage = totalWip > 0 ? ((loc.wipCount / totalWip) * 100).toFixed(1) : 0;
 
-        {/* Sección Liberación */}
-        {releaseLocations.length > 0 && (
-          <div>
-            <h3 style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: t.success,
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              ESTACIONES DE LIBERACION
-              <span style={{
-                backgroundColor: t.bgPanel,
-                padding: '2px 8px',
-                borderRadius: '10px',
-                fontSize: '12px'
-              }}>
-                {releaseLocations.reduce((sum, w) => sum + (w.wipCount || 0), 0)} piezas
-              </span>
-            </h3>
-            {releaseLocations.map(renderLocationCard)}
-          </div>
-        )}
+            return (
+              <div
+                key={loc.locationId}
+                style={{
+                  backgroundColor: t.bgCard,
+                  borderRadius: '8px',
+                  padding: '12px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  borderLeft: `4px solid ${typeColor}`,
+                  opacity: loc.wipCount === 0 ? 0.5 : 1,
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Fondo proporcional */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: `${Math.min(100, (loc.wipCount / maxWip) * 100)}%`,
+                  backgroundColor: typeColor,
+                  opacity: intensity * 0.2,
+                  transition: 'height 0.3s ease'
+                }} />
+
+                {/* Contenido */}
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: typeColor,
+                    marginBottom: '4px',
+                    textTransform: 'uppercase'
+                  }}>
+                    {loc.locationCode}
+                  </div>
+                  <div style={{
+                    fontSize: '28px',
+                    fontWeight: '700',
+                    color: loc.wipCount > 0 ? t.text : t.textDim,
+                    lineHeight: 1
+                  }}>
+                    {loc.wipCount}
+                  </div>
+                  <div style={{
+                    fontSize: '10px',
+                    color: t.textMuted,
+                    marginTop: '4px'
+                  }}>
+                    {percentage}% del total
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         {wipData.length === 0 && (
           <div style={styles.emptyState}>

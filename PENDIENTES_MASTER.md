@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-17 (Sesión 6)
+> Última actualización: 2026-08-17 (Sesión 7)
 
 ---
 
@@ -13,6 +13,7 @@
 | 4 | Test end-to-end Hospital → MRB → Hospital | 23-Jul | ⏳ |
 | 5 | MRBDashboard no refleja partes en MRB | 26-Jul | ⏳ |
 | 6 | Estaciones MRB mal configuradas | 26-Jul | ⏳ |
+| 7 | **Módulo Reportes Masivos (async servidor + UI)** | 16-Ago | ⏳ Depende cierre módulos |
 
 ---
 
@@ -41,8 +42,8 @@
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
 | 9 | ~~**ARQUITECTURA: Particionamiento PostgreSQL por mes**~~ | 16-Ago | ✅ 17-Ago |
-| 10 | **ARQUITECTURA: Módulo Reportes Masivos (async servidor)** | 16-Ago | ⏳ Planear |
-| 9 | Vista inventario WIP por ubicación | 26-Jul | ⏳ |
+| ~~10~~ | ~~ARQUITECTURA: Módulo Reportes Masivos~~ | 16-Ago | ↑ Movido a Alta |
+| 9 | ~~Vista inventario WIP por ubicación~~ | 26-Jul | ✅ 17-Ago |
 | 10 | Alertas paquetes no recibidos | 26-Jul | ⏳ |
 
 ---
@@ -68,6 +69,12 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Home: Rediseño treemap heatmap estilo bolsa de valores | 17-Ago |
+| ✅ Home: Soporte temas claro/oscuro en treemap | 17-Ago |
+| ✅ Vista inventario WIP por ubicación (dashboard compacto + desglose status) | 17-Ago |
+| ✅ WIP: Categoría "EN PROCESO" para defectos sin ubicación asignada | 17-Ago |
+| ✅ Hospital: Vistas restauradas (v_defects_all, pending_repair, pending_release, etc.) | 17-Ago |
+| ✅ Hospital: Migración 098 (v_defects_all) + 170 (v_hospital_wip_by_location) | 17-Ago |
 | ✅ Paginación server-side Hospital (cubierto por particiones + archivado + límites) | 17-Ago |
 | ✅ Review permisos Hospital (pulido con habilidades de user) | 17-Ago |
 | ✅ UX modal desviación (funciona bien, sencillo) | 17-Ago |

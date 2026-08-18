@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
@@ -6,174 +6,102 @@ import { useLanguage } from '../context/LanguageContext';
 import usePermissions from '../hooks/usePermissions';
 import { isUserAdmin } from '../utils/permissions';
 
+// Squarified Treemap Algorithm
+function worstRatio(areas, sum, side) {
+  if (areas.length === 0) return Infinity;
+  const maxA = Math.max(...areas);
+  const minA = Math.min(...areas);
+  return Math.max((side * side * maxA) / (sum * sum), (sum * sum) / (side * side * minA));
+}
+
+function squarify(items, x, y, w, h) {
+  const result = [];
+  let remaining = items.slice();
+
+  while (remaining.length) {
+    const shortSide = Math.min(w, h);
+    let row = [remaining[0]];
+    let rowSum = remaining[0].area;
+    let i = 1;
+
+    while (i < remaining.length) {
+      const testRow = [...row, remaining[i]];
+      const testSum = rowSum + remaining[i].area;
+      const curWorst = worstRatio(row.map(r => r.area), rowSum, shortSide);
+      const testWorst = worstRatio(testRow.map(r => r.area), testSum, shortSide);
+      if (testWorst <= curWorst) {
+        row = testRow;
+        rowSum = testSum;
+        i++;
+      } else break;
+    }
+
+    if (w >= h) {
+      const rowWidth = rowSum / h;
+      let cy = y;
+      for (const it of row) {
+        const rh = it.area / rowWidth;
+        result.push({ item: it, x, y: cy, w: rowWidth, h: rh });
+        cy += rh;
+      }
+      x += rowWidth;
+      w -= rowWidth;
+    } else {
+      const rowHeight = rowSum / w;
+      let cx = x;
+      for (const it of row) {
+        const rw = it.area / rowHeight;
+        result.push({ item: it, x: cx, y, w: rw, h: rowHeight });
+        cx += rw;
+      }
+      y += rowHeight;
+      h -= rowHeight;
+    }
+    remaining = remaining.slice(row.length);
+  }
+  return result;
+}
+
 const Home = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
   const { hasAccess, loading: permissionsLoading, getAccessibleModules } = usePermissions();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [hoveredTile, setHoveredTile] = useState(null);
 
   useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
   const isAdmin = isUserAdmin(user);
 
+  // Module definitions with usage values (will connect to real analytics later)
   const allApps = [
-    {
-      id: '8d',
-      moduleId: '8d',
-      name: '8D Problem Solving',
-      description: 'Gestión de reportes 8D con flujo de aprobación multinivel',
-      path: '/dashboard',
-      code: '8D'
-    },
-    {
-      id: 'quality_alert',
-      moduleId: 'quality_alert',
-      name: 'Quality Alert',
-      description: 'Captura de defectos y generación automática de alertas',
-      path: '/defect-dashboard',
-      code: 'QAR'
-    },
-    {
-      id: 'mrb',
-      moduleId: 'mrb',
-      name: 'Material Review Board',
-      description: 'Campañas de calidad para gestión de material no conforme',
-      path: '/mrb-dashboard',
-      code: 'MRB'
-    },
-    {
-      id: 'ecr',
-      moduleId: 'ecr',
-      name: 'Engineering Changes',
-      description: 'Gestión de cambios de ingeniería con análisis de impacto',
-      path: '/ecr-dashboard',
-      code: 'ECR'
-    },
-    {
-      id: 'audits',
-      moduleId: 'audits',
-      name: 'Internal Audits',
-      description: 'Programa de auditorías internas con checklists dinámicos',
-      path: '/audit-dashboard',
-      code: 'AUD'
-    },
-    {
-      id: 'workload',
-      moduleId: 'workload',
-      name: 'Workload Manager',
-      description: 'Asignación de actividades y tracking de tiempo del equipo',
-      path: '/workload',
-      code: 'WKL'
-    },
-    {
-      id: 'clients',
-      moduleId: 'clients',
-      name: 'Client Management',
-      description: 'Administración de clientes, proyectos y BOM global',
-      path: '/clients',
-      code: 'CLT'
-    },
-    {
-      id: 'work_instructions',
-      moduleId: 'work_instructions',
-      name: 'Work Instructions',
-      description: 'Creación y gestión de instrucciones de trabajo con versionamiento',
-      path: '/work-instructions',
-      code: 'WI'
-    },
-    {
-      id: 'inspeccion',
-      moduleId: 'quality_alert',
-      name: 'Inspección de Defectos',
-      description: 'Captura directa de defectos en línea para generación de QARs',
-      path: '/defect-capture',
-      code: 'INS'
-    },
-    {
-      id: 'defect_hospital',
-      moduleId: 'quality_alert',
-      name: 'Hospital de Defectos',
-      description: 'Reparación y liberación de defectos capturados',
-      path: '/hospital-dashboard',
-      code: 'REP'
-    },
-    {
-      id: 'repair_station',
-      moduleId: 'quality_alert',
-      name: 'Estación de Reparación',
-      description: 'Vista simplificada para reparadores e inspectores por parte',
-      path: '/repair-station',
-      code: 'EST'
-    },
-    {
-      id: 'skills',
-      moduleId: 'skills',
-      name: 'Skills & Training',
-      description: 'Gestión de habilidades, evaluaciones y matriz de competencias del equipo',
-      path: '/skills/dashboard',
-      code: 'SKL'
-    },
-    {
-      id: 'iluo',
-      moduleId: 'work_instructions',
-      name: 'ILUO Certifications',
-      description: 'Certificaciones de operadores en Work Instructions con matriz de cobertura',
-      path: '/work-instructions-dashboard',
-      code: 'ILUO'
-    },
-    {
-      id: 'release_ok',
-      moduleId: 'quality_alert',
-      name: 'Release OK',
-      description: 'Estación final de liberación - Cierre de ciclo de calidad',
-      path: '/release-ok',
-      code: 'REL'
-    },
-    {
-      id: 'management_review',
-      moduleId: 'management_review',
-      name: 'Management Review',
-      description: 'Revisión por la dirección y seguimiento de objetivos',
-      path: '/management-review',
-      code: 'MGT'
-    },
-    {
-      id: 'calibration',
-      moduleId: 'quality_alert',
-      name: 'Equipos de Calibración',
-      description: 'Control de equipos de medición, certificados y alertas de vencimiento',
-      path: '/calibration',
-      code: 'CAL'
-    },
-    {
-      id: 'user_manual',
-      moduleId: 'help',
-      name: 'Manual de Usuario',
-      description: 'Guía completa del sistema con tutoriales por módulo',
-      path: '/manual',
-      code: '?'
-    }
-  ];
-
-  const adminApps = [
-    {
-      id: 'configuration',
-      name: 'System Configuration',
-      description: 'Usuarios, roles, departamentos y configuración del sistema',
-      path: '/configuration',
-      code: 'CFG'
-    }
+    { id: 'inspeccion', moduleId: 'quality_alert', code: 'INS', name: 'Inspección de Defectos', desc: 'Captura directa de defectos en línea', path: '/defect-capture', value: 95 },
+    { id: 'quality_alert', moduleId: 'quality_alert', code: 'QAR', name: 'Alerta de Calidad', desc: 'Captura de defectos y generación de alertas', path: '/defect-dashboard', value: 88 },
+    { id: 'repair_station', moduleId: 'quality_alert', code: 'EST', name: 'Estación de Reparación', desc: 'Vista simplificada para reparadores', path: '/repair-station', value: 82 },
+    { id: '8d', moduleId: '8d', code: '8D', name: '8D Problem Solving', desc: 'Gestión de reportes 8D multinivel', path: '/dashboard', value: 75 },
+    { id: 'defect_hospital', moduleId: 'quality_alert', code: 'REP', name: 'Hospital de Defectos', desc: 'Reparación y liberación de defectos', path: '/hospital-dashboard', value: 70 },
+    { id: 'mrb', moduleId: 'mrb', code: 'MRB', name: 'Material Review Board', desc: 'Campañas de calidad y material NC', path: '/mrb-dashboard', value: 65 },
+    { id: 'work_instructions', moduleId: 'work_instructions', code: 'WI', name: 'Work Instructions', desc: 'Instrucciones de trabajo versionadas', path: '/work-instructions', value: 60 },
+    { id: 'audits', moduleId: 'audits', code: 'AUD', name: 'Auditorías Internas', desc: 'Programa de auditorías con checklists', path: '/audit-dashboard', value: 55 },
+    { id: 'skills', moduleId: 'skills', code: 'SKL', name: 'Skills & Training', desc: 'Gestión de habilidades del equipo', path: '/skills/dashboard', value: 50 },
+    { id: 'iluo', moduleId: 'work_instructions', code: 'ILUO', name: 'Certificaciones ILUO', desc: 'Certificaciones con matriz de cobertura', path: '/work-instructions-dashboard', value: 45 },
+    { id: 'workload', moduleId: 'workload', code: 'WKL', name: 'Gestor de Cargas', desc: 'Asignación y tracking del equipo', path: '/workload', value: 40 },
+    { id: 'clients', moduleId: 'clients', code: 'CLT', name: 'Gestión de Clientes', desc: 'Clientes, proyectos y BOM global', path: '/clients', value: 38 },
+    { id: 'ecr', moduleId: 'ecr', code: 'ECR', name: 'Cambios de Ingeniería', desc: 'ECR con análisis de impacto', path: '/ecr-dashboard', value: 35 },
+    { id: 'calibration', moduleId: 'quality_alert', code: 'CAL', name: 'Equipos de Calibración', desc: 'Control de equipos y alertas', path: '/calibration', value: 32 },
+    { id: 'release_ok', moduleId: 'quality_alert', code: 'REL', name: 'Release OK', desc: 'Estación final de liberación', path: '/release-ok', value: 30 },
+    { id: 'management_review', moduleId: 'management_review', code: 'MGT', name: 'Revisión Directiva', desc: 'Revisión por la dirección', path: '/management-review', value: 25 },
+    { id: 'configuration', moduleId: 'admin', code: 'CFG', name: 'Configuración', desc: 'Usuarios, roles y sistema', path: '/configuration', value: 20, adminOnly: true },
+    { id: 'user_manual', moduleId: 'help', code: '?', name: 'Manual de Usuario', desc: 'Guía completa del sistema', path: '/manual', value: 15 }
   ];
 
   const getVisibleApps = () => {
-    if (isAdmin) {
-      return [...allApps, ...adminApps];
-    }
+    if (isAdmin) return allApps;
     const accessibleModules = getAccessibleModules();
     return allApps.filter(app => {
       if (app.adminOnly) return false;
@@ -183,417 +111,221 @@ const Home = () => {
 
   const visibleApps = getVisibleApps();
 
+  // Calculate treemap layout
+  const treemapData = useMemo(() => {
+    if (visibleApps.length === 0) return { tiles: [], placed: [] };
+
+    const W = 1200, H = 500;
+    const totalValue = visibleApps.reduce((s, app) => s + app.value, 0);
+    const items = visibleApps.map(app => ({
+      ...app,
+      area: (app.value / totalValue) * (W * H)
+    })).sort((a, b) => b.area - a.area);
+
+    const placed = squarify(items, 0, 0, W, H);
+
+    const minVal = Math.min(...visibleApps.map(a => a.value));
+    const maxVal = Math.max(...visibleApps.map(a => a.value));
+
+    // Detect if dark mode from theme
+    const isDark = t.bg?.includes('0.1') || t.bg?.includes('0.15') || t.bg?.includes('rgb(') && parseInt(t.bg.match(/\d+/)?.[0] || 255) < 100;
+
+    const heatColor = (v) => {
+      const ratio = (v - minVal) / (maxVal - minVal);
+      if (isDark) {
+        // Dark mode: from dark muted to bright saturated
+        const lightness = 0.25 + ratio * 0.35;
+        const chroma = 0.02 + ratio * 0.08;
+        return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} 235)`;
+      } else {
+        // Light mode: from light to dark saturated
+        const lightness = 0.88 - ratio * 0.55;
+        const chroma = 0.006 + ratio * 0.06;
+        return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} 235)`;
+      }
+    };
+
+    const tiles = placed.map(p => {
+      const { item } = p;
+      const leftPct = (p.x / W) * 100;
+      const topPct = (p.y / H) * 100;
+      const wPct = (p.w / W) * 100;
+      const hPct = (p.h / H) * 100;
+      const ratio = (item.value - minVal) / (maxVal - minVal);
+      const dark = isDark ? ratio > 0.3 : ratio > 0.42;
+      const pxW = p.w;
+      const pxH = p.h;
+
+      return {
+        ...item,
+        left: leftPct,
+        top: topPct,
+        width: wPct,
+        height: hPct,
+        bgColor: heatColor(item.value),
+        textColor: dark ? 'oklch(0.97 0.004 240)' : 'oklch(0.3 0.015 240)',
+        mutedColor: dark ? 'oklch(0.85 0.008 240)' : 'oklch(0.45 0.012 240)',
+        showTitle: pxW > 80 && pxH > 35,
+        showDesc: pxW > 140 && pxH > 75,
+        showPct: pxW > 80 && pxH > 50
+      };
+    });
+
+    // Legend stops
+    const legendStops = [];
+    for (let i = 0; i < 6; i++) {
+      const v = minVal + (i / 5) * (maxVal - minVal);
+      legendStops.push(heatColor(v));
+    }
+
+    return { tiles, legendStops };
+  }, [visibleApps]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const formatDate = () => {
-    return currentTime.toLocaleDateString(language === 'es' ? 'es-MX' : 'en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+  const formatClock = () => {
+    return currentTime.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
     });
-  };
-
-  const styles = {
-    page: {
-      minHeight: '100vh',
-      backgroundColor: t.bg,
-      fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif"
-    },
-    header: {
-      backgroundColor: t.bgCard,
-      borderBottom: `1px solid ${t.border}`,
-      padding: '16px 32px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100
-    },
-    headerLeft: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px'
-    },
-    headerRight: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px'
-    },
-    logo: {
-      width: '40px',
-      height: '40px',
-      backgroundColor: t.primary,
-      borderRadius: '4px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: 'white',
-      fontWeight: '700',
-      fontSize: '14px',
-      letterSpacing: '-0.5px'
-    },
-    brandText: {
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    brandName: {
-      fontSize: '16px',
-      fontWeight: '600',
-      color: t.text,
-      letterSpacing: '-0.01em'
-    },
-    brandSubtitle: {
-      fontSize: '12px',
-      color: t.textMuted
-    },
-    themeSection: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      paddingRight: '16px',
-      borderRight: `1px solid ${t.border}`
-    },
-    themeLabel: {
-      fontSize: '11px',
-      color: t.textDim,
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em'
-    },
-    dateTime: {
-      textAlign: 'right'
-    },
-    dateText: {
-      fontSize: '13px',
-      color: t.textMuted,
-      textTransform: 'capitalize'
-    },
-    timeText: {
-      fontSize: '12px',
-      color: t.textDim
-    },
-    userSection: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      paddingLeft: '24px',
-      borderLeft: `1px solid ${t.border}`
-    },
-    avatar: {
-      width: '36px',
-      height: '36px',
-      borderRadius: '4px',
-      backgroundColor: t.primary,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: 'white',
-      fontWeight: '600',
-      fontSize: '13px'
-    },
-    userInfo: {
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    userName: {
-      fontSize: '13px',
-      fontWeight: '500',
-      color: t.text
-    },
-    userRole: {
-      fontSize: '12px',
-      color: t.textMuted,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    },
-    adminBadge: {
-      fontSize: '10px',
-      fontWeight: '600',
-      color: t.error,
-      backgroundColor: `${t.error}15`,
-      padding: '1px 6px',
-      borderRadius: '2px',
-      textTransform: 'uppercase',
-      letterSpacing: '0.03em'
-    },
-    logoutBtn: {
-      padding: '8px 16px',
-      fontSize: '13px',
-      fontWeight: '500',
-      color: t.textMuted,
-      backgroundColor: t.bgPanel,
-      border: `1px solid ${t.border}`,
-      borderRadius: '4px',
-      cursor: 'pointer',
-      transition: 'all 0.15s ease'
-    },
-    main: {
-      maxWidth: '1400px',
-      margin: '0 auto',
-      padding: '32px'
-    },
-    pageTitle: {
-      marginBottom: '32px'
-    },
-    title: {
-      fontSize: '20px',
-      fontWeight: '600',
-      color: t.text,
-      marginBottom: '4px'
-    },
-    subtitle: {
-      fontSize: '14px',
-      color: t.textMuted
-    },
-    grid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-      gap: '16px'
-    },
-    card: {
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '4px',
-      padding: '20px',
-      cursor: 'pointer',
-      transition: 'all 0.15s ease',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '12px'
-    },
-    cardHover: {
-      borderColor: t.primary,
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.07)'
-    },
-    cardHeader: {
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between'
-    },
-    cardCode: {
-      fontSize: '11px',
-      fontWeight: '600',
-      color: '#ffffff',
-      backgroundColor: t.primary,
-      padding: '4px 8px',
-      borderRadius: '2px',
-      letterSpacing: '0.05em'
-    },
-    cardArrow: {
-      fontSize: '18px',
-      color: t.border,
-      transition: 'all 0.15s ease'
-    },
-    cardArrowHover: {
-      color: t.primary,
-      transform: 'translateX(4px)'
-    },
-    cardName: {
-      fontSize: '15px',
-      fontWeight: '600',
-      color: t.text,
-      lineHeight: '1.3'
-    },
-    cardDesc: {
-      fontSize: '13px',
-      color: t.textMuted,
-      lineHeight: '1.5'
-    },
-    noAccess: {
-      textAlign: 'center',
-      padding: '80px 32px',
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '4px'
-    },
-    noAccessTitle: {
-      fontSize: '16px',
-      fontWeight: '500',
-      color: t.textMuted,
-      marginBottom: '8px'
-    },
-    noAccessText: {
-      fontSize: '14px',
-      color: t.textMuted
-    },
-    loading: {
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: t.bg
-    },
-    spinner: {
-      width: '32px',
-      height: '32px',
-      border: `3px solid ${t.border}`,
-      borderTopColor: t.primary,
-      borderRadius: '50%',
-      animation: 'spin 1s linear infinite'
-    }
   };
 
   if (permissionsLoading) {
     return (
-      <div style={styles.loading}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.bg }}>
+        <div style={{ width: 32, height: 32, border: `3px solid ${t.border}`, borderTopColor: t.primary, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <div style={styles.spinner}></div>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ width: '100%', minHeight: '100vh', background: t.bg, fontFamily: "'Public Sans', 'Inter', sans-serif", color: t.text }}>
 
       {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <div style={styles.logo}>QMS</div>
-          <div style={styles.brandText}>
-            <div style={styles.brandName}>{tr('home.title')}</div>
-            <div style={styles.brandSubtitle}>{tr('home.subtitle')}</div>
+      <div style={{ height: 64, background: t.bgCard, borderBottom: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 32, height: 32, minWidth: 32, borderRadius: 6, background: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>QMS</span>
           </div>
+          <div style={{ fontSize: 15.5, fontWeight: 700, color: t.text, letterSpacing: -0.1 }}>Quality Management System</div>
         </div>
 
-        <div style={styles.headerRight}>
-          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '500', color: t.text, backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontSize: 12, color: t.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>{formatClock()}</div>
+          <div style={{ width: 1, height: 22, background: t.border }} />
+
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, color: t.text, background: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: 4, cursor: 'pointer' }}>
             {language === 'es' ? 'EN' : 'ES'}
           </button>
-          <div style={styles.themeSection}>
-            <span style={styles.themeLabel}>{tr('header.theme')}</span>
-            <ThemeSelector />
-          </div>
 
-          <div style={styles.dateTime}>
-            <div style={styles.dateText}>{formatDate()}</div>
-            <div style={styles.timeText}>
-              {currentTime.toLocaleTimeString(language === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          </div>
+          <ThemeSelector />
 
-          <div style={styles.userSection}>
-            <div style={styles.avatar}>
+          <div style={{ width: 1, height: 22, background: t.border }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 30, height: 30, minWidth: 30, borderRadius: '50%', background: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 11.5 }}>
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </div>
-            <div style={styles.userInfo}>
-              <div style={styles.userName}>
-                {user?.firstName} {user?.lastName}
-              </div>
-              <div style={styles.userRole}>
-                {user?.position || user?.role}
-                {isAdmin && <span style={styles.adminBadge}>Admin</span>}
-              </div>
+            <div style={{ lineHeight: 1.25, whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: t.text }}>{user?.firstName} {user?.lastName}</div>
+              <div style={{ fontSize: 10.5, color: t.textMuted }}>{user?.position || user?.role}</div>
             </div>
-            <button
-              onClick={handleLogout}
-              style={styles.logoutBtn}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = t.bgPanel;
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = t.bg;
-              }}
-            >
-              {tr('header.logout')}
-            </button>
           </div>
+
+          <button onClick={handleLogout} style={{ padding: '6px 14px', fontSize: 11, fontWeight: 600, color: t.textMuted, background: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: 4, cursor: 'pointer' }}>
+            {language === 'es' ? 'Salir' : 'Logout'}
+          </button>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <main style={styles.main}>
-        {/* Quick Access - Operator Stations */}
-        <div style={{
-          display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap'
-        }}>
-          <button
-            onClick={() => navigate('/defect-capture')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '14px 24px', backgroundColor: t.primary,
-              color: 'white', border: 'none', borderRadius: '8px',
-              cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>🔍</span>
-            {language === 'es' ? 'Inspección' : 'Inspection'}
-          </button>
-          <button
-            onClick={() => navigate('/repair-station')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '14px 24px', backgroundColor: '#0369a1',
-              color: 'white', border: 'none', borderRadius: '8px',
-              cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>🔧</span>
-            {language === 'es' ? 'Estación de Reparación' : 'Repair Station'}
-          </button>
-          <button
-            onClick={() => navigate('/release-ok')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '14px 24px', backgroundColor: '#059669',
-              color: 'white', border: 'none', borderRadius: '8px',
-              cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>✅</span>
-            {language === 'es' ? 'Liberación Final' : 'Final Release'}
-          </button>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 32px 48px' }}>
+
+        {/* Title + Legend */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, gap: 20 }}>
+          <div>
+            <div style={{ fontSize: 21, fontWeight: 800, color: t.text, letterSpacing: -0.3 }}>
+              {language === 'es' ? 'Módulos por importancia' : 'Modules by importance'}
+            </div>
+            <div style={{ fontSize: 13, color: t.textMuted, marginTop: 3 }}>
+              {language === 'es' ? 'Tamaño y color según frecuencia de uso en los últimos 30 días' : 'Size and color based on usage frequency in last 30 days'}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Menor uso' : 'Less used'}</span>
+            <div style={{ display: 'flex', height: 10, width: 140, borderRadius: 5, overflow: 'hidden' }}>
+              {treemapData.legendStops.map((color, i) => (
+                <div key={i} style={{ flex: 1, background: color }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Mayor uso' : 'More used'}</span>
+          </div>
         </div>
 
-        <div style={styles.pageTitle}>
-          <h1 style={styles.title}>{tr('common.modules')}</h1>
-          <p style={styles.subtitle}>{visibleApps.length} {language === 'es' ? 'módulos disponibles' : 'modules available'}</p>
-        </div>
-
+        {/* Treemap */}
         {visibleApps.length === 0 ? (
-          <div style={styles.noAccess}>
-            <div style={styles.noAccessTitle}>{language === 'es' ? 'Sin acceso a módulos' : 'No module access'}</div>
-            <div style={styles.noAccessText}>{language === 'es' ? 'Contacte a su administrador para solicitar permisos' : 'Contact your administrator to request permissions'}</div>
+          <div style={{ textAlign: 'center', padding: '80px 32px', background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8 }}>
+            <div style={{ fontSize: 16, fontWeight: 500, color: t.textMuted, marginBottom: 8 }}>
+              {language === 'es' ? 'Sin acceso a módulos' : 'No module access'}
+            </div>
+            <div style={{ fontSize: 14, color: t.textDim }}>
+              {language === 'es' ? 'Contacte a su administrador' : 'Contact your administrator'}
+            </div>
           </div>
         ) : (
-          <div style={styles.grid}>
-            {visibleApps.map((app) => (
+          <div style={{ position: 'relative', width: '100%', height: 500, borderRadius: 8, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+            {treemapData.tiles.map((tile) => (
               <div
-                key={app.id}
-                onClick={() => navigate(app.path)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = t.primary;
-                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.07)';
-                  e.currentTarget.querySelector('.card-arrow').style.color = t.primary;
-                  e.currentTarget.querySelector('.card-arrow').style.transform = 'translateX(4px)';
+                key={tile.id}
+                onClick={() => navigate(tile.path)}
+                onMouseEnter={() => setHoveredTile(tile.id)}
+                onMouseLeave={() => setHoveredTile(null)}
+                style={{
+                  position: 'absolute',
+                  left: `${tile.left}%`,
+                  top: `${tile.top}%`,
+                  width: `${tile.width}%`,
+                  height: `${tile.height}%`,
+                  background: tile.bgColor,
+                  border: `1px solid ${t.border}40`,
+                  padding: '10px 12px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box',
+                  transition: 'filter 0.12s ease',
+                  filter: hoveredTile === tile.id ? 'brightness(1.08)' : 'none',
+                  wordBreak: 'break-word'
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = t.border;
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.querySelector('.card-arrow').style.color = t.border;
-                  e.currentTarget.querySelector('.card-arrow').style.transform = 'translateX(0)';
-                }}
-                style={styles.card}
               >
-                <div style={styles.cardHeader}>
-                  <span style={styles.cardCode}>{app.code}</span>
-                  <span className="card-arrow" style={styles.cardArrow}>→</span>
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, color: tile.textColor, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {tile.code}
                 </div>
-                <div style={styles.cardName}>{app.name}</div>
-                <div style={styles.cardDesc}>{app.description}</div>
+                {tile.showTitle && (
+                  <div style={{ fontSize: 13, fontWeight: 700, color: tile.textColor, marginTop: 4, lineHeight: 1.3 }}>
+                    {tile.name}
+                  </div>
+                )}
+                {tile.showDesc && (
+                  <div style={{ fontSize: 11.5, color: tile.mutedColor, marginTop: 5, lineHeight: 1.4 }}>
+                    {tile.desc}
+                  </div>
+                )}
+                {tile.showPct && (
+                  <div style={{ fontSize: 10.5, fontWeight: 600, color: tile.mutedColor, marginTop: 6 }}>
+                    {tile.value}% uso
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 };
