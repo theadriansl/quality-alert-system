@@ -581,7 +581,7 @@ export const getTransferPackageDetails = async (packageId) => {
  * @param {number} options.source8dId - 8D Report ID
  * @param {number} options.alertUserId - User ID to notify on alert
  * @param {string} options.notes - Notes
- * @param {number} options.alertHours - Hours before alert (default 24)
+ * @param {number} options.alertMinutes - Minutes before alert (default 60)
  */
 export const createTransferPackage = async (originType, destinationType, defectIds, options = {}) => {
   const {
@@ -591,7 +591,7 @@ export const createTransferPackage = async (originType, destinationType, defectI
     alertUserId = null,
     destinationLocationId = null,
     notes = '',
-    alertHours = 24
+    alertMinutes = 60
   } = options;
 
   const res = await fetch(`${API_URL}/transfer-packages`, {
@@ -607,7 +607,7 @@ export const createTransferPackage = async (originType, destinationType, defectI
       alertUserId,
       destinationLocationId,
       notes,
-      alertHours
+      alertMinutes
     })
   });
   return res.json();

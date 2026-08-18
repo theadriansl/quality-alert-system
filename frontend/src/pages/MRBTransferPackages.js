@@ -64,17 +64,11 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
   const [selectedRework, setSelectedRework] = useState(new Set());
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendNotes, setSendNotes] = useState('');
-  const [sendAlertHours, setSendAlertHours] = useState(24);
+  const [sendAlertMinutes, setSendAlertMinutes] = useState(60);
   const [sending, setSending] = useState(false);
 
   // Catálogos para modal de envío
-  const [availableQars, setAvailableQars] = useState([]);
-  const [available8Ds, setAvailable8Ds] = useState([]);
-  const [availableUsers, setAvailableUsers] = useState([]);
   const [hospitalLocations, setHospitalLocations] = useState([]); // Ubicaciones REPAIR/RELEASE
-  const [sendQarId, setSendQarId] = useState(null);
-  const [send8dId, setSend8dId] = useState(null);
-  const [sendAlertUserId, setSendAlertUserId] = useState(null);
   const [sendDestinationLocationId, setSendDestinationLocationId] = useState(null); // Ubicación destino Hospital
 
   // ========== EXIT-OK MODE STATE ==========
@@ -99,9 +93,14 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
         fetch(`${API_URL}/mrb?status=ABIERTA&status=EN_PROCESO&limit=100`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }).then(r => r.json()),
-        fetch(`${API_URL}/location-codes?type=MRB`, {
+        fetch(`${API_URL}/location-codes?activeOnly=true`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }).then(r => r.json()),
+        }).then(r => r.json()).then(data => ({
+          // Filtrar solo ubicaciones de MRB (MRB, QUARANTINE)
+          locations: (data.locations || []).filter(loc =>
+            ['MRB', 'QUARANTINE'].includes(loc.locationType || loc.location_type)
+          )
+        })),
         getCampaignAssignmentMatrix()
       ]);
 
@@ -151,26 +150,11 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
   const loadSendData = useCallback(async () => {
     setLoading(true);
     try {
-      const [reworkRes, qarsRes, eightdRes, usersRes] = await Promise.all([
-        getReworkPendingTransfer(),
-        fetch(`${API_URL}/qar?status=open&limit=100`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }).then(r => r.json()),
-        fetch(`${API_URL}/8d/reports?status=open&limit=100`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }).then(r => r.json()),
-        fetch(`${API_URL}/mrb/users/list`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }).then(r => r.json())
-      ]);
-
+      const reworkRes = await getReworkPendingTransfer();
       if (reworkRes.success) {
         setReworkDefects(reworkRes.defects || []);
         setReworkByCampaign(reworkRes.byCampaign || []);
       }
-      setAvailableQars(qarsRes.alerts || qarsRes.items || []);
-      setAvailable8Ds(eightdRes.reports || eightdRes.items || []);
-      setAvailableUsers(usersRes.users || usersRes.items || []);
     } catch (err) {
       setError(`Error: ${err.message}`);
     } finally {
@@ -287,6 +271,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
     setReceiveNotes('');
     setReceiveCampaignId(pkg.mrbCampaignId || null);
     setReceiveMode(pkg.mrbCampaignId ? 'campaign' : 'investigation'); // Default según si ya tiene campaña
+    setReceiveLocationId(pkg.destinationLocationId || null); // Usar ubicación destino del paquete como default
     setShowReceiveModal(true);
   };
 
@@ -308,8 +293,8 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
       if (result.success) {
         setSuccess(
           language === 'es'
-            ? `Paquete ${selectedPackage.packageNumber} recibido (${result.transferHours}h de transferencia)`
-            : `Package ${selectedPackage.packageNumber} received (${result.transferHours}h transfer time)`
+            ? `Paquete ${selectedPackage.packageNumber} recibido (${result.transferMinutes || 0}min de transferencia)`
+            : `Package ${selectedPackage.packageNumber} received (${result.transferMinutes || 0}min transfer time)`
         );
         setShowReceiveModal(false);
         loadReceiveData();
@@ -355,10 +340,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
       return;
     }
     setSendNotes('');
-    setSendAlertHours(24);
-    setSendQarId(null);
-    setSend8dId(null);
-    setSendAlertUserId(null);
+    setSendAlertMinutes(60);
     setSendDestinationLocationId(null);
 
     // Cargar ubicaciones de Hospital (REPAIR/RELEASE)
@@ -393,12 +375,6 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
       return;
     }
 
-    // Validar que se seleccione un usuario para alertas
-    if (!sendAlertUserId) {
-      setError(language === 'es' ? 'Selecciona un usuario para recibir alertas' : 'Select a user to receive alerts');
-      return;
-    }
-
     setSending(true);
     try {
       const defectIds = Array.from(selectedRework);
@@ -407,12 +383,9 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
         'HOSPITAL',      // destinationType
         defectIds,
         {
-          qarId: sendQarId,
-          source8dId: send8dId,
-          alertUserId: sendAlertUserId,
           destinationLocationId: sendDestinationLocationId,
           notes: sendNotes,
-          alertHours: sendAlertHours
+          alertMinutes: sendAlertMinutes
         }
       );
 
@@ -1227,77 +1200,60 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
         </>
       ) : mode === 'send' ? (
         /* ==================== SEND MODE ==================== */
-        <>
-          {/* Action bar */}
-          {selectedRework.size > 0 && (
-            <div style={{
-              padding: '12px 20px',
-              backgroundColor: '#f59e0b',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <span style={{ color: '#fff', fontWeight: '600' }}>
-                {selectedRework.size} {language === 'es' ? 'defecto(s) seleccionado(s)' : 'defect(s) selected'}
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 220px)' }}>
+          {/* Fixed top bar with button */}
+          <div style={{
+            padding: '12px 20px',
+            backgroundColor: t.bgCard,
+            borderBottom: `1px solid ${t.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderRadius: '10px 10px 0 0',
+            marginBottom: '1px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ fontSize: '14px', color: t.text }}>
+                <strong style={{ color: '#f59e0b', fontSize: '18px' }}>{selectedRework.size}</strong> {language === 'es' ? 'seleccionado(s)' : 'selected'}
               </span>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              {selectedRework.size > 0 && (
                 <button
                   onClick={() => setSelectedRework(new Set())}
                   style={{
-                    padding: '8px 16px',
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
+                    padding: '6px 12px',
+                    backgroundColor: 'transparent',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '4px',
+                    color: t.textMuted,
                     cursor: 'pointer',
-                    fontSize: '13px'
+                    fontSize: '12px'
                   }}
                 >
                   {language === 'es' ? 'Limpiar' : 'Clear'}
                 </button>
-                <button
-                  onClick={openSendModal}
-                  style={{
-                    padding: '8px 20px',
-                    backgroundColor: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#f59e0b',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '700'
-                  }}
-                >
-                  📤 {language === 'es' ? 'Crear Paquete a Hospital' : 'Create Package to Hospital'}
-                </button>
-              </div>
+              )}
             </div>
-          )}
-
-          {/* KPIs for send mode */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-            <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #f59e0b' }}>
-              <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
-                {language === 'es' ? 'Total REWORK Pendientes' : 'Total REWORK Pending'}
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>{reworkDefects.length}</div>
-            </div>
-            <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #7c3aed' }}>
-              <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
-                {language === 'es' ? 'Campañas con REWORK' : 'Campaigns with REWORK'}
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#7c3aed' }}>{reworkByCampaign.length}</div>
-            </div>
-            <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #16a34a' }}>
-              <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
-                {language === 'es' ? 'Seleccionados' : 'Selected'}
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#16a34a' }}>{selectedRework.size}</div>
-            </div>
+            <button
+              onClick={openSendModal}
+              disabled={selectedRework.size === 0}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: selectedRework.size > 0 ? '#f59e0b' : t.border,
+                border: 'none',
+                borderRadius: '6px',
+                color: '#fff',
+                cursor: selectedRework.size > 0 ? 'pointer' : 'not-allowed',
+                fontSize: '14px',
+                fontWeight: '700',
+                opacity: selectedRework.size > 0 ? 1 : 0.6
+              }}
+            >
+              📤 {language === 'es' ? 'Crear Paquete a Hospital' : 'Create Package to Hospital'}
+            </button>
           </div>
 
+          {/* Scrollable list area */}
+          <div style={{ flex: 1, overflow: 'auto', paddingTop: '16px' }}>
           {/* REWORK defects by campaign */}
           {reworkByCampaign.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px', backgroundColor: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}` }}>
@@ -1431,7 +1387,8 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               </div>
             ))
           )}
-        </>
+          </div>
+        </div>
       ) : null}
 
       {/* ==================== EXIT-OK MODE ==================== */}
@@ -1634,16 +1591,32 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                       transition: 'all 0.2s'
                     }}
                   >
-                    <div>
-                      <div style={{ fontWeight: '600', color: t.text, fontSize: '15px' }}>
-                        {pkg.packageNumber}
-                      </div>
-                      <div style={{ fontSize: '12px', color: t.textMuted }}>
-                        {pkg.direction === 'sent'
-                          ? (language === 'es' ? 'Enviado a Hospital → Ver detalle' : 'Sent to Hospital → View details')
-                          : (language === 'es' ? 'Desde Hospital → Recibir' : 'From Hospital → Receive')}
-                        {' • '}{pkg.itemCount} item(s)
-                        {pkg.campaignNumber && ` • ${pkg.campaignNumber}`}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        backgroundColor: pkg.direction === 'incoming' ? '#dc262620' : '#3b82f620',
+                        color: pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6',
+                        border: `1px solid ${pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6'}`
+                      }}>
+                        {pkg.direction === 'incoming'
+                          ? (language === 'es' ? 'Entrante' : 'Incoming')
+                          : (language === 'es' ? 'Saliente' : 'Outgoing')}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: '600', color: t.text, fontSize: '15px' }}>
+                          {pkg.packageNumber}
+                        </div>
+                        <div style={{ fontSize: '12px', color: t.textMuted }}>
+                          {pkg.direction === 'sent'
+                            ? (language === 'es' ? 'Enviado a Hospital' : 'Sent to Hospital')
+                            : (language === 'es' ? 'Desde Hospital → Recibir' : 'From Hospital → Receive')}
+                          {' • '}{pkg.itemCount} item(s)
+                          {pkg.campaignNumber && ` • ${pkg.campaignNumber}`}
+                        </div>
                       </div>
                     </div>
 
@@ -1795,11 +1768,28 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             borderRadius: '12px',
             padding: '24px',
             minWidth: '450px',
-            maxWidth: '500px'
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#16a34a' }}>
-              {language === 'es' ? 'Recibir Paquete' : 'Receive Package'}
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#16a34a' }}>
+                {language === 'es' ? 'Recibir Paquete' : 'Receive Package'}
+              </h3>
+              <button
+                onClick={() => setShowReceiveModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: t.textMuted,
+                  padding: '0 8px'
+                }}
+              >
+                ×
+              </button>
+            </div>
             <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: t.textMuted }}>
               {language === 'es'
                 ? `Confirmar recepción de ${selectedPackage.packageNumber} con ${selectedPackage.itemCount} item(s)`
@@ -1912,10 +1902,13 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                   cursor: 'pointer'
                 }}
               >
-                <option value="">{language === 'es' ? '-- Sin ubicación --' : '-- No location --'}</option>
+                <option value="">{language === 'es' ? '-- Seleccionar ubicación --' : '-- Select location --'}</option>
+                {mrbLocations.length === 0 && (
+                  <option disabled>{language === 'es' ? '(No hay ubicaciones configuradas)' : '(No locations configured)'}</option>
+                )}
                 {mrbLocations.map(loc => (
                   <option key={loc.id} value={loc.id}>
-                    {loc.code} - {loc.description}
+                    [{loc.locationType || loc.location_type}] {loc.code} - {loc.description}
                   </option>
                 ))}
               </select>
@@ -2037,103 +2030,17 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               )}
             </div>
 
-            {/* Usuario para alertas (REQUERIDO) */}
+            {/* Minutos de alerta */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                👤 {language === 'es' ? 'Usuario a notificar si no se recibe *' : 'User to notify if not received *'}
-              </label>
-              <select
-                value={sendAlertUserId || ''}
-                onChange={(e) => setSendAlertUserId(e.target.value ? parseInt(e.target.value) : null)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${sendAlertUserId ? t.border : '#dc2626'}`,
-                  backgroundColor: t.bgPanel,
-                  color: t.text,
-                  fontSize: '13px'
-                }}
-              >
-                <option value="">{language === 'es' ? '-- Seleccionar usuario --' : '-- Select user --'}</option>
-                {availableUsers.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstName || user.first_name} {user.lastName || user.last_name} ({user.email})
-                  </option>
-                ))}
-              </select>
-              {!sendAlertUserId && (
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#dc2626' }}>
-                  {language === 'es' ? 'Requerido' : 'Required'}
-                </p>
-              )}
-            </div>
-
-            {/* QAR asociado (opcional) */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                🔔 {language === 'es' ? 'QAR asociado (opcional)' : 'Associated QAR (optional)'}
-              </label>
-              <select
-                value={sendQarId || ''}
-                onChange={(e) => setSendQarId(e.target.value ? parseInt(e.target.value) : null)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${t.border}`,
-                  backgroundColor: t.bgPanel,
-                  color: t.text,
-                  fontSize: '13px'
-                }}
-              >
-                <option value="">{language === 'es' ? '-- Sin QAR --' : '-- No QAR --'}</option>
-                {availableQars.map(qar => (
-                  <option key={qar.id} value={qar.id}>
-                    {qar.alertNumber || qar.alert_number} - {qar.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 8D asociado (opcional) */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                📋 {language === 'es' ? '8D asociado (opcional)' : 'Associated 8D (optional)'}
-              </label>
-              <select
-                value={send8dId || ''}
-                onChange={(e) => setSend8dId(e.target.value ? parseInt(e.target.value) : null)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: `1px solid ${t.border}`,
-                  backgroundColor: t.bgPanel,
-                  color: t.text,
-                  fontSize: '13px'
-                }}
-              >
-                <option value="">{language === 'es' ? '-- Sin 8D --' : '-- No 8D --'}</option>
-                {available8Ds.map(report => (
-                  <option key={report.id} value={report.id}>
-                    {report.reportId || report.report_id} - {report.title || report.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Horas de alerta */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                {language === 'es' ? '⏱️ Horas de alerta' : '⏱️ Alert hours'}
+                {language === 'es' ? '⏱️ Tiempo de alerta (minutos)' : '⏱️ Alert time (minutes)'}
               </label>
               <input
                 type="number"
-                value={sendAlertHours}
-                onChange={(e) => setSendAlertHours(parseInt(e.target.value) || 24)}
+                value={sendAlertMinutes}
+                onChange={(e) => setSendAlertMinutes(parseInt(e.target.value) || 60)}
                 min={1}
-                max={168}
+                max={10080}
                 style={{
                   width: '100px',
                   padding: '10px 12px',
@@ -2145,7 +2052,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                 }}
               />
               <span style={{ marginLeft: '10px', fontSize: '12px', color: t.textMuted }}>
-                {language === 'es' ? '(Alerta si no se recibe en este tiempo)' : '(Alert if not received within this time)'}
+                ({sendAlertMinutes >= 60 ? `${Math.floor(sendAlertMinutes / 60)}h ${sendAlertMinutes % 60}m` : `${sendAlertMinutes}m`})
               </span>
             </div>
 
@@ -2188,16 +2095,16 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               </button>
               <button
                 onClick={handleSend}
-                disabled={sending || !sendDestinationLocationId || !sendAlertUserId}
+                disabled={sending || !sendDestinationLocationId}
                 style={{
                   padding: '10px 24px',
                   border: 'none',
                   borderRadius: '6px',
-                  backgroundColor: (!sendDestinationLocationId || !sendAlertUserId) ? t.border : '#f59e0b',
+                  backgroundColor: !sendDestinationLocationId ? t.border : '#f59e0b',
                   color: '#fff',
-                  cursor: (sending || !sendDestinationLocationId || !sendAlertUserId) ? 'not-allowed' : 'pointer',
+                  cursor: (sending || !sendDestinationLocationId) ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
-                  opacity: (sending || !sendDestinationLocationId || !sendAlertUserId) ? 0.7 : 1
+                  opacity: (sending || !sendDestinationLocationId) ? 0.7 : 1
                 }}
               >
                 {sending

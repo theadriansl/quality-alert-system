@@ -505,15 +505,17 @@ router.post('/', authenticateToken, async (req, res) => {
 // POST /transfer-packages/:id/receive - Recibir un paquete
 // ============================================================================
 router.post('/:id/receive', authenticateToken, async (req, res) => {
-  const { id } = req.params;
+  const packageId = parseInt(req.params.id);
   const { notes, mrbCampaignId, locationId } = req.body; // locationId para ubicación destino
   const userId = req.user.id;
+  const parsedLocationId = locationId ? parseInt(locationId) : null;
+  const parsedCampaignId = mrbCampaignId ? parseInt(mrbCampaignId) : null;
 
   try {
     // Verificar paquete existe y está pendiente
     const packageCheck = await query(
       'SELECT * FROM transfer_packages WHERE id = $1 AND status = $2',
-      [id, 'PENDING']
+      [packageId, 'PENDING']
     );
 
     if (packageCheck.rows.length === 0) {
@@ -523,7 +525,7 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
     const pkg = packageCheck.rows[0];
 
     // Actualizar campaña si se proporciona al recibir (para paquetes sin campaña)
-    const finalCampaignId = mrbCampaignId || pkg.mrb_campaign_id;
+    const finalCampaignId = parsedCampaignId || pkg.mrb_campaign_id;
 
     // Marcar paquete como recibido
     const updateResult = await query(`
@@ -536,7 +538,7 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $4
       RETURNING *
-    `, [userId, notes || null, finalCampaignId, id]);
+    `, [userId, notes || null, finalCampaignId, packageId]);
 
     // Actualizar estado de los defectos y obtener datos para mrb_affected_serials
     const newRepairStatus = pkg.destination_type === 'MRB' ? 'QUARANTINE' : 'IN_REPAIR';
@@ -552,7 +554,7 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
           updated_at = CURRENT_TIMESTAMP
       WHERE transfer_package_id = $3
       RETURNING id, serial_number, part_id, lot_number
-    `, [newRepairStatus, finalCampaignId, id, locationId || null]);
+    `, [newRepairStatus, finalCampaignId, packageId, parsedLocationId]);
 
     // Si hay campaña asignada y es destino MRB, crear registros en mrb_affected_serials
     if (finalCampaignId && pkg.destination_type === 'MRB') {
@@ -568,13 +570,13 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
     }
 
     // Actualizar ubicación de las partes (unit_registry) si hay locationId
-    if (locationId) {
+    if (parsedLocationId) {
       await query(`
         UPDATE unit_registry ur
         SET current_location_id = $1
         FROM defect_entries_v2 d
         WHERE d.unit_id = ur.id AND d.transfer_package_id = $2
-      `, [locationId, id]);
+      `, [parsedLocationId, packageId]);
     }
 
     // Log evento
@@ -582,7 +584,7 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
       INSERT INTO defect_events (defect_id, event_type, performed_by, comments)
       SELECT defect_id, 'PACKAGE_RECEIVED', $1, $2
       FROM transfer_package_items WHERE package_id = $3
-    `, [userId, `Paquete ${pkg.package_number} recibido`, id]);
+    `, [userId, `Paquete ${pkg.package_number} recibido`, packageId]);
 
     // Calcular tiempo de transferencia en minutos
     const transferMinutes = (new Date() - new Date(pkg.created_at)) / (1000 * 60);
@@ -595,7 +597,7 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error receiving package:', error);
-    res.status(500).json({ success: false, message: 'Error al recibir paquete' });
+    res.status(500).json({ success: false, message: `Error al recibir paquete: ${error.message}` });
   }
 });
 

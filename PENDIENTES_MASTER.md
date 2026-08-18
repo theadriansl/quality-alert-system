@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-18 (Sesión 8)
+> Última actualización: 2026-08-18 (Sesión 9)
 
 ---
 
@@ -10,7 +10,7 @@
 | 1 | ~~BUG: Defectos de Spec NOK no se crean~~ | 04-Jul | ✅ 14-Ago |
 | 2 | ~~Test flujo re-verificación completo~~ | 04-Jul | ✅ 14-Ago |
 | 3 | ~~Integrar check-can-dispose en UI Hospital~~ | 23-Jul | ✅ 16-Ago |
-| 4 | Test end-to-end Hospital → MRB → Hospital | 23-Jul | ⏳ |
+| 4 | ~~Test end-to-end Hospital → MRB → Hospital~~ | 23-Jul | ✅ 18-Ago |
 | 5 | MRBDashboard no refleja partes en MRB | 26-Jul | ⏳ |
 | 6 | Estaciones MRB mal configuradas | 26-Jul | ⏳ |
 | 7 | **Módulo Reportes Masivos (async servidor + UI)** | 16-Ago | ⏳ Depende cierre módulos |
@@ -45,6 +45,7 @@
 | ~~10~~ | ~~ARQUITECTURA: Módulo Reportes Masivos~~ | 16-Ago | ↑ Movido a Alta |
 | 9 | ~~Vista inventario WIP por ubicación~~ | 26-Jul | ✅ 17-Ago |
 | 10 | ~~Alertas paquetes no recibidos~~ | 26-Jul | ✅ 18-Ago |
+| 11 | **WebSockets tiempo real (socket.io)** - Notificaciones push | 18-Ago | ⏳ |
 
 ---
 
@@ -69,6 +70,13 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Flujo bidireccional Hospital ↔ MRB completo y funcional | 18-Ago |
+| ✅ Modal recepción estilo "hover" (cierra con overlay click + botón X) | 18-Ago |
+| ✅ Filtro ubicaciones por contexto (Hospital: REPAIR/RELEASE, MRB: MRB/QUARANTINE) | 18-Ago |
+| ✅ Fix 500 error recepción paquetes (parseInt para params PostgreSQL) | 18-Ago |
+| ✅ Botón "Crear Paquete" sticky arriba con lista scrollable | 18-Ago |
+| ✅ Removido QAR/8D selectors de modal envío MRB (info ya en campaña) | 18-Ago |
+| ✅ Ubicación destino pre-seleccionada en modal recepción | 18-Ago |
 | ✅ HospitalTransferPackages: Nueva página /hospital-packages (espejo de MRB) | 18-Ago |
 | ✅ Tab Alertas en Hospital y MRB con tiempos Target/Transcurrido/Excedido | 18-Ago |
 | ✅ Click en alerta navega directo al paquete para recibir/ver detalle | 18-Ago |

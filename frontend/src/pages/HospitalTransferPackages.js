@@ -92,8 +92,8 @@ const HospitalTransferPackages = () => {
     try {
       const token = localStorage.getItem('token');
       const [defectsRes, campaignsRes, qarsRes, locsRes] = await Promise.all([
-        // Defectos en quarantine listos para enviar
-        fetch(`${API_URL}/defects/hospital?repairStatus=QUARANTINE&notInPackage=true&limit=500`, {
+        // Defectos en quarantine listos para enviar (endpoint ya filtra pending_transfer)
+        fetch(`${API_URL}/defects-v2/quarantine`, {
           headers: { Authorization: `Bearer ${token}` }
         }).then(r => r.json()),
         // Campañas MRB activas
@@ -104,15 +104,19 @@ const HospitalTransferPackages = () => {
         fetch(`${API_URL}/qar?status=open&limit=100`, {
           headers: { Authorization: `Bearer ${token}` }
         }).then(r => r.json()),
-        // Ubicaciones MRB
-        fetch(`${API_URL}/location-codes?type=MRB`, {
+        // Ubicaciones MRB (destino para envíos)
+        fetch(`${API_URL}/location-codes?activeOnly=true`, {
           headers: { Authorization: `Bearer ${token}` }
-        }).then(r => r.json())
+        }).then(r => r.json()).then(data => ({
+          locations: (data.locations || []).filter(loc =>
+            ['MRB', 'QUARANTINE'].includes(loc.locationType || loc.location_type)
+          )
+        }))
       ]);
 
       setQuarantineDefects(defectsRes.defects || []);
       setAvailableCampaigns(campaignsRes.campaigns || []);
-      setAvailableQars(qarsRes.alerts || qarsRes.items || []);
+      setAvailableQars(qarsRes.qars || qarsRes.alerts || []);
       setMrbLocations(locsRes.locations || []);
 
       if (locsRes.locations?.length > 0) {
@@ -157,17 +161,18 @@ const HospitalTransferPackages = () => {
       const token = localStorage.getItem('token');
       const [packagesRes, locsRes] = await Promise.all([
         getPendingTransferPackages('HOSPITAL'),
-        fetch(`${API_URL}/location-codes?type=REPAIR&type=RELEASE`, {
+        fetch(`${API_URL}/location-codes?activeOnly=true`, {
           headers: { Authorization: `Bearer ${token}` }
-        }).then(r => r.json())
+        }).then(r => r.json()).then(data => ({
+          // Filtrar solo ubicaciones de Hospital (REPAIR, RELEASE)
+          locations: (data.locations || []).filter(loc =>
+            ['REPAIR', 'RELEASE'].includes(loc.locationType || loc.location_type)
+          )
+        }))
       ]);
 
       setIncomingPackages(packagesRes.packages || []);
       setHospitalLocations(locsRes.locations || []);
-
-      if (locsRes.locations?.length > 0) {
-        setReceiveLocationId(locsRes.locations[0].id);
-      }
     } catch (err) {
       setError(`Error: ${err.message}`);
     } finally {
@@ -247,16 +252,18 @@ const HospitalTransferPackages = () => {
 
     try {
       const defectIds = Array.from(selectedDefects);
-      const result = await createTransferPackage({
-        originType: 'HOSPITAL',
-        destinationType: 'MRB',
+      const result = await createTransferPackage(
+        'HOSPITAL',
+        'MRB',
         defectIds,
-        mrbCampaignId: sendCampaignId,
-        qarId: sendQarId,
-        destinationLocationId: sendDestinationLocationId,
-        notes: sendNotes,
-        alertMinutes: sendAlertMinutes
-      });
+        {
+          mrbCampaignId: sendCampaignId,
+          qarId: sendQarId,
+          destinationLocationId: sendDestinationLocationId,
+          notes: sendNotes,
+          alertMinutes: sendAlertMinutes
+        }
+      );
 
       if (result.success) {
         setSuccess(language === 'es'
@@ -289,6 +296,8 @@ const HospitalTransferPackages = () => {
         } else {
           setIncomingPackageDetails(result);
           setSelectedIncomingPackage(pkg);
+          // Usar ubicación destino del paquete como default
+          setReceiveLocationId(pkg.destinationLocationId || null);
         }
       }
     } catch (err) {
@@ -805,102 +814,156 @@ const HospitalTransferPackages = () => {
             </div>
           </div>
 
-          {/* Detalle y acción de recibir */}
+          {/* Modal Recibir Paquete (hover) */}
           {selectedIncomingPackage && incomingPackageDetails && (
-            <div style={{ backgroundColor: t.bg, borderRadius: '8px', border: `1px solid ${t.border}`, padding: '20px' }}>
-              <h3 style={{ margin: '0 0 16px 0', color: t.text }}>
-                {language === 'es' ? 'Recibir Paquete' : 'Receive Package'}
-              </h3>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>
-                  {language === 'es' ? 'Ubicación destino' : 'Destination Location'}
-                </label>
-                <select
-                  value={receiveLocationId || ''}
-                  onChange={(e) => setReceiveLocationId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${t.border}`,
-                    borderRadius: '6px',
-                    backgroundColor: t.bg,
-                    color: t.text
-                  }}
-                >
-                  <option value="">{language === 'es' ? 'Seleccionar ubicación...' : 'Select location...'}</option>
-                  {hospitalLocations.map(loc => (
-                    <option key={loc.id} value={loc.id}>{loc.code} - {loc.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: t.textMuted, marginBottom: '4px' }}>
-                  {language === 'es' ? 'Notas de recepción' : 'Reception notes'}
-                </label>
-                <textarea
-                  value={receiveNotes}
-                  onChange={(e) => setReceiveNotes(e.target.value)}
-                  placeholder={language === 'es' ? 'Notas opcionales...' : 'Optional notes...'}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${t.border}`,
-                    borderRadius: '6px',
-                    backgroundColor: t.bg,
-                    color: t.text,
-                    minHeight: '80px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              <button
-                onClick={handleReceivePackage}
-                disabled={receiving}
+            <div
+              style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 1000
+              }}
+              onClick={() => { setSelectedIncomingPackage(null); setIncomingPackageDetails(null); }}
+            >
+              <div
                 style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: t.primary,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: receiving ? 'wait' : 'pointer',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
+                  backgroundColor: t.bgCard,
+                  borderRadius: '12px',
+                  padding: '24px',
+                  minWidth: '450px',
+                  maxWidth: '550px',
+                  maxHeight: '85vh',
+                  overflow: 'auto'
                 }}
+                onClick={e => e.stopPropagation()}
               >
-                <CheckCircle size={18} />
-                {receiving
-                  ? (language === 'es' ? 'Recibiendo...' : 'Receiving...')
-                  : (language === 'es' ? 'Confirmar Recepción' : 'Confirm Reception')}
-              </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', color: t.primary }}>
+                    {language === 'es' ? 'Recibir Paquete' : 'Receive Package'}
+                  </h3>
+                  <button
+                    onClick={() => { setSelectedIncomingPackage(null); setIncomingPackageDetails(null); }}
+                    style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: t.textMuted, padding: '0 8px' }}
+                  >
+                    ×
+                  </button>
+                </div>
 
-              <h4 style={{ margin: '20px 0 8px 0', fontSize: '13px', color: t.textMuted }}>
-                {language === 'es' ? 'Items en el paquete' : 'Items in package'}
-              </h4>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: t.bgHover }}>
-                    <th style={{ padding: '8px', textAlign: 'left' }}>Serial</th>
-                    <th style={{ padding: '8px', textAlign: 'left' }}>Parte</th>
-                    <th style={{ padding: '8px', textAlign: 'left' }}>Defecto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {incomingPackageDetails.items?.map(item => (
-                    <tr key={item.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                      <td style={{ padding: '8px', fontFamily: 'monospace' }}>{item.serialNumber || '-'}</td>
-                      <td style={{ padding: '8px' }}>{item.partNumber || '-'}</td>
-                      <td style={{ padding: '8px' }}>{item.defectSummary || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: t.textMuted }}>
+                  {selectedIncomingPackage.packageNumber} — {incomingPackageDetails.items?.length || 0} item(s)
+                </p>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                    {language === 'es' ? 'Ubicación de recepción' : 'Reception Location'}
+                  </label>
+                  <select
+                    value={receiveLocationId || ''}
+                    onChange={(e) => setReceiveLocationId(e.target.value ? parseInt(e.target.value) : null)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: `1px solid ${t.border}`,
+                      borderRadius: '6px',
+                      backgroundColor: t.bgPanel,
+                      color: t.text,
+                      fontSize: '13px'
+                    }}
+                  >
+                    <option value="">{language === 'es' ? '-- Seleccionar ubicación --' : '-- Select location --'}</option>
+                    {hospitalLocations.map(loc => (
+                      <option key={loc.id} value={loc.id}>
+                        [{loc.locationType || loc.location_type}] {loc.code} - {loc.description || loc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
+                    {language === 'es' ? 'Notas de recepción (opcional)' : 'Reception notes (optional)'}
+                  </label>
+                  <textarea
+                    value={receiveNotes}
+                    onChange={(e) => setReceiveNotes(e.target.value)}
+                    rows={3}
+                    placeholder={language === 'es' ? 'Observaciones...' : 'Observations...'}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: `1px solid ${t.border}`,
+                      borderRadius: '6px',
+                      backgroundColor: t.bgPanel,
+                      color: t.text,
+                      fontSize: '13px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                {/* Items en el paquete */}
+                <div style={{ marginBottom: '20px', maxHeight: '200px', overflow: 'auto' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: t.textMuted, textTransform: 'uppercase' }}>
+                    {language === 'es' ? 'Items en el paquete' : 'Items in package'}
+                  </h4>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: t.bgPanel }}>
+                        <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted }}>Serial</th>
+                        <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted }}>Parte</th>
+                        <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted }}>Defecto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {incomingPackageDetails.items?.map(item => (
+                        <tr key={item.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                          <td style={{ padding: '8px', fontFamily: 'monospace', color: t.primary }}>{item.serialNumber || '-'}</td>
+                          <td style={{ padding: '8px', color: t.text }}>{item.partNumber || '-'}</td>
+                          <td style={{ padding: '8px', color: t.text }}>{item.defectSummary || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => { setSelectedIncomingPackage(null); setIncomingPackageDetails(null); }}
+                    style={{
+                      padding: '10px 20px',
+                      border: `1px solid ${t.border}`,
+                      borderRadius: '6px',
+                      backgroundColor: t.bgCard,
+                      color: t.text,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {language === 'es' ? 'Cancelar' : 'Cancel'}
+                  </button>
+                  <button
+                    onClick={handleReceivePackage}
+                    disabled={receiving}
+                    style={{
+                      padding: '10px 24px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      backgroundColor: t.primary,
+                      color: '#fff',
+                      cursor: receiving ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                      opacity: receiving ? 0.7 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <CheckCircle size={18} />
+                    {receiving
+                      ? (language === 'es' ? 'Recibiendo...' : 'Receiving...')
+                      : (language === 'es' ? 'Confirmar Recepción' : 'Confirm Reception')}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -959,15 +1022,31 @@ const HospitalTransferPackages = () => {
                       transition: 'all 0.2s'
                     }}
                   >
-                    <div>
-                      <div style={{ fontWeight: '600', color: t.text, fontSize: '15px' }}>
-                        {pkg.packageNumber}
-                      </div>
-                      <div style={{ fontSize: '12px', color: t.textMuted }}>
-                        {pkg.direction === 'sent'
-                          ? (language === 'es' ? 'Enviado a MRB → Ver estado' : 'Sent to MRB → View status')
-                          : (language === 'es' ? 'Desde MRB → Recibir' : 'From MRB → Receive')}
-                        {' • '}{pkg.itemCount} item(s)
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        backgroundColor: pkg.direction === 'incoming' ? '#dc262620' : '#3b82f620',
+                        color: pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6',
+                        border: `1px solid ${pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6'}`
+                      }}>
+                        {pkg.direction === 'incoming'
+                          ? (language === 'es' ? 'Entrante' : 'Incoming')
+                          : (language === 'es' ? 'Saliente' : 'Outgoing')}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: '600', color: t.text, fontSize: '15px' }}>
+                          {pkg.packageNumber}
+                        </div>
+                        <div style={{ fontSize: '12px', color: t.textMuted }}>
+                          {pkg.direction === 'sent'
+                            ? (language === 'es' ? 'Enviado a MRB' : 'Sent to MRB')
+                            : (language === 'es' ? 'Desde MRB → Recibir' : 'From MRB → Receive')}
+                          {' • '}{pkg.itemCount} item(s)
+                        </div>
                       </div>
                     </div>
 
