@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-18 (Sesión 9)
+> Última actualización: 2026-08-19
 
 ---
 
@@ -11,8 +11,8 @@
 | 2 | ~~Test flujo re-verificación completo~~ | 04-Jul | ✅ 14-Ago |
 | 3 | ~~Integrar check-can-dispose en UI Hospital~~ | 23-Jul | ✅ 16-Ago |
 | 4 | ~~Test end-to-end Hospital → MRB → Hospital~~ | 23-Jul | ✅ 18-Ago |
-| 5 | MRBDashboard no refleja partes en MRB | 26-Jul | ⏳ |
-| 6 | Estaciones MRB mal configuradas | 26-Jul | ⏳ |
+| 5 | ~~MRBDashboard no refleja partes en MRB~~ | 26-Jul | ✅ 18-Ago (Tab Inventario) |
+| 6 | ~~Estaciones MRB mal configuradas~~ | 26-Jul | ✅ 19-Ago (MRB01/MRB02 existen) |
 | 7 | **Módulo Reportes Masivos (async servidor + UI)** | 16-Ago | ⏳ Depende cierre módulos |
 
 ---
@@ -27,6 +27,7 @@
 | 5 | Testing Reportes/Dashboard | Arrastrado | ⏳ |
 | 6 | Control 360° MRB (ubicaciones) - SIN PROBAR | 26-Jul | ⏳ |
 | 7 | Probar Módulo Reportes Hospital | 05-Ago | ⏳ |
+| 8 | **Testing Tab Inventario MRBCampaignDetail** | 18-Ago | ⏳ |
 
 ---
 
@@ -70,6 +71,8 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Fix importación masiva MRB: Query incluye parts_list JSONB + validación filas sin parte | 19-Ago |
+| ✅ MRBCampaignDetail: Tab "Inventario" con seriales afectados (planeados vs inspeccionados) | 18-Ago |
 | ✅ Flujo bidireccional Hospital ↔ MRB completo y funcional | 18-Ago |
 | ✅ Modal recepción estilo "hover" (cierra con overlay click + botón X) | 18-Ago |
 | ✅ Filtro ubicaciones por contexto (Hospital: REPAIR/RELEASE, MRB: MRB/QUARANTINE) | 18-Ago |

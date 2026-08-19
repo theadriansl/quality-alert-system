@@ -5580,12 +5580,16 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
       return res.status(400).json({ success: false, message: 'No se encontró header SERIAL en el archivo' });
     }
 
-    // 4. Obtener partes válidas de la campaña
+    // 4. Obtener partes válidas de la campaña (de mrb_campaign_parts, part_id directo, y parts_list JSONB)
     const partsRes = await query(`
       SELECT DISTINCT cp.id as part_id, cp.part_number FROM (
         SELECT part_id FROM mrb_campaign_parts WHERE mrb_campaign_id = $1
         UNION
         SELECT part_id FROM mrb_campaigns WHERE id = $1 AND part_id IS NOT NULL
+        UNION
+        SELECT (elem->>'partId')::int as part_id
+        FROM mrb_campaigns mc, jsonb_array_elements(mc.parts_list) elem
+        WHERE mc.id = $1 AND mc.parts_list IS NOT NULL
       ) parts
       JOIN client_parts cp ON cp.id = parts.part_id
     `, [id]);
@@ -5624,6 +5628,10 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
       } else if (validParts.size === 1) {
         // Si solo hay una parte en la campaña, usarla por defecto
         partId = validParts.values().next().value;
+      } else {
+        // Sin parte y múltiples opciones o ninguna → skip
+        skipped++;
+        continue;
       }
 
       if (importType === 'OK') {
