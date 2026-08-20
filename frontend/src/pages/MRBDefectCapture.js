@@ -4,7 +4,7 @@ import {
   CheckCircle, XCircle, Plus, Home, List, BarChart3,
   Search, Package, Layers, Hash, Users, Info, Eye,
   RefreshCw, Scissors, RotateCcw, Truck, PauseCircle, Trash2, Calendar,
-  Download, Upload, ChevronLeft, ChevronRight, ChevronUp
+  Download, Upload, ChevronLeft, ChevronRight, ChevronUp, AlertTriangle, FileSpreadsheet
 } from 'lucide-react';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -184,6 +184,9 @@ const MRBDefectCapture = () => {
   const [importFile, setImportFile] = useState(null);
   const [importDragOver, setImportDragOver] = useState(false);
   const [campaignDefects, setCampaignDefects] = useState([]); // Defectos de la campaña
+  const [importConflicts, setImportConflicts] = useState(null); // { conflicts: [], preview: {} }
+  const [pendingImportData, setPendingImportData] = useState(null); // FormData guardado para re-submit
+  const [reprocessComment, setReprocessComment] = useState(''); // Comentario para reprocesos
 
   // ── SCRAP VALIDATION STATE ─────────────────────────────────────────────────
   const [serialScrapped, setSerialScrapped] = useState(false);
@@ -197,6 +200,14 @@ const MRBDefectCapture = () => {
   const [serialPartMismatch, setSerialPartMismatch] = useState(null); // { expected, found } if serial belongs to different part
   const [serialValidated, setSerialValidated] = useState(false); // True after serial lookup completes (blocks OK until validated)
   const [affectedStatus, setAffectedStatus] = useState({}); // { campaignId: 'IN_LIST' | 'OUT_OF_LIST' | 'NO_LIST_DEFINED' }
+  const [priorInspectionResults, setPriorInspectionResults] = useState({}); // { campaignId: { inspected: bool, result: 'OK'|'NOK'|null } }
+
+  // ── MULTI-CAMPAIGN INSPECTION MODAL STATE ────────────────────────────────
+  const [multiCampaignModalOpen, setMultiCampaignModalOpen] = useState(false);
+  const [multiCampaignDefectsData, setMultiCampaignDefectsData] = useState({}); // { campaignId: { defects: [], campaignNumber, title } }
+  const [defectInspectionResults, setDefectInspectionResults] = useState({}); // { `${campaignId}-${defectId}`: 'OK' | 'NOK' | null }
+  const [loadingMultiCampaignDefects, setLoadingMultiCampaignDefects] = useState(false);
+  const [modalDispositionId, setModalDispositionId] = useState(null); // Disposición para NOKs en modal
 
   // ── SCAN INPUT REF ────────────────────────────────────────────────────────
   const scanRef = useRef(null);
@@ -604,6 +615,7 @@ const MRBDefectCapture = () => {
     setProductionInfo(null);
     setSerialPartMismatch(null);
     setAffectedStatus(null);
+    setPriorInspectionResults({});
     if (serialCheckTimer.current) clearTimeout(serialCheckTimer.current);
     if (!val) {
       return;
@@ -717,6 +729,7 @@ const MRBDefectCapture = () => {
 
         if (campaignsToCheck.length > 0) {
           const newAffectedStatus = {};
+          const newPriorResults = {};
           for (const camp of campaignsToCheck) {
             const campId = camp.campaignId || camp.id;
             try {
@@ -727,12 +740,21 @@ const MRBDefectCapture = () => {
               if (affectedRes.ok) {
                 const affectedData = await affectedRes.json();
                 newAffectedStatus[campId] = affectedData.affectedStatus;
+                // Capturar resultado de inspección previa si existe
+                if (affectedData.affectedSerial) {
+                  newPriorResults[campId] = {
+                    inspected: affectedData.affectedSerial.inspected || false,
+                    result: affectedData.affectedSerial.inspectionResult || null
+                  };
+                }
               }
             } catch (e) { /* silent */ }
           }
           setAffectedStatus(newAffectedStatus);
+          setPriorInspectionResults(newPriorResults);
         } else {
           setAffectedStatus({});
+          setPriorInspectionResults({});
         }
       } catch (e) { /* silent */ }
     }, 300);
@@ -870,6 +892,227 @@ const MRBDefectCapture = () => {
       setSubmitting(false);
     }
   }, [selectedShift, selectedCampaigns, selectedDefects, detectedPart, hasDowntime, downtimeMinutes, comment, selectedDisposition, selectedSeverity, stagedEvidence]); // eslint-disable-line
+
+  // ── MULTI-CAMPAIGN INSPECTION MODAL FUNCTIONS ─────────────────────────────
+  const openMultiCampaignInspectionModal = useCallback(async () => {
+    if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
+    if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
+    if (!selectedShift) return showMsg(L.selectShift, true);
+    if (selectedCampaigns.length === 0) return showMsg(L.selectCampaign, true);
+
+    setLoadingMultiCampaignDefects(true);
+    setMultiCampaignModalOpen(true);
+    const token = localStorage.getItem('token');
+
+    try {
+      const defectsData = {};
+
+      for (const camp of selectedCampaigns) {
+        const priorResult = priorInspectionResults[camp.campaignId];
+        try {
+          const res = await fetch(`${API_URL}/mrb/${camp.campaignId}/campaign-defects`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          defectsData[camp.campaignId] = {
+            campaignNumber: camp.campaignNumber,
+            title: camp.title,
+            defects: data.success && data.defects ? data.defects : [],
+            priorInspected: priorResult?.inspected || false,
+            priorResult: priorResult?.result || null
+          };
+        } catch (e) {
+          defectsData[camp.campaignId] = {
+            campaignNumber: camp.campaignNumber,
+            title: camp.title,
+            defects: [],
+            priorInspected: priorResult?.inspected || false,
+            priorResult: priorResult?.result || null
+          };
+        }
+      }
+
+      // Si alguna campaña no tiene defectos configurados, cargar defectos de la parte
+      const campaignsWithoutDefects = Object.entries(defectsData)
+        .filter(([_, v]) => v.defects.length === 0)
+        .map(([k]) => parseInt(k));
+
+      if (campaignsWithoutDefects.length > 0 && detectedPart?.id) {
+        try {
+          const res = await fetch(`${API_URL}/defects-v2/parts/${detectedPart.id}/config`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          const partDefects = (data.defects || []).map(d => ({
+            defectTypeId: d.id,
+            name: d.name,
+            code: d.code,
+            categoryName: d.categoryName || 'Sin Categoría'
+          }));
+          campaignsWithoutDefects.forEach(campId => {
+            if (defectsData[campId]) {
+              defectsData[campId].defects = partDefects;
+            }
+          });
+        } catch (e) { /* silent */ }
+      }
+
+      setMultiCampaignDefectsData(defectsData);
+      // Inicializar defectos: pre-cargar resultado anterior si existe
+      // - Si campaña fue OK → todos los defectos pre-marcados como 'OK'
+      // - Si campaña fue NOK o no inspeccionada → todos null (sin marcar)
+      const initialResults = {};
+      Object.entries(defectsData).forEach(([campId, campData]) => {
+        const preloadAsOk = campData.priorInspected && campData.priorResult === 'OK';
+        campData.defects.forEach(d => {
+          initialResults[`${campId}-${d.defectTypeId}`] = preloadAsOk ? 'OK' : null;
+        });
+      });
+      setDefectInspectionResults(initialResults);
+    } catch (e) {
+      showMsg('Error cargando defectos de campañas', true);
+    } finally {
+      setLoadingMultiCampaignDefects(false);
+    }
+  }, [selectedMrbLocation, selectedMrbStation, selectedShift, selectedCampaigns, detectedPart, priorInspectionResults]); // eslint-disable-line
+
+  const handleMultiCampaignInspectionSubmit = useCallback(async () => {
+    // Verificar que todos los defectos estén marcados
+    const allDefectsMarked = Object.values(defectInspectionResults).every(v => v !== null);
+    if (!allDefectsMarked) {
+      showMsg('Debe marcar OK o NOK en todos los defectos', true);
+      return;
+    }
+
+    // Verificar si hay NOKs y si hay disposición seleccionada
+    const hasNoks = Object.values(defectInspectionResults).some(v => v === 'NOK');
+    if (hasNoks && !modalDispositionId) {
+      showMsg('Seleccione una disposición para los defectos NOK', true);
+      return;
+    }
+
+    setSubmitting(true);
+    const token = localStorage.getItem('token');
+    const today = new Date().toLocaleDateString('en-CA');
+    let okCount = 0;
+    let nokCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Procesar cada campaña
+      for (const [campaignId, campData] of Object.entries(multiCampaignDefectsData)) {
+        const nokDefects = campData.defects.filter(d =>
+          defectInspectionResults[`${campaignId}-${d.defectTypeId}`] === 'NOK'
+        );
+
+        if (nokDefects.length > 0) {
+          // Registrar cada defecto NOK
+          for (const defect of nokDefects) {
+            const serialValue = lotNumberRef.current.trim() || lotNumber.trim();
+            const body = {
+              quantity: 1,
+              shiftId: selectedShift.id,
+              partId: detectedPart?.id,
+              defectTypeId: defect.defectTypeId,
+              serialNumber: serialValue || undefined,
+              lotNumber: serialValue || undefined,
+              inspectionDate: today,
+              downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
+              notes: comment || null,
+              severityId: selectedSeverity?.id || null,
+              dispositionId: modalDispositionId
+            };
+
+            try {
+              const res = await fetch(`${API_URL}/mrb/${campaignId}/capture-nok`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(body)
+              });
+              if (res.ok) nokCount++;
+              else errorCount++;
+            } catch (e) {
+              errorCount++;
+            }
+          }
+        } else {
+          // Todos los defectos de esta campaña son OK → registrar OK
+          const serialValue = lotNumberRef.current.trim() || lotNumber.trim();
+          const body = {
+            quantity: 1,
+            shiftId: selectedShift.id,
+            partId: detectedPart?.id,
+            serialNumber: serialValue || undefined,
+            lotNumber: serialValue || undefined,
+            inspectionDate: today,
+            downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
+            notes: comment || null
+          };
+
+          try {
+            const res = await fetch(`${API_URL}/mrb/${campaignId}/capture-ok`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify(body)
+            });
+            if (res.ok) okCount++;
+            else errorCount++;
+          } catch (e) {
+            errorCount++;
+          }
+        }
+      }
+
+      // Upload staged evidence
+      if (stagedEvidence.length > 0 && lotNumberRef.current.trim()) {
+        const targetCampaignId = Object.keys(multiCampaignDefectsData)[0];
+        if (targetCampaignId) {
+          for (const item of stagedEvidence) {
+            const fd = new FormData();
+            fd.append('file', item.file);
+            fd.append('attachmentType', 'defect_evidence');
+            fd.append('lotNumber', lotNumberRef.current.trim());
+            fd.append('shiftId', selectedShift.id);
+            fd.append('inspectionDate', today);
+            try {
+              await fetch(`${API_URL}/mrb/${targetCampaignId}/attachments`, {
+                method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd
+              });
+            } catch (e) { /* ignore */ }
+          }
+        }
+      }
+      setStagedEvidence([]);
+      setUploadedEvidence([]);
+
+      // Reset
+      setLotNumber('');
+      lotNumberRef.current = '';
+      setCampaignResults({});
+      setSelectedDefects([]);
+      setHasDowntime(false);
+      setDowntimeMinutes('');
+      setComment('');
+      setMultiCampaignModalOpen(false);
+      setMultiCampaignDefectsData({});
+      setDefectInspectionResults({});
+      setModalDispositionId(null);
+
+      if (errorCount === 0) {
+        const msg = nokCount > 0
+          ? `✓ ${nokCount} NOK + ${okCount} OK registrados`
+          : `✓ ${okCount} OK registrado(s)`;
+        showMsg(msg);
+      } else {
+        showMsg(`${okCount + nokCount} OK, ${errorCount} errores`, true);
+      }
+      refocusScan();
+    } catch (e) {
+      showMsg(e.message || 'Error', true);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [defectInspectionResults, multiCampaignDefectsData, selectedShift, detectedPart, hasDowntime, downtimeMinutes, comment, selectedSeverity, modalDispositionId, stagedEvidence, lotNumber]); // eslint-disable-line
 
   // ── INDIVIDUAL MODE HANDLERS ──────────────────────────────────────────────
   const handlePiezaOk = useCallback(async () => {
@@ -1239,7 +1482,7 @@ const MRBDefectCapture = () => {
   };
 
   // ── IMPORT MASIVO SIMPLIFICADO ──────────────────────────────────────────────
-  const handleMassImport = async () => {
+  const handleMassImport = async (confirmedSerials = null, reprocessCommentText = null) => {
     if (!importFile || !selectedCampaign) return showMsg('Selecciona un archivo', true);
     if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
     if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
@@ -1255,6 +1498,14 @@ const MRBDefectCapture = () => {
       formData.append('defectTypeId', importDefectId);
       formData.append('disposition', importDisposition);
     }
+    // Agregar seriales confirmados si vienen de re-submit
+    if (confirmedSerials && confirmedSerials.length > 0) {
+      formData.append('confirmedSerials', JSON.stringify(confirmedSerials));
+    }
+    // Agregar comentario de reproceso
+    if (reprocessCommentText) {
+      formData.append('reprocessComment', reprocessCommentText);
+    }
 
     try {
       setSubmitting(true);
@@ -1266,17 +1517,53 @@ const MRBDefectCapture = () => {
       const data = await res.json();
 
       if (data.success) {
-        const msg = importType === 'OK'
+        let msg = importType === 'OK'
           ? `✓ Importados ${data.imported} registros OK`
           : `✓ Importados ${data.imported} registros con defecto ${data.defectName} → ${data.disposition}`;
-        showMsg(msg);
-        setImportFile(null);
 
-        // Refresh campaign data
-        const refreshRes = await fetch(`${API_URL}/mrb/active-campaigns`, { headers: { Authorization: `Bearer ${token}` } });
-        const refreshData = await refreshRes.json();
-        const updated = (refreshData.campaigns || []).find(c => c.id === selectedCampaign.id);
-        if (updated) setSelectedCampaign(updated);
+        if (data.skipped > 0) {
+          msg += ` | ${data.skipped} omitidos (parte no en campaña)`;
+        }
+        if (data.wrongPartCount > 0) {
+          msg += ` | ⚠️ ${data.wrongPartCount} rechazados (serial no corresponde a la parte)`;
+          // Mostrar ejemplos en consola para debug
+          if (data.wrongPartSerials?.length > 0) {
+            console.warn('Seriales rechazados por parte incorrecta:', data.wrongPartSerials);
+          }
+        }
+        showMsg(msg, data.wrongPartCount > 0); // Mostrar como warning si hay rechazados
+        setImportFile(null);
+        setImportConflicts(null);
+        setPendingImportData(null);
+        setReprocessComment('');
+
+        // Refresh campaign data - fetch directo de la campaña específica
+        try {
+          const refreshRes = await fetch(`${API_URL}/mrb/${selectedCampaign.id}`, { headers: { Authorization: `Bearer ${token}` } });
+          const refreshData = await refreshRes.json();
+          if (refreshData.success && refreshData.mrb) {
+            setSelectedCampaign(refreshData.mrb);
+          } else {
+            // Fallback: actualizar desde lista de campañas activas
+            const listRes = await fetch(`${API_URL}/mrb/active-campaigns`, { headers: { Authorization: `Bearer ${token}` } });
+            const listData = await listRes.json();
+            const updated = (listData.campaigns || []).find(c => c.id === selectedCampaign.id);
+            if (updated) setSelectedCampaign(updated);
+          }
+        } catch (refreshErr) {
+          console.error('Error refreshing campaign:', refreshErr);
+        }
+      } else if (data.needsConfirmation) {
+        // Mostrar modal de confirmación con preview
+        setImportConflicts({
+          conflicts: data.conflicts || [],
+          preview: data.preview,
+          wrongPartCount: data.wrongPartCount || 0,
+          wrongPartSerials: data.wrongPartSerials || [],
+          extendedCount: data.extendedCount || 0,
+          extendedSerials: data.extendedSerials || []
+        });
+        setPendingImportData({ file: importFile }); // Guardar referencia
       } else {
         showMsg(data.message || 'Error importando', true);
       }
@@ -1285,6 +1572,19 @@ const MRBDefectCapture = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Confirmar reproceso en conflictos
+  const handleConfirmConflicts = async (selectedSerials, comment) => {
+    if (selectedSerials.length === 0) {
+      setImportConflicts(null);
+      setReprocessComment('');
+      showMsg('Importación cancelada');
+      return;
+    }
+    // Re-ejecutar import con los seriales confirmados y comentario
+    await handleMassImport(selectedSerials, comment);
+    setReprocessComment('');
   };
 
   const handleImportDrop = (e) => {
@@ -1945,27 +2245,23 @@ const MRBDefectCapture = () => {
                   ))}
                 </div>
 
-                {/* BOTÓN: Preview + Agregar Defectos */}
+                {/* BOTÓN: Abrir Modal Inspección Multi-Campaña */}
                 <button
-                  onClick={handleMultiCampaignSubmit}
+                  onClick={openMultiCampaignInspectionModal}
                   disabled={submitting || selectedCampaigns.length === 0}
                   style={{
                     width: '100%', padding: '10px 16px', border: 'none', borderRadius: '6px',
-                    backgroundColor: (submitting || selectedCampaigns.length === 0) ? t.textDim : t.accent, color: 'white',
+                    backgroundColor: (submitting || selectedCampaigns.length === 0) ? t.textDim : '#3b82f6', color: 'white',
                     cursor: (submitting || selectedCampaigns.length === 0) ? 'not-allowed' : 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'
                   }}
                 >
-                  {selectedDefects.length > 0 && (
-                    <span style={{ fontSize: '10px', opacity: 0.9 }}>
-                      {selectedPart?.partNumber || detectedPart?.partNumber || ''} │ {selectedDefects.map(d => d.name).join(', ')} │ {selectedSeverity?.code || ''}
-                    </span>
-                  )}
                   <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700' }}>
-                    <Plus size={16} />
-                    {submitting ? 'GUARDANDO...' : selectedDefects.length > 0
-                      ? `AGREGAR ${selectedDefects.length} DEFECTO${selectedDefects.length > 1 ? 'S' : ''} NOK`
-                      : `REGISTRAR ${selectedCampaigns.length} OK`}
+                    <Eye size={16} />
+                    INSPECCIONAR {selectedCampaigns.length} CAMPAÑA{selectedCampaigns.length > 1 ? 'S' : ''}
+                  </span>
+                  <span style={{ fontSize: '10px', opacity: 0.8 }}>
+                    {detectedPart?.partNumber || ''} • Revisar defectos uno por uno
                   </span>
                 </button>
               </div>
@@ -2699,6 +2995,199 @@ const MRBDefectCapture = () => {
         </div>
       )}
 
+      {/* Modal de Confirmación de Importación */}
+      {importConflicts && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ backgroundColor: t.bgCard, borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '95%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            {/* Header dinámico */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: importConflicts.wrongPartCount > 0 ? '#fef3c7' : '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {importConflicts.wrongPartCount > 0 ? <AlertTriangle size={24} color="#f59e0b" /> : <FileSpreadsheet size={24} color="#3b82f6" />}
+              </div>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: importConflicts.wrongPartCount > 0 ? '#f59e0b' : '#3b82f6' }}>
+                  {importConflicts.wrongPartCount > 0 ? 'Atención: Seriales con Parte Incorrecta' : 'Confirmar Importación'}
+                </div>
+                <div style={{ fontSize: '12px', color: t.textMuted }}>
+                  {importConflicts.preview?.toImport || 0} serial(es) listos para importar
+                  {importConflicts.conflicts?.length > 0 && ` (${importConflicts.conflicts.length} reprocesos)`}
+                </div>
+              </div>
+            </div>
+
+            {/* Warning de partes incorrectas */}
+            {importConflicts.wrongPartCount > 0 && (
+              <div style={{ backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: importConflicts.wrongPartSerials?.length > 0 ? '8px' : 0 }}>
+                  <AlertTriangle size={16} color="#d97706" />
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#92400e' }}>
+                    {importConflicts.wrongPartCount} serial(es) rechazados - Parte no corresponde al serial en inventario de campaña
+                  </span>
+                </div>
+                {importConflicts.wrongPartSerials?.length > 0 && (
+                  <details style={{ marginLeft: '24px' }}>
+                    <summary style={{ fontSize: '11px', color: '#92400e', cursor: 'pointer', userSelect: 'none' }}>
+                      Ver seriales rechazados
+                    </summary>
+                    <div style={{ fontSize: '11px', color: '#78350f', fontFamily: 'monospace', marginTop: '6px', maxHeight: '100px', overflowY: 'auto' }}>
+                      {importConflicts.wrongPartSerials.map((w, i) => (
+                        <div key={i}>• {w.serial}</div>
+                      ))}
+                      {importConflicts.wrongPartCount > importConflicts.wrongPartSerials.length && (
+                        <div style={{ color: '#92400e', fontStyle: 'italic' }}>... y {importConflicts.wrongPartCount - importConflicts.wrongPartSerials.length} más</div>
+                      )}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+
+            {/* Preview de importación */}
+            <div style={{ backgroundColor: t.bgInput, borderRadius: '8px', padding: '12px', marginBottom: '16px', fontSize: '12px' }}>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <span><strong style={{ color: '#22c55e' }}>{importConflicts.preview?.toImport || 0}</strong> a importar</span>
+                {(importConflicts.preview?.reprocessCount || 0) > 0 && (
+                  <span><strong style={{ color: '#3b82f6' }}>{importConflicts.preview.reprocessCount}</strong> reprocesos</span>
+                )}
+                {(importConflicts.preview?.extendedCount || 0) > 0 && (
+                  <span><strong style={{ color: '#8b5cf6' }}>{importConflicts.preview.extendedCount}</strong> adicionales (fuera de campaña)</span>
+                )}
+                {(importConflicts.preview?.skippedInvalidPart || 0) > 0 && (
+                  <span><strong style={{ color: '#6b7280' }}>{importConflicts.preview.skippedInvalidPart}</strong> omitidos (parte no existe en sistema)</span>
+                )}
+                {(importConflicts.preview?.wrongPartCount || 0) > 0 && (
+                  <span><strong style={{ color: '#ef4444' }}>{importConflicts.preview.wrongPartCount}</strong> rechazados</span>
+                )}
+              </div>
+            </div>
+
+            {/* Lista de seriales a importar (expandible) */}
+            {importConflicts.preview?.serialsList?.length > 0 && (() => {
+              const allSerials = importConflicts.preview.serialsList;
+              const initialLimit = 20;
+              return (
+                <details style={{ marginBottom: '16px', backgroundColor: t.bgInput, borderRadius: '8px', padding: '8px 12px' }}>
+                  <summary style={{ fontSize: '12px', fontWeight: '600', color: t.text, cursor: 'pointer', userSelect: 'none' }}>
+                    Ver {allSerials.length} serial(es) a importar
+                  </summary>
+                  <div style={{ marginTop: '8px', maxHeight: '250px', overflowY: 'auto', fontSize: '11px', fontFamily: 'monospace' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ color: t.textMuted, position: 'sticky', top: 0, backgroundColor: t.bgInput }}>
+                          <th style={{ textAlign: 'left', padding: '4px', borderBottom: `1px solid ${t.border}` }}>Serial</th>
+                          <th style={{ textAlign: 'left', padding: '4px', borderBottom: `1px solid ${t.border}` }}>Parte</th>
+                          <th style={{ textAlign: 'center', padding: '4px', borderBottom: `1px solid ${t.border}` }}>Ronda</th>
+                          <th style={{ textAlign: 'center', padding: '4px', borderBottom: `1px solid ${t.border}` }}>Status</th>
+                          <th style={{ textAlign: 'center', padding: '4px', borderBottom: `1px solid ${t.border}` }}>Nota</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allSerials.map((s, i) => (
+                          <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgCard }}>
+                            <td style={{ padding: '3px 4px' }}>{s.serial}</td>
+                            <td style={{ padding: '3px 4px', color: t.textMuted }}>{s.partNumber || '—'}</td>
+                            <td style={{ padding: '3px 4px', textAlign: 'center' }}>R{s.round}</td>
+                            <td style={{ padding: '3px 4px', textAlign: 'center' }}>
+                              <span style={{
+                                padding: '1px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: '700',
+                                backgroundColor: s.status === 'OK' ? '#d1fae5' : '#fee2e2',
+                                color: s.status === 'OK' ? '#16a34a' : '#dc2626'
+                              }}>{s.status}</span>
+                            </td>
+                            <td style={{ padding: '3px 4px', textAlign: 'center' }}>
+                              {s.isExtended && (
+                                <span style={{ color: '#8b5cf6', fontSize: '9px', fontWeight: '600' }} title={s.extendedReason === 'parte' ? 'Parte fuera de campaña' : 'Serial no estaba en inventario'}>
+                                  +ADIC
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              );
+            })()}
+
+            {/* Lista de reprocesos (solo si hay) */}
+            {importConflicts.conflicts?.length > 0 && (
+              <details style={{ marginBottom: '16px', backgroundColor: t.bgInput, borderRadius: '8px', padding: '8px 12px' }}>
+                <summary style={{ fontSize: '12px', fontWeight: '600', color: '#f59e0b', cursor: 'pointer', userSelect: 'none' }}>
+                  ⟳ {importConflicts.conflicts.length} reproceso(s) detectado(s)
+                </summary>
+                <div style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                    <thead>
+                      <tr style={{ position: 'sticky', top: 0, backgroundColor: t.bgInput, color: t.textMuted }}>
+                        <th style={{ padding: '6px', textAlign: 'left', borderBottom: `1px solid ${t.border}` }}>Serial</th>
+                        <th style={{ padding: '6px', textAlign: 'center', borderBottom: `1px solid ${t.border}` }}>Anterior</th>
+                        <th style={{ padding: '6px', textAlign: 'center', borderBottom: `1px solid ${t.border}` }}>Nueva</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importConflicts.conflicts.map((c, idx) => (
+                        <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? 'transparent' : t.bgCard }}>
+                          <td style={{ padding: '4px 6px', fontFamily: 'monospace', fontWeight: '600' }}>{c.serial}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                            <span style={{ padding: '2px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: '700', backgroundColor: c.currentStatus === 'OK' ? '#d1fae5' : '#fee2e2', color: c.currentStatus === 'OK' ? '#16a34a' : '#dc2626' }}>R{c.currentRound}: {c.currentStatus}</span>
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                            <span style={{ padding: '2px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: '700', backgroundColor: c.newStatus === 'OK' ? '#d1fae5' : '#fee2e2', color: c.newStatus === 'OK' ? '#16a34a' : '#dc2626' }}>R{c.newRound}: {c.newStatus}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+
+            {/* Input de comentario (solo si hay reprocesos) */}
+            {importConflicts.conflicts?.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textMuted, marginBottom: '6px' }}>
+                  Comentario de reproceso (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={reprocessComment}
+                  onChange={(e) => setReprocessComment(e.target.value)}
+                  placeholder="Ej: Verificación adicional solicitada"
+                  style={{ width: '100%', padding: '10px 12px', fontSize: '13px', border: `1px solid ${t.border}`, borderRadius: '8px', backgroundColor: t.bgInput, color: t.text }}
+                />
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  handleConfirmConflicts(importConflicts.conflicts?.map(c => c.serial) || [], reprocessComment);
+                }}
+                disabled={submitting || (importConflicts.preview?.toImport || 0) === 0}
+                style={{
+                  flex: 1, padding: '12px',
+                  backgroundColor: (importConflicts.preview?.toImport || 0) === 0 ? '#9ca3af' : '#22c55e',
+                  color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700',
+                  cursor: submitting || (importConflicts.preview?.toImport || 0) === 0 ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.7 : 1
+                }}
+              >
+                {submitting ? 'Procesando...' : (importConflicts.preview?.toImport || 0) === 0 ? 'Nada que importar' : `Confirmar ${importConflicts.preview?.toImport || 0} registro(s)`}
+              </button>
+              <button
+                onClick={() => { setImportConflicts(null); setReprocessComment(''); }}
+                disabled={submitting}
+                style={{ flex: 1, padding: '12px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Selección de Ubicación MRB (obligatorio al entrar) */}
       {showLocationModal && (
         <div style={{
@@ -2764,6 +3253,265 @@ const MRBDefectCapture = () => {
                 Cancelar
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          MODAL: INSPECCIÓN MULTI-CAMPAÑA DEFECTO POR DEFECTO
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {multiCampaignModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard, borderRadius: '12px', width: '90%', maxWidth: '600px',
+            maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: `1px solid ${t.border}`,
+              backgroundColor: '#3b82f6', color: 'white'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontWeight: '700', fontSize: '16px' }}>Inspección Multi-Campaña</div>
+                  <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '2px' }}>
+                    Serial: {lotNumber || '—'} • Parte: {detectedPart?.partNumber || '—'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setMultiCampaignModalOpen(false);
+                    setMultiCampaignDefectsData({});
+                    setDefectInspectionResults({});
+                    setModalDispositionId(null);
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white',
+                    width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+                  }}
+                >✕</button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+              {loadingMultiCampaignDefects ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+                  <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite' }} />
+                  <div style={{ marginTop: '8px' }}>Cargando defectos...</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {Object.entries(multiCampaignDefectsData).map(([campaignId, campData]) => {
+                    const allMarked = campData.defects.every(d =>
+                      defectInspectionResults[`${campaignId}-${d.defectTypeId}`] !== null
+                    );
+                    const hasNok = campData.defects.some(d =>
+                      defectInspectionResults[`${campaignId}-${d.defectTypeId}`] === 'NOK'
+                    );
+
+                    return (
+                      <div
+                        key={campaignId}
+                        style={{
+                          border: `2px solid ${allMarked ? (hasNok ? '#ef4444' : '#22c55e') : t.border}`,
+                          borderRadius: '10px', overflow: 'hidden',
+                          backgroundColor: allMarked ? (hasNok ? '#fef2f2' : '#f0fdf4') : t.bgPanel
+                        }}
+                      >
+                        {/* Campaign Header */}
+                        <div style={{
+                          padding: '10px 14px',
+                          backgroundColor: allMarked ? (hasNok ? '#fee2e2' : '#dcfce7') : t.bgInput,
+                          borderBottom: `1px solid ${t.border}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}>
+                          <div>
+                            <span style={{ fontWeight: '700', color: t.text, fontSize: '14px' }}>
+                              📋 {campData.campaignNumber}
+                            </span>
+                            <span style={{ fontSize: '12px', color: t.textMuted, marginLeft: '8px' }}>
+                              {campData.title}
+                            </span>
+                            {/* Indicador de inspección previa */}
+                            {campData.priorInspected && (
+                              <span style={{
+                                marginLeft: '8px', padding: '2px 6px', borderRadius: '4px', fontSize: '10px',
+                                backgroundColor: campData.priorResult === 'OK' ? '#dbeafe' : '#fef3c7',
+                                color: campData.priorResult === 'OK' ? '#1e40af' : '#92400e',
+                                fontWeight: '600'
+                              }}>
+                                ↻ Previo: {campData.priorResult || '?'}
+                              </span>
+                            )}
+                          </div>
+                          {allMarked && (
+                            <span style={{
+                              padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700',
+                              backgroundColor: hasNok ? '#ef4444' : '#22c55e', color: 'white'
+                            }}>
+                              {hasNok ? 'NOK' : 'OK'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Defects List */}
+                        <div style={{ padding: '8px' }}>
+                          {campData.defects.length === 0 ? (
+                            <div style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontSize: '13px' }}>
+                              Sin defectos configurados para esta campaña
+                            </div>
+                          ) : (
+                            campData.defects.map(defect => {
+                              const key = `${campaignId}-${defect.defectTypeId}`;
+                              const result = defectInspectionResults[key];
+
+                              return (
+                                <div
+                                  key={key}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '10px 12px', marginBottom: '4px',
+                                    backgroundColor: result === 'OK' ? '#d1fae5' : result === 'NOK' ? '#fee2e2' : t.bgCard,
+                                    borderRadius: '6px', border: `1px solid ${result === 'OK' ? '#22c55e' : result === 'NOK' ? '#ef4444' : t.border}`
+                                  }}
+                                >
+                                  <div>
+                                    <span style={{ fontWeight: '600', color: t.text, fontSize: '13px' }}>
+                                      {defect.code || defect.name}
+                                    </span>
+                                    {defect.code && defect.name !== defect.code && (
+                                      <span style={{ fontSize: '12px', color: t.textMuted, marginLeft: '8px' }}>
+                                        {defect.name}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* OK / NOK Buttons */}
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button
+                                      onClick={() => setDefectInspectionResults(prev => ({ ...prev, [key]: 'OK' }))}
+                                      style={{
+                                        padding: '6px 14px', borderRadius: '5px', cursor: 'pointer',
+                                        border: result === 'OK' ? '2px solid #15803d' : `1px solid ${t.border}`,
+                                        backgroundColor: result === 'OK' ? '#22c55e' : t.bgInput,
+                                        color: result === 'OK' ? 'white' : t.text,
+                                        fontWeight: result === 'OK' ? '700' : '500', fontSize: '12px'
+                                      }}
+                                    >
+                                      ✓ OK
+                                    </button>
+                                    <button
+                                      onClick={() => setDefectInspectionResults(prev => ({ ...prev, [key]: 'NOK' }))}
+                                      style={{
+                                        padding: '6px 14px', borderRadius: '5px', cursor: 'pointer',
+                                        border: result === 'NOK' ? '2px solid #b91c1c' : `1px solid ${t.border}`,
+                                        backgroundColor: result === 'NOK' ? '#ef4444' : t.bgInput,
+                                        color: result === 'NOK' ? 'white' : t.text,
+                                        fontWeight: result === 'NOK' ? '700' : '500', fontSize: '12px'
+                                      }}
+                                    >
+                                      ✕ NOK
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '14px 20px', borderTop: `1px solid ${t.border}`,
+              backgroundColor: t.bgPanel, display: 'flex', flexDirection: 'column', gap: '12px'
+            }}>
+              {(() => {
+                const totalDefects = Object.values(multiCampaignDefectsData).reduce((sum, c) => sum + c.defects.length, 0);
+                const markedCount = Object.values(defectInspectionResults).filter(v => v !== null).length;
+                const allMarked = markedCount === totalDefects && totalDefects > 0;
+                const nokCount = Object.values(defectInspectionResults).filter(v => v === 'NOK').length;
+                const canSubmit = allMarked && (nokCount === 0 || modalDispositionId);
+
+                return (
+                  <>
+                    {/* Selector de disposición - solo aparece si hay NOKs */}
+                    {nokCount > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                        <span style={{ fontSize: '12px', color: '#b91c1c', fontWeight: '600' }}>
+                          Disposición para {nokCount} NOK:
+                        </span>
+                        <select
+                          value={modalDispositionId || ''}
+                          onChange={e => setModalDispositionId(e.target.value ? parseInt(e.target.value) : null)}
+                          style={{
+                            flex: 1, padding: '8px 12px', borderRadius: '6px', fontSize: '13px',
+                            border: modalDispositionId ? '2px solid #ef4444' : `1px solid ${t.border}`,
+                            backgroundColor: modalDispositionId ? '#fee2e2' : t.bgInput,
+                            color: t.text, fontWeight: modalDispositionId ? '600' : '400'
+                          }}
+                        >
+                          <option value="">-- Seleccionar disposición --</option>
+                          {dispositions.map(d => (
+                            <option key={d.id} value={d.id}>{d.code} - {d.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Botones */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: t.textMuted }}>
+                        <span>Revisados: <strong style={{ color: t.text }}>{markedCount}/{totalDefects}</strong></span>
+                        {nokCount > 0 && (
+                          <span style={{ color: '#ef4444', fontWeight: '600' }}>{nokCount} NOK</span>
+                        )}
+                        {nokCount > 0 && !modalDispositionId && (
+                          <span style={{ color: '#f59e0b', fontSize: '11px' }}>⚠️ Falta disposición</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setMultiCampaignModalOpen(false);
+                          setMultiCampaignDefectsData({});
+                          setDefectInspectionResults({});
+                          setModalDispositionId(null);
+                        }}
+                        style={{
+                          padding: '10px 20px', borderRadius: '6px', cursor: 'pointer',
+                          border: `1px solid ${t.border}`, backgroundColor: t.bgInput, color: t.text, fontSize: '13px'
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleMultiCampaignInspectionSubmit}
+                        disabled={!canSubmit || submitting}
+                        style={{
+                          padding: '10px 24px', borderRadius: '6px', cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
+                          border: 'none', backgroundColor: canSubmit && !submitting ? '#22c55e' : t.textDim,
+                          color: 'white', fontWeight: '700', fontSize: '13px',
+                          opacity: canSubmit && !submitting ? 1 : 0.6
+                        }}
+                      >
+                        {submitting ? 'Guardando...' : !allMarked ? `Faltan ${totalDefects - markedCount} defectos` : (nokCount > 0 && !modalDispositionId) ? 'Falta disposición' : '✓ Guardar Inspección'}
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}

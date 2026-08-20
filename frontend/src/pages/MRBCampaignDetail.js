@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import MRBShiftReport from './MRBShiftReport';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -234,6 +234,10 @@ const MRBCampaignDetail = () => {
   const [showAffectedSerialsModal, setShowAffectedSerialsModal] = useState(false);
   const [affectedSerials, setAffectedSerials] = useState([]);
   const [affectedSerialsSummary, setAffectedSerialsSummary] = useState({ total: 0, inspected: 0, pending: 0 });
+  const [maxInspectionRound, setMaxInspectionRound] = useState(0);
+  const [roundComments, setRoundComments] = useState({});
+  const scrollTopRef = useRef(null);
+  const scrollBottomRef = useRef(null);
   const [loadingSerials, setLoadingSerials] = useState(false);
   const [savingSerials, setSavingSerials] = useState(false);
   // Tab control for serial modal
@@ -297,7 +301,7 @@ const MRBCampaignDetail = () => {
         fetch(`${API_URL}/mrb/${id}/cost-summary`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
           .then(r => r.json()).then(cs => { if (cs.success) setCostSummary(cs); }).catch(() => {});
         fetch(`${API_URL}/mrb/${id}/affected-serials`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-          .then(r => r.json()).then(as => { if (as.success) { setAffectedSerials(as.serials || []); setAffectedSerialsSummary(as.summary || { total: 0, inspected: 0, pending: 0 }); } }).catch(() => {});
+          .then(r => r.json()).then(as => { if (as.success) { setAffectedSerials(as.serials || []); setAffectedSerialsSummary(as.summary || { total: 0, inspected: 0, pending: 0 }); setMaxInspectionRound(as.maxRound || 0); setRoundComments(as.roundComments || {}); } }).catch(() => {});
         fetch(`${API_URL}/mrb/${id}/campaign-defects`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
           .then(r => r.json()).then(cd => { if (cd.success) setCampaignDefects(cd.defects || []); }).catch(() => {});
 
@@ -475,6 +479,8 @@ const MRBCampaignDetail = () => {
       if (data.success) {
         setAffectedSerials(data.serials || []);
         setAffectedSerialsSummary(data.summary || { total: 0, inspected: 0, pending: 0 });
+        setMaxInspectionRound(data.maxRound || 0);
+        setRoundComments(data.roundComments || {});
       }
     } catch (err) {
       console.error('Error loading affected serials:', err);
@@ -1752,13 +1758,15 @@ const MRBCampaignDetail = () => {
         <div style={{ display: 'flex', borderBottom: `2px solid ${t.border}`, marginBottom: '24px', gap: '0' }}>
           {[
             { id: 'detail', label: L.caseDetail },
-            { id: 'progress', label: `📊 ${L.campaignProgress}` }
+            { id: 'progress', label: `📊 ${L.campaignProgress}` },
+            { id: 'inventory', label: `📦 Inventario (${affectedSerialsSummary.total})` }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id);
                 if (tab.id === 'progress') loadProgress();
+                if (tab.id === 'inventory') loadAffectedSerials();
               }}
               style={{
                 padding: '12px 24px',
@@ -3188,6 +3196,133 @@ const MRBCampaignDetail = () => {
           </div>
         </div>
         </div>}   {/* closes activeTab === 'detail' && <div style={styles.grid}> */}
+
+        {/* ── INVENTORY TAB ─────────────────────────────────────────── */}
+        {activeTab === 'inventory' && (
+          <div>
+            {/* Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ ...styles.card, borderLeft: '4px solid #0072CE', padding: '16px' }}>
+                <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Total Seriales</div>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#0072CE' }}>{affectedSerialsSummary.total}</div>
+              </div>
+              <div style={{ ...styles.card, borderLeft: '4px solid #16a34a', padding: '16px' }}>
+                <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Inspeccionados</div>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#16a34a' }}>{affectedSerialsSummary.inspected}</div>
+                <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.inspected / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
+              </div>
+              <div style={{ ...styles.card, borderLeft: '4px solid #f59e0b', padding: '16px' }}>
+                <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Pendientes</div>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#f59e0b' }}>{affectedSerialsSummary.pending}</div>
+                <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.pending / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
+              </div>
+              <div style={{ ...styles.card, borderLeft: '4px solid #8b5cf6', padding: '16px' }}>
+                <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>OK</div>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#8b5cf6' }}>{affectedSerials.filter(s => s.inspectionResult === 'OK').length}</div>
+              </div>
+            </div>
+
+            {/* Serials Table */}
+            <div style={styles.card}>
+              {loadingSerials ? (
+                <div style={{ textAlign: 'center', padding: '60px', color: t.textMuted }}>Cargando inventario...</div>
+              ) : affectedSerials.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px' }}>
+                  <div style={{ fontSize: '40px', marginBottom: '16px' }}>📦</div>
+                  <div style={{ color: t.text, fontWeight: '600', marginBottom: '8px' }}>Sin seriales registrados</div>
+                  <div style={{ color: t.textMuted, fontSize: '13px' }}>Use el botón "Seriales Afectados" en la pestaña Detalle para agregar seriales a esta campaña.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', border: `1px solid ${t.border}`, borderRadius: '8px', overflow: 'hidden' }}>
+                  {/* Scrollbar ARRIBA sincronizado */}
+                  <div
+                    ref={scrollTopRef}
+                    style={{ overflowX: 'auto', overflowY: 'hidden', borderBottom: `1px solid ${t.border}` }}
+                    onScroll={(e) => { if (scrollBottomRef.current) scrollBottomRef.current.scrollLeft = e.target.scrollLeft; }}
+                  >
+                    <div style={{ height: '10px', width: `${275 + (maxInspectionRound > 0 ? maxInspectionRound * 140 : 100)}px` }} />
+                  </div>
+                  {/* Tabla única con columnas sticky */}
+                  <div
+                    ref={scrollBottomRef}
+                    style={{ overflowX: 'auto', maxHeight: '60vh' }}
+                    onScroll={(e) => { if (scrollTopRef.current) scrollTopRef.current.scrollLeft = e.target.scrollLeft; }}
+                  >
+                    <table style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: '13px', width: 'max-content', minWidth: '100%' }}>
+                      <thead>
+                        <tr>
+                          {/* Columnas STICKY: Serial, Parte, Fecha */}
+                          <th style={{ position: 'sticky', left: 0, zIndex: 20, padding: '8px 10px', textAlign: 'left', fontWeight: '700', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '130px' }}>Serial</th>
+                          <th style={{ position: 'sticky', left: '130px', zIndex: 20, padding: '8px 10px', textAlign: 'left', fontWeight: '700', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '80px' }}>Parte</th>
+                          <th style={{ position: 'sticky', left: '210px', zIndex: 20, padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `2px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '65px' }}>Fecha</th>
+                          {/* Columnas de rondas (scroll horizontal) */}
+                          {Array.from({ length: maxInspectionRound }, (_, i) => {
+                            const roundNum = i + 1;
+                            const comment = roundComments[roundNum] || '';
+                            const shortComment = comment.length > 15 ? comment.substring(0, 15) + '…' : comment;
+                            return (
+                              <th key={`round-${roundNum}`} style={{ padding: '4px 6px', textAlign: 'center', fontWeight: '700', color: '#2563eb', fontSize: '10px', backgroundColor: '#eff6ff', minWidth: '140px', borderBottom: `2px solid ${t.border}` }} title={comment}>
+                                <div>R{roundNum}</div>
+                                <div style={{ fontSize: '8px', color: '#666', fontWeight: '400', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px', margin: '0 auto' }}>{shortComment || '—'}</div>
+                              </th>
+                            );
+                          })}
+                          {maxInspectionRound === 0 && (
+                            <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: t.textMuted, fontSize: '10px', borderBottom: `2px solid ${t.border}` }}>Sin inspecciones</th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {affectedSerials.map((serial, idx) => {
+                          const roundsMap = {};
+                          (serial.rounds || []).forEach(r => { roundsMap[r.round] = r; });
+                          const rowBg = idx % 2 === 0 ? t.bgCard : t.bgPanel;
+                          return (
+                            <tr key={serial.id}>
+                              {/* Columnas STICKY */}
+                              <td style={{ position: 'sticky', left: 0, zIndex: 10, padding: '6px 10px', fontWeight: '600', fontFamily: 'monospace', fontSize: '11px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>
+                                {serial.serialNumber}
+                                {serial.inspected ? <span style={{ color: '#16a34a', marginLeft: '4px' }}>✓</span> : <span style={{ color: '#f59e0b', marginLeft: '4px' }}>⏳</span>}
+                              </td>
+                              <td style={{ position: 'sticky', left: '130px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>{serial.partNumber || '—'}</td>
+                              <td style={{ position: 'sticky', left: '210px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `2px solid ${t.border}`, textAlign: 'center', backgroundColor: rowBg }}>
+                                {new Date(serial.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                              </td>
+                              {/* Columnas de rondas */}
+                              {Array.from({ length: maxInspectionRound }, (_, i) => {
+                                const roundNum = i + 1;
+                                const roundData = roundsMap[roundNum];
+                                if (!roundData) {
+                                  return <td key={`r-${roundNum}`} style={{ padding: '6px', textAlign: 'center', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, backgroundColor: rowBg }}>—</td>;
+                                }
+                                const isOk = roundData.result === 'OK';
+                                const bgColor = isOk ? '#dcfce7' : '#fee2e2';
+                                const textColor = isOk ? '#16a34a' : '#ef4444';
+                                const dateStr = roundData.inspectedAt ? new Date(roundData.inspectedAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '';
+                                const inspectorShort = roundData.inspectorName ? roundData.inspectorName.split(' ')[0].substring(0, 6) : '';
+                                return (
+                                  <td key={`r-${roundNum}`} style={{ padding: '4px', textAlign: 'center', backgroundColor: bgColor, borderBottom: `1px solid ${t.border}` }}>
+                                    <span style={{ color: textColor, fontSize: '10px', fontWeight: '700' }}>{roundData.result}</span>
+                                    <span style={{ fontSize: '9px', color: '#555', marginLeft: '3px' }}>{inspectorShort}</span>
+                                    <span style={{ fontSize: '8px', color: '#888', marginLeft: '2px' }}>{dateStr}</span>
+                                  </td>
+                                );
+                              })}
+                              {maxInspectionRound === 0 && (
+                                <td style={{ padding: '6px 10px', textAlign: 'center', color: t.textMuted, borderBottom: `1px solid ${t.border}`, backgroundColor: rowBg }}>—</td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </>}       {/* closes !isDraft && <> */}
 
       {/* ====== MODAL: Campaign Defects ====== */}

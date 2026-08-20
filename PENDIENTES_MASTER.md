@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-19
+> Última actualización: 2026-08-20 (sesión 2)
 
 ---
 
@@ -14,6 +14,7 @@
 | 5 | ~~MRBDashboard no refleja partes en MRB~~ | 26-Jul | ✅ 18-Ago (Tab Inventario) |
 | 6 | ~~Estaciones MRB mal configuradas~~ | 26-Jul | ✅ 19-Ago (MRB01/MRB02 existen) |
 | 7 | **Módulo Reportes Masivos (async servidor + UI)** | 16-Ago | ⏳ Depende cierre módulos |
+| 8 | **BUG: Error 500 en capture-nok (modal multicampaña)** | 19-Ago | ⏳ Verificar logs |
 
 ---
 
@@ -28,6 +29,8 @@
 | 6 | Control 360° MRB (ubicaciones) - SIN PROBAR | 26-Jul | ⏳ |
 | 7 | Probar Módulo Reportes Hospital | 05-Ago | ⏳ |
 | 8 | **Testing Tab Inventario MRBCampaignDetail** | 18-Ago | ⏳ |
+| 9 | **Testing Modal Multi-Campaña MRB (inspección individual)** | 19-Ago | ⏳ |
+| 10 | **Verificar partes "omitidas" en import-mass (deberían existir en sistema)** | 20-Ago | ⏳ |
 
 ---
 
@@ -71,6 +74,21 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Modal import-mass: Lista completa seriales con status OK/NOK expandible | 20-Ago |
+| ✅ Modal import-mass: Lista reprocesos expandible (sin límite de 10) | 20-Ago |
+| ✅ Seriales "adicionales" (fuera de inventario) se agregan automáticamente a campaña | 20-Ago |
+| ✅ Terminología: "omitidos" → "adicionales (fuera de campaña)" + "omitidos (parte no existe)" | 20-Ago |
+| ✅ Modal import-mass: Siempre muestra preview/confirmación antes de importar (R1+) | 20-Ago |
+| ✅ Modal import-mass: Validación serial vs parte en inventario con warning expandible | 20-Ago |
+| ✅ Tab Inventario: Columnas sticky (Serial/Parte/Fecha) con scroll horizontal (una tabla) | 20-Ago |
+| ✅ Fix import-mass: Ahora actualiza mrb_affected_serials (inspected, result) | 20-Ago |
+| ✅ Tab Inventario: Columnas dinámicas por ronda (R1-R7) con resultado + inspector | 20-Ago |
+| ✅ Sincronización retroactiva de seriales ya inspeccionados | 20-Ago |
+| ✅ Modal Multi-Campaña: Endpoint `campaigns-by-part` busca en parts_list JSONB | 19-Ago |
+| ✅ Modal Multi-Campaña: Pre-carga resultados anteriores (OK pre-marcado, NOK sin marcar) | 19-Ago |
+| ✅ Modal Multi-Campaña: Badge visual "↻ Previo: OK/NOK" en campañas ya inspeccionadas | 19-Ago |
+| ✅ Fix reproceso: Quitado `AND NOT inspected` en capture-ok/nok | 19-Ago |
+| ✅ Fix serial en modal: Envía `serialNumber` explícito en llamadas | 19-Ago |
 | ✅ Fix importación masiva MRB: Query incluye parts_list JSONB + validación filas sin parte | 19-Ago |
 | ✅ MRBCampaignDetail: Tab "Inventario" con seriales afectados (planeados vs inspeccionados) | 18-Ago |
 | ✅ Flujo bidireccional Hospital ↔ MRB completo y funcional | 18-Ago |

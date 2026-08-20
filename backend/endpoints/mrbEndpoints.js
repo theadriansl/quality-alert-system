@@ -397,6 +397,8 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
   const today = inspectionDate || new Date().toLocaleDateString('en-CA');
   const serial = serialNumber || lotNumber; // Usar serialNumber si existe, sino lotNumber
 
+  console.log('[capture-ok] campId:', id, '| serialNumber:', serialNumber, '| lotNumber:', lotNumber, '| serial:', serial);
+
   try {
     // 1. Update MRB campaign counters
     const result = await query(`
@@ -436,12 +438,12 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
         );
         affectedStatus = inList.rows.length > 0 ? 'IN_LIST' : 'OUT_OF_LIST';
 
-        // Marcar como inspeccionado si está en la lista
+        // Marcar como inspeccionado si está en la lista (permite reproceso)
         if (affectedStatus === 'IN_LIST') {
           await query(`
             UPDATE mrb_affected_serials
             SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = 'OK'
-            WHERE mrb_campaign_id = $1 AND serial_number = $2 AND NOT inspected
+            WHERE mrb_campaign_id = $1 AND serial_number = $2
           `, [id, serial.trim()]);
         }
       }
@@ -571,6 +573,8 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     partId
   } = req.body;
 
+  console.log('[capture-nok] campId:', id, '| body:', JSON.stringify(req.body));
+
   const serial = serialNumber || lotNumber; // Usar serialNumber si existe, sino lotNumber
 
   if (!serial || !String(serial).trim()) {
@@ -623,12 +627,12 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
       );
       affectedStatus = inList.rows.length > 0 ? 'IN_LIST' : 'OUT_OF_LIST';
 
-      // Marcar como inspeccionado si está en la lista
+      // Marcar como inspeccionado si está en la lista (permite reproceso)
       if (affectedStatus === 'IN_LIST') {
         await query(`
           UPDATE mrb_affected_serials
           SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = $3
-          WHERE mrb_campaign_id = $1 AND serial_number = $2 AND NOT inspected
+          WHERE mrb_campaign_id = $1 AND serial_number = $2
         `, [id, serial.trim(), inspectionResultCode]);
       }
     }
@@ -3964,8 +3968,9 @@ router.get('/users/list', authenticateToken, async (req, res) => {
 router.get('/campaigns-by-part/:partId', authenticateToken, async (req, res) => {
   const { partId } = req.params;
   try {
+    // Busca en mrb_campaign_parts Y en parts_list JSONB
     const result = await query(`
-      SELECT
+      SELECT DISTINCT
         mc.id as campaign_id,
         mc.campaign_number,
         mc.title,
@@ -3982,11 +3987,22 @@ router.get('/campaigns-by-part/:partId', authenticateToken, async (req, res) => 
         mc.qty_use_as_is,
         mc.qty_return,
         mc.created_at
-      FROM mrb_campaign_parts mcp
-      JOIN mrb_campaigns mc ON mcp.mrb_campaign_id = mc.id
+      FROM mrb_campaigns mc
       LEFT JOIN inspection_severities sev ON mc.severity_id = sev.id
-      WHERE mcp.part_id = $1
-        AND mc.status IN ('ABIERTA', 'EN_PROCESO')
+      WHERE mc.status IN ('ABIERTA', 'EN_PROCESO')
+        AND (
+          -- Buscar en mrb_campaign_parts
+          EXISTS (SELECT 1 FROM mrb_campaign_parts mcp WHERE mcp.mrb_campaign_id = mc.id AND mcp.part_id = $1)
+          OR
+          -- Buscar en parts_list JSONB
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements(mc.parts_list) elem
+            WHERE (elem->>'partId')::int = $1
+          )
+          OR
+          -- Buscar en part_id directo
+          mc.part_id = $1
+        )
       ORDER BY mc.campaign_number
     `, [partId]);
 
@@ -4171,6 +4187,7 @@ router.delete('/:id/remove-part/:partId', authenticateToken, async (req, res) =>
 router.get('/:id/affected-serials', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
+    // 1. Obtener seriales afectados
     const result = await query(`
       SELECT
         mas.id, mas.serial_number, mas.lot_number, mas.notes,
@@ -4185,12 +4202,88 @@ router.get('/:id/affected-serials', authenticateToken, async (req, res) => {
       ORDER BY mas.inspected ASC, mas.created_at DESC
     `, [id]);
 
+    // 2. Obtener historial de rondas para todos los seriales de esta campaña
+    const roundsResult = await query(`
+      SELECT * FROM (
+        SELECT
+          UPPER(o.serial_number) as serial_upper,
+          o.inspection_round as round,
+          'OK' as result,
+          o.created_at as inspected_at,
+          u.first_name || ' ' || u.last_name as inspector_name
+        FROM mrb_ok_entries o
+        LEFT JOIN users u ON o.inspector_id = u.id
+        WHERE o.mrb_campaign_id = $1
+        UNION ALL
+        SELECT
+          UPPER(d.serial_number) as serial_upper,
+          d.inspection_round as round,
+          COALESCE(id.code, 'NOK') as result,
+          d.captured_at as inspected_at,
+          u.first_name || ' ' || u.last_name as inspector_name
+        FROM defect_entries_v2 d
+        LEFT JOIN inspection_dispositions id ON d.disposition_id = id.id
+        LEFT JOIN users u ON d.inspector_id = u.id
+        WHERE d.mrb_campaign_id = $1
+      ) combined
+      ORDER BY serial_upper, round ASC
+    `, [id]);
+
+    // 2b. Obtener comentarios por ronda (primer comentario no vacío de cada ronda)
+    const roundCommentsResult = await query(`
+      SELECT DISTINCT ON (round) round, notes, inspected_at FROM (
+        SELECT inspection_round as round, notes, created_at as inspected_at
+        FROM mrb_ok_entries
+        WHERE mrb_campaign_id = $1 AND notes IS NOT NULL AND notes <> ''
+        UNION ALL
+        SELECT inspection_round as round, notes, captured_at as inspected_at
+        FROM defect_entries_v2
+        WHERE mrb_campaign_id = $1 AND notes IS NOT NULL AND notes <> ''
+      ) all_notes
+      ORDER BY round, inspected_at ASC
+    `, [id]);
+    const roundComments = {};
+    for (const row of roundCommentsResult.rows) {
+      roundComments[row.round || 1] = row.notes;
+    }
+
+    // 3. Agrupar rondas por serial
+    const roundsBySerial = {};
+    let maxRoundGlobal = 0;
+    for (const row of roundsResult.rows) {
+      const key = row.serial_upper;
+      if (!roundsBySerial[key]) roundsBySerial[key] = [];
+      roundsBySerial[key].push({
+        round: row.round || 1,
+        result: row.result,
+        inspectedAt: row.inspected_at,
+        inspectorName: row.inspector_name
+      });
+      if ((row.round || 1) > maxRoundGlobal) maxRoundGlobal = row.round || 1;
+    }
+
+    // 4. Combinar con seriales
+    const serialsWithRounds = result.rows.map(s => {
+      const serialUpper = s.serial_number.toUpperCase();
+      const rounds = roundsBySerial[serialUpper] || [];
+      const maxRound = rounds.length > 0 ? Math.max(...rounds.map(r => r.round)) : 0;
+      const lastRound = rounds.find(r => r.round === maxRound);
+      return {
+        ...s,
+        inspection_round: maxRound,
+        last_inspection_result: lastRound?.result || null,
+        rounds: rounds
+      };
+    });
+
     const inspectedCount = result.rows.filter(r => r.inspected).length;
     const pendingCount = result.rows.filter(r => !r.inspected).length;
 
     res.json({
       success: true,
-      serials: transformToCamelCase(result.rows),
+      serials: transformToCamelCase(serialsWithRounds),
+      maxRound: maxRoundGlobal,
+      roundComments: roundComments,
       summary: {
         total: result.rows.length,
         inspected: inspectedCount,
@@ -5535,7 +5628,7 @@ router.get('/:id/defects', authenticateToken, async (req, res) => {
 // ============================================================================
 router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memoryStorage() }).single('file'), async (req, res) => {
   const { id } = req.params;
-  const { importType, shiftId, defectTypeId, disposition } = req.body;
+  const { importType, shiftId, defectTypeId, disposition, forceOverwrite, confirmedSerials, reprocessComment } = req.body;
 
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'Archivo requerido' });
@@ -5595,9 +5688,63 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
     `, [id]);
     const validParts = new Map(partsRes.rows.map(r => [r.part_number.trim().toUpperCase(), r.part_id]));
 
-    // 5. Procesar filas de datos
+    // 4b. Obtener TODAS las partes del sistema (para extensiones de campaña)
+    const allPartsRes = await query(`SELECT id, UPPER(TRIM(part_number)) as part_number FROM client_parts`);
+    const allParts = new Map(allPartsRes.rows.map(r => [r.part_number, r.id]));
+
+    // 4c. Obtener seriales del inventario de esta campaña para validar parte
+    const inventoryRes = await query(`
+      SELECT UPPER(serial_number) as serial_upper, part_id
+      FROM mrb_affected_serials
+      WHERE mrb_campaign_id = $1 AND part_id IS NOT NULL
+    `, [id]);
+    const serialPartMap = new Map(inventoryRes.rows.map(r => [r.serial_upper, r.part_id]));
+
+    // 5. Obtener seriales ya procesados en esta campaña con su ronda máxima y último status
+    const existingRes = await query(`
+      SELECT serial_number, MAX(inspection_round) as max_round,
+             (SELECT 'OK' FROM mrb_ok_entries o2
+              WHERE o2.mrb_campaign_id = $1 AND UPPER(o2.serial_number) = UPPER(combined.serial_number)
+              ORDER BY inspection_round DESC, created_at DESC LIMIT 1) as last_status_ok,
+             (SELECT 'NOK' FROM defect_entries_v2 d2
+              WHERE d2.mrb_campaign_id = $1 AND UPPER(d2.serial_number) = UPPER(combined.serial_number)
+              ORDER BY inspection_round DESC, created_at DESC LIMIT 1) as last_status_nok
+      FROM (
+        SELECT serial_number, inspection_round FROM mrb_ok_entries WHERE mrb_campaign_id = $1 AND serial_number IS NOT NULL
+        UNION ALL
+        SELECT serial_number, inspection_round FROM defect_entries_v2 WHERE mrb_campaign_id = $1 AND serial_number IS NOT NULL
+      ) combined
+      GROUP BY serial_number
+    `, [id]);
+
+    // Map: serial -> { maxRound, lastStatus }
+    const existingSerials = new Map();
+    for (const row of existingRes.rows) {
+      const serialUpper = row.serial_number.trim().toUpperCase();
+      const lastStatus = row.last_status_ok ? 'OK' : (row.last_status_nok ? 'NOK' : null);
+      existingSerials.set(serialUpper, {
+        maxRound: parseInt(row.max_round) || 1,
+        lastStatus
+      });
+    }
+
+    // Parse confirmedSerials si viene como string
+    const confirmedSet = new Set(
+      confirmedSerials
+        ? (typeof confirmedSerials === 'string' ? JSON.parse(confirmedSerials) : confirmedSerials).map(s => s.toUpperCase())
+        : []
+    );
+
+    // 6. Procesar filas de datos - Primera pasada: detectar reprocesos
     let imported = 0;
     let skipped = 0;
+    let wrongPartCount = 0;
+    let extendedCount = 0;
+    const wrongPartSerials = [];
+    const extendedSerials = [];
+    const conflicts = [];
+    const toProcess = [];
+    const seriesToAdd = []; // Seriales nuevos para agregar a mrb_affected_serials
     const inspectorId = req.user.id;
     const today = new Date().toISOString().split('T')[0];
 
@@ -5608,54 +5755,256 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
       if (dtRes.rows.length > 0) defectName = dtRes.rows[0].code || dtRes.rows[0].name;
     }
 
+    // Obtener disposition_id si es DEFECT
+    let dispositionId = null;
+    if (importType === 'DEFECT') {
+      const dispCode = disposition || 'REWORK';
+      const dispRes = await query('SELECT id FROM inspection_dispositions WHERE code = $1', [dispCode]);
+      dispositionId = dispRes.rows.length > 0 ? dispRes.rows[0].id : 2; // Default REWORK = 2
+    }
+
     for (let i = headerRowIndex + 1; i < data.length; i++) {
       const row = data[i];
-      if (!row || !row[0]) continue; // Skip empty rows
+      if (!row || !row[0]) continue;
 
       const serial = String(row[0]).trim();
+      const serialUpper = serial.toUpperCase();
       const partNumber = row[1] ? String(row[1]).trim().toUpperCase() : null;
 
       if (!serial) continue;
 
       // Validar parte si se proporciona
       let partId = null;
+      let isExtended = false;
+      let extendedReason = null;
       if (partNumber) {
         partId = validParts.get(partNumber);
         if (!partId) {
-          skipped++;
-          continue; // Parte no válida para esta campaña
+          // Parte no está en campaña, buscar en todas las partes del sistema
+          partId = allParts.get(partNumber);
+          if (partId) {
+            // Existe en sistema pero no en campaña
+            isExtended = true;
+            extendedReason = 'parte';
+          } else {
+            // Parte no existe en el sistema
+            skipped++;
+            continue;
+          }
         }
       } else if (validParts.size === 1) {
-        // Si solo hay una parte en la campaña, usarla por defecto
         partId = validParts.values().next().value;
       } else {
-        // Sin parte y múltiples opciones o ninguna → skip
         skipped++;
         continue;
       }
 
+      // Validar que el serial corresponda a la parte indicada (si existe en el inventario)
+      const realPartId = serialPartMap.get(serialUpper);
+      const serialInInventory = serialPartMap.has(serialUpper);
+
+      if (realPartId && String(realPartId) !== String(partId)) {
+        // Serial existe en inventario pero con parte diferente - RECHAZAR
+        console.log(`[import-mass] RECHAZADO: ${serial} - Parte Excel: ${partId}, Parte real: ${realPartId}`);
+        wrongPartCount++;
+        if (wrongPartSerials.length < 10) {
+          wrongPartSerials.push({ serial, partNumberGiven: partNumber, realPartId });
+        }
+        continue;
+      }
+
+      // Si serial no está en inventario de campaña → es adicional
+      if (!serialInInventory && !isExtended) {
+        isExtended = true;
+        extendedReason = extendedReason || 'serial';
+      }
+
+      // Contar adicionales
+      if (isExtended && extendedSerials.length < 20) {
+        extendedSerials.push({ serial, partNumber, reason: extendedReason });
+        extendedCount++;
+      } else if (isExtended) {
+        extendedCount++;
+      }
+
+      // Verificar si el serial ya fue procesado
+      const existing = existingSerials.get(serialUpper);
+      const newStatus = importType === 'OK' ? 'OK' : 'NOK';
+
+      if (existing) {
+        // Serial ya existe - es un reproceso
+        if (!forceOverwrite && !confirmedSet.has(serialUpper)) {
+          conflicts.push({
+            serial,
+            currentStatus: existing.lastStatus,
+            currentRound: existing.maxRound,
+            newStatus,
+            newRound: existing.maxRound + 1,
+            partId
+          });
+          continue;
+        }
+        // Si está confirmado o forceOverwrite, procesar como nueva ronda
+        toProcess.push({ serial, partId, partNumber, inspectionRound: existing.maxRound + 1, isReprocess: true, isExtended });
+      } else {
+        // Serial nuevo - ronda 1
+        toProcess.push({ serial, partId, partNumber, inspectionRound: 1, isReprocess: false, isExtended, extendedReason });
+        // Si es nuevo, agregarlo a la lista para insertar en mrb_affected_serials
+        if (!serialInInventory) {
+          seriesToAdd.push({ serial, partId, partNumber, isExtended, extendedReason });
+        }
+      }
+    }
+
+    // SIEMPRE mostrar preview para confirmación (a menos que sea forceOverwrite)
+    if (!forceOverwrite) {
+      let message = `${toProcess.length} serial(es) listos para importar como ${importType}`;
+      if (conflicts.length > 0) message += ` (${conflicts.length} reprocesos)`;
+      if (extendedCount > 0) message += ` | ${extendedCount} adicionales (fuera de campaña)`;
+      if (skipped > 0) message += ` | ${skipped} omitidos (parte no existe en sistema)`;
+      if (wrongPartCount > 0) message += ` | ⚠️ ${wrongPartCount} rechazados (serial no corresponde a la parte)`;
+
+      return res.json({
+        success: false,
+        needsConfirmation: true,
+        conflicts,
+        wrongPartCount,
+        wrongPartSerials: wrongPartSerials.slice(0, 10),
+        extendedCount,
+        extendedSerials: extendedSerials.slice(0, 10),
+        message,
+        preview: {
+          toImport: toProcess.length,
+          skippedInvalidPart: skipped,
+          reprocessCount: conflicts.length,
+          wrongPartCount,
+          extendedCount,
+          serialsList: toProcess.map(p => ({ serial: p.serial, partNumber: p.partNumber, round: p.inspectionRound, isExtended: p.isExtended, extendedReason: p.extendedReason, status: importType }))
+        }
+      });
+    }
+
+    // 6b. Agregar seriales nuevos a mrb_affected_serials (incluyendo adicionales)
+    for (const { serial, partId, partNumber, isExtended, extendedReason } of seriesToAdd) {
+      let notes = null;
+      if (isExtended) {
+        if (extendedReason === 'parte') {
+          notes = `[ADICIONAL] Parte ${partNumber} fuera de campaña`;
+        } else {
+          notes = `[ADICIONAL] Serial fuera de inventario campaña`;
+        }
+      }
+      await query(`
+        INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, notes, created_at)
+        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+        ON CONFLICT (mrb_campaign_id, serial_number) DO NOTHING
+      `, [id, serial, partId, notes]);
+    }
+
+    // 7. Procesar inserciones
+    for (const { serial, partId, inspectionRound, isReprocess, isExtended } of toProcess) {
+      const noteText = isReprocess && reprocessComment ? `[Reproceso Ronda ${inspectionRound}] ${reprocessComment}` : null;
+
       if (importType === 'OK') {
-        // Insertar en mrb_ok_entries
         await query(`
-          INSERT INTO mrb_ok_entries (mrb_campaign_id, shift_id, inspector_id, part_id, quantity, lot_number, serial_number, inspection_date)
-          VALUES ($1, $2, $3, $4, 1, $5, $6, $7)
-        `, [id, shiftId, inspectorId, partId, campaign.lot_number || null, serial, today]);
+          INSERT INTO mrb_ok_entries (mrb_campaign_id, shift_id, inspector_id, part_id, quantity, lot_number, serial_number, inspection_date, inspection_round, notes)
+          VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9)
+        `, [id, shiftId, inspectorId, partId, campaign.lot_number || null, serial, today, inspectionRound, noteText]);
+        // Actualizar mrb_affected_serials
+        await query(`
+          UPDATE mrb_affected_serials
+          SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = 'OK'
+          WHERE mrb_campaign_id = $1 AND UPPER(serial_number) = UPPER($2)
+        `, [id, serial]);
         imported++;
       } else {
-        // Insertar en defect_entries_v2
-        const entryNumRes = await query('SELECT generate_defect_entry_number() as entry_number');
-        const entryNumber = entryNumRes.rows[0].entry_number;
+        // Generar entry_number manualmente (la función trigger no se puede llamar directamente)
+        const now = new Date();
+        const year = now.getFullYear();
+        const startOfYear = new Date(year, 0, 0);
+        const diff = now - startOfYear;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const julian = String(Math.floor(diff / oneDay)).padStart(3, '0');
+        const prefix = `DEF-${year}${julian}-`;
+
+        const seqRes = await query(`
+          SELECT COALESCE(MAX(SUBSTRING(entry_number FROM '[0-9]{5}$')::INTEGER), 0) + 1 as seq
+          FROM defect_entries_v2
+          WHERE entry_number LIKE $1
+        `, [prefix + '%']);
+        const entryNumber = prefix + String(seqRes.rows[0].seq).padStart(5, '0');
 
         await query(`
           INSERT INTO defect_entries_v2 (
-            entry_number, part_id, defect_type_id, disposition, quantity,
-            lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, inspection_date
-          ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, $10)
+            entry_number, part_id, defect_type_id, disposition_id, quantity,
+            lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, captured_at, inspection_round, notes, captured_by_user_id
+          ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, NOW(), $10, $11, $8)
         `, [
-          entryNumber, partId, defectTypeId, disposition || 'REWORK',
-          campaign.lot_number || null, serial, shiftId, inspectorId, id, today
+          entryNumber, partId, defectTypeId, dispositionId,
+          campaign.lot_number || null, serial, shiftId, inspectorId, id, inspectionRound, noteText
         ]);
+        // Actualizar mrb_affected_serials con disposición
+        const dispCode = disposition || 'REWORK';
+        await query(`
+          UPDATE mrb_affected_serials
+          SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = $3
+          WHERE mrb_campaign_id = $1 AND UPPER(serial_number) = UPPER($2)
+        `, [id, serial, dispCode]);
         imported++;
+      }
+    }
+
+    // Procesar conflictos confirmados (reprocesos)
+    for (const conflict of conflicts) {
+      if (confirmedSet.has(conflict.serial.toUpperCase())) {
+        const noteText = reprocessComment ? `[Reproceso Ronda ${conflict.newRound}] ${reprocessComment}` : null;
+
+        if (importType === 'OK') {
+          await query(`
+            INSERT INTO mrb_ok_entries (mrb_campaign_id, shift_id, inspector_id, part_id, quantity, lot_number, serial_number, inspection_date, inspection_round, notes)
+            VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9)
+          `, [id, shiftId, inspectorId, conflict.partId, campaign.lot_number || null, conflict.serial, today, conflict.newRound, noteText]);
+          // Actualizar mrb_affected_serials
+          await query(`
+            UPDATE mrb_affected_serials
+            SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = 'OK'
+            WHERE mrb_campaign_id = $1 AND UPPER(serial_number) = UPPER($2)
+          `, [id, conflict.serial]);
+          imported++;
+        } else {
+          const now = new Date();
+          const year = now.getFullYear();
+          const startOfYear = new Date(year, 0, 0);
+          const diff = now - startOfYear;
+          const oneDay = 1000 * 60 * 60 * 24;
+          const julian = String(Math.floor(diff / oneDay)).padStart(3, '0');
+          const prefix = `DEF-${year}${julian}-`;
+
+          const seqRes = await query(`
+            SELECT COALESCE(MAX(SUBSTRING(entry_number FROM '[0-9]{5}$')::INTEGER), 0) + 1 as seq
+            FROM defect_entries_v2
+            WHERE entry_number LIKE $1
+          `, [prefix + '%']);
+          const entryNumber = prefix + String(seqRes.rows[0].seq).padStart(5, '0');
+
+          await query(`
+            INSERT INTO defect_entries_v2 (
+              entry_number, part_id, defect_type_id, disposition_id, quantity,
+              lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, captured_at, inspection_round, notes, captured_by_user_id
+            ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, NOW(), $10, $11, $8)
+          `, [
+            entryNumber, conflict.partId, defectTypeId, dispositionId,
+            campaign.lot_number || null, conflict.serial, shiftId, inspectorId, id, conflict.newRound, noteText
+          ]);
+          // Actualizar mrb_affected_serials con disposición
+          const dispCodeConflict = disposition || 'REWORK';
+          await query(`
+            UPDATE mrb_affected_serials
+            SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = $3
+            WHERE mrb_campaign_id = $1 AND UPPER(serial_number) = UPPER($2)
+          `, [id, conflict.serial, dispCodeConflict]);
+          imported++;
+        }
       }
     }
 
@@ -5668,14 +6017,20 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
       }
     }
 
+    let message = `Importados ${imported} registros`;
+    if (skipped > 0) message += `, ${skipped} omitidos (parte no en campaña)`;
+    if (wrongPartCount > 0) message += `, ${wrongPartCount} rechazados (serial no corresponde a la parte)`;
+
     res.json({
       success: true,
       imported,
       skipped,
+      wrongPartCount,
+      wrongPartSerials: wrongPartSerials.slice(0, 5), // Mostrar máximo 5 ejemplos
       importType,
       defectName,
       disposition: importType === 'DEFECT' ? disposition : null,
-      message: `Importados ${imported} registros${skipped > 0 ? `, ${skipped} omitidos (parte inválida)` : ''}`
+      message
     });
 
   } catch (error) {
