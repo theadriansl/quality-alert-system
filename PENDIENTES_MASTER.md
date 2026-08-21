@@ -13,7 +13,7 @@
 | 4 | ~~Test end-to-end Hospital → MRB → Hospital~~ | 23-Jul | ✅ 18-Ago |
 | 5 | ~~MRBDashboard no refleja partes en MRB~~ | 26-Jul | ✅ 18-Ago (Tab Inventario) |
 | 6 | ~~Estaciones MRB mal configuradas~~ | 26-Jul | ✅ 19-Ago (MRB01/MRB02 existen) |
-| 7 | **Módulo Reportes Masivos (async servidor + UI)** | 16-Ago | ⏳ Depende cierre módulos |
+| 7 | ~~Módulo Reportes Masivos (async servidor + UI)~~ | 16-Ago | ✅ 21-Ago |
 | 8 | ~~BUG: Error 500 en capture-nok (falta part_id + trigger entry_number)~~ | 19-Ago | ✅ 21-Ago |
 
 ---
@@ -74,6 +74,7 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Módulo Reportes Masivos: Backend async + UI ReportCenter (7 tipos de reporte) | 21-Ago |
 | ✅ Fix capture-nok/ok: Validación part_id obligatorio en campañas multi-parte | 21-Ago |
 | ✅ Fix capture-nok/ok: Seriales adicionales (OUT_OF_LIST) se agregan a inventario campaña | 21-Ago |
 | ✅ Tab Inventario: Separador visual "— Adicionales (N) —" para seriales fuera de lista | 21-Ago |

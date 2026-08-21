@@ -52,6 +52,7 @@ const unitRegistryEndpoints = require('./endpoints/unitRegistryEndpoints');
 const specInspectionEndpoints = require('./endpoints/specInspectionEndpoints');
 const locationCodesEndpoints = require('./endpoints/locationCodesEndpoints');
 const hospitalDashboardEndpoints = require('./endpoints/hospitalDashboardEndpoints');
+const reportJobsEndpoints = require('./endpoints/reportJobsEndpoints');
 const hospitalRolesEndpoints = require('./endpoints/hospitalRolesEndpoints');
 const deviationEndpoints = require('./endpoints/deviationEndpoints');
 const skillsEndpoints = require('./endpoints/skillsEndpoints');
@@ -962,6 +963,12 @@ console.log('✅ WI Plant Configuration endpoints registered');
 // ============================================================================
 managementReviewEndpoints(app);
 
+
+// ============================================================================
+// REPORT JOBS MODULE (Async report generation)
+// ============================================================================
+app.use('/report-jobs', reportJobsEndpoints);
+console.log('✅ Report Jobs endpoints registered');
 
 // ============================================================================
 // START SERVER

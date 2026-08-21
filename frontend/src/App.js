@@ -46,6 +46,7 @@ import MRBBuffer from './pages/MRBBuffer';
 import MRBTransferPackages from './pages/MRBTransferPackages';
 import HospitalTransferPackages from './pages/HospitalTransferPackages';
 import MRBInventory from './pages/MRBInventory';
+import ReportCenter from './pages/ReportCenter';
 // Audit Module
 import AuditDashboard from './pages/AuditDashboard';
 import AuditPrograms from './pages/AuditPrograms';
@@ -405,6 +406,13 @@ function App() {
               <Route path="/release-ok" element={
                 <ProtectedRoute>
                   <ReleaseOK />
+                </ProtectedRoute>
+              } />
+
+              {/* Report Center - Async report generation */}
+              <Route path="/report-center" element={
+                <ProtectedRoute>
+                  <ReportCenter />
                 </ProtectedRoute>
               } />
 
