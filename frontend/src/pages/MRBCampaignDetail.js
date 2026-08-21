@@ -3273,47 +3273,64 @@ const MRBCampaignDetail = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {affectedSerials.map((serial, idx) => {
-                          const roundsMap = {};
-                          (serial.rounds || []).forEach(r => { roundsMap[r.round] = r; });
-                          const rowBg = idx % 2 === 0 ? t.bgCard : t.bgPanel;
+                        {(() => {
+                          const normales = affectedSerials.filter(s => !s.notes?.includes('[ADICIONAL]'));
+                          const adicionales = affectedSerials.filter(s => s.notes?.includes('[ADICIONAL]'));
+                          const renderRow = (serial, idx, isAdicional = false) => {
+                            const roundsMap = {};
+                            (serial.rounds || []).forEach(r => { roundsMap[r.round] = r; });
+                            const rowBg = idx % 2 === 0 ? t.bgCard : t.bgPanel;
+                            return (
+                              <tr key={serial.id}>
+                                <td style={{ position: 'sticky', left: 0, zIndex: 10, padding: '6px 10px', fontWeight: '600', fontFamily: 'monospace', fontSize: '11px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>
+                                  {serial.serialNumber}
+                                  {serial.inspected
+                                    ? <span style={{ color: '#16a34a', marginLeft: '4px' }}>✓</span>
+                                    : <span style={{ color: '#f59e0b', marginLeft: '4px' }}>⏳</span>}
+                                </td>
+                                <td style={{ position: 'sticky', left: '130px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>{serial.partNumber || '—'}</td>
+                                <td style={{ position: 'sticky', left: '210px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `2px solid ${t.border}`, textAlign: 'center', backgroundColor: rowBg }}>
+                                  {new Date(serial.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                                </td>
+                                {Array.from({ length: maxInspectionRound }, (_, i) => {
+                                  const roundNum = i + 1;
+                                  const roundData = roundsMap[roundNum];
+                                  if (!roundData) {
+                                    return <td key={`r-${roundNum}`} style={{ padding: '6px', textAlign: 'center', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, backgroundColor: rowBg }}>—</td>;
+                                  }
+                                  const isOk = roundData.result === 'OK';
+                                  const bgColor = isOk ? '#dcfce7' : '#fee2e2';
+                                  const textColor = isOk ? '#16a34a' : '#ef4444';
+                                  const dateStr = roundData.inspectedAt ? new Date(roundData.inspectedAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '';
+                                  const inspectorShort = roundData.inspectorName ? roundData.inspectorName.split(' ')[0].substring(0, 6) : '';
+                                  return (
+                                    <td key={`r-${roundNum}`} style={{ padding: '4px', textAlign: 'center', backgroundColor: bgColor, borderBottom: `1px solid ${t.border}` }}>
+                                      <span style={{ color: textColor, fontSize: '10px', fontWeight: '700' }}>{roundData.result}</span>
+                                      <span style={{ fontSize: '9px', color: '#555', marginLeft: '3px' }}>{inspectorShort}</span>
+                                      <span style={{ fontSize: '8px', color: '#888', marginLeft: '2px' }}>{dateStr}</span>
+                                    </td>
+                                  );
+                                })}
+                                {maxInspectionRound === 0 && (
+                                  <td style={{ padding: '6px 10px', textAlign: 'center', color: t.textMuted, borderBottom: `1px solid ${t.border}`, backgroundColor: rowBg }}>—</td>
+                                )}
+                              </tr>
+                            );
+                          };
                           return (
-                            <tr key={serial.id}>
-                              {/* Columnas STICKY */}
-                              <td style={{ position: 'sticky', left: 0, zIndex: 10, padding: '6px 10px', fontWeight: '600', fontFamily: 'monospace', fontSize: '11px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>
-                                {serial.serialNumber}
-                                {serial.inspected ? <span style={{ color: '#16a34a', marginLeft: '4px' }}>✓</span> : <span style={{ color: '#f59e0b', marginLeft: '4px' }}>⏳</span>}
-                              </td>
-                              <td style={{ position: 'sticky', left: '130px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>{serial.partNumber || '—'}</td>
-                              <td style={{ position: 'sticky', left: '210px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `2px solid ${t.border}`, textAlign: 'center', backgroundColor: rowBg }}>
-                                {new Date(serial.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
-                              </td>
-                              {/* Columnas de rondas */}
-                              {Array.from({ length: maxInspectionRound }, (_, i) => {
-                                const roundNum = i + 1;
-                                const roundData = roundsMap[roundNum];
-                                if (!roundData) {
-                                  return <td key={`r-${roundNum}`} style={{ padding: '6px', textAlign: 'center', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, backgroundColor: rowBg }}>—</td>;
-                                }
-                                const isOk = roundData.result === 'OK';
-                                const bgColor = isOk ? '#dcfce7' : '#fee2e2';
-                                const textColor = isOk ? '#16a34a' : '#ef4444';
-                                const dateStr = roundData.inspectedAt ? new Date(roundData.inspectedAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '';
-                                const inspectorShort = roundData.inspectorName ? roundData.inspectorName.split(' ')[0].substring(0, 6) : '';
-                                return (
-                                  <td key={`r-${roundNum}`} style={{ padding: '4px', textAlign: 'center', backgroundColor: bgColor, borderBottom: `1px solid ${t.border}` }}>
-                                    <span style={{ color: textColor, fontSize: '10px', fontWeight: '700' }}>{roundData.result}</span>
-                                    <span style={{ fontSize: '9px', color: '#555', marginLeft: '3px' }}>{inspectorShort}</span>
-                                    <span style={{ fontSize: '8px', color: '#888', marginLeft: '2px' }}>{dateStr}</span>
+                            <>
+                              {normales.map((s, i) => renderRow(s, i))}
+                              {adicionales.length > 0 && (
+                                <tr>
+                                  <td colSpan={3 + Math.max(maxInspectionRound, 1)} style={{ padding: '8px 10px', backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '11px', fontWeight: '700', textAlign: 'center', borderBottom: `2px solid #3b82f6` }}>
+                                    — Adicionales ({adicionales.length}) —
                                   </td>
-                                );
-                              })}
-                              {maxInspectionRound === 0 && (
-                                <td style={{ padding: '6px 10px', textAlign: 'center', color: t.textMuted, borderBottom: `1px solid ${t.border}`, backgroundColor: rowBg }}>—</td>
+                                </tr>
                               )}
-                            </tr>
+                              {adicionales.map((s, i) => renderRow(s, i))}
+                            </>
                           );
-                        })}
+                        })()}
                       </tbody>
                     </table>
                   </div>

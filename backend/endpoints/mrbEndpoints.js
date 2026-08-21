@@ -422,6 +422,14 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
     const mrb = result.rows[0];
     const effectivePartId = partId || mrb.part_id;
 
+    // Validar que tengamos un part_id para trazabilidad
+    if (!effectivePartId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe seleccionar una parte. La campaña es multi-parte y no tiene parte por defecto.'
+      });
+    }
+
     // === AFFECTED STATUS: Verificar si serial está en lista de afectados ===
     let affectedStatus = null;
     if (serial && serial.trim()) {
@@ -445,6 +453,12 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
             SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = 'OK'
             WHERE mrb_campaign_id = $1 AND serial_number = $2
           `, [id, serial.trim()]);
+        } else if (affectedStatus === 'OUT_OF_LIST') {
+          // Agregar serial adicional al inventario de campaña
+          await query(`
+            INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, inspected, inspected_at, inspection_result, notes)
+            VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP, 'OK', '[ADICIONAL] Captura individual OK')
+          `, [id, serial.trim(), effectivePartId]);
         }
       }
     }
@@ -612,6 +626,14 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     const mrb = mrbResult.rows[0];
     const effectivePartId = partId || mrb.part_id;
 
+    // Validar que tengamos un part_id (requerido para defect_entries_v2)
+    if (!effectivePartId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe seleccionar una parte. La campaña es multi-parte y no tiene parte por defecto.'
+      });
+    }
+
     // === AFFECTED STATUS: Verificar si serial está en lista de afectados ===
     let affectedStatus = null;
     const affectedCount = await query(
@@ -634,6 +656,12 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
           SET inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = $3
           WHERE mrb_campaign_id = $1 AND serial_number = $2
         `, [id, serial.trim(), inspectionResultCode]);
+      } else if (affectedStatus === 'OUT_OF_LIST') {
+        // Agregar serial adicional al inventario de campaña
+        await query(`
+          INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, inspected, inspected_at, inspection_result, notes)
+          VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP, $4, '[ADICIONAL] Captura individual NOK')
+        `, [id, serial.trim(), effectivePartId, inspectionResultCode]);
       }
     }
 
@@ -5691,6 +5719,7 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
     // 4b. Obtener TODAS las partes del sistema (para extensiones de campaña)
     const allPartsRes = await query(`SELECT id, UPPER(TRIM(part_number)) as part_number FROM client_parts`);
     const allParts = new Map(allPartsRes.rows.map(r => [r.part_number, r.id]));
+    const allPartsById = new Map(allPartsRes.rows.map(r => [r.id, r.part_number])); // Inverso: id → part_number
 
     // 4c. Obtener seriales del inventario de esta campaña para validar parte
     const inventoryRes = await query(`
@@ -5742,6 +5771,7 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
     let extendedCount = 0;
     const wrongPartSerials = [];
     const extendedSerials = [];
+    const skippedSerials = []; // Seriales omitidos (parte no existe en sistema)
     const conflicts = [];
     const toProcess = [];
     const seriesToAdd = []; // Seriales nuevos para agregar a mrb_affected_serials
@@ -5771,7 +5801,8 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
       const serialUpper = serial.toUpperCase();
       const partNumber = row[1] ? String(row[1]).trim().toUpperCase() : null;
 
-      if (!serial) continue;
+      // Ignorar filas vacías o headers duplicados
+      if (!serial || serialUpper === 'SERIAL') continue;
 
       // Validar parte si se proporciona
       let partId = null;
@@ -5789,13 +5820,16 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
           } else {
             // Parte no existe en el sistema
             skipped++;
+            if (skippedSerials.length < 20) {
+              skippedSerials.push({ serial, partNumber, reason: 'Parte no existe en sistema' });
+            }
             continue;
           }
         }
       } else if (validParts.size === 1) {
         partId = validParts.values().next().value;
       } else {
-        skipped++;
+        // Sin parte especificada y múltiples partes en campaña - ignorar silenciosamente
         continue;
       }
 
@@ -5805,10 +5839,15 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
 
       if (realPartId && String(realPartId) !== String(partId)) {
         // Serial existe en inventario pero con parte diferente - RECHAZAR
-        console.log(`[import-mass] RECHAZADO: ${serial} - Parte Excel: ${partId}, Parte real: ${realPartId}`);
+        const realPartNumber = allPartsById.get(realPartId) || `ID:${realPartId}`;
+        console.log(`[import-mass] DISCREPANCIA: ${serial} - Excel: ${partNumber}, Inventario: ${realPartNumber}`);
         wrongPartCount++;
-        if (wrongPartSerials.length < 10) {
-          wrongPartSerials.push({ serial, partNumberGiven: partNumber, realPartId });
+        if (wrongPartSerials.length < 20) {
+          wrongPartSerials.push({
+            serial,
+            partNumberExcel: partNumber,
+            partNumberReal: realPartNumber
+          });
         }
         continue;
       }
@@ -5820,16 +5859,21 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
       }
 
       // Contar adicionales
-      if (isExtended && extendedSerials.length < 20) {
-        extendedSerials.push({ serial, partNumber, reason: extendedReason });
-        extendedCount++;
-      } else if (isExtended) {
+      if (isExtended) {
+        console.log('[import-mass] ADICIONAL:', serial, '| partNumber:', partNumber, '| partId:', partId);
+        if (extendedSerials.length < 20) {
+          extendedSerials.push({ serial, partNumber, reason: extendedReason });
+        }
         extendedCount++;
       }
 
       // Verificar si el serial ya fue procesado
       const existing = existingSerials.get(serialUpper);
       const newStatus = importType === 'OK' ? 'OK' : 'NOK';
+
+      if (isExtended) {
+        console.log('[import-mass] ADICIONAL check:', serial, '| existing:', !!existing, '| serialInInventory:', serialInInventory);
+      }
 
       if (existing) {
         // Serial ya existe - es un reproceso
@@ -5846,6 +5890,10 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
         }
         // Si está confirmado o forceOverwrite, procesar como nueva ronda
         toProcess.push({ serial, partId, partNumber, inspectionRound: existing.maxRound + 1, isReprocess: true, isExtended });
+        // Si es reproceso pero no está en inventario de campaña, agregarlo
+        if (!serialInInventory) {
+          seriesToAdd.push({ serial, partId, partNumber, isExtended, extendedReason: extendedReason || 'reproceso' });
+        }
       } else {
         // Serial nuevo - ronda 1
         toProcess.push({ serial, partId, partNumber, inspectionRound: 1, isReprocess: false, isExtended, extendedReason });
@@ -5856,22 +5904,27 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
       }
     }
 
-    // SIEMPRE mostrar preview para confirmación (a menos que sea forceOverwrite)
-    if (!forceOverwrite) {
+    // Mostrar preview para confirmación (a menos que sea forceOverwrite o ya se confirmaron los seriales)
+    const hasConfirmedSerials = confirmedSet.size > 0;
+    if (!forceOverwrite && !hasConfirmedSerials) {
       let message = `${toProcess.length} serial(es) listos para importar como ${importType}`;
       if (conflicts.length > 0) message += ` (${conflicts.length} reprocesos)`;
       if (extendedCount > 0) message += ` | ${extendedCount} adicionales (fuera de campaña)`;
       if (skipped > 0) message += ` | ${skipped} omitidos (parte no existe en sistema)`;
       if (wrongPartCount > 0) message += ` | ⚠️ ${wrongPartCount} rechazados (serial no corresponde a la parte)`;
 
+      console.log('[import-mass] Preview:', { toProcess: toProcess.length, conflicts: conflicts.length, skipped, wrongPartCount, extendedCount });
+
       return res.json({
         success: false,
         needsConfirmation: true,
         conflicts,
         wrongPartCount,
-        wrongPartSerials: wrongPartSerials.slice(0, 10),
+        wrongPartSerials: wrongPartSerials.slice(0, 20),
         extendedCount,
-        extendedSerials: extendedSerials.slice(0, 10),
+        extendedSerials: extendedSerials.slice(0, 20),
+        skippedCount: skipped,
+        skippedSerials: skippedSerials.slice(0, 20),
         message,
         preview: {
           toImport: toProcess.length,

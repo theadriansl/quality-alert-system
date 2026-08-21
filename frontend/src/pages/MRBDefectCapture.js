@@ -186,7 +186,7 @@ const MRBDefectCapture = () => {
   const [campaignDefects, setCampaignDefects] = useState([]); // Defectos de la campaña
   const [importConflicts, setImportConflicts] = useState(null); // { conflicts: [], preview: {} }
   const [pendingImportData, setPendingImportData] = useState(null); // FormData guardado para re-submit
-  const [reprocessComment, setReprocessComment] = useState(''); // Comentario para reprocesos
+  const reprocessCommentRef = useRef(null); // Comentario para reprocesos (ref para evitar re-renders)
 
   // ── SCRAP VALIDATION STATE ─────────────────────────────────────────────────
   const [serialScrapped, setSerialScrapped] = useState(false);
@@ -1120,6 +1120,7 @@ const MRBDefectCapture = () => {
     if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
     if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
+    if (!selectedPart && campaignParts.length > 0) return showMsg('Seleccione una parte', true);
     // Validaciones de seguridad
     if (serialScrapped) return showMsg('Serial en SCRAP. No se puede registrar como OK.', true);
     if (serialPartMismatch) return showMsg(`Serial pertenece a ${serialPartMismatch.found}, no a la parte seleccionada.`, true);
@@ -1151,6 +1152,7 @@ const MRBDefectCapture = () => {
     if (!selectedMrbLocation) return showMsg(L.selectMrbLocation, true);
     if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
+    if (!selectedPart && campaignParts.length > 0) return showMsg('Seleccione una parte', true);
     if (selectedDefects.length === 0) return showMsg(L.selectDefect, true);
     setSubmitting(true);
     const token = localStorage.getItem('token');
@@ -1535,7 +1537,7 @@ const MRBDefectCapture = () => {
         setImportFile(null);
         setImportConflicts(null);
         setPendingImportData(null);
-        setReprocessComment('');
+        if (reprocessCommentRef.current) reprocessCommentRef.current.value = '';
 
         // Refresh campaign data - fetch directo de la campaña específica
         try {
@@ -1561,7 +1563,9 @@ const MRBDefectCapture = () => {
           wrongPartCount: data.wrongPartCount || 0,
           wrongPartSerials: data.wrongPartSerials || [],
           extendedCount: data.extendedCount || 0,
-          extendedSerials: data.extendedSerials || []
+          extendedSerials: data.extendedSerials || [],
+          skippedCount: data.skippedCount || 0,
+          skippedSerials: data.skippedSerials || []
         });
         setPendingImportData({ file: importFile }); // Guardar referencia
       } else {
@@ -1578,13 +1582,13 @@ const MRBDefectCapture = () => {
   const handleConfirmConflicts = async (selectedSerials, comment) => {
     if (selectedSerials.length === 0) {
       setImportConflicts(null);
-      setReprocessComment('');
+      if (reprocessCommentRef.current) reprocessCommentRef.current.value = '';
       showMsg('Importación cancelada');
       return;
     }
     // Re-ejecutar import con los seriales confirmados y comentario
     await handleMassImport(selectedSerials, comment);
-    setReprocessComment('');
+    if (reprocessCommentRef.current) reprocessCommentRef.current.value = '';
   };
 
   const handleImportDrop = (e) => {
@@ -3015,51 +3019,101 @@ const MRBDefectCapture = () => {
               </div>
             </div>
 
-            {/* Warning de partes incorrectas */}
-            {importConflicts.wrongPartCount > 0 && (
-              <div style={{ backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: importConflicts.wrongPartSerials?.length > 0 ? '8px' : 0 }}>
-                  <AlertTriangle size={16} color="#d97706" />
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#92400e' }}>
-                    {importConflicts.wrongPartCount} serial(es) rechazados - Parte no corresponde al serial en inventario de campaña
-                  </span>
-                </div>
-                {importConflicts.wrongPartSerials?.length > 0 && (
-                  <details style={{ marginLeft: '24px' }}>
-                    <summary style={{ fontSize: '11px', color: '#92400e', cursor: 'pointer', userSelect: 'none' }}>
-                      Ver seriales rechazados
-                    </summary>
-                    <div style={{ fontSize: '11px', color: '#78350f', fontFamily: 'monospace', marginTop: '6px', maxHeight: '100px', overflowY: 'auto' }}>
-                      {importConflicts.wrongPartSerials.map((w, i) => (
-                        <div key={i}>• {w.serial}</div>
-                      ))}
-                      {importConflicts.wrongPartCount > importConflicts.wrongPartSerials.length && (
-                        <div style={{ color: '#92400e', fontStyle: 'italic' }}>... y {importConflicts.wrongPartCount - importConflicts.wrongPartSerials.length} más</div>
-                      )}
+            {/* Alertas compactas expandibles */}
+            <div style={{ fontSize: '12px', marginBottom: '12px' }}>
+              {/* Discrepancias de parte */}
+              {importConflicts.wrongPartCount > 0 && (
+                <details style={{ marginBottom: '6px' }}>
+                  <summary style={{ cursor: 'pointer', color: '#dc2626', fontWeight: '600' }}>
+                    {importConflicts.wrongPartCount} discrepancia(s) de parte - Excel vs Inventario
+                  </summary>
+                  <div style={{ fontSize: '11px', fontFamily: 'monospace', marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: '#fef2f2', padding: '6px', borderRadius: '4px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #fca5a5', paddingBottom: '2px', marginBottom: '2px' }}>
+                      <span>Serial</span><span>Excel</span><span>Inventario</span>
                     </div>
-                  </details>
-                )}
-              </div>
-            )}
+                    {importConflicts.wrongPartSerials?.map((w, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
+                        <span>{w.serial}</span>
+                        <span style={{ color: '#dc2626' }}>{w.partNumberExcel || w.partNumberGiven || '-'}</span>
+                        <span style={{ color: '#059669' }}>{w.partNumberReal || '-'}</span>
+                      </div>
+                    ))}
+                    {importConflicts.wrongPartCount > (importConflicts.wrongPartSerials?.length || 0) && (
+                      <div style={{ fontStyle: 'italic', marginTop: '2px' }}>... y {importConflicts.wrongPartCount - importConflicts.wrongPartSerials.length} más</div>
+                    )}
+                  </div>
+                </details>
+              )}
+
+              {/* Omitidos */}
+              {(importConflicts.skippedCount || 0) > 0 && (
+                <details style={{ marginBottom: '6px' }}>
+                  <summary style={{ cursor: 'pointer', color: '#6b7280', fontWeight: '600' }}>
+                    {importConflicts.skippedCount} omitido(s) - parte no existe en sistema
+                  </summary>
+                  <div style={{ fontSize: '11px', fontFamily: 'monospace', marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: '#f3f4f6', padding: '6px', borderRadius: '4px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #d1d5db', paddingBottom: '2px', marginBottom: '2px' }}>
+                      <span>Serial</span><span>Parte</span>
+                    </div>
+                    {importConflicts.skippedSerials?.map((s, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                        <span>{s.serial}</span>
+                        <span style={{ color: '#dc2626' }}>{s.partNumber || '-'}</span>
+                      </div>
+                    ))}
+                    {importConflicts.skippedCount > (importConflicts.skippedSerials?.length || 0) && (
+                      <div style={{ fontStyle: 'italic', marginTop: '2px' }}>... y {importConflicts.skippedCount - importConflicts.skippedSerials.length} más</div>
+                    )}
+                  </div>
+                </details>
+              )}
+
+              {/* Adicionales */}
+              {(importConflicts.extendedCount || 0) > 0 && (
+                <details style={{ marginBottom: '6px' }}>
+                  <summary style={{ cursor: 'pointer', color: '#7c3aed', fontWeight: '600' }}>
+                    {importConflicts.extendedCount} adicional(es) - se agregarán a campaña
+                  </summary>
+                  <div style={{ fontSize: '11px', fontFamily: 'monospace', marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: '#f5f3ff', padding: '6px', borderRadius: '4px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #c4b5fd', paddingBottom: '2px', marginBottom: '2px' }}>
+                      <span>Serial</span><span>Parte</span>
+                    </div>
+                    {importConflicts.extendedSerials?.map((e, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                        <span>{e.serial}</span>
+                        <span>{e.partNumber || '-'}</span>
+                      </div>
+                    ))}
+                    {importConflicts.extendedCount > (importConflicts.extendedSerials?.length || 0) && (
+                      <div style={{ fontStyle: 'italic', marginTop: '2px' }}>... y {importConflicts.extendedCount - importConflicts.extendedSerials.length} más</div>
+                    )}
+                  </div>
+                </details>
+              )}
+            </div>
 
             {/* Preview de importación */}
-            <div style={{ backgroundColor: t.bgInput, borderRadius: '8px', padding: '12px', marginBottom: '16px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <span><strong style={{ color: '#22c55e' }}>{importConflicts.preview?.toImport || 0}</strong> a importar</span>
-                {(importConflicts.preview?.reprocessCount || 0) > 0 && (
-                  <span><strong style={{ color: '#3b82f6' }}>{importConflicts.preview.reprocessCount}</strong> reprocesos</span>
-                )}
-                {(importConflicts.preview?.extendedCount || 0) > 0 && (
-                  <span><strong style={{ color: '#8b5cf6' }}>{importConflicts.preview.extendedCount}</strong> adicionales (fuera de campaña)</span>
-                )}
-                {(importConflicts.preview?.skippedInvalidPart || 0) > 0 && (
-                  <span><strong style={{ color: '#6b7280' }}>{importConflicts.preview.skippedInvalidPart}</strong> omitidos (parte no existe en sistema)</span>
-                )}
-                {(importConflicts.preview?.wrongPartCount || 0) > 0 && (
-                  <span><strong style={{ color: '#ef4444' }}>{importConflicts.preview.wrongPartCount}</strong> rechazados</span>
-                )}
-              </div>
-            </div>
+            {(() => {
+              const toImport = importConflicts.preview?.toImport || 0;
+              const reprocessCount = importConflicts.preview?.reprocessCount || 0;
+              const extendedCount = importConflicts.preview?.extendedCount || 0;
+              const skipped = importConflicts.preview?.skippedInvalidPart || 0;
+              const wrongPart = importConflicts.preview?.wrongPartCount || 0;
+              // Si hay adicionales y todos son reprocesos (toImport=0), restar del conteo de reprocesos
+              const extendedInReprocess = toImport === 0 && extendedCount > 0 ? extendedCount : 0;
+              const normalReprocess = reprocessCount - extendedInReprocess;
+              return (
+                <div style={{ backgroundColor: t.bgInput, borderRadius: '8px', padding: '12px', marginBottom: '16px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    {toImport > 0 && <span><strong style={{ color: '#22c55e' }}>{toImport}</strong> nuevos</span>}
+                    {normalReprocess > 0 && <span><strong style={{ color: '#3b82f6' }}>{normalReprocess}</strong> reprocesos</span>}
+                    {extendedCount > 0 && <span><strong style={{ color: '#8b5cf6' }}>{extendedCount}</strong> adicionales{extendedInReprocess > 0 ? ' (reproceso)' : ''}</span>}
+                    {skipped > 0 && <span><strong style={{ color: '#6b7280' }}>{skipped}</strong> omitidos</span>}
+                    {wrongPart > 0 && <span><strong style={{ color: '#ef4444' }}>{wrongPart}</strong> rechazados</span>}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Lista de seriales a importar (expandible) */}
             {importConflicts.preview?.serialsList?.length > 0 && (() => {
@@ -3151,8 +3205,8 @@ const MRBDefectCapture = () => {
                 </label>
                 <input
                   type="text"
-                  value={reprocessComment}
-                  onChange={(e) => setReprocessComment(e.target.value)}
+                  ref={reprocessCommentRef}
+                  defaultValue=""
                   placeholder="Ej: Verificación adicional solicitada"
                   style={{ width: '100%', padding: '10px 12px', fontSize: '13px', border: `1px solid ${t.border}`, borderRadius: '8px', backgroundColor: t.bgInput, color: t.text }}
                 />
@@ -3163,21 +3217,21 @@ const MRBDefectCapture = () => {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={() => {
-                  handleConfirmConflicts(importConflicts.conflicts?.map(c => c.serial) || [], reprocessComment);
+                  handleConfirmConflicts(importConflicts.conflicts?.map(c => c.serial) || [], reprocessCommentRef.current?.value || '');
                 }}
-                disabled={submitting || (importConflicts.preview?.toImport || 0) === 0}
+                disabled={submitting || ((importConflicts.preview?.toImport || 0) === 0 && (importConflicts.conflicts?.length || 0) === 0)}
                 style={{
                   flex: 1, padding: '12px',
-                  backgroundColor: (importConflicts.preview?.toImport || 0) === 0 ? '#9ca3af' : '#22c55e',
+                  backgroundColor: ((importConflicts.preview?.toImport || 0) === 0 && (importConflicts.conflicts?.length || 0) === 0) ? '#9ca3af' : '#22c55e',
                   color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700',
-                  cursor: submitting || (importConflicts.preview?.toImport || 0) === 0 ? 'not-allowed' : 'pointer',
+                  cursor: submitting || ((importConflicts.preview?.toImport || 0) === 0 && (importConflicts.conflicts?.length || 0) === 0) ? 'not-allowed' : 'pointer',
                   opacity: submitting ? 0.7 : 1
                 }}
               >
-                {submitting ? 'Procesando...' : (importConflicts.preview?.toImport || 0) === 0 ? 'Nada que importar' : `Confirmar ${importConflicts.preview?.toImport || 0} registro(s)`}
+                {submitting ? 'Procesando...' : ((importConflicts.preview?.toImport || 0) + (importConflicts.conflicts?.length || 0)) === 0 ? 'Nada que importar' : `Confirmar ${(importConflicts.preview?.toImport || 0) + (importConflicts.conflicts?.length || 0)} registro(s)`}
               </button>
               <button
-                onClick={() => { setImportConflicts(null); setReprocessComment(''); }}
+                onClick={() => { setImportConflicts(null); if (reprocessCommentRef.current) reprocessCommentRef.current.value = ''; }}
                 disabled={submitting}
                 style={{ flex: 1, padding: '12px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer' }}
               >

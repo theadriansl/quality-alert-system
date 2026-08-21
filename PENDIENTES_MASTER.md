@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-20 (sesión 2)
+> Última actualización: 2026-08-21
 
 ---
 
@@ -14,7 +14,7 @@
 | 5 | ~~MRBDashboard no refleja partes en MRB~~ | 26-Jul | ✅ 18-Ago (Tab Inventario) |
 | 6 | ~~Estaciones MRB mal configuradas~~ | 26-Jul | ✅ 19-Ago (MRB01/MRB02 existen) |
 | 7 | **Módulo Reportes Masivos (async servidor + UI)** | 16-Ago | ⏳ Depende cierre módulos |
-| 8 | **BUG: Error 500 en capture-nok (modal multicampaña)** | 19-Ago | ⏳ Verificar logs |
+| 8 | ~~BUG: Error 500 en capture-nok (falta part_id + trigger entry_number)~~ | 19-Ago | ✅ 21-Ago |
 
 ---
 
@@ -30,7 +30,7 @@
 | 7 | Probar Módulo Reportes Hospital | 05-Ago | ⏳ |
 | 8 | **Testing Tab Inventario MRBCampaignDetail** | 18-Ago | ⏳ |
 | 9 | **Testing Modal Multi-Campaña MRB (inspección individual)** | 19-Ago | ⏳ |
-| 10 | **Verificar partes "omitidas" en import-mass (deberían existir en sistema)** | 20-Ago | ⏳ |
+| 10 | ~~Verificar partes "omitidas" en import-mass~~ | 20-Ago | ✅ 21-Ago (discrepancias claras) |
 
 ---
 
@@ -74,6 +74,13 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Fix capture-nok/ok: Validación part_id obligatorio en campañas multi-parte | 21-Ago |
+| ✅ Fix capture-nok/ok: Seriales adicionales (OUT_OF_LIST) se agregan a inventario campaña | 21-Ago |
+| ✅ Tab Inventario: Separador visual "— Adicionales (N) —" para seriales fuera de lista | 21-Ago |
+| ✅ Modal import-mass: Sección discrepancias compacta expandible (Serial/Excel/Inventario) | 21-Ago |
+| ✅ Modal import-mass: Fix doble modal de confirmación | 21-Ago |
+| ✅ Modal import-mass: Fix input comment lag (useRef vs useState) | 21-Ago |
+| ✅ Modal import-mass: Matemáticas correctas (reprocesos vs adicionales) | 21-Ago |
 | ✅ Modal import-mass: Lista completa seriales con status OK/NOK expandible | 20-Ago |
 | ✅ Modal import-mass: Lista reprocesos expandible (sin límite de 10) | 20-Ago |
 | ✅ Seriales "adicionales" (fuera de inventario) se agregan automáticamente a campaña | 20-Ago |
