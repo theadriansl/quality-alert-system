@@ -75,6 +75,8 @@
 | Tarea | Fecha |
 |-------|-------|
 | ✅ Módulo Reportes Masivos: Backend async + UI ReportCenter (7 tipos de reporte) | 21-Ago |
+| ✅ Reportes: Schema fixes (projects.project_name, 8D supplier_name, audits area_process) | 21-Ago |
+| ✅ Reportes: Download con query param token + soporte fake tokens | 21-Ago |
 | ✅ Fix capture-nok/ok: Validación part_id obligatorio en campañas multi-parte | 21-Ago |
 | ✅ Fix capture-nok/ok: Seriales adicionales (OUT_OF_LIST) se agregan a inventario campaña | 21-Ago |
 | ✅ Tab Inventario: Separador visual "— Adicionales (N) —" para seriales fuera de lista | 21-Ago |
