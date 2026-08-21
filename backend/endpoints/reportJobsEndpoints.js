@@ -5,7 +5,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { query, transformToCamelCase } = require('../config/database');
+const { query } = require('../config/database');
+const { transformToCamelCase } = require('../utils/caseTransform');
 const authenticateToken = require('../middleware/auth');
 const ExcelJS = require('exceljs');
 const path = require('path');
