@@ -278,7 +278,7 @@ async function generateHospitalDefectsReport(jobId, params) {
     FROM defect_entries_v2 d
     LEFT JOIN defect_types dt ON d.defect_type_id = dt.id
     LEFT JOIN client_parts cp ON d.part_id = cp.id
-    LEFT JOIN stations s ON d.station_id = s.id
+    LEFT JOIN inspection_stations s ON d.station_id = s.id
     LEFT JOIN shifts sh ON d.shift_id = sh.id
     LEFT JOIN inspection_dispositions disp ON d.disposition_id = disp.id
     LEFT JOIN users u ON d.inspector_id = u.id
@@ -676,7 +676,7 @@ async function generateProductionReport(jobId, params) {
            u.full_name as operator_name
     FROM production_entries pe
     LEFT JOIN client_parts cp ON pe.part_id = cp.id
-    LEFT JOIN stations s ON pe.station_id = s.id
+    LEFT JOIN inspection_stations s ON pe.station_id = s.id
     LEFT JOIN users u ON pe.operator_id = u.id
     WHERE 1=1
   `;
