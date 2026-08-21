@@ -96,6 +96,7 @@ const Home = () => {
     { id: 'calibration', moduleId: 'quality_alert', code: 'CAL', name: 'Equipos de Calibración', desc: 'Control de equipos y alertas', path: '/calibration', value: 32 },
     { id: 'release_ok', moduleId: 'quality_alert', code: 'REL', name: 'Release OK', desc: 'Estación final de liberación', path: '/release-ok', value: 30 },
     { id: 'management_review', moduleId: 'management_review', code: 'MGT', name: 'Revisión Directiva', desc: 'Revisión por la dirección', path: '/management-review', value: 25 },
+    { id: 'reports', moduleId: 'reports', code: 'RPT', name: 'Centro de Reportes', desc: 'Generación masiva de reportes Excel', path: '/report-center', value: 22 },
     { id: 'configuration', moduleId: 'admin', code: 'CFG', name: 'Configuración', desc: 'Usuarios, roles y sistema', path: '/configuration', value: 20, adminOnly: true },
     { id: 'user_manual', moduleId: 'help', code: '?', name: 'Manual de Usuario', desc: 'Guía completa del sistema', path: '/manual', value: 15 }
   ];
