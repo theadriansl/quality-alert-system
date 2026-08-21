@@ -129,12 +129,34 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // ============================================================================
 // GET /report-jobs/:id/download - Download completed report
 // ============================================================================
-router.get('/:id/download', authenticateToken, async (req, res) => {
+router.get('/:id/download', async (req, res) => {
   try {
+    // Accept token from query parameter for window.open() downloads
+    const token = req.query.token;
+    if (!token) {
+      return res.status(401).json({ error: 'Access token required' });
+    }
+
+    let userId;
+
+    // Check if it's a fake token (for development)
+    if (token.startsWith('fake-jwt-token-')) {
+      userId = parseInt(token.replace('fake-jwt-token-', ''));
+    } else {
+      // Verify JWT token
+      const jwt = require('jsonwebtoken');
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        userId = decoded.userId;
+      } catch (err) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+    }
+
     const result = await query(`
       SELECT * FROM report_jobs
       WHERE id = $1 AND created_by = $2 AND status = 'COMPLETED'
-    `, [req.params.id, req.user.id]);
+    `, [req.params.id, userId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Reporte no disponible' });
@@ -274,7 +296,7 @@ async function generateHospitalDefectsReport(jobId, params) {
            s.name as station_name,
            sh.name as shift_name,
            disp.name as disposition_name,
-           u.full_name as inspector_name
+           CONCAT(u.first_name, ' ', u.last_name) as inspector_name
     FROM defect_entries_v2 d
     LEFT JOIN defect_types dt ON d.defect_type_id = dt.id
     LEFT JOIN client_parts cp ON d.part_id = cp.id
@@ -350,9 +372,9 @@ async function generateMRBCampaignsReport(jobId, params) {
   let sql = `
     SELECT mc.*,
            c.name as client_name,
-           p.name as project_name,
+           p.project_name,
            cp.part_number,
-           u.full_name as created_by_name
+           CONCAT(u.first_name, ' ', u.last_name) as created_by_name
     FROM mrb_campaigns mc
     LEFT JOIN clients c ON mc.client_id = c.id
     LEFT JOIN projects p ON mc.project_id = p.id
@@ -451,7 +473,7 @@ async function generateMRBInspectionReport(jobId, params) {
             COALESCE(o.inspection_round, 1) as round,
             'OK' as result,
             o.created_at as date,
-            u.full_name as inspector
+            CONCAT(u.first_name, ' ', u.last_name) as inspector
           FROM mrb_ok_entries o
           LEFT JOIN users u ON o.inspector_id = u.id
           WHERE o.mrb_campaign_id = $1 AND UPPER(o.serial_number) = UPPER(mas.serial_number)
@@ -460,7 +482,7 @@ async function generateMRBInspectionReport(jobId, params) {
             COALESCE(d.inspection_round, 1) as round,
             'NOK' as result,
             d.created_at as date,
-            u.full_name as inspector
+            CONCAT(u.first_name, ' ', u.last_name) as inspector
           FROM defect_entries_v2 d
           LEFT JOIN users u ON d.inspector_id = u.id
           WHERE d.mrb_campaign_id = $1 AND UPPER(d.serial_number) = UPPER(mas.serial_number)
@@ -531,10 +553,9 @@ async function generate8DReport(jobId, params) {
 
   let sql = `
     SELECT er.*,
-           c.name as client_name,
-           u.full_name as created_by_name
+           er.supplier_name as client_name,
+           CONCAT(u.first_name, ' ', u.last_name) as created_by_name
     FROM eightd_reports er
-    LEFT JOIN clients c ON er.client_id = c.id
     LEFT JOIN users u ON er.created_by = u.id
     WHERE 1=1
   `;
@@ -558,18 +579,18 @@ async function generate8DReport(jobId, params) {
   sheet.columns = [
     { header: 'Folio', key: 'report_id', width: 15 },
     { header: 'Título', key: 'title', width: 35 },
-    { header: 'Cliente', key: 'client_name', width: 20 },
+    { header: 'Proveedor', key: 'client_name', width: 20 },
     { header: 'Status', key: 'status', width: 15 },
     { header: 'Severidad', key: 'severity', width: 12 },
     { header: 'Parte', key: 'part_number', width: 15 },
-    { header: 'D1', key: 'd1_complete', width: 5 },
-    { header: 'D2', key: 'd2_complete', width: 5 },
-    { header: 'D3', key: 'd3_complete', width: 5 },
-    { header: 'D4', key: 'd4_complete', width: 5 },
-    { header: 'D5', key: 'd5_complete', width: 5 },
-    { header: 'D6', key: 'd6_complete', width: 5 },
-    { header: 'D7', key: 'd7_complete', width: 5 },
-    { header: 'D8', key: 'd8_complete', width: 5 },
+    { header: 'D1', key: 'd1_completed', width: 5 },
+    { header: 'D2', key: 'd2_completed', width: 5 },
+    { header: 'D3', key: 'd3_completed', width: 5 },
+    { header: 'D4', key: 'd4_completed', width: 5 },
+    { header: 'D5', key: 'd5_completed', width: 5 },
+    { header: 'D6', key: 'd6_completed', width: 5 },
+    { header: 'D7', key: 'd7_completed', width: 5 },
+    { header: 'D8', key: 'd8_completed', width: 5 },
     { header: 'Creado', key: 'created_at', width: 12 },
     { header: 'Creado por', key: 'created_by_name', width: 18 }
   ];
@@ -581,14 +602,14 @@ async function generate8DReport(jobId, params) {
   result.rows.forEach(row => {
     sheet.addRow({
       ...row,
-      d1_complete: row.d1_complete ? '✓' : '',
-      d2_complete: row.d2_complete ? '✓' : '',
-      d3_complete: row.d3_complete ? '✓' : '',
-      d4_complete: row.d4_complete ? '✓' : '',
-      d5_complete: row.d5_complete ? '✓' : '',
-      d6_complete: row.d6_complete ? '✓' : '',
-      d7_complete: row.d7_complete ? '✓' : '',
-      d8_complete: row.d8_complete ? '✓' : '',
+      d1_completed: row.d1_completed ? '✓' : '',
+      d2_completed: row.d2_completed ? '✓' : '',
+      d3_completed: row.d3_completed ? '✓' : '',
+      d4_completed: row.d4_completed ? '✓' : '',
+      d5_completed: row.d5_completed ? '✓' : '',
+      d6_completed: row.d6_completed ? '✓' : '',
+      d7_completed: row.d7_completed ? '✓' : '',
+      d8_completed: row.d8_completed ? '✓' : '',
       created_at: row.created_at ? new Date(row.created_at).toLocaleDateString() : ''
     });
   });
@@ -610,10 +631,9 @@ async function generateQARReport(jobId, params) {
   let sql = `
     SELECT q.*,
            c.name as client_name,
-           u.full_name as created_by_name
+           q.reported_by_name
     FROM quality_alerts q
     LEFT JOIN clients c ON q.client_id = c.id
-    LEFT JOIN users u ON q.created_by = u.id
     WHERE 1=1
   `;
   const queryParams = [];
@@ -634,14 +654,13 @@ async function generateQARReport(jobId, params) {
   await updateProgress(jobId, 50);
 
   sheet.columns = [
-    { header: 'QAR #', key: 'qar_number', width: 15 },
+    { header: 'Alerta #', key: 'alert_number', width: 15 },
     { header: 'Título', key: 'title', width: 35 },
     { header: 'Cliente', key: 'client_name', width: 20 },
     { header: 'Status', key: 'status', width: 15 },
-    { header: 'Tipo', key: 'alert_type', width: 12 },
-    { header: 'Severidad', key: 'severity', width: 12 },
+    { header: 'Trigger', key: 'trigger_type', width: 12 },
     { header: 'Creado', key: 'created_at', width: 12 },
-    { header: 'Creado por', key: 'created_by_name', width: 18 }
+    { header: 'Reportado por', key: 'reported_by_name', width: 18 }
   ];
 
   sheet.getRow(1).font = { bold: true };
@@ -672,26 +691,26 @@ async function generateProductionReport(jobId, params) {
   let sql = `
     SELECT pe.*,
            cp.part_number,
-           s.name as station_name,
-           u.full_name as operator_name
+           sh.name as shift_name,
+           CONCAT(u.first_name, ' ', u.last_name) as created_by_name
     FROM production_entries pe
     LEFT JOIN client_parts cp ON pe.part_id = cp.id
-    LEFT JOIN inspection_stations s ON pe.station_id = s.id
-    LEFT JOIN users u ON pe.operator_id = u.id
+    LEFT JOIN inspection_shifts sh ON pe.shift_id = sh.id
+    LEFT JOIN users u ON pe.created_by = u.id
     WHERE 1=1
   `;
   const queryParams = [];
 
   if (params.dateFrom) {
     queryParams.push(params.dateFrom);
-    sql += ` AND pe.created_at >= $${queryParams.length}`;
+    sql += ` AND pe.registered_at >= $${queryParams.length}`;
   }
   if (params.dateTo) {
     queryParams.push(params.dateTo);
-    sql += ` AND pe.created_at <= $${queryParams.length}::date + INTERVAL '1 day'`;
+    sql += ` AND pe.registered_at <= $${queryParams.length}::date + INTERVAL '1 day'`;
   }
 
-  sql += ' ORDER BY pe.created_at DESC LIMIT 10000';
+  sql += ' ORDER BY pe.registered_at DESC LIMIT 10000';
 
   await updateProgress(jobId, 30);
   const result = await query(sql, queryParams);
@@ -700,10 +719,12 @@ async function generateProductionReport(jobId, params) {
   sheet.columns = [
     { header: 'Serial', key: 'serial_number', width: 22 },
     { header: 'Parte', key: 'part_number', width: 15 },
-    { header: 'Estación', key: 'station_name', width: 15 },
-    { header: 'Operador', key: 'operator_name', width: 20 },
+    { header: 'Lote', key: 'lot_number', width: 15 },
+    { header: 'Work Order', key: 'work_order', width: 15 },
+    { header: 'Turno', key: 'shift_name', width: 12 },
     { header: 'Status Insp.', key: 'inspection_status', width: 12 },
-    { header: 'Fecha', key: 'created_at', width: 12 }
+    { header: 'Registrado por', key: 'created_by_name', width: 20 },
+    { header: 'Fecha', key: 'registered_at', width: 12 }
   ];
 
   sheet.getRow(1).font = { bold: true };
@@ -733,9 +754,9 @@ async function generateAuditReport(jobId, params) {
 
   let sql = `
     SELECT a.*,
-           u.full_name as auditor_name
+           a.lead_auditor_name as auditor_name,
+           (COALESCE(a.non_conformities_major, 0) + COALESCE(a.non_conformities_minor, 0) + COALESCE(a.observations, 0)) as findings_count
     FROM audits a
-    LEFT JOIN users u ON a.auditor_id = u.id
     WHERE 1=1
   `;
   const queryParams = [];
@@ -757,12 +778,14 @@ async function generateAuditReport(jobId, params) {
 
   sheet.columns = [
     { header: 'Auditoría #', key: 'audit_number', width: 15 },
-    { header: 'Título', key: 'title', width: 35 },
-    { header: 'Tipo', key: 'audit_type', width: 15 },
+    { header: 'Área/Proceso', key: 'area_process', width: 30 },
     { header: 'Status', key: 'status', width: 12 },
     { header: 'Auditor', key: 'auditor_name', width: 20 },
     { header: 'Fecha', key: 'audit_date', width: 12 },
-    { header: 'Hallazgos', key: 'findings_count', width: 10 }
+    { header: 'NC Mayor', key: 'non_conformities_major', width: 10 },
+    { header: 'NC Menor', key: 'non_conformities_minor', width: 10 },
+    { header: 'Observaciones', key: 'observations', width: 12 },
+    { header: 'Score %', key: 'score_percentage', width: 10 }
   ];
 
   sheet.getRow(1).font = { bold: true };
