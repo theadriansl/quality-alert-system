@@ -439,6 +439,13 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
       );
       if (affectedCount.rows[0].count === 0) {
         affectedStatus = 'NO_LIST_DEFINED';
+        // Campaña sin lista predefinida - agregar serial al inventario
+        await query(`
+          INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, inspected, inspected_at, inspection_result, notes)
+          VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP, 'OK', '[INSPECCION] Sin lista predefinida')
+          ON CONFLICT (mrb_campaign_id, serial_number) DO UPDATE SET
+            inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = 'OK'
+        `, [id, serial.trim(), effectivePartId]);
       } else {
         const inList = await query(
           'SELECT id FROM mrb_affected_serials WHERE mrb_campaign_id = $1 AND serial_number = $2',
@@ -642,6 +649,13 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
     );
     if (affectedCount.rows[0].count === 0) {
       affectedStatus = 'NO_LIST_DEFINED';
+      // Campaña sin lista predefinida - agregar serial al inventario
+      await query(`
+        INSERT INTO mrb_affected_serials (mrb_campaign_id, serial_number, part_id, inspected, inspected_at, inspection_result, notes)
+        VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP, $4, '[INSPECCION] Sin lista predefinida')
+        ON CONFLICT (mrb_campaign_id, serial_number) DO UPDATE SET
+          inspected = true, inspected_at = CURRENT_TIMESTAMP, inspection_result = $4
+      `, [id, serial.trim(), effectivePartId, inspectionResultCode]);
     } else {
       const inList = await query(
         'SELECT id FROM mrb_affected_serials WHERE mrb_campaign_id = $1 AND serial_number = $2',

@@ -162,6 +162,12 @@ const MRBDefectCapture = () => {
   const [campaignResults, setCampaignResults]       = useState({});    // { campaignId: 'OK' | 'NOK' | null }
   const lastDetectedPartId                          = useRef(null);    // Para mantener selección por lote
 
+  // ── CAMPAÑAS ADICIONALES (para seriales fuera de inventario) ────────────────
+  const [additionalCampaignsModal, setAdditionalCampaignsModal] = useState(false);
+  const [partCampaigns, setPartCampaigns]           = useState([]);    // Todas las campañas de la parte
+  const [additionalCampaigns, setAdditionalCampaigns] = useState([]); // Campañas adicionales seleccionadas (persiste por parte)
+  const lastPartIdForAdditional                     = useRef(null);    // Para resetear cuando cambia parte
+
   // ── BULK / TALLY MODE STATE ───────────────────────────────────────────────
   const [okQty, setOkQty]               = useState('');
   const [accumulatedOk, setAccumulatedOk] = useState(0);
@@ -367,6 +373,14 @@ const MRBDefectCapture = () => {
     setTallySheets([]);
     setOkQty('');
     setAccumulatedOk(0);
+    // Reset multi-campaign states
+    setSelectedCampaigns([]);
+    setAvailableCampaigns([]);
+    setAdditionalCampaigns([]);
+    setPartCampaigns([]);
+    setDetectedPart(null);
+    lastDetectedPartId.current = null;
+    lastPartIdForAdditional.current = null;
     if (!campaign) { setCampaignParts([]); setSelectedPart(null); return; }
     localStorage.setItem('mrbCaptureCampaignId', campaign.id);
 
@@ -404,16 +418,41 @@ const MRBDefectCapture = () => {
     } catch (e) { setCampaignDefects([]); }
   };
 
-  const selectPart = (part, campaignId) => {
+  const selectPart = async (part, campaignId) => {
+    const previousPartId = selectedPart?.id;
     setSelectedPart(part);
     setSelectedDefects([]);
     if (!part?.id) return;
     localStorage.setItem(`mrbLastPart_${campaignId || selectedCampaign?.id}`, part.id);
+
+    // Si cambió la parte, resetear estados multi-campaña
+    if (part.id !== previousPartId) {
+      setSelectedCampaigns([]);
+      setAvailableCampaigns([]);
+      setAdditionalCampaigns([]);
+      setDetectedPart(null);
+      lastDetectedPartId.current = null;
+      lastPartIdForAdditional.current = null;
+    }
+
     // Pasar todas las campañas seleccionadas o la campaña individual
-    const campaignIds = selectedCampaigns.length > 0
-      ? selectedCampaigns.map(c => c.campaignId)
-      : (campaignId ? [campaignId] : (selectedCampaign?.id ? [selectedCampaign.id] : []));
+    const campaignIds = campaignId ? [campaignId] : (selectedCampaign?.id ? [selectedCampaign.id] : []);
     loadPartDefects(part.id, campaignIds);
+
+    // Cargar todas las campañas de esta parte para el selector de campañas adicionales
+    const token = localStorage.getItem('token');
+    try {
+      const campRes = await fetch(`${API_URL}/mrb/campaigns-by-part/${part.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (campRes.ok) {
+        const campData = await campRes.json();
+        setPartCampaigns(campData.campaigns || []);
+        lastPartIdForAdditional.current = part.id;
+      }
+    } catch (e) {
+      console.error('Error loading part campaigns:', e);
+    }
   };
 
   const loadPartDefects = async (partId, campaignIds = []) => {
@@ -618,6 +657,14 @@ const MRBDefectCapture = () => {
     setPriorInspectionResults({});
     if (serialCheckTimer.current) clearTimeout(serialCheckTimer.current);
     if (!val) {
+      // Serial cleared - reset multi-campaign states
+      setSelectedCampaigns([]);
+      setAvailableCampaigns([]);
+      setAdditionalCampaigns([]);
+      setDetectedPart(null);
+      setPartCampaigns([]);
+      lastDetectedPartId.current = null;
+      lastPartIdForAdditional.current = null;
       return;
     }
 
@@ -698,13 +745,57 @@ const MRBDefectCapture = () => {
               );
               if (campRes.ok) {
                 const campData = await campRes.json();
-                setAvailableCampaigns(campData.campaigns || []);
-                if ((campData.campaigns || []).length <= 3) {
-                  setSelectedCampaigns(campData.campaigns || []);
-                } else {
-                  setSelectedCampaigns([]);
-                }
+                const campaigns = campData.campaigns || [];
+                setAvailableCampaigns(campaigns);
+                setPartCampaigns(campaigns);
                 setCampaignResults({});
+
+                // Verificar estado afectado para TODAS las campañas de esta parte
+                if (campaigns.length > 0) {
+                  const newAffectedStatus = {};
+                  const newPriorResults = {};
+                  for (const camp of campaigns) {
+                    const campId = camp.campaignId || camp.id;
+                    try {
+                      const affectedRes = await fetch(
+                        `${API_URL}/mrb/${campId}/check-affected/${encodeURIComponent(val)}`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                      );
+                      if (affectedRes.ok) {
+                        const affectedData = await affectedRes.json();
+                        newAffectedStatus[campId] = affectedData.affectedStatus;
+                        if (affectedData.affectedSerial) {
+                          newPriorResults[campId] = {
+                            inspected: affectedData.affectedSerial.inspected || false,
+                            result: affectedData.affectedSerial.inspectionResult || null
+                          };
+                        }
+                      }
+                    } catch (e) { /* silent */ }
+                  }
+                  setAffectedStatus(newAffectedStatus);
+                  setPriorInspectionResults(newPriorResults);
+
+                  // Auto-seleccionar campañas donde el serial está IN_LIST o NO_LIST_DEFINED
+                  const campaignsToAutoSelect = campaigns.filter(camp => {
+                    const campId = camp.campaignId || camp.id;
+                    const status = newAffectedStatus[campId];
+                    return status === 'IN_LIST' || status === 'NO_LIST_DEFINED';
+                  });
+
+                  if (campaignsToAutoSelect.length > 0) {
+                    setSelectedCampaigns(campaignsToAutoSelect);
+                  } else {
+                    // Si ninguna campaña tiene el serial, mostrar todas para que elija
+                    setSelectedCampaigns([]);
+                  }
+                }
+              }
+
+              // Resetear campañas adicionales cuando cambia la parte
+              if (newPartId !== lastPartIdForAdditional.current) {
+                setAdditionalCampaigns([]);
+                lastPartIdForAdditional.current = newPartId;
               }
             }
           }
@@ -721,41 +812,6 @@ const MRBDefectCapture = () => {
             setComment(prev => prev.includes('[Reproceso]') ? prev : (prev ? `${prev} [Reproceso]` : '[Reproceso]'));
           }
         }
-
-        // 3. Check si serial está en lista de afectados (para todas las campañas seleccionadas)
-        const campaignsToCheck = selectedCampaigns.length > 0
-          ? selectedCampaigns
-          : (selectedCampaign ? [{ campaignId: selectedCampaign.id }] : []);
-
-        if (campaignsToCheck.length > 0) {
-          const newAffectedStatus = {};
-          const newPriorResults = {};
-          for (const camp of campaignsToCheck) {
-            const campId = camp.campaignId || camp.id;
-            try {
-              const affectedRes = await fetch(
-                `${API_URL}/mrb/${campId}/check-affected/${encodeURIComponent(val)}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-              if (affectedRes.ok) {
-                const affectedData = await affectedRes.json();
-                newAffectedStatus[campId] = affectedData.affectedStatus;
-                // Capturar resultado de inspección previa si existe
-                if (affectedData.affectedSerial) {
-                  newPriorResults[campId] = {
-                    inspected: affectedData.affectedSerial.inspected || false,
-                    result: affectedData.affectedSerial.inspectionResult || null
-                  };
-                }
-              }
-            } catch (e) { /* silent */ }
-          }
-          setAffectedStatus(newAffectedStatus);
-          setPriorInspectionResults(newPriorResults);
-        } else {
-          setAffectedStatus({});
-          setPriorInspectionResults({});
-        }
       } catch (e) { /* silent */ }
     }, 300);
   };
@@ -769,6 +825,12 @@ const MRBDefectCapture = () => {
     if (!selectedMrbStation) return showMsg(L.selectMrbStation, true);
     if (!selectedShift) return showMsg(L.selectShift, true);
     if (selectedCampaigns.length === 0) return showMsg(L.selectCampaign, true);
+
+    // Validar que hay serial/lote
+    const serialCheck = lotNumberRef.current.trim() || lotNumber.trim();
+    if (!serialCheck) {
+      return showMsg(language === 'es' ? 'Ingrese número de serie/lote' : 'Enter serial/lot number', true);
+    }
 
     setSubmitting(true);
     const token = localStorage.getItem('token');
@@ -789,10 +851,11 @@ const MRBDefectCapture = () => {
 
           campaignsWithDefects.add(campaignId);
 
+          const effectivePartId = detectedPart?.id || selectedPart?.id;
           const body = {
             quantity: 1,
             shiftId: selectedShift.id,
-            partId: detectedPart?.id,
+            partId: effectivePartId,
             defectTypeId: defect.id,
             lotNumber: lotNumberRef.current.trim() || undefined,
             inspectionDate: today,
@@ -820,10 +883,11 @@ const MRBDefectCapture = () => {
       for (const camp of selectedCampaigns) {
         if (campaignsWithDefects.has(camp.campaignId)) continue; // Ya tiene defecto(s)
 
+        const effectivePartId = detectedPart?.id || selectedPart?.id;
         const body = {
           quantity: 1,
           shiftId: selectedShift.id,
-          partId: detectedPart?.id,
+          partId: effectivePartId,
           lotNumber: lotNumberRef.current.trim() || undefined,
           inspectionDate: today,
           downtimeMinutes: hasDowntime ? parseInt(downtimeMinutes) || 0 : 0,
@@ -891,7 +955,7 @@ const MRBDefectCapture = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [selectedShift, selectedCampaigns, selectedDefects, detectedPart, hasDowntime, downtimeMinutes, comment, selectedDisposition, selectedSeverity, stagedEvidence]); // eslint-disable-line
+  }, [selectedShift, selectedCampaigns, selectedDefects, detectedPart, hasDowntime, downtimeMinutes, comment, selectedDisposition, selectedSeverity, stagedEvidence, language, lotNumber]); // eslint-disable-line
 
   // ── MULTI-CAMPAIGN INSPECTION MODAL FUNCTIONS ─────────────────────────────
   const openMultiCampaignInspectionModal = useCallback(async () => {
@@ -977,6 +1041,13 @@ const MRBDefectCapture = () => {
   }, [selectedMrbLocation, selectedMrbStation, selectedShift, selectedCampaigns, detectedPart, priorInspectionResults]); // eslint-disable-line
 
   const handleMultiCampaignInspectionSubmit = useCallback(async () => {
+    // Validar que hay serial/lote
+    const serialValue = lotNumberRef.current.trim() || lotNumber.trim();
+    if (!serialValue) {
+      showMsg(language === 'es' ? 'Ingrese número de serie/lote' : 'Enter serial/lot number', true);
+      return;
+    }
+
     // Verificar que todos los defectos estén marcados
     const allDefectsMarked = Object.values(defectInspectionResults).every(v => v !== null);
     if (!allDefectsMarked) {
@@ -1009,10 +1080,11 @@ const MRBDefectCapture = () => {
           // Registrar cada defecto NOK
           for (const defect of nokDefects) {
             const serialValue = lotNumberRef.current.trim() || lotNumber.trim();
+            const effectivePartId = detectedPart?.id || selectedPart?.id;
             const body = {
               quantity: 1,
               shiftId: selectedShift.id,
-              partId: detectedPart?.id,
+              partId: effectivePartId,
               defectTypeId: defect.defectTypeId,
               serialNumber: serialValue || undefined,
               lotNumber: serialValue || undefined,
@@ -1038,10 +1110,11 @@ const MRBDefectCapture = () => {
         } else {
           // Todos los defectos de esta campaña son OK → registrar OK
           const serialValue = lotNumberRef.current.trim() || lotNumber.trim();
+          const effectivePartId = detectedPart?.id || selectedPart?.id;
           const body = {
             quantity: 1,
             shiftId: selectedShift.id,
-            partId: detectedPart?.id,
+            partId: effectivePartId,
             serialNumber: serialValue || undefined,
             lotNumber: serialValue || undefined,
             inspectionDate: today,
@@ -1112,7 +1185,7 @@ const MRBDefectCapture = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [defectInspectionResults, multiCampaignDefectsData, selectedShift, detectedPart, hasDowntime, downtimeMinutes, comment, selectedSeverity, modalDispositionId, stagedEvidence, lotNumber]); // eslint-disable-line
+  }, [defectInspectionResults, multiCampaignDefectsData, selectedShift, detectedPart, hasDowntime, downtimeMinutes, comment, selectedSeverity, modalDispositionId, stagedEvidence, lotNumber, language]); // eslint-disable-line
 
   // ── INDIVIDUAL MODE HANDLERS ──────────────────────────────────────────────
   const handlePiezaOk = useCallback(async () => {
@@ -1916,7 +1989,7 @@ const MRBDefectCapture = () => {
 
               {/* ── AFFECTED STATUS - indica si serial está en lista de afectados (multi-campaña) ─────────── */}
               {affectedStatus && Object.keys(affectedStatus).length > 0 && Object.values(affectedStatus).some(s => s === 'OUT_OF_LIST') && (
-                <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b' }}>
+                <div style={{ marginTop: '8px', padding: '10px', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #f59e0b' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     ⚠️ FUERA DE CAMPAÑA
                   </div>
@@ -1934,6 +2007,19 @@ const MRBDefectCapture = () => {
                         : `Serial no está en lista de afectados de: ${outCampaigns.join(', ')}.`;
                     })()}
                   </div>
+                  {/* Botón para agregar a campañas adicionales */}
+                  {partCampaigns.length > 0 && (
+                    <button
+                      onClick={() => setAdditionalCampaignsModal(true)}
+                      style={{
+                        marginTop: '8px', width: '100%', padding: '8px 12px', fontSize: '11px', fontWeight: '600',
+                        backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                      }}
+                    >
+                      + Agregar a otras campañas ({partCampaigns.length} disponibles)
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -2008,8 +2094,27 @@ const MRBDefectCapture = () => {
               )}
 
               {availableCampaigns.length === 0 && detectedPart && (
-                <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '11px', color: '#92400e' }}>
-                  ⚠ {L.noActiveCampaigns}
+                <div style={{ marginTop: '8px', padding: '10px', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #fbbf24' }}>
+                  <div style={{ fontSize: '11px', color: '#92400e', marginBottom: partCampaigns.length > 0 ? '8px' : 0 }}>
+                    ⚠ {L.noActiveCampaigns}
+                  </div>
+                  {partCampaigns.length > 0 && (
+                    <button
+                      onClick={() => setAdditionalCampaignsModal(true)}
+                      style={{
+                        width: '100%', padding: '8px 12px', fontSize: '11px', fontWeight: '600',
+                        backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                      }}
+                    >
+                      + Agregar a campañas adicionales ({partCampaigns.length})
+                    </button>
+                  )}
+                  {additionalCampaigns.length > 0 && (
+                    <div style={{ marginTop: '8px', fontSize: '10px', color: '#166534', backgroundColor: '#dcfce7', padding: '6px 8px', borderRadius: '4px' }}>
+                      ✓ {additionalCampaigns.length} campaña{additionalCampaigns.length > 1 ? 's' : ''} adicional{additionalCampaigns.length > 1 ? 'es' : ''} seleccionada{additionalCampaigns.length > 1 ? 's' : ''}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -3565,6 +3670,142 @@ const MRBDefectCapture = () => {
                   </>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          MODAL: CAMPAÑAS ADICIONALES
+      ══════════════════════════════════════════════════════════════════════ */}
+      {additionalCampaignsModal && (
+        <div style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard, borderRadius: '12px', width: '90%', maxWidth: '450px',
+            maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px rgba(0,0,0,0.25)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: `1px solid ${t.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: '700', color: t.text }}>
+                  Campañas Adicionales
+                </div>
+                <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>
+                  {detectedPart?.partNumber} - {detectedPart?.partName}
+                </div>
+              </div>
+              <button
+                onClick={() => setAdditionalCampaignsModal(false)}
+                style={{
+                  background: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '6px',
+                  width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px', color: t.textMuted
+                }}
+              >✕</button>
+            </div>
+
+            {/* Lista de campañas */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+              <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '12px' }}>
+                Selecciona en cuáles campañas quieres inspeccionar este serial:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {partCampaigns.map(camp => {
+                  const isSelected = additionalCampaigns.some(c => c.campaignId === camp.campaignId);
+                  return (
+                    <label
+                      key={camp.campaignId}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px',
+                        backgroundColor: isSelected ? '#dcfce7' : t.bgPanel,
+                        border: `1px solid ${isSelected ? '#22c55e' : t.border}`,
+                        borderRadius: '8px', cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          if (isSelected) {
+                            setAdditionalCampaigns(prev => prev.filter(c => c.campaignId !== camp.campaignId));
+                          } else {
+                            setAdditionalCampaigns(prev => [...prev, camp]);
+                          }
+                        }}
+                        style={{ marginTop: '2px', accentColor: '#22c55e' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text }}>
+                          {camp.campaignNumber}
+                        </div>
+                        <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>
+                          {camp.title || camp.description || 'Sin descripción'}
+                        </div>
+                        {camp.severityName && (
+                          <span style={{
+                            display: 'inline-block', marginTop: '4px', fontSize: '9px', fontWeight: '600',
+                            padding: '2px 6px', borderRadius: '4px',
+                            backgroundColor: camp.severityColor || '#6b7280', color: 'white'
+                          }}>
+                            {camp.severityName}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 20px', borderTop: `1px solid ${t.border}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div style={{ fontSize: '11px', color: t.textMuted }}>
+                {additionalCampaigns.length} seleccionada{additionalCampaigns.length !== 1 ? 's' : ''}
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => setAdditionalCampaignsModal(false)}
+                  style={{
+                    padding: '8px 16px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer',
+                    backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, color: t.text
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    // Agregar campañas adicionales a selectedCampaigns
+                    setSelectedCampaigns(prev => {
+                      const existing = prev.map(c => c.campaignId);
+                      const newCamps = additionalCampaigns.filter(c => !existing.includes(c.campaignId));
+                      return [...prev, ...newCamps];
+                    });
+                    setAvailableCampaigns(prev => {
+                      const existing = prev.map(c => c.campaignId);
+                      const newCamps = additionalCampaigns.filter(c => !existing.includes(c.campaignId));
+                      return [...prev, ...newCamps];
+                    });
+                    setAdditionalCampaignsModal(false);
+                  }}
+                  disabled={additionalCampaigns.length === 0}
+                  style={{
+                    padding: '8px 20px', fontSize: '12px', fontWeight: '600', borderRadius: '6px',
+                    cursor: additionalCampaigns.length > 0 ? 'pointer' : 'not-allowed',
+                    backgroundColor: additionalCampaigns.length > 0 ? '#22c55e' : t.textDim,
+                    border: 'none', color: 'white'
+                  }}
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>
