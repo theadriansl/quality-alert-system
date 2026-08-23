@@ -5,6 +5,7 @@ import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import usePermissions from '../hooks/usePermissions';
 import { isUserAdmin } from '../utils/permissions';
+import HomeReminders from '../components/HomeReminders';
 
 // Squarified Treemap Algorithm
 function worstRatio(areas, sum, side) {
@@ -246,86 +247,94 @@ const Home = () => {
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 32px 48px' }}>
+      <div style={{ padding: '28px 28px 48px 28px', display: 'flex', gap: 24 }}>
 
-        {/* Title + Legend */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, gap: 20 }}>
-          <div>
-            <div style={{ fontSize: 21, fontWeight: 800, color: t.text, letterSpacing: -0.3 }}>
-              {language === 'es' ? 'Módulos por importancia' : 'Modules by importance'}
-            </div>
-            <div style={{ fontSize: 13, color: t.textMuted, marginTop: 3 }}>
-              {language === 'es' ? 'Tamaño y color según frecuencia de uso en los últimos 30 días' : 'Size and color based on usage frequency in last 30 days'}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Menor uso' : 'Less used'}</span>
-            <div style={{ display: 'flex', height: 10, width: 140, borderRadius: 5, overflow: 'hidden' }}>
-              {treemapData.legendStops.map((color, i) => (
-                <div key={i} style={{ flex: 1, background: color }} />
-              ))}
-            </div>
-            <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Mayor uso' : 'More used'}</span>
-          </div>
+        {/* Columna izquierda: Actividades pendientes */}
+        <div style={{ width: 340, flexShrink: 0 }}>
+          <HomeReminders />
         </div>
 
-        {/* Treemap */}
-        {visibleApps.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 32px', background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8 }}>
-            <div style={{ fontSize: 16, fontWeight: 500, color: t.textMuted, marginBottom: 8 }}>
-              {language === 'es' ? 'Sin acceso a módulos' : 'No module access'}
-            </div>
-            <div style={{ fontSize: 14, color: t.textDim }}>
-              {language === 'es' ? 'Contacte a su administrador' : 'Contact your administrator'}
-            </div>
-          </div>
-        ) : (
-          <div style={{ position: 'relative', width: '100%', height: 500, borderRadius: 8, overflow: 'hidden', border: `1px solid ${t.border}` }}>
-            {treemapData.tiles.map((tile) => (
-              <div
-                key={tile.id}
-                onClick={() => navigate(tile.path)}
-                onMouseEnter={() => setHoveredTile(tile.id)}
-                onMouseLeave={() => setHoveredTile(null)}
-                style={{
-                  position: 'absolute',
-                  left: `${tile.left}%`,
-                  top: `${tile.top}%`,
-                  width: `${tile.width}%`,
-                  height: `${tile.height}%`,
-                  background: tile.bgColor,
-                  border: `1px solid ${t.border}40`,
-                  padding: '10px 12px',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  boxSizing: 'border-box',
-                  transition: 'filter 0.12s ease',
-                  filter: hoveredTile === tile.id ? 'brightness(1.08)' : 'none',
-                  wordBreak: 'break-word'
-                }}
-              >
-                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, color: tile.textColor, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {tile.code}
-                </div>
-                {tile.showTitle && (
-                  <div style={{ fontSize: 13, fontWeight: 700, color: tile.textColor, marginTop: 4, lineHeight: 1.3 }}>
-                    {tile.name}
-                  </div>
-                )}
-                {tile.showDesc && (
-                  <div style={{ fontSize: 11.5, color: tile.mutedColor, marginTop: 5, lineHeight: 1.4 }}>
-                    {tile.desc}
-                  </div>
-                )}
-                {tile.showPct && (
-                  <div style={{ fontSize: 10.5, fontWeight: 600, color: tile.mutedColor, marginTop: 6 }}>
-                    {tile.value}% uso
-                  </div>
-                )}
+        {/* Columna derecha: Treemap */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Title + Legend */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, gap: 20 }}>
+            <div>
+              <div style={{ fontSize: 21, fontWeight: 800, color: t.text, letterSpacing: -0.3 }}>
+                {language === 'es' ? 'Módulos por importancia' : 'Modules by importance'}
               </div>
-            ))}
+              <div style={{ fontSize: 13, color: t.textMuted, marginTop: 3 }}>
+                {language === 'es' ? 'Tamaño y color según frecuencia de uso en los últimos 30 días' : 'Size and color based on usage frequency in last 30 days'}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Menor uso' : 'Less used'}</span>
+              <div style={{ display: 'flex', height: 10, width: 140, borderRadius: 5, overflow: 'hidden' }}>
+                {treemapData.legendStops.map((color, i) => (
+                  <div key={i} style={{ flex: 1, background: color }} />
+                ))}
+              </div>
+              <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Mayor uso' : 'More used'}</span>
+            </div>
           </div>
-        )}
+
+          {/* Treemap */}
+          {visibleApps.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '80px 32px', background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 500, color: t.textMuted, marginBottom: 8 }}>
+                {language === 'es' ? 'Sin acceso a módulos' : 'No module access'}
+              </div>
+              <div style={{ fontSize: 14, color: t.textDim }}>
+                {language === 'es' ? 'Contacte a su administrador' : 'Contact your administrator'}
+              </div>
+            </div>
+          ) : (
+            <div style={{ position: 'relative', width: '100%', height: 500, borderRadius: 8, overflow: 'hidden', border: `1px solid ${t.border}` }}>
+              {treemapData.tiles.map((tile) => (
+                <div
+                  key={tile.id}
+                  onClick={() => navigate(tile.path)}
+                  onMouseEnter={() => setHoveredTile(tile.id)}
+                  onMouseLeave={() => setHoveredTile(null)}
+                  style={{
+                    position: 'absolute',
+                    left: `${tile.left}%`,
+                    top: `${tile.top}%`,
+                    width: `${tile.width}%`,
+                    height: `${tile.height}%`,
+                    background: tile.bgColor,
+                    border: `1px solid ${t.border}40`,
+                    padding: '10px 12px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    boxSizing: 'border-box',
+                    transition: 'filter 0.12s ease',
+                    filter: hoveredTile === tile.id ? 'brightness(1.08)' : 'none',
+                    wordBreak: 'break-word'
+                  }}
+                >
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, color: tile.textColor, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {tile.code}
+                  </div>
+                  {tile.showTitle && (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: tile.textColor, marginTop: 4, lineHeight: 1.3 }}>
+                      {tile.name}
+                    </div>
+                  )}
+                  {tile.showDesc && (
+                    <div style={{ fontSize: 11.5, color: tile.mutedColor, marginTop: 5, lineHeight: 1.4 }}>
+                      {tile.desc}
+                    </div>
+                  )}
+                  {tile.showPct && (
+                    <div style={{ fontSize: 10.5, fontWeight: 600, color: tile.mutedColor, marginTop: 6 }}>
+                      {tile.value}% uso
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

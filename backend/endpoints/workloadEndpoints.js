@@ -504,6 +504,60 @@ router.get('/activities/team', authenticateToken, async (req, res) => {
   }
 });
 
+// Get my-day activities (all pending: overdue + today + week + future) for Home reminders
+router.get('/my-day', authenticateToken, async (req, res) => {
+  const userId = req.query.user_id || req.user.id;
+
+  try {
+    // Usa COALESCE: due_date si existe, sino end_date como fecha de vencimiento
+    // Excluye actividades que ya tienen registro de actividad HOY en daily_progress
+    const result = await query(`
+      SELECT
+        a.id, a.title, a.status, a.priority,
+        COALESCE(a.due_date, a.end_date) as due_date,
+        k.code as kpi_code, k.name as kpi_name,
+        p.name as project_name,
+        CASE
+          WHEN COALESCE(a.due_date, a.end_date) < CURRENT_DATE THEN 'overdue'
+          WHEN COALESCE(a.due_date, a.end_date) = CURRENT_DATE THEN 'today'
+          WHEN COALESCE(a.due_date, a.end_date) <= CURRENT_DATE + INTERVAL '7 days' THEN 'week'
+          ELSE 'future'
+        END as bucket
+      FROM workload_activities a
+      LEFT JOIN workload_kpis k ON a.kpi_id = k.id
+      LEFT JOIN workload_projects p ON a.project_id = p.id
+      WHERE a.assigned_to = $1
+        AND a.status NOT IN ('completed', 'cancelled')
+        AND NOT EXISTS (
+          SELECT 1 FROM jsonb_array_elements(COALESCE(a.daily_progress, '[]'::jsonb)) AS dp
+          WHERE dp->>'date' = TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')
+        )
+      ORDER BY
+        CASE
+          WHEN COALESCE(a.due_date, a.end_date) = CURRENT_DATE THEN 0
+          WHEN COALESCE(a.due_date, a.end_date) > CURRENT_DATE THEN 1
+          ELSE 2
+        END,
+        CASE a.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+        COALESCE(a.due_date, a.end_date) DESC
+    `, [userId]);
+
+    const overdue = result.rows.filter(r => r.bucket === 'overdue').length;
+    const today = result.rows.filter(r => r.bucket === 'today').length;
+    const week = result.rows.filter(r => r.bucket === 'week').length;
+    const future = result.rows.filter(r => r.bucket === 'future').length;
+
+    res.json({
+      success: true,
+      counts: { overdue, today, week, future, total: result.rows.length },
+      activities: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching my-day activities:', error);
+    res.status(500).json({ success: false, message: 'Error fetching my-day activities' });
+  }
+});
+
 // Get single activity
 router.get('/activities/:id', authenticateToken, async (req, res) => {
   try {

@@ -1,0 +1,161 @@
+/**
+ * HomeReminders.js
+ * Widget compacto de actividades pendientes para Home.
+ * Muestra resumen en header + listado sencillo con checkbox para completar.
+ */
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const PRIORITY_COLORS = {
+  critical: { bg: '#FEE2E2', text: '#991B1B' },
+  high: { bg: '#FEE2E2', text: '#991B1B' },
+  medium: { bg: '#FEF3C7', text: '#92400E' },
+  low: { bg: '#F3F4F6', text: '#6B7280' },
+};
+
+const HomeReminders = () => {
+  const navigate = useNavigate();
+  const { theme: t } = useTheme();
+  const { language } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [counts, setCounts] = useState({ overdue: 0, today: 0, week: 0, future: 0, total: 0 });
+  const load = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/workload/my-day`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActivities(data.activities);
+        setCounts(data.counts);
+      }
+    } catch (err) {
+      console.error('Error loading my-day:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const totalPending = counts.total || (counts.overdue + counts.today + counts.week + counts.noDate);
+
+  // Si no hay actividades, mostrar estado vacío en columna
+  if (loading) return null;
+
+  if (activities.length === 0) {
+    return (
+      <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, padding: '20px 16px', height: 'fit-content' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 12 }}>
+          {language === 'es' ? 'Actividades' : 'Activities'}
+        </div>
+        <div style={{ fontSize: 12, color: t.textMuted, textAlign: 'center', padding: '20px 0' }}>
+          {language === 'es' ? 'Sin pendientes' : 'No pending tasks'}
+        </div>
+      </div>
+    );
+  }
+
+  const labels = {
+    title: language === 'es' ? 'Actividades Pendientes' : 'Pending Activities',
+    overdue: language === 'es' ? 'Atrasadas' : 'Overdue',
+    today: language === 'es' ? 'Hoy' : 'Today',
+    week: language === 'es' ? 'Semana' : 'Week',
+    future: language === 'es' ? 'Futuras' : 'Future',
+    viewAll: language === 'es' ? 'Ver en Workload' : 'View in Workload',
+    dueToday: language === 'es' ? 'Vence hoy' : 'Due today',
+    overdueDays: (d) => language === 'es' ? `${d}d atraso` : `${d}d overdue`,
+  };
+
+  const getDueLabel = (activity) => {
+    if (!activity.due_date) return '-';
+    if (activity.bucket === 'today') return labels.dueToday;
+    if (activity.bucket === 'overdue') {
+      const days = Math.max(1, Math.round((new Date() - new Date(activity.due_date)) / 86400000));
+      return labels.overdueDays(days);
+    }
+    return new Date(activity.due_date).toLocaleDateString(language === 'es' ? 'es-MX' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+  };
+
+  return (
+    <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, padding: '16px', height: 'fit-content' }}>
+      {/* Header con contadores */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{labels.title}</span>
+          {totalPending > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: t.error, borderRadius: 10, padding: '2px 7px' }}>
+              {totalPending}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {counts.overdue > 0 && (
+            <span style={{ fontSize: 10, color: t.error, fontWeight: 600 }}>{counts.overdue} {labels.overdue}</span>
+          )}
+          {counts.today > 0 && (
+            <span style={{ fontSize: 10, color: t.warning, fontWeight: 600 }}>{counts.today} {labels.today}</span>
+          )}
+          {counts.week > 0 && (
+            <span style={{ fontSize: 10, color: t.info, fontWeight: 600 }}>{counts.week} {labels.week}</span>
+          )}
+          {counts.future > 0 && (
+            <span style={{ fontSize: 10, color: t.textMuted, fontWeight: 600 }}>{counts.future} {labels.future}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Lista de actividades con scroll */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto', paddingRight: 4 }}>
+        {activities.map((a) => {
+          const pr = PRIORITY_COLORS[a.priority] || PRIORITY_COLORS.medium;
+          const dotColor = a.bucket === 'overdue' ? t.error : a.bucket === 'today' ? t.warning : a.bucket === 'future' ? t.textMuted : t.info;
+          return (
+            <div
+              key={a.id}
+              onClick={() => navigate('/workload')}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px',
+                background: t.bgPanel, borderRadius: 6, cursor: 'pointer',
+                border: `1px solid ${t.border}`,
+              }}
+            >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11.5, color: t.text, lineHeight: 1.35, marginBottom: 4 }}>
+                  {a.title}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                  <span style={{ fontSize: 9.5, color: dotColor }}>{getDueLabel(a)}</span>
+                  <span style={{ fontSize: 8, fontWeight: 600, color: pr.text, background: pr.bg, padding: '1px 5px', borderRadius: 3 }}>
+                    {a.priority?.slice(0, 3).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Link a Workload */}
+      <button
+        onClick={() => navigate('/workload')}
+        style={{
+          width: '100%', marginTop: 10, padding: '8px', fontSize: 11, fontWeight: 600,
+          color: t.primary, background: t.bgPanel, border: `1px solid ${t.border}`,
+          borderRadius: 6, cursor: 'pointer', textAlign: 'center'
+        }}
+      >
+        {labels.viewAll}
+      </button>
+    </div>
+  );
+};
+
+export default HomeReminders;
