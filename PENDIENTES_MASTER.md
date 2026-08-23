@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-21
+> Última actualización: 2026-08-23
 
 ---
 
@@ -26,10 +26,10 @@
 | 3 | ~~Dashboard Hospital pruebas~~ | 30-Jun | ✅ 16-Ago |
 | 4 | Testing formal Auditorías | Arrastrado | ⏳ |
 | 5 | Testing Reportes/Dashboard | Arrastrado | ⏳ |
-| 6 | Control 360° MRB (ubicaciones) - SIN PROBAR | 26-Jul | ⏳ |
+| 6 | ~~Control 360° MRB (ubicaciones)~~ | 26-Jul | ✅ 23-Ago |
 | 7 | Probar Módulo Reportes Hospital | 05-Ago | ⏳ |
 | 8 | **Testing Tab Inventario MRBCampaignDetail** | 18-Ago | ⏳ |
-| 9 | **Testing Modal Multi-Campaña MRB (inspección individual)** | 19-Ago | ⏳ |
+| 9 | ~~Testing Modal Multi-Campaña MRB (inspección individual)~~ | 19-Ago | ✅ 23-Ago |
 | 10 | ~~Verificar partes "omitidas" en import-mass~~ | 20-Ago | ✅ 21-Ago (discrepancias claras) |
 
 ---
@@ -74,6 +74,12 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Home: Widget HomeReminders con actividades pendientes (columna izquierda) | 23-Ago |
+| ✅ MRB Capture: Auto-selección de campañas donde serial está IN_LIST o NO_LIST_DEFINED | 23-Ago |
+| ✅ MRB Capture: Registro simultáneo en múltiples campañas seleccionadas | 23-Ago |
+| ✅ MRB Capture: Serial se agrega a inventario incluso sin lista predefinida (NO_LIST_DEFINED) | 23-Ago |
+| ✅ MRB Capture: Validación serial/lote antes de submit con mensaje claro | 23-Ago |
+| ✅ MRB Capture: Reset estados multi-campaña al cambiar campaña/parte/serial | 23-Ago |
 | ✅ Módulo Reportes Masivos: Backend async + UI ReportCenter (7 tipos de reporte) | 21-Ago |
 | ✅ Reportes: Schema fixes (projects.project_name, 8D supplier_name, audits area_process) | 21-Ago |
 | ✅ Reportes: Download con query param token + soporte fake tokens | 21-Ago |
