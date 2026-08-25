@@ -369,9 +369,16 @@ const checkWritePermission = async (req, res, next) => {
     }
   } else if (moduleAccess === 'view' || moduleAccess === 'none') {
     console.log(`⛔ LAYER 1 DENIED: User ${userId} (${userRole.role_name}) has '${moduleAccess}' access - write blocked`);
+
+    // Provide more specific message for ECR approval/rejection
+    const isEcrApprovalAction = module === 'ecr' && (fullPath.includes('/approve') || fullPath.includes('/reject'));
+    const message = isEcrApprovalAction
+      ? 'Solo tienes acceso de consulta al módulo ECR. Para aprobar o rechazar ECRs, contacta a un administrador para obtener permisos adicionales.'
+      : 'Solo tienes acceso de consulta. No puedes realizar modificaciones en este módulo. Contacta a un administrador si necesitas permisos adicionales.';
+
     return res.status(403).json({
       success: false,
-      message: 'Solo tienes acceso de consulta. No puedes realizar modificaciones en este módulo.',
+      message,
       code: 'READ_ONLY_ACCESS'
     });
   } else if (moduleAccess === 'partial') {

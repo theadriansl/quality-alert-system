@@ -52,8 +52,16 @@ const HomeReminders = () => {
   if (activities.length === 0) {
     return (
       <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, padding: '20px 16px', height: 'fit-content' }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 12 }}>
-          {language === 'es' ? 'Actividades' : 'Activities'}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: t.text, letterSpacing: 0.3 }}>
+            {language === 'es' ? 'MI WORKLOAD' : 'MY WORKLOAD'}
+          </span>
+          <span
+            onClick={() => navigate('/workload')}
+            style={{ fontSize: 11, color: t.primary, cursor: 'pointer', fontWeight: 600 }}
+          >
+            {language === 'es' ? 'Ver todo →' : 'View all →'}
+          </span>
         </div>
         <div style={{ fontSize: 12, color: t.textMuted, textAlign: 'center', padding: '20px 0' }}>
           {language === 'es' ? 'Sin pendientes' : 'No pending tasks'}
@@ -63,7 +71,7 @@ const HomeReminders = () => {
   }
 
   const labels = {
-    title: language === 'es' ? 'Actividades Pendientes' : 'Pending Activities',
+    title: language === 'es' ? 'MI WORKLOAD' : 'MY WORKLOAD',
     overdue: language === 'es' ? 'Atrasadas' : 'Overdue',
     today: language === 'es' ? 'Hoy' : 'Today',
     week: language === 'es' ? 'Semana' : 'Week',
@@ -87,13 +95,21 @@ const HomeReminders = () => {
     <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, padding: '16px', height: 'fit-content' }}>
       {/* Header con contadores */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{labels.title}</span>
-          {totalPending > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: t.error, borderRadius: 10, padding: '2px 7px' }}>
-              {totalPending}
-            </span>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: t.text, letterSpacing: 0.3 }}>{labels.title}</span>
+            {totalPending > 0 && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
+                {totalPending}
+              </span>
+            )}
+          </div>
+          <span
+            onClick={() => navigate('/workload')}
+            style={{ fontSize: 11, color: t.primary, cursor: 'pointer', fontWeight: 600 }}
+          >
+            {labels.viewAll} →
+          </span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {counts.overdue > 0 && (
@@ -112,7 +128,7 @@ const HomeReminders = () => {
       </div>
 
       {/* Lista de actividades con scroll */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto', paddingRight: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
         {activities.map((a) => {
           const pr = PRIORITY_COLORS[a.priority] || PRIORITY_COLORS.medium;
           const dotColor = a.bucket === 'overdue' ? t.error : a.bucket === 'today' ? t.warning : a.bucket === 'future' ? t.textMuted : t.info;
@@ -143,17 +159,6 @@ const HomeReminders = () => {
         })}
       </div>
 
-      {/* Link a Workload */}
-      <button
-        onClick={() => navigate('/workload')}
-        style={{
-          width: '100%', marginTop: 10, padding: '8px', fontSize: 11, fontWeight: 600,
-          color: t.primary, background: t.bgPanel, border: `1px solid ${t.border}`,
-          borderRadius: 6, cursor: 'pointer', textAlign: 'center'
-        }}
-      >
-        {labels.viewAll}
-      </button>
     </div>
   );
 };

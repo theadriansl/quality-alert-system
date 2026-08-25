@@ -651,6 +651,8 @@ async function rejectECR(req, res) {
 
     // Update approval for current level as rejected
     // Save rejected_at_level so resubmit goes directly to this level
+    // Also set status = 'rejected' so frontend can unlock sections for corrections
+    // Clear validation_evidence signature so user can re-sign after making corrections
     const rejecterName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
     await client.query(
       `UPDATE ecr_reports
@@ -658,10 +660,12 @@ async function rejectECR(req, res) {
            level${level}_by = $2,
            level${level}_at = NOW(),
            level${level}_comments = $3,
+           status = 'rejected',
            approval_status = 'rejected',
            current_approval_level = NULL,
            rejected_at_level = $4,
            approval_history = COALESCE(approval_history, '[]'::jsonb) || $5::jsonb,
+           validation_evidence = (COALESCE(validation_evidence, '{}'::jsonb) - 'signedBy' - 'signedByName' - 'signedAt') || '{"isLocked": false}'::jsonb,
            updated_at = NOW()
        WHERE id = $1`,
       [id, userId, comments, level, JSON.stringify({

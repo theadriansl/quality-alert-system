@@ -112,6 +112,16 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
   });
 
   const [uploadingValidation, setUploadingValidation] = useState(null);
+
+  // Computed: Validation Evidence lock state
+  // isEcrRejected: ECR needs corrections (unlocks fields for editing)
+  // isValidationLocked: VISUAL state - is the section currently signed?
+  // isFieldsLocked: ACTUAL field disable state - signed AND not rejected
+  // Note: Backend clears signature when ECR is rejected (new behavior)
+  // Backwards compat: old rejected ECRs with signature will still be editable
+  const isEcrRejected = data.status === 'rejected' || data.approvalStatus === 'rejected';
+  const isValidationLocked = formData.validationEvidence.isLocked; // Visual only
+  const isFieldsLocked = formData.validationEvidence.isLocked && !isEcrRejected; // Field disable
   const [expandedStakeholders, setExpandedStakeholders] = useState({
     customer: data.communicationPlan?.customer?.expanded || false,
     supplier: data.communicationPlan?.supplier?.expanded || false,
@@ -792,16 +802,28 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
 
     if (confirmed) {
       const now = new Date().toISOString();
+      const updatedValidationEvidence = {
+        ...formData.validationEvidence,
+        signedBy: currentUser?.id,
+        signedByName: `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim(),
+        signedAt: now,
+        isLocked: true
+      };
+
+      // Update local state
       setFormData(prev => ({
         ...prev,
-        validationEvidence: {
-          ...prev.validationEvidence,
-          signedBy: currentUser?.id,
-          signedByName: `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim(),
-          signedAt: now,
-          isLocked: true
-        }
+        validationEvidence: updatedValidationEvidence
       }));
+
+      // Update parent state
+      onDataUpdate({ validationEvidence: updatedValidationEvidence });
+
+      // Persist to backend immediately
+      if (onSaveDraft) {
+        onSaveDraft({ validationEvidence: updatedValidationEvidence });
+      }
+
       showSuccess(language === 'es' ? 'Validación firmada exitosamente' : 'Validation signed successfully');
     }
   };
@@ -2154,7 +2176,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
         {formData.validationEvidence?.requiresValidation === true && (
           <div>
             {/* Change answer button - hidden when locked */}
-            {!formData.validationEvidence.isLocked && (
+            {!isFieldsLocked && (
               <div style={{ marginBottom: '16px' }}>
                 <button
                   onClick={() => updateValidationEvidence('requiresValidation', null)}
@@ -2184,22 +2206,22 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                 Tipo de validación requerida:
               </label>
               <div style={{ display: 'flex', gap: '24px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: isFieldsLocked ? 'default' : 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={formData.validationEvidence.validationType.functional}
                     onChange={(e) => updateValidationType('functional', e.target.checked)}
-                    disabled={formData.validationEvidence.isLocked}
+                    disabled={isFieldsLocked}
                     style={{ width: '18px', height: '18px' }}
                   />
                   <span style={{ fontSize: '14px' }}>Prueba funcional / Dimensional</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: isFieldsLocked ? 'default' : 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={formData.validationEvidence.validationType.documents}
                     onChange={(e) => updateValidationType('documents', e.target.checked)}
-                    disabled={formData.validationEvidence.isLocked}
+                    disabled={isFieldsLocked}
                     style={{ width: '18px', height: '18px' }}
                   />
                   <span style={{ fontSize: '14px' }}>Modificación de documentos (AMEF, Plan de Control, etc.)</span>
@@ -2219,7 +2241,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                 <label style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>
                    Criterios de Validación
                 </label>
-                {!formData.validationEvidence.isLocked && (
+                {!isFieldsLocked && (
                   <button
                     onClick={addValidationCriteria}
                     style={{
@@ -2265,7 +2287,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               value={criteria.parameter}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'parameter', e.target.value)}
                               placeholder={language === 'es' ? 'Ej: Dimensión X' : 'Ex: Dimension X'}
-                              disabled={formData.validationEvidence.isLocked}
+                              disabled={isFieldsLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </td>
@@ -2275,7 +2297,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               value={criteria.method}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'method', e.target.value)}
                               placeholder={language === 'es' ? 'Ej: CMM' : 'Ex: CMM'}
-                              disabled={formData.validationEvidence.isLocked}
+                              disabled={isFieldsLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </td>
@@ -2285,7 +2307,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               value={criteria.target}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'target', e.target.value)}
                               placeholder={language === 'es' ? 'Ej: 10±0.5mm' : 'Ex: 10±0.5mm'}
-                              disabled={formData.validationEvidence.isLocked}
+                              disabled={isFieldsLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </td>
@@ -2295,7 +2317,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               value={criteria.before}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'before', e.target.value)}
                               placeholder={language === 'es' ? 'Valor antes' : 'Value before'}
-                              disabled={formData.validationEvidence.isLocked}
+                              disabled={isFieldsLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </td>
@@ -2305,7 +2327,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               value={criteria.after}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'after', e.target.value)}
                               placeholder={language === 'es' ? 'Valor después' : 'Value after'}
-                              disabled={formData.validationEvidence.isLocked}
+                              disabled={isFieldsLocked}
                               style={{ ...styles.input, width: '100%', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box' }}
                             />
                           </td>
@@ -2313,7 +2335,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                             <select
                               value={criteria.status}
                               onChange={(e) => updateValidationCriteria(criteria.id, 'status', e.target.value)}
-                              disabled={formData.validationEvidence.isLocked}
+                              disabled={isFieldsLocked}
                               style={{
                                 ...styles.select,
                                 width: '100%',
@@ -2331,7 +2353,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                             </select>
                           </td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
-                            {!formData.validationEvidence.isLocked && (
+                            {!isFieldsLocked && (
                               <button
                                 onClick={() => removeValidationCriteria(criteria.id)}
                                 style={{
@@ -2372,7 +2394,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                   value={formData.validationEvidence.beforeEvidence.description}
                   onChange={(e) => updateEvidenceSection('beforeEvidence', 'description', e.target.value)}
                   placeholder={language === 'es' ? 'Descripción de la condición antes del cambio...' : 'Description of the condition before the change...'}
-                  disabled={formData.validationEvidence.isLocked}
+                  disabled={isFieldsLocked}
                   style={{ ...styles.input, width: '100%', minHeight: '80px', marginBottom: '12px', resize: 'vertical', boxSizing: 'border-box' }}
                 />
                 {/* File grid with thumbnails for images */}
@@ -2406,7 +2428,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{file.name}</span>
                             </a>
                           )}
-                          {!formData.validationEvidence.isLocked && (
+                          {!isFieldsLocked && (
                             <button
                               onClick={() => removeEvidenceFile('beforeEvidence', idx)}
                               style={{
@@ -2422,7 +2444,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                     })}
                   </div>
                 )}
-                {!formData.validationEvidence.isLocked && (
+                {!isFieldsLocked && (
                   <>
                     <input
                       type="file"
@@ -2464,7 +2486,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                   value={formData.validationEvidence.afterEvidence.description}
                   onChange={(e) => updateEvidenceSection('afterEvidence', 'description', e.target.value)}
                   placeholder={language === 'es' ? 'Descripción de la condición después del cambio...' : 'Description of the condition after the change...'}
-                  disabled={formData.validationEvidence.isLocked}
+                  disabled={isFieldsLocked}
                   style={{ ...styles.input, width: '100%', minHeight: '80px', marginBottom: '12px', resize: 'vertical', boxSizing: 'border-box' }}
                 />
                 {/* File grid with thumbnails for images */}
@@ -2498,7 +2520,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{file.name}</span>
                             </a>
                           )}
-                          {!formData.validationEvidence.isLocked && (
+                          {!isFieldsLocked && (
                             <button
                               onClick={() => removeEvidenceFile('afterEvidence', idx)}
                               style={{
@@ -2514,7 +2536,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                     })}
                   </div>
                 )}
-                {!formData.validationEvidence.isLocked && (
+                {!isFieldsLocked && (
                   <>
                     <input
                       type="file"
@@ -2554,33 +2576,33 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                  {language === 'es' ? 'Resumen de Validación' : 'Validation Summary'}
               </label>
               <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: isFieldsLocked ? 'default' : 'pointer' }}>
                   <input
                     type="radio"
                     name="validationStatus"
                     checked={formData.validationEvidence.summary.status === 'pass'}
                     onChange={() => updateEvidenceSection('summary', 'status', 'pass')}
-                    disabled={formData.validationEvidence.isLocked}
+                    disabled={isFieldsLocked}
                   />
                   <span style={{ color: '#2E7D32', fontWeight: '600' }}> {language === 'es' ? 'Aprobado' : 'Approved'}</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: isFieldsLocked ? 'default' : 'pointer' }}>
                   <input
                     type="radio"
                     name="validationStatus"
                     checked={formData.validationEvidence.summary.status === 'conditional'}
                     onChange={() => updateEvidenceSection('summary', 'status', 'conditional')}
-                    disabled={formData.validationEvidence.isLocked}
+                    disabled={isFieldsLocked}
                   />
                   <span style={{ color: '#C77700', fontWeight: '600' }}> {language === 'es' ? 'Condicional' : 'Conditional'}</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.validationEvidence.isLocked ? 'default' : 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: isFieldsLocked ? 'default' : 'pointer' }}>
                   <input
                     type="radio"
                     name="validationStatus"
                     checked={formData.validationEvidence.summary.status === 'fail'}
                     onChange={() => updateEvidenceSection('summary', 'status', 'fail')}
-                    disabled={formData.validationEvidence.isLocked}
+                    disabled={isFieldsLocked}
                   />
                   <span style={{ color: '#B00020', fontWeight: '600' }}> {language === 'es' ? 'No Aprobado' : 'Not Approved'}</span>
                 </label>
@@ -2589,7 +2611,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                 value={formData.validationEvidence.summary.observations}
                 onChange={(e) => updateEvidenceSection('summary', 'observations', e.target.value)}
                 placeholder={language === 'es' ? 'Observaciones adicionales sobre la validación...' : 'Additional observations about the validation...'}
-                disabled={formData.validationEvidence.isLocked}
+                disabled={isFieldsLocked}
                 style={{ ...styles.input, width: '100%', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box' }}
               />
             </div>
@@ -2598,16 +2620,16 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
             <div style={{
               marginTop: '24px',
               padding: '20px',
-              backgroundColor: formData.validationEvidence.isLocked ? '#d1fae5' : '#fef3c7',
+              backgroundColor: isValidationLocked ? '#d1fae5' : '#fef3c7',
               borderRadius: '8px',
-              border: `2px solid ${formData.validationEvidence.isLocked ? '#2E7D32' : '#C77700'}`
+              border: `2px solid ${isValidationLocked ? '#2E7D32' : '#C77700'}`
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: formData.validationEvidence.isLocked ? '#065f46' : '#92400e' }}>
-                    {formData.validationEvidence.isLocked ? (language === 'es' ? ' Validación Firmada' : ' Validation Signed') : (language === 'es' ? ' Firma de Validación' : ' Validation Signature')}
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: isValidationLocked ? '#065f46' : '#92400e' }}>
+                    {isValidationLocked ? (language === 'es' ? ' Validación Firmada' : ' Validation Signed') : (language === 'es' ? ' Firma de Validación' : ' Validation Signature')}
                   </h4>
-                  {formData.validationEvidence.isLocked ? (
+                  {isValidationLocked ? (
                     <div style={{ fontSize: '13px', color: '#065f46' }}>
                       <p style={{ margin: '0 0 4px 0' }}>
                         <strong>{language === 'es' ? 'Firmado por:' : 'Signed by:'}</strong> {formData.validationEvidence.signedByName}
@@ -2627,7 +2649,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                     </div>
                   )}
                 </div>
-                {!formData.validationEvidence.isLocked && (
+                {!isValidationLocked && (
                   <button
                     onClick={handleSignValidation}
                     style={{
@@ -2648,7 +2670,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                   </button>
                 )}
               </div>
-              {formData.validationEvidence.isLocked && (
+              {isValidationLocked && (
                 <div style={{
                   marginTop: '12px',
                   padding: '8px 12px',

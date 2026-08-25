@@ -259,6 +259,11 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
 
   // Translation helper with fallback
   const tr = (key) => translate ? translate(key) : key;
+
+  // Computed: Check if ECR needs corrections (allows editing previously locked sections)
+  // Unlock when: status='rejected' OR approvalStatus='rejected'
+  // Once user re-submits, approvalStatus changes to 'pending_approval' and it locks again
+  const isEcrRejected = data.status === 'rejected' || data.approvalStatus === 'rejected';
   const [users, setUsers] = useState([]);
   const [uploadingEvidence, setUploadingEvidence] = useState(null);
   const [qualityTargets, setQualityTargets] = useState({ cpTarget: 1.33, cpkTarget: 1.33, processStabilityTarget: 95, initialScrapTarget: 5 });
@@ -2162,20 +2167,21 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 };
 
                 // Only lock if verdict is 'approved' AND signed - rejected/conditional stay editable
-                const isLocked = verificationData.verdict === 'approved' && verificationData.signedBy;
+                // Also unlock if ECR was rejected (allows corrections)
+                const isSubsectionLocked = verificationData.verdict === 'approved' && verificationData.signedBy && !isEcrRejected;
 
                 return (
                   <div key={subsectionKey} style={{
                     ...styles.subsectionCard,
-                    backgroundColor: isLocked ? '#f0fdf4' : t.bg,
-                    border: isLocked ? '1px solid #2E7D32' : `1px solid ${t.border}`
+                    backgroundColor: isSubsectionLocked ? '#f0fdf4' : t.bg,
+                    border: isSubsectionLocked ? '1px solid #2E7D32' : `1px solid ${t.border}`
                   }}>
                     {/* Subsection Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <h5 style={{ fontSize: '15px', fontWeight: '600', color: t.text, margin: 0 }}>
                         {getSubsectionLabel(area.areaKey, subsectionKey)}
                       </h5>
-                      {isLocked && (
+                      {isSubsectionLocked && (
                         <span style={{
                           padding: '4px 12px',
                           backgroundColor: '#d1fae5',
@@ -2201,15 +2207,15 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           backgroundColor: verificationData.verdict === 'approved' ? '#d1fae5' : t.bgCard,
                           border: `2px solid ${verificationData.verdict === 'approved' ? '#2E7D32' : t.border}`,
                           borderRadius: '8px',
-                          cursor: isLocked ? 'default' : 'pointer',
-                          opacity: isLocked ? 0.8 : 1
+                          cursor: isSubsectionLocked ? 'default' : 'pointer',
+                          opacity: isSubsectionLocked ? 0.8 : 1
                         }}>
                           <input
                             type="radio"
                             name={`verdict-${area.areaKey}-${subsectionKey}`}
                             checked={verificationData.verdict === 'approved'}
                             onChange={() => handleVerificationChange(area.areaKey, subsectionKey, 'verdict', 'approved')}
-                            disabled={isLocked}
+                            disabled={isSubsectionLocked}
                             style={{ width: '16px', height: '16px' }}
                           />
                           <span style={{ color: '#065f46', fontWeight: '600' }}> {language === 'es' ? 'Aprobado' : 'Approved'}</span>
@@ -2223,15 +2229,15 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           backgroundColor: verificationData.verdict === 'conditional' ? '#fef3c7' : t.bgCard,
                           border: `2px solid ${verificationData.verdict === 'conditional' ? '#C77700' : t.border}`,
                           borderRadius: '8px',
-                          cursor: isLocked ? 'default' : 'pointer',
-                          opacity: isLocked ? 0.8 : 1
+                          cursor: isSubsectionLocked ? 'default' : 'pointer',
+                          opacity: isSubsectionLocked ? 0.8 : 1
                         }}>
                           <input
                             type="radio"
                             name={`verdict-${area.areaKey}-${subsectionKey}`}
                             checked={verificationData.verdict === 'conditional'}
                             onChange={() => handleVerificationChange(area.areaKey, subsectionKey, 'verdict', 'conditional')}
-                            disabled={isLocked}
+                            disabled={isSubsectionLocked}
                             style={{ width: '16px', height: '16px' }}
                           />
                           <span style={{ color: '#92400e', fontWeight: '600' }}> {language === 'es' ? 'Condicional' : 'Conditional'}</span>
@@ -2245,15 +2251,15 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           backgroundColor: verificationData.verdict === 'rejected' ? '#fee2e2' : t.bgCard,
                           border: `2px solid ${verificationData.verdict === 'rejected' ? '#ef4444' : t.border}`,
                           borderRadius: '8px',
-                          cursor: isLocked ? 'default' : 'pointer',
-                          opacity: isLocked ? 0.8 : 1
+                          cursor: isSubsectionLocked ? 'default' : 'pointer',
+                          opacity: isSubsectionLocked ? 0.8 : 1
                         }}>
                           <input
                             type="radio"
                             name={`verdict-${area.areaKey}-${subsectionKey}`}
                             checked={verificationData.verdict === 'rejected'}
                             onChange={() => handleVerificationChange(area.areaKey, subsectionKey, 'verdict', 'rejected')}
-                            disabled={isLocked}
+                            disabled={isSubsectionLocked}
                             style={{ width: '16px', height: '16px' }}
                           />
                           <span style={{ color: '#B00020', fontWeight: '600' }}> {language === 'es' ? 'No Adoptable' : 'Not Adoptable'}</span>
@@ -2265,19 +2271,19 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                     <div style={styles.field}>
                       <label style={styles.label}>{language === 'es' ? 'Observaciones / Resultados' : 'Observations / Results'}</label>
                       <textarea
-                        style={{ ...styles.textarea, backgroundColor: isLocked ? t.bg : t.bgCard }}
+                        style={{ ...styles.textarea, backgroundColor: isSubsectionLocked ? t.bg : t.bgCard }}
                         value={verificationData.observations}
                         onChange={(e) => handleVerificationChange(area.areaKey, subsectionKey, 'observations', e.target.value)}
                         placeholder={language === 'es' ? 'Describe los resultados de la verificación...' : 'Describe the verification results...'}
                         rows={3}
-                        disabled={isLocked}
+                        disabled={isSubsectionLocked}
                       />
                     </div>
 
                     {/* Evidence */}
                     <div style={styles.evidenceSection}>
                       <label style={styles.label}>{language === 'es' ? 'Evidencia de Verificación' : 'Verification Evidence'}</label>
-                      {!isLocked && (
+                      {!isSubsectionLocked && (
                         <>
                           <input
                             type="file"
@@ -2299,7 +2305,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                               <a href={`http://localhost:5000${file.url}`} target="_blank" rel="noopener noreferrer" style={styles.fileLink}>
                                  {file.name}
                               </a>
-                              {!isLocked && (
+                              {!isSubsectionLocked && (
                                 <button onClick={() => removeEvidenceFile('verification', idx, area.areaKey, subsectionKey)} style={styles.removeFileButton}>
                                   ×
                                 </button>
@@ -2369,11 +2375,11 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                     <div style={{
                       marginTop: '16px',
                       padding: '16px',
-                      backgroundColor: isLocked ? '#d1fae5' : '#fef3c7',
+                      backgroundColor: isSubsectionLocked ? '#d1fae5' : '#fef3c7',
                       borderRadius: '8px',
-                      border: `2px solid ${isLocked ? '#2E7D32' : '#C77700'}`
+                      border: `2px solid ${isSubsectionLocked ? '#2E7D32' : '#C77700'}`
                     }}>
-                      {isLocked ? (
+                      {isSubsectionLocked ? (
                         <div>
                           <h5 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#065f46' }}>
                              Verificación Firmada

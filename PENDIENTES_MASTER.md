@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-23
+> Última actualización: 2026-08-25
 
 ---
 
@@ -42,7 +42,7 @@
 | 3 | ~~Export Excel 8D Consultation~~ | 27-Jun | ✅ 16-Ago |
 | 4 | ~~PRINT_LABELS (Kanban)~~ | 02-Jul | ❌ Descartado |
 | 5 | ~~8D generación PDF refactorizada~~ | Arrastrado | ✅ 15-Ago |
-| 6 | ECR pruebas aprobaciones | Arrastrado | ⏳ |
+| 6 | ECR pruebas aprobaciones (ECR-3 ✅, ECR-4 pendiente) | Arrastrado | ⏳ |
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
 | 9 | ~~**ARQUITECTURA: Particionamiento PostgreSQL por mes**~~ | 16-Ago | ✅ 17-Ago |
@@ -74,6 +74,25 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ ECR: Flujo aprobaciones nivel 1→2→3 funcionando | 25-Ago |
+| ✅ ECR: Rechazar y devolver a creator funciona | 25-Ago |
+| ✅ ECR: Validación TFT muestra equipo default | 25-Ago |
+| ✅ ECR: Prevención bypass ECR-3 sin aprobación | 25-Ago |
+| ✅ ECR: Mensaje mejorado para "Consulta" en aprobaciones | 25-Ago |
+| ✅ ECR: Validation Evidence se desbloquea al rechazar | 25-Ago |
+| ✅ ECR: Firma de validación guarda inmediatamente en backend | 25-Ago |
+| ✅ ECR: Log auditoría para firmas de validación | 25-Ago |
+| ✅ ECR: Fix log falsos positivos (NaN, objetos vacíos) | 25-Ago |
+| ✅ ECR: Backend limpia firma al rechazar (permite re-firmar) | 25-Ago |
+| ✅ Home: Widget OPEN ITEMS (QAR/8D/ECR abiertos del usuario) | 24-Ago |
+| ✅ Home: Checkbox funcional con persistencia localStorage (7 días auto-limpieza) | 24-Ago |
+| ✅ Home: Links correctos a qar-detail, 8d-workflow, ecr-workflow | 24-Ago |
+| ✅ Backend: Endpoint /notifications/my-pending (QAR assigned/created, 8D responsible/created, ECR created/approver) | 24-Ago |
+| ✅ Home: ACCESOS DIRECTOS con label posición absoluta (INS, EST, REL, MRB) | 24-Ago |
+| ✅ Home: Badges con color primario t.primary (azul QMS) | 24-Ago |
+| ✅ Home: Rediseño 4 grupos fijos (PROCESO/DOCUMENTACIÓN/ADMINISTRACIÓN/SISTEMA) | 24-Ago |
+| ✅ Home: HomeReminders "MI WORKLOAD" + HomeNotifications "OPEN ITEMS" columna izquierda | 24-Ago |
+| ✅ Home: Layout alineado (gaps 8px, padding 16px, soporte bilingüe ES/EN) | 24-Ago |
 | ✅ Home: Widget HomeReminders con actividades pendientes (columna izquierda) | 23-Ago |
 | ✅ MRB Capture: Auto-selección de campañas donde serial está IN_LIST o NO_LIST_DEFINED | 23-Ago |
 | ✅ MRB Capture: Registro simultáneo en múltiples campañas seleccionadas | 23-Ago |

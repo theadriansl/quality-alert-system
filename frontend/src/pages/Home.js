@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
@@ -6,62 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import usePermissions from '../hooks/usePermissions';
 import { isUserAdmin } from '../utils/permissions';
 import HomeReminders from '../components/HomeReminders';
-
-// Squarified Treemap Algorithm
-function worstRatio(areas, sum, side) {
-  if (areas.length === 0) return Infinity;
-  const maxA = Math.max(...areas);
-  const minA = Math.min(...areas);
-  return Math.max((side * side * maxA) / (sum * sum), (sum * sum) / (side * side * minA));
-}
-
-function squarify(items, x, y, w, h) {
-  const result = [];
-  let remaining = items.slice();
-
-  while (remaining.length) {
-    const shortSide = Math.min(w, h);
-    let row = [remaining[0]];
-    let rowSum = remaining[0].area;
-    let i = 1;
-
-    while (i < remaining.length) {
-      const testRow = [...row, remaining[i]];
-      const testSum = rowSum + remaining[i].area;
-      const curWorst = worstRatio(row.map(r => r.area), rowSum, shortSide);
-      const testWorst = worstRatio(testRow.map(r => r.area), testSum, shortSide);
-      if (testWorst <= curWorst) {
-        row = testRow;
-        rowSum = testSum;
-        i++;
-      } else break;
-    }
-
-    if (w >= h) {
-      const rowWidth = rowSum / h;
-      let cy = y;
-      for (const it of row) {
-        const rh = it.area / rowWidth;
-        result.push({ item: it, x, y: cy, w: rowWidth, h: rh });
-        cy += rh;
-      }
-      x += rowWidth;
-      w -= rowWidth;
-    } else {
-      const rowHeight = rowSum / w;
-      let cx = x;
-      for (const it of row) {
-        const rw = it.area / rowHeight;
-        result.push({ item: it, x: cx, y, w: rw, h: rowHeight });
-        cx += rw;
-      }
-      y += rowHeight;
-      h -= rowHeight;
-    }
-    remaining = remaining.slice(row.length);
-  }
-  return result;
-}
+import HomeNotifications from '../components/HomeNotifications';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -70,7 +15,7 @@ const Home = () => {
   const { language, changeLanguage } = useLanguage();
   const { hasAccess, loading: permissionsLoading, getAccessibleModules } = usePermissions();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [hoveredTile, setHoveredTile] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -79,109 +24,71 @@ const Home = () => {
 
   const isAdmin = isUserAdmin(user);
 
-  // Module definitions with usage values (will connect to real analytics later)
-  const allApps = [
-    { id: 'inspeccion', moduleId: 'quality_alert', code: 'INS', name: 'Inspección de Defectos', desc: 'Captura directa de defectos en línea', path: '/defect-capture', value: 95 },
-    { id: 'quality_alert', moduleId: 'quality_alert', code: 'QAR', name: 'Alerta de Calidad', desc: 'Captura de defectos y generación de alertas', path: '/defect-dashboard', value: 88 },
-    { id: 'repair_station', moduleId: 'quality_alert', code: 'EST', name: 'Estación de Reparación', desc: 'Vista simplificada para reparadores', path: '/repair-station', value: 82 },
-    { id: '8d', moduleId: '8d', code: '8D', name: '8D Problem Solving', desc: 'Gestión de reportes 8D multinivel', path: '/dashboard', value: 75 },
-    { id: 'defect_hospital', moduleId: 'quality_alert', code: 'REP', name: 'Hospital de Defectos', desc: 'Reparación y liberación de defectos', path: '/hospital-dashboard', value: 70 },
-    { id: 'mrb', moduleId: 'mrb', code: 'MRB', name: 'Material Review Board', desc: 'Campañas de calidad y material NC', path: '/mrb-dashboard', value: 65 },
-    { id: 'work_instructions', moduleId: 'work_instructions', code: 'WI', name: 'Work Instructions', desc: 'Instrucciones de trabajo versionadas', path: '/work-instructions', value: 60 },
-    { id: 'audits', moduleId: 'audits', code: 'AUD', name: 'Auditorías Internas', desc: 'Programa de auditorías con checklists', path: '/audit-dashboard', value: 55 },
-    { id: 'skills', moduleId: 'skills', code: 'SKL', name: 'Skills & Training', desc: 'Gestión de habilidades del equipo', path: '/skills/dashboard', value: 50 },
-    { id: 'iluo', moduleId: 'work_instructions', code: 'ILUO', name: 'Certificaciones ILUO', desc: 'Certificaciones con matriz de cobertura', path: '/work-instructions-dashboard', value: 45 },
-    { id: 'workload', moduleId: 'workload', code: 'WKL', name: 'Gestor de Cargas', desc: 'Asignación y tracking del equipo', path: '/workload', value: 40 },
-    { id: 'clients', moduleId: 'clients', code: 'CLT', name: 'Gestión de Clientes', desc: 'Clientes, proyectos y BOM global', path: '/clients', value: 38 },
-    { id: 'ecr', moduleId: 'ecr', code: 'ECR', name: 'Cambios de Ingeniería', desc: 'ECR con análisis de impacto', path: '/ecr-dashboard', value: 35 },
-    { id: 'calibration', moduleId: 'quality_alert', code: 'CAL', name: 'Equipos de Calibración', desc: 'Control de equipos y alertas', path: '/calibration', value: 32 },
-    { id: 'release_ok', moduleId: 'quality_alert', code: 'REL', name: 'Release OK', desc: 'Estación final de liberación', path: '/release-ok', value: 30 },
-    { id: 'management_review', moduleId: 'management_review', code: 'MGT', name: 'Revisión Directiva', desc: 'Revisión por la dirección', path: '/management-review', value: 25 },
-    { id: 'reports', moduleId: 'reports', code: 'RPT', name: 'Centro de Reportes', desc: 'Generación masiva de reportes Excel', path: '/report-center', value: 22 },
-    { id: 'configuration', moduleId: 'admin', code: 'CFG', name: 'Configuración', desc: 'Usuarios, roles y sistema', path: '/configuration', value: 20, adminOnly: true },
-    { id: 'user_manual', moduleId: 'help', code: '?', name: 'Manual de Usuario', desc: 'Guía completa del sistema', path: '/manual', value: 15 }
+  // Módulos de acceso rápido (flujo principal)
+  const quickAccessModules = [
+    { id: 'quick_ins', moduleId: 'quality_alert', code: 'INS', name: { es: 'Inspección', en: 'Inspection' }, path: '/defect-capture' },
+    { id: 'quick_est', moduleId: 'quality_alert', code: 'EST', name: { es: 'Estación Reparación', en: 'Repair Station' }, path: '/repair-station' },
+    { id: 'quick_rel', moduleId: 'quality_alert', code: 'REL', name: { es: 'Release', en: 'Release' }, path: '/release-ok' },
+    { id: 'quick_mrb', moduleId: 'mrb', code: 'MRB', name: { es: 'Material Review', en: 'Material Review' }, path: '/mrb-dashboard' }
   ];
 
-  const getVisibleApps = () => {
-    if (isAdmin) return allApps;
+  // Módulos organizados en 4 grupos principales
+  const moduleCategories = [
+    {
+      id: 'proceso',
+      name: { es: 'PROCESO', en: 'PROCESS' },
+      modules: [
+        { id: 'quality_alert', moduleId: 'quality_alert', code: 'QAR', name: { es: 'Alerta de Calidad', en: 'Quality Alert' }, desc: { es: 'Gestión de alertas', en: 'Alert management' }, path: '/defect-dashboard' },
+        { id: 'defect_hospital', moduleId: 'quality_alert', code: 'HOS', name: { es: 'Hospital Defectos', en: 'Defect Hospital' }, desc: { es: 'Piezas retenidas', en: 'Retained parts' }, path: '/hospital-dashboard' },
+        { id: 'calibration', moduleId: 'quality_alert', code: 'CAL', name: { es: 'Calibración', en: 'Calibration' }, desc: { es: 'Instrumentos', en: 'Instruments' }, path: '/calibration' },
+        { id: '8d', moduleId: '8d', code: '8D', name: { es: '8D Reports', en: '8D Reports' }, desc: { es: 'Abiertos / revisión', en: 'Open / review' }, path: '/dashboard' },
+        { id: 'ecr', moduleId: 'ecr', code: 'ECR', name: { es: 'Cambios Ing.', en: 'Eng. Changes' }, desc: { es: 'ECR en trámite', en: 'ECR in process' }, path: '/ecr-dashboard' }
+      ]
+    },
+    {
+      id: 'documentacion',
+      name: { es: 'DOCUMENTACIÓN', en: 'DOCUMENTATION' },
+      modules: [
+        { id: 'work_instructions', moduleId: 'work_instructions', code: 'WI', name: { es: 'Work Instructions', en: 'Work Instructions' }, desc: { es: 'Instrucciones versionadas', en: 'Versioned instructions' }, path: '/work-instructions' },
+        { id: 'iluo', moduleId: 'work_instructions', code: 'ILU', name: { es: 'Certificaciones ILUO', en: 'ILUO Certifications' }, desc: { es: 'Matriz de cobertura', en: 'Coverage matrix' }, path: '/work-instructions-dashboard' },
+        { id: 'skills', moduleId: 'skills', code: 'SKL', name: { es: 'Skills & Training', en: 'Skills & Training' }, desc: { es: 'Capacitación', en: 'Training' }, path: '/skills/dashboard' }
+      ]
+    },
+    {
+      id: 'administracion',
+      name: { es: 'ADMINISTRACIÓN', en: 'ADMINISTRATION' },
+      modules: [
+        { id: 'audits', moduleId: 'audits', code: 'AUD', name: { es: 'Auditorías', en: 'Audits' }, desc: { es: 'Programadas', en: 'Scheduled' }, path: '/audit-dashboard' },
+        { id: 'clients', moduleId: 'clients', code: 'CLT', name: { es: 'Clientes', en: 'Clients' }, desc: { es: 'Requisitos', en: 'Requirements' }, path: '/clients' },
+        { id: 'management_review', moduleId: 'management_review', code: 'MGT', name: { es: 'Revisión Directiva', en: 'Management Review' }, desc: { es: 'Management review', en: 'Management review' }, path: '/management-review' }
+      ]
+    },
+    {
+      id: 'sistema',
+      name: { es: 'SISTEMA', en: 'SYSTEM' },
+      modules: [
+        { id: 'reports', moduleId: 'reports', code: 'RPT', name: { es: 'Centro Reportes', en: 'Report Center' }, desc: { es: 'Reportes y export', en: 'Reports & export' }, path: '/report-center' },
+        { id: 'configuration', moduleId: 'admin', code: 'CFG', name: { es: 'Configuración', en: 'Configuration' }, desc: { es: 'Parámetros', en: 'Parameters' }, path: '/configuration', adminOnly: true },
+        { id: 'user_manual', moduleId: 'help', code: '?', name: { es: 'Manual', en: 'Manual' }, desc: { es: 'Ayuda', en: 'Help' }, path: '/manual' }
+      ]
+    }
+  ];
+
+  // Filtrar categorías y módulos según permisos
+  const getVisibleCategories = () => {
     const accessibleModules = getAccessibleModules();
-    return allApps.filter(app => {
-      if (app.adminOnly) return false;
-      return accessibleModules.includes(app.moduleId) || hasAccess(app.moduleId, 'view');
-    });
+
+    return moduleCategories.map(cat => ({
+      ...cat,
+      modules: cat.modules.filter(mod => {
+        if (mod.adminOnly && !isAdmin) return false;
+        if (isAdmin) return true;
+        return accessibleModules.includes(mod.moduleId) || hasAccess(mod.moduleId, 'view');
+      })
+    })).filter(cat => cat.modules.length > 0);
   };
 
-  const visibleApps = getVisibleApps();
-
-  // Calculate treemap layout
-  const treemapData = useMemo(() => {
-    if (visibleApps.length === 0) return { tiles: [], placed: [] };
-
-    const W = 1200, H = 500;
-    const totalValue = visibleApps.reduce((s, app) => s + app.value, 0);
-    const items = visibleApps.map(app => ({
-      ...app,
-      area: (app.value / totalValue) * (W * H)
-    })).sort((a, b) => b.area - a.area);
-
-    const placed = squarify(items, 0, 0, W, H);
-
-    const minVal = Math.min(...visibleApps.map(a => a.value));
-    const maxVal = Math.max(...visibleApps.map(a => a.value));
-
-    // Detect if dark mode from theme
-    const isDark = t.bg?.includes('0.1') || t.bg?.includes('0.15') || t.bg?.includes('rgb(') && parseInt(t.bg.match(/\d+/)?.[0] || 255) < 100;
-
-    const heatColor = (v) => {
-      const ratio = (v - minVal) / (maxVal - minVal);
-      if (isDark) {
-        // Dark mode: from dark muted to bright saturated
-        const lightness = 0.25 + ratio * 0.35;
-        const chroma = 0.02 + ratio * 0.08;
-        return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} 235)`;
-      } else {
-        // Light mode: from light to dark saturated
-        const lightness = 0.88 - ratio * 0.55;
-        const chroma = 0.006 + ratio * 0.06;
-        return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} 235)`;
-      }
-    };
-
-    const tiles = placed.map(p => {
-      const { item } = p;
-      const leftPct = (p.x / W) * 100;
-      const topPct = (p.y / H) * 100;
-      const wPct = (p.w / W) * 100;
-      const hPct = (p.h / H) * 100;
-      const ratio = (item.value - minVal) / (maxVal - minVal);
-      const dark = isDark ? ratio > 0.3 : ratio > 0.42;
-      const pxW = p.w;
-      const pxH = p.h;
-
-      return {
-        ...item,
-        left: leftPct,
-        top: topPct,
-        width: wPct,
-        height: hPct,
-        bgColor: heatColor(item.value),
-        textColor: dark ? 'oklch(0.97 0.004 240)' : 'oklch(0.3 0.015 240)',
-        mutedColor: dark ? 'oklch(0.85 0.008 240)' : 'oklch(0.45 0.012 240)',
-        showTitle: pxW > 80 && pxH > 35,
-        showDesc: pxW > 140 && pxH > 75,
-        showPct: pxW > 80 && pxH > 50
-      };
-    });
-
-    // Legend stops
-    const legendStops = [];
-    for (let i = 0; i < 6; i++) {
-      const v = minVal + (i / 5) * (maxVal - minVal);
-      legendStops.push(heatColor(v));
-    }
-
-    return { tiles, legendStops };
-  }, [visibleApps]);
+  const visibleCategories = getVisibleCategories();
 
   const handleLogout = () => {
     logout();
@@ -205,6 +112,17 @@ const Home = () => {
       </div>
     );
   }
+
+  // Estilo badges con color primario (igual que QMS)
+  const badgeStyle = (isHovered) => ({
+    width: 44, height: 44, borderRadius: 10,
+    background: t.primary,
+    opacity: isHovered ? 1 : 0.85,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#fff', fontSize: 11, fontWeight: 800,
+    fontFamily: "'IBM Plex Mono', monospace",
+    transition: 'opacity 0.15s ease'
+  });
 
   return (
     <div style={{ width: '100%', minHeight: '100vh', background: t.bg, fontFamily: "'Public Sans', 'Inter', sans-serif", color: t.text }}>
@@ -247,91 +165,238 @@ const Home = () => {
       </div>
 
       {/* Main Content */}
-      <div style={{ padding: '28px 28px 48px 28px', display: 'flex', gap: 24 }}>
+      <div style={{ padding: '24px 28px 48px 28px', display: 'flex', gap: 24 }}>
 
-        {/* Columna izquierda: Actividades pendientes */}
-        <div style={{ width: 340, flexShrink: 0 }}>
+        {/* Columna izquierda: Mi Workload + Notificaciones */}
+        <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <HomeReminders />
+          <HomeNotifications />
         </div>
 
-        {/* Columna derecha: Treemap */}
+        {/* Columna derecha: Grid de 4 grupos */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Title + Legend */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18, gap: 20 }}>
-            <div>
-              <div style={{ fontSize: 21, fontWeight: 800, color: t.text, letterSpacing: -0.3 }}>
-                {language === 'es' ? 'Módulos por importancia' : 'Modules by importance'}
-              </div>
-              <div style={{ fontSize: 13, color: t.textMuted, marginTop: 3 }}>
-                {language === 'es' ? 'Tamaño y color según frecuencia de uso en los últimos 30 días' : 'Size and color based on usage frequency in last 30 days'}
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Menor uso' : 'Less used'}</span>
-              <div style={{ display: 'flex', height: 10, width: 140, borderRadius: 5, overflow: 'hidden' }}>
-                {treemapData.legendStops.map((color, i) => (
-                  <div key={i} style={{ flex: 1, background: color }} />
-                ))}
-              </div>
-              <span style={{ fontSize: 11, color: t.textMuted }}>{language === 'es' ? 'Mayor uso' : 'More used'}</span>
-            </div>
-          </div>
-
-          {/* Treemap */}
-          {visibleApps.length === 0 ? (
+          {visibleCategories.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '80px 32px', background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8 }}>
               <div style={{ fontSize: 16, fontWeight: 500, color: t.textMuted, marginBottom: 8 }}>
                 {language === 'es' ? 'Sin acceso a módulos' : 'No module access'}
               </div>
-              <div style={{ fontSize: 14, color: t.textDim }}>
-                {language === 'es' ? 'Contacte a su administrador' : 'Contact your administrator'}
-              </div>
             </div>
           ) : (
-            <div style={{ position: 'relative', width: '100%', height: 500, borderRadius: 8, overflow: 'hidden', border: `1px solid ${t.border}` }}>
-              {treemapData.tiles.map((tile) => (
-                <div
-                  key={tile.id}
-                  onClick={() => navigate(tile.path)}
-                  onMouseEnter={() => setHoveredTile(tile.id)}
-                  onMouseLeave={() => setHoveredTile(null)}
-                  style={{
-                    position: 'absolute',
-                    left: `${tile.left}%`,
-                    top: `${tile.top}%`,
-                    width: `${tile.width}%`,
-                    height: `${tile.height}%`,
-                    background: tile.bgColor,
-                    border: `1px solid ${t.border}40`,
-                    padding: '10px 12px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box',
-                    transition: 'filter 0.12s ease',
-                    filter: hoveredTile === tile.id ? 'brightness(1.08)' : 'none',
-                    wordBreak: 'break-word'
-                  }}
-                >
-                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4, color: tile.textColor, fontFamily: "'IBM Plex Mono', monospace" }}>
-                    {tile.code}
-                  </div>
-                  {tile.showTitle && (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: tile.textColor, marginTop: 4, lineHeight: 1.3 }}>
-                      {tile.name}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+              {/* Accesos Directos - 4 módulos */}
+              <div style={{
+                background: t.bgCard,
+                borderRadius: 10,
+                border: `1px solid ${t.border}`,
+                padding: '28px 16px 16px 16px',
+                position: 'relative'
+              }}>
+                <span style={{
+                  position: 'absolute',
+                  top: 8,
+                  left: 16,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.text,
+                  letterSpacing: 0.5,
+                  opacity: 0.5
+                }}>
+                  {language === 'es' ? 'ACCESOS DIRECTOS' : 'QUICK ACCESS'}
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  {quickAccessModules.map(mod => (
+                    <div
+                      key={mod.id}
+                      onClick={() => navigate(mod.path)}
+                      onMouseEnter={() => setHoveredCard(mod.id)}
+                      onMouseLeave={() => setHoveredCard(null)}
+                      style={{
+                        background: hoveredCard === mod.id ? t.bgPanel : 'transparent',
+                        borderRadius: 8,
+                        padding: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        border: `1px solid ${hoveredCard === mod.id ? t.border : 'transparent'}`
+                      }}
+                    >
+                      <div style={badgeStyle(hoveredCard === mod.id)}>{mod.code}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{mod.name[language]}</div>
                     </div>
-                  )}
-                  {tile.showDesc && (
-                    <div style={{ fontSize: 11.5, color: tile.mutedColor, marginTop: 5, lineHeight: 1.4 }}>
-                      {tile.desc}
-                    </div>
-                  )}
-                  {tile.showPct && (
-                    <div style={{ fontSize: 10.5, fontWeight: 600, color: tile.mutedColor, marginTop: 6 }}>
-                      {tile.value}% uso
-                    </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* PROCESO - 5 módulos */}
+              {visibleCategories.find(c => c.id === 'proceso') && (
+                <div style={{
+                  background: t.bgCard,
+                  borderRadius: 10,
+                  border: `1px solid ${t.border}`,
+                  padding: 16
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 16, letterSpacing: 0.5, opacity: 0.5 }}>
+                    {visibleCategories.find(c => c.id === 'proceso')?.name[language]}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                    {visibleCategories.find(c => c.id === 'proceso')?.modules.map(mod => (
+                      <div
+                        key={mod.id}
+                        onClick={() => navigate(mod.path)}
+                        onMouseEnter={() => setHoveredCard(mod.id)}
+                        onMouseLeave={() => setHoveredCard(null)}
+                        style={{
+                          background: hoveredCard === mod.id ? t.bgPanel : 'transparent',
+                          borderRadius: 8,
+                          padding: 12,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          textAlign: 'center',
+                          border: `1px solid ${hoveredCard === mod.id ? t.border : 'transparent'}`
+                        }}
+                      >
+                        <div style={badgeStyle(hoveredCard === mod.id)}>{mod.code}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: t.text, marginTop: 10, lineHeight: 1.3 }}>{mod.name[language]}</div>
+                        <div style={{ fontSize: 9, color: t.textMuted, marginTop: 4 }}>{mod.desc[language]}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fila inferior: DOCUMENTACIÓN, ADMINISTRACIÓN, SISTEMA */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, alignItems: 'start' }}>
+
+                {/* DOCUMENTACIÓN */}
+                {visibleCategories.find(c => c.id === 'documentacion') && (
+                  <div style={{
+                    background: t.bgCard,
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                    padding: 16
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
+                      {visibleCategories.find(c => c.id === 'documentacion')?.name[language]}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {visibleCategories.find(c => c.id === 'documentacion')?.modules.map(mod => (
+                        <div
+                          key={mod.id}
+                          onClick={() => navigate(mod.path)}
+                          onMouseEnter={() => setHoveredCard(mod.id)}
+                          onMouseLeave={() => setHoveredCard(null)}
+                          style={{
+                            background: hoveredCard === mod.id ? t.bgPanel : 'transparent',
+                            borderRadius: 8,
+                            padding: 10,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            border: `1px solid ${hoveredCard === mod.id ? t.border : 'transparent'}`
+                          }}
+                        >
+                          <div style={{ ...badgeStyle(hoveredCard === mod.id), width: 36, height: 36, fontSize: 10 }}>{mod.code}</div>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{mod.name[language]}</div>
+                            <div style={{ fontSize: 10, color: t.textMuted }}>{mod.desc[language]}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ADMINISTRACIÓN */}
+                {visibleCategories.find(c => c.id === 'administracion') && (
+                  <div style={{
+                    background: t.bgCard,
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                    padding: 16
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
+                      {visibleCategories.find(c => c.id === 'administracion')?.name[language]}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {visibleCategories.find(c => c.id === 'administracion')?.modules.map(mod => (
+                        <div
+                          key={mod.id}
+                          onClick={() => navigate(mod.path)}
+                          onMouseEnter={() => setHoveredCard(mod.id)}
+                          onMouseLeave={() => setHoveredCard(null)}
+                          style={{
+                            background: hoveredCard === mod.id ? t.bgPanel : 'transparent',
+                            borderRadius: 8,
+                            padding: 10,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            border: `1px solid ${hoveredCard === mod.id ? t.border : 'transparent'}`
+                          }}
+                        >
+                          <div style={{ ...badgeStyle(hoveredCard === mod.id), width: 36, height: 36, fontSize: 10 }}>{mod.code}</div>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{mod.name[language]}</div>
+                            <div style={{ fontSize: 10, color: t.textMuted }}>{mod.desc[language]}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SISTEMA */}
+                {visibleCategories.find(c => c.id === 'sistema') && (
+                  <div style={{
+                    background: t.bgCard,
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                    padding: 16
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
+                      {visibleCategories.find(c => c.id === 'sistema')?.name[language]}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {visibleCategories.find(c => c.id === 'sistema')?.modules.map(mod => (
+                        <div
+                          key={mod.id}
+                          onClick={() => navigate(mod.path)}
+                          onMouseEnter={() => setHoveredCard(mod.id)}
+                          onMouseLeave={() => setHoveredCard(null)}
+                          style={{
+                            background: hoveredCard === mod.id ? t.bgPanel : 'transparent',
+                            borderRadius: 8,
+                            padding: 10,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            border: `1px solid ${hoveredCard === mod.id ? t.border : 'transparent'}`
+                          }}
+                        >
+                          <div style={{ ...badgeStyle(hoveredCard === mod.id), width: 36, height: 36, fontSize: 10 }}>{mod.code}</div>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{mod.name[language]}</div>
+                            <div style={{ fontSize: 10, color: t.textMuted }}>{mod.desc[language]}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
         </div>

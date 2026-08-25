@@ -980,7 +980,8 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
           <div style={styles.areasGrid}>
             {impactAreas.map(area => {
               const isSelected = validationAreas.includes(area.areaKey);
-              const teamMembers = validationTeams[area.areaKey] || [];
+              // Use validationTeams if set, otherwise fall back to defaultValidators (same as Involved TFT)
+              const teamMembers = validationTeams[area.areaKey] || area.defaultValidators || [];
 
               return (
                 <div

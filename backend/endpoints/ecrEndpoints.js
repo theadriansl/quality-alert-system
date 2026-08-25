@@ -479,7 +479,8 @@ async function updateECRReport(req, res) {
               requires_closure_audit,
               selected_parts, affected_documents, review_board, validation_teams,
               involved_areas, validation_areas, impact_analysis, risk_assessment,
-              financial_impact, change_attachments, validation_actions
+              financial_impact, change_attachments, validation_actions,
+              approval_status, stage_completion_status
        FROM ecr_reports WHERE id = $1`, [id]
     );
     const prev = prevResult.rows[0] || {};
@@ -894,8 +895,41 @@ async function updateECRReport(req, res) {
     }
     // rejection_reason already handled above (line ~704)
     if (req.body.stageCompletionStatus !== undefined) {
+      const newStageStatus = req.body.stageCompletionStatus;
+      const prevStageStatus = prev.stage_completion_status || {};
+
+      // VALIDATION: ECR-3 cannot be marked as completed without approval process
+      const wasEcr3Completed = prevStageStatus.ecr3?.completed === true;
+      const isEcr3BeingCompleted = newStageStatus.ecr3?.completed === true;
+
+      if (!wasEcr3Completed && isEcr3BeingCompleted) {
+        // Check if approval_status is 'approved'
+        if (prev.approval_status !== 'approved') {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            message: 'ECR-3 no puede marcarse como completado sin pasar por el proceso de aprobación. El ECR debe estar aprobado por todos los niveles requeridos.'
+          });
+        }
+      }
+
+      // VALIDATION: ECR-4 cannot be marked as completed without closure approval
+      const wasEcr4Completed = prevStageStatus.ecr4?.completed === true;
+      const isEcr4BeingCompleted = newStageStatus.ecr4?.completed === true;
+
+      if (!wasEcr4Completed && isEcr4BeingCompleted) {
+        // Check if status is 'closed' or 'closed_rejected'
+        if (prev.status !== 'closed' && prev.status !== 'closed_rejected') {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            message: 'ECR-4 no puede marcarse como completado sin pasar por el proceso de cierre. El ECR debe estar cerrado oficialmente.'
+          });
+        }
+      }
+
       updates.push(`stage_completion_status = $${paramIndex++}`);
-      values.push(JSON.stringify(req.body.stageCompletionStatus));
+      values.push(JSON.stringify(newStageStatus));
     }
     if (req.body.financialImpact !== undefined) {
       updates.push(`financial_impact = $${paramIndex++}`);
@@ -1055,7 +1089,15 @@ async function updateECRReport(req, res) {
     const stageLabel = req.body._auditStageLabel || updatedECR.currentStage || null;
 
     // Detect field-level changes
-    const normalize = (v) => (v === null || v === undefined || v === '') ? '' : String(v).trim();
+    const normalize = (v) => {
+      if (v === null || v === undefined || v === '') return '';
+      if (typeof v === 'object') return JSON.stringify(v);
+      if (typeof v === 'number' && isNaN(v)) return '';
+      const str = String(v).trim();
+      // Treat "NaN" string as empty (comes from parseFloat(''))
+      if (str === 'NaN' || str === 'null' || str === 'undefined') return '';
+      return str;
+    };
 
     const scalarFields = {
       change_title:                  ['Título',                   changeTitle],
@@ -1077,7 +1119,6 @@ async function updateECRReport(req, res) {
       dms_update:                    ['Actualización DMS',        req.body.dmsUpdate],
       traceability_evidence:         ['Evidencia de trazabilidad',req.body.traceabilityEvidence],
       affected_parts:                ['Partes afectadas',         req.body.affectedParts],
-      ppap_status:                   ['Estatus PPAP',             req.body.ppapStatus],
       detected_risks:                ['Riesgos detectados',       req.body.detectedRisks],
       applied_improvements:          ['Mejoras aplicadas',        req.body.appliedImprovements],
       requestor_name:                ['Solicitante',              requestorName],
@@ -1103,6 +1144,7 @@ async function updateECRReport(req, res) {
       financial_impact:   ['Impacto financiero',         req.body.financialImpact],
       change_attachments: ['Archivos adjuntos',          changeAttachments],
       validation_actions: ['Acciones de validación',     validationActions],
+      ppap_status_detail: ['Estatus PPAP',               req.body.ppapStatus],
     };
 
     const changedFields = [];
@@ -1111,17 +1153,78 @@ async function updateECRReport(req, res) {
       if (newVal === undefined) continue;
       if (normalize(newVal) !== normalize(prev[col])) {
         const oldDisplay = normalize(prev[col]) || '—';
-        const newDisplay = String(newVal).substring(0, 80);
-        changedFields.push(`${label}: "${oldDisplay}" → "${newDisplay}"`);
+        const newDisplay = normalize(newVal) || '—';
+        changedFields.push(`${label}: "${oldDisplay}" → "${newDisplay.substring(0, 80)}"`);
       }
     }
 
+    // Deep compare for JSONB fields - sort keys to ignore order differences
+    // Also treat empty objects/arrays as null
+    const isEmptyValue = (v) => {
+      if (v === null || v === undefined || v === '') return true;
+      if (Array.isArray(v) && v.length === 0) return true;
+      if (typeof v === 'object' && Object.keys(v).every(k => isEmptyValue(v[k]))) return true;
+      return false;
+    };
+
+    const sortedStringify = (obj) => {
+      if (isEmptyValue(obj)) return 'null';
+      if (typeof obj !== 'object') return JSON.stringify(obj);
+      if (Array.isArray(obj)) {
+        const filtered = obj.filter(item => !isEmptyValue(item));
+        if (filtered.length === 0) return 'null';
+        return '[' + filtered.map(sortedStringify).join(',') + ']';
+      }
+      const sortedKeys = Object.keys(obj).sort();
+      const pairs = sortedKeys
+        .filter(k => !isEmptyValue(obj[k]))
+        .map(k => `"${k}":${sortedStringify(obj[k])}`);
+      if (pairs.length === 0) return 'null';
+      return '{' + pairs.join(',') + '}';
+    };
+
     for (const [col, [label, newVal]] of Object.entries(jsonbFields)) {
       if (newVal === undefined) continue;
-      const oldJson = JSON.stringify(prev[col] ?? null);
-      const newJson = JSON.stringify(newVal ?? null);
+      const oldJson = sortedStringify(prev[col]);
+      const newJson = sortedStringify(newVal);
       if (oldJson !== newJson) {
+        console.log(`🔍 JSONB diff [${col}]:`);
+        console.log('   OLD:', oldJson.substring(0, 200));
+        console.log('   NEW:', newJson.substring(0, 200));
         changedFields.push(`${label} actualizado`);
+      }
+    }
+
+    // Log validation signature events specifically
+    if (validationEvidence !== undefined) {
+      const prevEvidence = prev.validation_evidence || {};
+      const wasLocked = prevEvidence.isLocked === true;
+      const isNowLocked = validationEvidence.isLocked === true;
+
+      if (!wasLocked && isNowLocked && validationEvidence.signedBy) {
+        // Validation was just signed
+        logECRAction({
+          ecrId: updatedECR.id,
+          actionType: 'validation_signed',
+          actionCategory: 'signature',
+          sectionName: 'ECR-3 Validation',
+          userId: validationEvidence.signedBy,
+          userName: validationEvidence.signedByName || updaterName,
+          description: `Validación firmada por ${validationEvidence.signedByName || updaterName}`,
+          newValue: { signedAt: validationEvidence.signedAt }
+        });
+      } else if (wasLocked && !isNowLocked) {
+        // Validation signature was cleared (e.g., due to rejection)
+        logECRAction({
+          ecrId: updatedECR.id,
+          actionType: 'validation_unsigned',
+          actionCategory: 'signature',
+          sectionName: 'ECR-3 Validation',
+          userId: req.user?.id,
+          userName: updaterName,
+          description: `Firma de validación removida`,
+          previousValue: { signedBy: prevEvidence.signedByName, signedAt: prevEvidence.signedAt }
+        });
       }
     }
 
