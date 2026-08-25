@@ -78,9 +78,9 @@ const ECRApprovalModal = ({
     }
 
     if (toEmails.length > 0) {
-      let mailtoLink = `mailto:${toEmails.join(',')}?subject=${subject}&body=${body}`;
+      let mailtoLink = `mailto:${toEmails.join(';')}?subject=${subject}&body=${body}`;
       if (ccEmails.length > 0) {
-        mailtoLink = `mailto:${toEmails.join(',')}?cc=${ccEmails.join(',')}&subject=${subject}&body=${body}`;
+        mailtoLink = `mailto:${toEmails.join(';')}?cc=${ccEmails.join(';')}&subject=${subject}&body=${body}`;
       }
       window.open(mailtoLink, '_blank');
     }

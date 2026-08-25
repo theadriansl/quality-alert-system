@@ -581,7 +581,7 @@ const D7Validation = ({
 
       // Open mailto for auditors
       if (item.assignedAuditorsInfo && item.assignedAuditorsInfo.length > 0) {
-        const emails = item.assignedAuditorsInfo.map(a => a.email).join(',');
+        const emails = item.assignedAuditorsInfo.map(a => a.email).join(';');
         const subject = encodeURIComponent(`[ACTUALIZACIÓN] Auditoría D7 - ${reportId} - ${item.name}`);
         const body = encodeURIComponent(
           `Estimado Auditor,\n\n` +
@@ -642,7 +642,7 @@ const D7Validation = ({
 
         // Open mailto for auditors
         if (item.assignedAuditorsInfo && item.assignedAuditorsInfo.length > 0) {
-          const emails = item.assignedAuditorsInfo.map(a => a.email).join(',');
+          const emails = item.assignedAuditorsInfo.map(a => a.email).join(';');
           const subject = encodeURIComponent(`[RE-ENVÍO] Auditoría D7 - ${reportId} - ${item.name} (Ronda ${newRound})`);
           const body = encodeURIComponent(
             `Estimado Auditor,\n\n` +
@@ -981,7 +981,7 @@ Saludos,
 Sistema de Gestión de Calidad`
           );
 
-          window.open(`mailto:${allAuditorEmails.join(',')}?subject=${subject}&body=${body}`, '_blank');
+          window.open(`mailto:${allAuditorEmails.join(';')}?subject=${subject}&body=${body}`, '_blank');
         }
 
         // Reload to get updated sent_to_audit flags

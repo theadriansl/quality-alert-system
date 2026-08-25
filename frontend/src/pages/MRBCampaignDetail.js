@@ -756,7 +756,7 @@ const MRBCampaignDetail = () => {
             `${window.location.origin}/mrb-campaign/${id}\n\n` +
             `— ${mrbCase.respondedByName || 'Responsable'}`
           );
-          window.location.href = `mailto:${data.validationEmails.join(',')}?subject=${subject}&body=${body}`;
+          window.location.href = `mailto:${data.validationEmails.join(';')}?subject=${subject}&body=${body}`;
         } else {
           alert(data.message);
         }
@@ -808,7 +808,7 @@ const MRBCampaignDetail = () => {
             `${window.location.origin}/mrb-campaign/${id}\n\n` +
             `— Adrian Salazar`
           );
-          window.location.href = `mailto:${data.responsibleEmails.join(',')}?subject=${subject}&body=${body}`;
+          window.location.href = `mailto:${data.responsibleEmails.join(';')}?subject=${subject}&body=${body}`;
         } else {
           alert(data.message);
         }

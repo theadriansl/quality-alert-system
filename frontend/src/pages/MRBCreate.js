@@ -786,7 +786,7 @@ const MRBCreate = () => {
         `Este correo fue generado automáticamente por el Sistema MRB.`
       );
 
-      const mailtoLink = `mailto:${responseEmails.join(',')}?cc=${validationEmails.join(',')}&subject=${mailtoSubject}&body=${mailtoBody}`;
+      const mailtoLink = `mailto:${responseEmails.join(';')}?cc=${validationEmails.join(';')}&subject=${mailtoSubject}&body=${mailtoBody}`;
       window.open(mailtoLink, '_blank');
 
       alert(`MRB Abierto Exitosamente\n\nNúmero: ${result.mrb.campaignNumber}`);

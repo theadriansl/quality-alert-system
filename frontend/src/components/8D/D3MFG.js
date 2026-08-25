@@ -953,7 +953,7 @@ const D3MFG = ({ data, onDataUpdate, language = 'es', isBlocked = false, isReadO
         return user?.email;
       })
       .filter(Boolean)
-      .join(',');
+      .join(';');
 
     if (!emails) {
       showWarning('Los usuarios seleccionados no tienen emails configurados');

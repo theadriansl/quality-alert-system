@@ -985,9 +985,10 @@ async function updateECRReport(req, res) {
               audited_by = $11, audited_by_name = $12, verification_date = $13,
               audit_round = $14, display_order = $15,
               impact_area_key = $16, impact_area_name = $17, impact_subsection = $18,
-              leader_judgment = $19,
+              leader_judgment = $19, leader_judgment_by = $20, leader_judgment_by_name = $21,
+              leader_judgment_at = $22,
               updated_at = NOW()
-            WHERE id = $20 AND ecr_id = $21
+            WHERE id = $23 AND ecr_id = $24
           `, [
             item.name || item.itemName,
             item.icon || item.itemIcon || '📎',
@@ -1008,6 +1009,9 @@ async function updateECRReport(req, res) {
             item.impactAreaName || null,
             item.impactSubsection || null,
             item.leaderJudgment || '',
+            item.leaderJudgmentBy || null,
+            item.leaderJudgmentByName || '',
+            item.leaderJudgmentAt || null,
             item.id,
             id
           ]);
@@ -1018,8 +1022,9 @@ async function updateECRReport(req, res) {
               ecr_id, item_name, item_icon, is_default, check_item, comments,
               due_date, assigned_auditors, sent_to_audit, auditor_judgment,
               auditor_completed, audit_round, display_order,
-              impact_area_key, impact_area_name, impact_subsection, leader_judgment
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+              impact_area_key, impact_area_name, impact_subsection, leader_judgment,
+              leader_judgment_by, leader_judgment_by_name, leader_judgment_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
           `, [
             id,
             item.name || item.itemName,
@@ -1037,7 +1042,10 @@ async function updateECRReport(req, res) {
             item.impactAreaKey || null,
             item.impactAreaName || null,
             item.impactSubsection || null,
-            item.leaderJudgment || ''
+            item.leaderJudgment || '',
+            item.leaderJudgmentBy || null,
+            item.leaderJudgmentByName || '',
+            item.leaderJudgmentAt || null
           ]);
         }
       }
@@ -1614,8 +1622,11 @@ async function saveClosureAuditItems(req, res) {
               impact_area_name = $18,
               impact_subsection = $19,
               leader_judgment = $20,
+              leader_judgment_by = $21,
+              leader_judgment_by_name = $22,
+              leader_judgment_at = $23,
               updated_at = NOW()
-            WHERE id = $21 AND ecr_id = $22
+            WHERE id = $24 AND ecr_id = $25
           `, [
             item.name || item.itemName,
             item.icon || item.itemIcon || '📎',
@@ -1637,6 +1648,9 @@ async function saveClosureAuditItems(req, res) {
             item.impactAreaName || null,
             item.impactSubsection || null,
             item.leaderJudgment || '',
+            item.leaderJudgmentBy || null,
+            item.leaderJudgmentByName || '',
+            item.leaderJudgmentAt || null,
             item.id,
             id
           ]);
@@ -1657,8 +1671,9 @@ async function saveClosureAuditItems(req, res) {
                 ecr_id, item_name, item_icon, is_default, check_item, comments,
                 due_date, assigned_auditors, sent_to_audit, auditor_judgment,
                 auditor_completed, audit_round, display_order,
-                impact_area_key, impact_area_name, impact_subsection, leader_judgment
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                impact_area_key, impact_area_name, impact_subsection, leader_judgment,
+                leader_judgment_by, leader_judgment_by_name, leader_judgment_at
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
             `, [
               id,
               item.name || item.itemName,
@@ -1676,7 +1691,10 @@ async function saveClosureAuditItems(req, res) {
               impactKey,
               item.impactAreaName || null,
               item.impactSubsection || null,
-              item.leaderJudgment || ''
+              item.leaderJudgment || '',
+              item.leaderJudgmentBy || null,
+              item.leaderJudgmentByName || '',
+              item.leaderJudgmentAt || null
             ]);
           } else {
             console.log(`[closure-audit-items] Skipping duplicate: "${checkItem}" for ECR ${id}`);

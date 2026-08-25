@@ -532,9 +532,17 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
     }
   }, [data.closureAuditItems, auditRequests]);
 
-  // Re-hydrate assignedAuditorsInfo from IDs when users list is available
+  // Re-hydrate assignedAuditorsInfo from IDs when users list is available or items change
   useEffect(() => {
     if (users.length === 0) return;
+    if (!closureAuditItems.length) return;
+
+    // Check if any item needs hydration
+    const needsHydration = closureAuditItems.some(item =>
+      item.assignedAuditors?.length > 0 && !item.assignedAuditorsInfo?.length
+    );
+    if (!needsHydration) return;
+
     setClosureAuditItems(prev => prev.map(item => {
       if (item.assignedAuditorsInfo?.length > 0) return item;
       if (!item.assignedAuditors?.length) return item;
@@ -544,7 +552,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
       }).filter(Boolean);
       return hydrated.length > 0 ? { ...item, assignedAuditorsInfo: hydrated } : item;
     }));
-  }, [users]);
+  }, [users, data.closureAuditItems]);
 
   // Add a closure audit item to a specific impact area
   const addClosureAuditItem = (impactArea, itemTemplate = null) => {
@@ -806,7 +814,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
         ));
 
         // Abrir mailto a auditores asignados
-        const auditorEmails = (item.assignedAuditorsInfo || []).map(a => a.email).filter(Boolean).join(',');
+        const auditorEmails = (item.assignedAuditorsInfo || []).map(a => a.email).filter(Boolean).join(';');
         if (auditorEmails) {
           const ecrNumber = data.ecrNumber || `ECR-${data.id}`;
           const subject = encodeURIComponent(`[RE-ENVÍO] Auditoría ECR ${ecrNumber} — ${item.name} (Ronda ${newRound})`);
@@ -950,7 +958,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
       });
     });
 
-    const toEmails = [...auditorEmailSet].join(',');
+    const toEmails = [...auditorEmailSet].join(';');
     if (!toEmails) {
       showError(language === 'es' ? 'Los auditores asignados no tienen correo registrado' : 'Assigned auditors do not have registered email');
       return;
@@ -1353,7 +1361,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
 
     if (toEmails.length > 0 || ccEmails.length > 0) {
       const allEmails = [...new Set([...toEmails, ...ccEmails])];
-      window.open(`mailto:${allEmails.join(',')}?subject=${subject}&body=${body}`, '_blank');
+      window.open(`mailto:${allEmails.join(';')}?subject=${subject}&body=${body}`, '_blank');
     }
   };
 
@@ -1432,9 +1440,9 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
     }
 
     if (toEmails.length > 0) {
-      let mailtoLink = `mailto:${toEmails.join(',')}?subject=${subject}&body=${body}`;
+      let mailtoLink = `mailto:${toEmails.join(';')}?subject=${subject}&body=${body}`;
       if (ccEmails.length > 0) {
-        mailtoLink = `mailto:${toEmails.join(',')}?cc=${ccEmails.join(',')}&subject=${subject}&body=${body}`;
+        mailtoLink = `mailto:${toEmails.join(';')}?cc=${ccEmails.join(';')}&subject=${subject}&body=${body}`;
       }
       window.open(mailtoLink, '_blank');
     }
@@ -3363,26 +3371,19 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                     )}
                                   </td>
 
-                                  {/* Verified By */}
+                                  {/* Verified By (Auditor who completed the audit) */}
                                   <td style={{ padding: '8px', verticalAlign: 'top', textAlign: 'center' }}>
                                     {item.auditorCompleted && item.auditedByName ? (
                                       <div style={{ fontSize: '10px' }}>
-                                        <div style={{ fontWeight: '600' }}>{item.auditedByName?.split(' ')[0]}</div>
+                                        <div style={{ fontWeight: '600' }}>{item.auditedByName}</div>
                                         {item.verificationDate && (
                                           <div style={{ color: t.textDim, fontSize: '9px' }}>
                                             {new Date(item.verificationDate).toLocaleDateString()}
                                           </div>
                                         )}
                                       </div>
-                                    ) : item.leaderJudgmentByName ? (
-                                      <div style={{ fontSize: '10px' }}>
-                                        <div style={{ fontWeight: '600' }}>{item.leaderJudgmentByName?.split(' ')[0]}</div>
-                                        {item.leaderJudgmentAt && (
-                                          <div style={{ color: t.textDim, fontSize: '9px' }}>
-                                            {new Date(item.leaderJudgmentAt).toLocaleDateString()}
-                                          </div>
-                                        )}
-                                      </div>
+                                    ) : item.sentToAudit ? (
+                                      <span style={{ fontSize: '10px', color: t.textDim }}>{language === 'es' ? 'Pendiente' : 'Pending'}</span>
                                     ) : (
                                       <span style={{ fontSize: '10px', color: t.textDim }}>-</span>
                                     )}
@@ -3434,7 +3435,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                     </select>
                                     {item.leaderJudgmentByName && (
                                       <div style={{ fontSize: '9px', color: t.textDim, marginTop: '4px' }}>
-                                        {item.leaderJudgmentByName?.split(' ')[0]}
+                                        {item.leaderJudgmentByName}
                                       </div>
                                     )}
                                   </td>
@@ -3470,7 +3471,16 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                           <input
                                             type="checkbox"
                                             checked={item.auditorCompleted || false}
-                                            onChange={(e) => updateClosureAuditItem(item.id, 'auditorCompleted', e.target.checked)}
+                                            onChange={(e) => {
+                                              const currentUser = getCurrentUser();
+                                              const isCompleted = e.target.checked;
+                                              updateClosureAuditItemMultiple(item.id, {
+                                                auditorCompleted: isCompleted,
+                                                auditedById: isCompleted ? currentUser.id : null,
+                                                auditedByName: isCompleted ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() : '',
+                                                verificationDate: isCompleted ? new Date().toISOString() : null
+                                              });
+                                            }}
                                           />
                                           {language === 'es' ? 'Marcar completado' : 'Mark completed'}
                                         </label>
