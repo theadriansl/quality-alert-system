@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-25
+> Última actualización: 2026-08-25 (sesión 2)
 
 ---
 
@@ -74,6 +74,8 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ ECR-3: Testing completo (firmas validación, log sin falsos positivos) | 25-Ago |
+| ✅ Fix: Open Items muestra ECRs pendientes de aprobación (query corregido) | 25-Ago |
 | ✅ ECR: Flujo aprobaciones nivel 1→2→3 funcionando | 25-Ago |
 | ✅ ECR: Rechazar y devolver a creator funciona | 25-Ago |
 | ✅ ECR: Validación TFT muestra equipo default | 25-Ago |

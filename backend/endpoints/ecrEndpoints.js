@@ -1642,32 +1642,45 @@ async function saveClosureAuditItems(req, res) {
           ]);
         } else if (item.id && item.id < 0) {
           // Insert new item (negative ID means new)
-          await query(`
-            INSERT INTO ecr_closure_audit_items (
-              ecr_id, item_name, item_icon, is_default, check_item, comments,
-              due_date, assigned_auditors, sent_to_audit, auditor_judgment,
-              auditor_completed, audit_round, display_order,
-              impact_area_key, impact_area_name, impact_subsection, leader_judgment
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-          `, [
-            id,
-            item.name || item.itemName,
-            item.icon || item.itemIcon || '📎',
-            item.isDefault || false,
-            item.checkItem || '',
-            item.comments || '',
-            item.dueDate || null,
-            item.assignedAuditors || [],
-            item.sentToAudit || false,
-            item.auditorJudgment || '',
-            item.auditorCompleted || false,
-            item.auditRound || 1,
-            item.displayOrder || 0,
-            item.impactAreaKey || null,
-            item.impactAreaName || null,
-            item.impactSubsection || null,
-            item.leaderJudgment || ''
-          ]);
+          // Check for duplicates first (same check_item and impact_area_key)
+          const checkItem = item.checkItem || '';
+          const impactKey = item.impactAreaKey || null;
+          const existingCheck = await query(`
+            SELECT id FROM ecr_closure_audit_items
+            WHERE ecr_id = $1 AND check_item = $2 AND (impact_area_key = $3 OR (impact_area_key IS NULL AND $3 IS NULL))
+            LIMIT 1
+          `, [id, checkItem, impactKey]);
+
+          if (existingCheck.rows.length === 0) {
+            await query(`
+              INSERT INTO ecr_closure_audit_items (
+                ecr_id, item_name, item_icon, is_default, check_item, comments,
+                due_date, assigned_auditors, sent_to_audit, auditor_judgment,
+                auditor_completed, audit_round, display_order,
+                impact_area_key, impact_area_name, impact_subsection, leader_judgment
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            `, [
+              id,
+              item.name || item.itemName,
+              item.icon || item.itemIcon || '📎',
+              item.isDefault || false,
+              checkItem,
+              item.comments || '',
+              item.dueDate || null,
+              item.assignedAuditors || [],
+              item.sentToAudit || false,
+              item.auditorJudgment || '',
+              item.auditorCompleted || false,
+              item.auditRound || 1,
+              item.displayOrder || 0,
+              impactKey,
+              item.impactAreaName || null,
+              item.impactSubsection || null,
+              item.leaderJudgment || ''
+            ]);
+          } else {
+            console.log(`[closure-audit-items] Skipping duplicate: "${checkItem}" for ECR ${id}`);
+          }
         }
       }
     }
