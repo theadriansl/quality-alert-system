@@ -34,6 +34,7 @@ const riskMatrixRoutes = require('./routes/riskMatrixRoutes');
 const impactAreasRoutes = require('./routes/impactAreasRoutes');
 const teamTemplateEndpoints = require('./endpoints/teamTemplateEndpoints');
 const workloadEndpoints = require('./endpoints/workloadEndpoints');
+const notificationsEndpoints = require('./endpoints/notificationsEndpoints');
 const defectEndpoints = require('./endpoints/defectEndpoints');
 const defectAdminEndpoints = require('./endpoints/defectAdminEndpoints');
 const qarEndpoints = require('./endpoints/qarEndpoints');
@@ -848,6 +849,11 @@ app.use('/ecr', ecrRoutes);
 // WORKLOAD MANAGEMENT ROUTES
 // ============================================================================
 app.use('/workload', workloadEndpoints);
+
+// ============================================================================
+// NOTIFICATIONS ROUTES
+// ============================================================================
+app.use('/notifications', notificationsEndpoints);
 
 // ============================================================================
 // DEFECT / INITIAL CONCERNS ROUTES

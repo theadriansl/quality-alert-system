@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import ecrService from '../services/ecrService';
 import { getCurrentUser, isUserAdmin, canUserEdit, isReadOnly } from '../utils/permissions';
 import useScrollMemory from '../hooks/useScrollMemory';
@@ -86,6 +88,11 @@ const ECRWorkflow = () => {
   const [showLog, setShowLog] = useState(false);
   const [auditLog, setAuditLog] = useState([]);
   const [loadingLog, setLoadingLog] = useState(false);
+
+  // PDF Export state
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState('');
+  const contentRef = useRef(null);
 
   // Stage IDs for initial state (before STAGES is available)
   const STAGE_IDS = ['ecr1', 'ecr2', 'ecr2b', 'ecr3', 'ecr4'];
@@ -206,7 +213,7 @@ const ECRWorkflow = () => {
     }
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!!id); // Start loading if ECR exists
   const [saving, setSaving] = useState(false);
 
   // Load ECR data if ID exists
@@ -686,6 +693,16 @@ const ECRWorkflow = () => {
       }
     }
 
+    // Validate ECR-3 before marking as complete - requires approval
+    if (stageId === 'ecr3' && completed) {
+      if (workflowData.approvalStatus !== 'approved') {
+        showError(language === 'es'
+          ? 'No puedes marcar ECR-3 como completada. Primero debes enviar a aprobación ("Submit to Approval") y obtener todas las firmas requeridas.'
+          : 'Cannot mark ECR-3 as complete. You must first submit for approval and obtain all required signatures.');
+        return;
+      }
+    }
+
     const currentUser = getCurrentUser();
     const now = new Date().toISOString();
 
@@ -831,6 +848,149 @@ const ECRWorkflow = () => {
     }
   };
 
+  // ===================== PDF EXPORT FUNCTION =====================
+  const handleExportPDF = async () => {
+    if (!workflowData || !workflowData.id) {
+      showError(language === 'es' ? 'Guarda el reporte primero antes de exportar' : 'Save the report before exporting');
+      return;
+    }
+
+    if (!contentRef.current) {
+      showError(language === 'es' ? 'No se encontró el área de contenido' : 'Content area not found');
+      return;
+    }
+
+    setIsExportingPDF(true);
+    const originalStage = currentStage;
+    const originalShowLog = showLog;
+
+    try {
+      const pdf = new jsPDF('l', 'mm', 'a4'); // landscape
+      const pageWidth = pdf.internal.pageSize.getWidth(); // 297mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
+      const margin = 5;
+      let isFirstPage = true;
+
+      // Capture each stage + Log
+      const totalSections = STAGES.length + 1; // +1 for Log
+      for (let i = 0; i < totalSections; i++) {
+        const isLogSection = i === STAGES.length;
+        const sectionLabel = isLogSection ? 'Log' : STAGES[i].label;
+        const sectionTitle = isLogSection ? (language === 'es' ? 'Historial' : 'History') : STAGES[i].title;
+
+        setPdfProgress(`${language === 'es' ? 'Capturando' : 'Capturing'} ${sectionLabel} (${i + 1}/${totalSections})...`);
+
+        // Switch to the stage or log
+        if (isLogSection) {
+          setShowLog(true);
+          await fetchAuditLog();
+        } else {
+          setShowLog(false);
+          setCurrentStage(i);
+        }
+
+        // Wait for render
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Capture content
+        const canvas = await html2canvas(contentRef.current, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false
+        });
+
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const availableWidth = pageWidth - (margin * 2);
+        const availableHeight = pageHeight - 20 - margin;
+        const imgWidth = availableWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        if (!isFirstPage) {
+          pdf.addPage('l');
+        }
+        isFirstPage = false;
+
+        // Header
+        pdf.setFillColor(44, 82, 130);
+        pdf.rect(0, 0, pageWidth, 12, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${workflowData.ecrNumber || 'ECR Report'} - ${sectionLabel}: ${sectionTitle}`, margin, 8);
+        pdf.setFontSize(9);
+        pdf.text(workflowData.changeTitle || '', pageWidth - margin, 8, { align: 'right' });
+
+        const startY = 15;
+
+        if (imgHeight <= availableHeight) {
+          pdf.addImage(imgData, 'PNG', margin, startY, imgWidth, imgHeight);
+        } else {
+          // Multi-page handling
+          let pagesNeeded = Math.ceil(imgHeight / availableHeight);
+          for (let p = 0; p < pagesNeeded; p++) {
+            if (p > 0) {
+              pdf.addPage('l');
+              pdf.setFillColor(44, 82, 130);
+              pdf.rect(0, 0, pageWidth, 8, 'F');
+              pdf.setTextColor(255, 255, 255);
+              pdf.setFontSize(9);
+              pdf.text(`${sectionLabel} (${language === 'es' ? 'cont.' : 'cont.'})`, margin, 5);
+            }
+
+            const clipY = p * availableHeight;
+            const clipHeight = Math.min(availableHeight, imgHeight - clipY);
+            const headerOffset = p === 0 ? startY : 10;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = (clipHeight / imgHeight) * canvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            ctx.drawImage(
+              canvas,
+              0, (clipY / imgHeight) * canvas.height,
+              canvas.width, tempCanvas.height,
+              0, 0,
+              tempCanvas.width, tempCanvas.height
+            );
+
+            const portionData = tempCanvas.toDataURL('image/png', 1.0);
+            pdf.addImage(portionData, 'PNG', margin, headerOffset, imgWidth, clipHeight);
+          }
+        }
+      }
+
+      // Footer on all pages
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Quality Alert System - ${language === 'es' ? 'Generado' : 'Generated'}: ${new Date().toLocaleString('es-MX')}`, margin, pageHeight - 5);
+        pdf.text(`${language === 'es' ? 'Página' : 'Page'} ${i} ${language === 'es' ? 'de' : 'of'} ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+      }
+
+      // Download
+      const sanitizedTitle = (workflowData.changeTitle || 'Report')
+        .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 50);
+      pdf.save(`${workflowData.ecrNumber || 'ECR-Report'}_${sanitizedTitle}.pdf`);
+
+      showSuccess(language === 'es' ? 'PDF exportado exitosamente' : 'PDF exported successfully');
+
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      showError((language === 'es' ? 'Error al exportar PDF: ' : 'Error exporting PDF: ') + error.message);
+    } finally {
+      setCurrentStage(originalStage);
+      setShowLog(originalShowLog);
+      setIsExportingPDF(false);
+      setPdfProgress('');
+    }
+  };
+
   const handleGoBack = () => {
     localStorage.removeItem(`ecr-current-stage-${id}`);
     navigate('/ecr-dashboard');
@@ -912,21 +1072,12 @@ const ECRWorkflow = () => {
   };
 
   // Use scroll memory hook - saves/restores scroll position per stage
+  // Pass ready: !loading so scroll restores only after ECR data loads
   const { containerRef, clearPosition } = useScrollMemory(`ecr-${id}-stage-${currentStage}`, {
     debounce: 150,
-    useSession: true
+    useSession: true,
+    ready: !loading
   });
-
-  // Clear all scroll positions when leaving the ECR
-  useEffect(() => {
-    return () => {
-      if (id) {
-        STAGES.forEach((_, index) => {
-          sessionStorage.removeItem(`scroll-ecr-${id}-stage-${index}`);
-        });
-      }
-    };
-  }, [id]);
 
   // Generate styles based on theme
   const styles = useMemo(() => getStyles(t), [t]);
@@ -1096,6 +1247,30 @@ const ECRWorkflow = () => {
         <span style={{ fontSize: '14px', fontWeight: '600', color: t.accent }}>
           {Math.round(((currentStage + 1) / STAGES.length) * 100)}%
         </span>
+        {/* Export PDF Button */}
+        {workflowData.id && (
+          <button
+            onClick={handleExportPDF}
+            disabled={isExportingPDF}
+            style={{
+              padding: '6px 14px',
+              backgroundColor: isExportingPDF ? t.bgPanel : t.accent,
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: isExportingPDF ? 'not-allowed' : 'pointer',
+              opacity: isExportingPDF ? 0.7 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title={language === 'es' ? 'Exportar PDF completo' : 'Export full PDF'}
+          >
+            {isExportingPDF ? `⏳ ${pdfProgress}` : `📄 ${language === 'es' ? 'Exportar PDF' : 'Export PDF'}`}
+          </button>
+        )}
       </div>
 
       {/* Stage Navigation */}
@@ -1170,7 +1345,7 @@ const ECRWorkflow = () => {
       )}
 
       {/* Content Area */}
-      <div ref={containerRef} style={styles.content}>
+      <div ref={(el) => { containerRef.current = el; contentRef.current = el; }} style={styles.content}>
         {showLog ? (
           <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -1236,6 +1411,20 @@ const ECRWorkflow = () => {
           )}
         </div>
         <div style={styles.footerRight}>
+          {/* Draft Required Message - Show in ECR-1 when not saved */}
+          {!workflowData.id && STAGES[currentStage].id === 'ecr1' && !showLog && (
+            <span style={{
+              fontSize: '13px',
+              color: t.warning,
+              marginRight: '16px',
+              padding: '8px 12px',
+              backgroundColor: `${t.warning}15`,
+              borderRadius: '6px',
+              border: `1px solid ${t.warning}40`
+            }}>
+              {language === 'es' ? 'Guarda como Draft para avanzar' : 'Save as Draft to proceed'}
+            </span>
+          )}
           {/* Stage Completion Checkbox - Hide when showing Log */}
           {workflowData.id && !isECRLocked() && !showLog && (
             <label style={styles.footerCompletionCheckbox}>
@@ -1569,7 +1758,9 @@ const getStyles = (t) => ({
   content: {
     flex: 1,
     padding: '24px',
-    overflowY: 'auto'
+    overflowY: 'auto',
+    height: 0, // Forces flex item to scroll instead of expanding
+    minHeight: 0 // Required for Firefox
   },
   footer: {
     backgroundColor: t.bgCard,

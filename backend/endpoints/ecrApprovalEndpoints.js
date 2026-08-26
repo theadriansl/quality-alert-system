@@ -445,53 +445,17 @@ async function approveECR(req, res) {
     const fullyApproved = newStatus === 'approved';
     logECRAction({ ecrId: parseInt(id), actionType: 'approved', actionCategory: 'approval', userId: req.user?.id, userName: approverName, description: fullyApproved ? `ECR aprobado completamente (Nivel ${level})` : `ECR aprobado — Nivel ${level}, pendiente Nivel ${newLevel}`, newValue: { level, comments: comments || '', newStatus } });
 
-    // Send email notification to Review Board
+    // Get ECR data for mailto (no SMTP)
+    let ecrData = null;
     try {
-      const ecrData = await pool.query(
-        `SELECT ecr_number, change_title, review_board, level${newLevel}_approver as next_approver FROM ecr_reports WHERE id = $1`,
+      const nextApproverColumn = newLevel ? `, level${newLevel}_approver as next_approver` : '';
+      const result = await pool.query(
+        `SELECT ecr_number, change_title, review_board${nextApproverColumn} FROM ecr_reports WHERE id = $1`,
         [id]
       );
-      if (ecrData.rows[0]?.review_board?.members) {
-        const memberIds = ecrData.rows[0].review_board.members;
-        const membersResult = await pool.query(
-          'SELECT id, first_name, last_name, email FROM users WHERE id = ANY($1)',
-          [memberIds]
-        );
-        const members = membersResult.rows.map(m => ({
-          firstName: m.first_name,
-          lastName: m.last_name,
-          email: m.email
-        }));
-        sendEcrNotificationToReviewBoard(members, {
-          ecrNumber: ecrData.rows[0].ecr_number,
-          title: ecrData.rows[0].change_title,
-          action: 'approved',
-          approverName,
-          level,
-          comments: comments || ''
-        }).catch(err => console.error('Error sending ECR approval emails:', err));
-      }
-
-      // Send email to next level approver if exists
-      if (newLevel && ecrData.rows[0]?.next_approver) {
-        const nextApproverResult = await pool.query(
-          'SELECT first_name, last_name, email FROM users WHERE id = $1',
-          [ecrData.rows[0].next_approver]
-        );
-        if (nextApproverResult.rows[0]?.email) {
-          const nextApprover = nextApproverResult.rows[0];
-          sendEcrPendingApprovalNotification({
-            to: nextApprover.email,
-            approverName: `${nextApprover.first_name || ''} ${nextApprover.last_name || ''}`.trim(),
-            ecrNumber: ecrData.rows[0].ecr_number,
-            ecrTitle: ecrData.rows[0].change_title,
-            submitterName: approverName,
-            level: newLevel
-          }).catch(err => console.error('Error sending ECR next approver email:', err));
-        }
-      }
-    } catch (emailErr) {
-      console.error('Error preparing ECR approval email:', emailErr);
+      ecrData = result.rows[0];
+    } catch (queryErr) {
+      console.error('Error fetching ECR data for mailto:', queryErr);
     }
 
     // Prepare mailto data for frontend

@@ -687,9 +687,19 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
   // Get team members for an area (for sub-action responsible selection)
   const getTeamMembersForArea = (areaKey) => {
     const validationTeams = data.validationTeams || {};
-    const teamMemberIds = validationTeams[areaKey] || [];
-    if (teamMemberIds.length > 0) {
-      return users.filter(u => teamMemberIds.includes(u.id));
+    const teamMembers = validationTeams[areaKey] || [];
+    if (teamMembers.length > 0) {
+      // teamMembers can be array of user objects or array of IDs
+      // Extract IDs regardless of format
+      const memberIds = teamMembers.map(member => {
+        if (typeof member === 'object' && member !== null) {
+          return String(member.id || member.userId || member);
+        }
+        return String(member);
+      });
+      const filtered = users.filter(u => memberIds.includes(String(u.id)));
+      // If filter results empty (invalid IDs), fallback to all users
+      return filtered.length > 0 ? filtered : users;
     }
     return users; // Fallback to all users
   };
@@ -1031,58 +1041,63 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
       if (!confirmUpdate) return;
     }
 
+    // Calculate new validation actions
+    const hours = entry.hours ? parseFloat(entry.hours) : null;
+    const updatedBy = currentUser?.id;
+    const updatedByName = `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim();
+
+    const newValidationActions = formData.validationActions.map(action => {
+      if (action.id === actionId) {
+        const dailyProgress = action.dailyProgress || [];
+
+        // If date exists, replace it; otherwise add new
+        let newDailyProgress;
+        if (existingEntry) {
+          newDailyProgress = dailyProgress.map(d =>
+            d.date === entry.date
+              ? { ...d, progress: progress, activities: entry.activities || '', hours: hours, updatedBy, updatedByName }
+              : d
+          );
+        } else {
+          newDailyProgress = [...dailyProgress, {
+            date: entry.date,
+            progress: progress,
+            accumulated: 0,
+            activities: entry.activities || '',
+            hours: hours,
+            updatedBy,
+            updatedByName
+          }];
+        }
+
+        // Sort by date
+        newDailyProgress.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Recalculate accumulated
+        let accumulated = 0;
+        const updatedProgress = newDailyProgress.map(d => {
+          accumulated += d.progress;
+          return { ...d, accumulated: Math.min(100, accumulated) };
+        });
+
+        const totalProgress = updatedProgress.length > 0
+          ? updatedProgress[updatedProgress.length - 1].accumulated
+          : 0;
+
+        return {
+          ...action,
+          dailyProgress: updatedProgress,
+          actualProgress: totalProgress,
+          status: totalProgress >= 100 ? 'completed' : 'in_progress'
+        };
+      }
+      return action;
+    });
+
+    // Update local state
     setFormData(prev => ({
       ...prev,
-      validationActions: prev.validationActions.map(action => {
-        if (action.id === actionId) {
-          const dailyProgress = action.dailyProgress || [];
-
-          // If date exists, replace it; otherwise add new
-          let newDailyProgress;
-          const hours = entry.hours ? parseFloat(entry.hours) : null;
-          const updatedBy = currentUser?.id;
-          const updatedByName = `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim();
-          if (existingEntry) {
-            newDailyProgress = dailyProgress.map(d =>
-              d.date === entry.date
-                ? { ...d, progress: progress, activities: entry.activities || '', hours: hours, updatedBy, updatedByName }
-                : d
-            );
-          } else {
-            newDailyProgress = [...dailyProgress, {
-              date: entry.date,
-              progress: progress,
-              accumulated: 0,
-              activities: entry.activities || '',
-              hours: hours,
-              updatedBy,
-              updatedByName
-            }];
-          }
-
-          // Sort by date
-          newDailyProgress.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-          // Recalculate accumulated
-          let accumulated = 0;
-          const updatedProgress = newDailyProgress.map(d => {
-            accumulated += d.progress;
-            return { ...d, accumulated: Math.min(100, accumulated) };
-          });
-
-          const totalProgress = updatedProgress.length > 0
-            ? updatedProgress[updatedProgress.length - 1].accumulated
-            : 0;
-
-          return {
-            ...action,
-            dailyProgress: updatedProgress,
-            actualProgress: totalProgress,
-            status: totalProgress >= 100 ? 'completed' : 'in_progress'
-          };
-        }
-        return action;
-      })
+      validationActions: newValidationActions
     }));
 
     setDailyEntries(prev => ({
@@ -1094,7 +1109,59 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
       [actionId]: false
     }));
 
-    showSuccess(language === 'es' ? 'Progreso agregado correctamente' : 'Progress added successfully');
+    showSuccess(language === 'es' ? 'Progreso guardado' : 'Progress saved');
+
+    // Auto-save with the new data directly (don't wait for state sync)
+    if (onSaveDraft) {
+      onSaveDraft({ validationActions: newValidationActions });
+    }
+  };
+
+  const handleDeleteDailyProgress = (actionId, entryDate) => {
+    const confirmDelete = window.confirm(
+      language === 'es'
+        ? '¿Estás seguro de eliminar esta entrada de progreso?'
+        : 'Are you sure you want to delete this progress entry?'
+    );
+    if (!confirmDelete) return;
+
+    const newValidationActions = formData.validationActions.map(action => {
+      if (action.id === actionId) {
+        // Filter out the entry with the matching date
+        let newDailyProgress = (action.dailyProgress || []).filter(d => d.date !== entryDate);
+
+        // Recalculate accumulated
+        newDailyProgress.sort((a, b) => new Date(a.date) - new Date(b.date));
+        let accumulated = 0;
+        const updatedProgress = newDailyProgress.map(d => {
+          accumulated += d.progress;
+          return { ...d, accumulated: Math.min(100, accumulated) };
+        });
+
+        const totalProgress = updatedProgress.length > 0
+          ? updatedProgress[updatedProgress.length - 1].accumulated
+          : 0;
+
+        return {
+          ...action,
+          dailyProgress: updatedProgress,
+          actualProgress: totalProgress,
+          status: totalProgress >= 100 ? 'completed' : (totalProgress > 0 ? 'in_progress' : 'pending')
+        };
+      }
+      return action;
+    });
+
+    setFormData(prev => ({
+      ...prev,
+      validationActions: newValidationActions
+    }));
+
+    showSuccess(language === 'es' ? 'Entrada eliminada' : 'Entry deleted');
+
+    if (onSaveDraft) {
+      onSaveDraft({ validationActions: newValidationActions });
+    }
   };
 
   const getUserName = (userId) => {
@@ -1846,6 +1913,25 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                           }}>
                                             +{entry.progress}% → {entry.accumulated}%
                                           </span>
+                                          {!isReadOnly && (
+                                            <button
+                                              onClick={() => handleDeleteDailyProgress(action.id, entry.date)}
+                                              title={language === 'es' ? 'Eliminar entrada' : 'Delete entry'}
+                                              style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: '#ef4444',
+                                                padding: '2px',
+                                                fontSize: '12px',
+                                                opacity: 0.7
+                                              }}
+                                              onMouseOver={(e) => e.target.style.opacity = 1}
+                                              onMouseOut={(e) => e.target.style.opacity = 0.7}
+                                            >
+                                              X
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                       {entry.activities && (
@@ -2761,7 +2847,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                   value={formData.validationEvidence.noValidationReasonOther}
                   onChange={(e) => updateValidationEvidence('noValidationReasonOther', e.target.value)}
                   placeholder={language === 'es' ? 'Especifica el motivo...' : 'Specify the reason...'}
-                  style={{ ...styles.input, marginBottom: '16px' }}
+                  style={{ ...styles.input, width: '100%', boxSizing: 'border-box', marginBottom: '16px' }}
                 />
               )}
 
@@ -2772,7 +2858,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                 value={formData.validationEvidence.noValidationObservations}
                 onChange={(e) => updateValidationEvidence('noValidationObservations', e.target.value)}
                 placeholder={language === 'es' ? 'Observaciones adicionales...' : 'Additional observations...'}
-                style={{ ...styles.input, minHeight: '80px', marginBottom: '16px', resize: 'vertical' }}
+                style={{ ...styles.input, width: '100%', boxSizing: 'border-box', minHeight: '80px', marginBottom: '16px', resize: 'vertical' }}
               />
 
               <label style={{ fontSize: '14px', fontWeight: '600', color: t.text, display: 'block', marginBottom: '8px' }}>

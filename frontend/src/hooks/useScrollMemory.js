@@ -6,12 +6,21 @@ import { useEffect, useRef, useCallback } from 'react';
  * @param {object} options - Configuration options
  * @param {number} options.debounce - Debounce time in ms (default: 100)
  * @param {boolean} options.useSession - Use sessionStorage instead of memory (default: true)
+ * @param {boolean} options.ready - If provided, only restore when ready becomes true (default: true)
  */
 const useScrollMemory = (key, options = {}) => {
-  const { debounce = 100, useSession = true } = options;
+  const { debounce = 100, useSession = true, ready = true } = options;
   const containerRef = useRef(null);
   const timeoutRef = useRef(null);
   const isRestoringRef = useRef(false);
+  const previousKeyRef = useRef(key);
+
+  // Save scroll position for a specific key
+  const savePositionForKey = useCallback((targetKey, position) => {
+    if (useSession) {
+      sessionStorage.setItem(`scroll-${targetKey}`, position.toString());
+    }
+  }, [useSession]);
 
   // Get stored scroll position
   const getStoredPosition = useCallback(() => {
@@ -24,10 +33,8 @@ const useScrollMemory = (key, options = {}) => {
 
   // Save scroll position
   const savePosition = useCallback((position) => {
-    if (useSession) {
-      sessionStorage.setItem(`scroll-${key}`, position.toString());
-    }
-  }, [key, useSession]);
+    savePositionForKey(key, position);
+  }, [key, savePositionForKey]);
 
   // Handle scroll event with debounce
   const handleScroll = useCallback((e) => {
@@ -39,48 +46,62 @@ const useScrollMemory = (key, options = {}) => {
 
     timeoutRef.current = setTimeout(() => {
       const scrollTop = e.target.scrollTop || window.scrollY;
+      console.log('[ScrollMemory] Saving scroll position:', scrollTop, 'for key:', key);
       savePosition(scrollTop);
     }, debounce);
-  }, [debounce, savePosition]);
+  }, [debounce, savePosition, key]);
 
-  // Restore scroll position on mount
+  // Save position of previous key before switching
   useEffect(() => {
+    if (previousKeyRef.current !== key && containerRef.current) {
+      const currentScroll = containerRef.current.scrollTop;
+      savePositionForKey(previousKeyRef.current, currentScroll);
+    }
+    previousKeyRef.current = key;
+  }, [key, savePositionForKey]);
+
+  // Restore scroll position when ready (e.g., after loading completes)
+  useEffect(() => {
+    if (!ready) return;
+
     const savedPosition = getStoredPosition();
+    if (savedPosition === 0) return;
 
-    if (savedPosition > 0) {
-      isRestoringRef.current = true;
+    isRestoringRef.current = true;
 
-      // Small delay to ensure content is rendered
-      const restoreTimeout = setTimeout(() => {
-        if (containerRef.current) {
-          containerRef.current.scrollTop = savedPosition;
-        } else {
-          window.scrollTo(0, savedPosition);
-        }
+    // Restore after a short delay to ensure DOM is updated
+    const restoreTimeout = setTimeout(() => {
+      window.scrollTo(0, savedPosition);
+      setTimeout(() => { isRestoringRef.current = false; }, 150);
+    }, 200);
 
-        // Allow saving again after restore
-        setTimeout(() => {
-          isRestoringRef.current = false;
-        }, 100);
-      }, 50);
+    return () => clearTimeout(restoreTimeout);
+  }, [key, ready, getStoredPosition]);
 
-      return () => clearTimeout(restoreTimeout);
-    }
-  }, [key, getStoredPosition]);
-
-  // Attach scroll listener
+  // Attach scroll listener - listen on window for page-level scroll
   useEffect(() => {
-    const container = containerRef.current;
+    const attachTimeout = setTimeout(() => {
+      const scrollHandler = () => {
+        if (isRestoringRef.current) return;
+        const scrollTop = window.scrollY;
 
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-      return () => container.removeEventListener('scroll', handleScroll);
-    } else {
-      // Use window scroll if no container ref
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, [handleScroll]);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+          if (useSession) {
+            sessionStorage.setItem(`scroll-${key}`, scrollTop.toString());
+          }
+        }, debounce);
+      };
+
+      window.addEventListener('scroll', scrollHandler, { passive: true });
+      containerRef._cleanup = () => window.removeEventListener('scroll', scrollHandler);
+    }, 200);
+
+    return () => {
+      clearTimeout(attachTimeout);
+      if (containerRef._cleanup) containerRef._cleanup();
+    };
+  }, [key, debounce, useSession]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

@@ -13,6 +13,7 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
   const [approvalStatus, setApprovalStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const styles = getStyles(t);
 
@@ -92,11 +93,12 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
     window.open(mailtoLink, '_blank');
   };
 
-  const handleSubmitForApproval = async () => {
-    if (!window.confirm(language === 'es' ? '¿Estás seguro de que quieres enviar este ECR a aprobación?' : 'Are you sure you want to submit this ECR for approval?')) {
-      return;
-    }
+  const handleSubmitForApproval = () => {
+    setShowConfirmSubmitModal(true);
+  };
 
+  const confirmSubmitForApproval = async () => {
+    setShowConfirmSubmitModal(false);
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
@@ -405,6 +407,84 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
           onSuccess={handleApprovalSuccess}
           language={language}
         />
+      )}
+
+      {/* Confirm Submit Modal (centered) */}
+      {showConfirmSubmitModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '420px',
+            width: '90%',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '16px' }}>⚠️</div>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: t.text,
+              marginBottom: '12px'
+            }}>
+              {language === 'es' ? 'Confirmar Envío a Aprobación' : 'Confirm Submit for Approval'}
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: t.textMuted,
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              {language === 'es'
+                ? '¿Estás seguro de que quieres enviar este ECR a aprobación? Una vez enviado, comenzará el flujo de aprobaciones.'
+                : 'Are you sure you want to submit this ECR for approval? Once submitted, the approval flow will begin.'}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowConfirmSubmitModal(false)}
+                style={{
+                  padding: '10px 24px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  backgroundColor: t.bgSecondary,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                {language === 'es' ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button
+                onClick={confirmSubmitForApproval}
+                style={{
+                  padding: '10px 24px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  backgroundColor: t.accent,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                {language === 'es' ? 'Sí, Enviar' : 'Yes, Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
