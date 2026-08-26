@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-25 (sesión 3)
+> Última actualización: 2026-08-26
 
 ---
 
@@ -42,7 +42,7 @@
 | 3 | ~~Export Excel 8D Consultation~~ | 27-Jun | ✅ 16-Ago |
 | 4 | ~~PRINT_LABELS (Kanban)~~ | 02-Jul | ❌ Descartado |
 | 5 | ~~8D generación PDF refactorizada~~ | Arrastrado | ✅ 15-Ago |
-| 6 | ECR pruebas aprobaciones (ECR-3 ✅, ECR-4 ciclo OK ✅, **ECR-4 NO ADOPTABLE pendiente**) | Arrastrado | ⏳ |
+| 6 | ~~ECR pruebas aprobaciones (ECR-3 ✅, ECR-4 ciclo OK ✅, ECR-4 NO ADOPTABLE ✅)~~ | Arrastrado | ✅ 26-Ago |
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
 | 9 | ~~**ARQUITECTURA: Particionamiento PostgreSQL por mes**~~ | 16-Ago | ✅ 17-Ago |
@@ -74,6 +74,15 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ ECR: Exportar PDF completo (captura todas las etapas + historial) | 26-Ago |
+| ✅ ECR: Modal centrado para confirmación de envío a aprobación | 26-Ago |
+| ✅ ECR: Ciclo completo con 1 solo aprobador (sin errores) | 26-Ago |
+| ✅ ECR-4: Cierre NO ADOPTABLE probado y funcionando | 26-Ago |
+| ✅ ECR: Scroll memory persistente por tab (sessionStorage) | 26-Ago |
+| ✅ ECR: Fix dropdown validación TFT (maneja objetos user vs IDs) | 26-Ago |
+| ✅ ECR: Auto-save y delete de actividades en Master Plan | 26-Ago |
+| ✅ ECR: Mensaje "Guarda como Draft para avanzar" en ECR-1 | 26-Ago |
+| ✅ FIX: Bug levelnull_approver en queries de aprobación | 26-Ago |
 | ✅ ECR-4: Ciclo aprobación OK completo (nivel 1→2→3, cierre, solo lectura) | 25-Ago |
 | ✅ ECR-4: Acceso permitido a admin/emisor/aprobadores durante pending_approval | 25-Ago |
 | ✅ ECR-4: Retención datos auditor (nombres, judgment, deadlines, verified by) | 25-Ago |
