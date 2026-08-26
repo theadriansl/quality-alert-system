@@ -913,17 +913,33 @@ async function updateECRReport(req, res) {
         }
       }
 
-      // VALIDATION: ECR-4 cannot be marked as completed without closure approval
+      // ECR-4 completion validation: Check required fields
+      // ECR-4 represents the "Formal Closure" stage which includes closure audit.
+      // Flow: Complete audit → Fill required fields → Mark ECR-4 complete → Submit for approval → Approve → status='closed'
       const wasEcr4Completed = prevStageStatus.ecr4?.completed === true;
       const isEcr4BeingCompleted = newStageStatus.ecr4?.completed === true;
 
       if (!wasEcr4Completed && isEcr4BeingCompleted) {
-        // Check if status is 'closed' or 'closed_rejected'
-        if (prev.status !== 'closed' && prev.status !== 'closed_rejected') {
+        // Check required fields for ECR-4 completion
+        const missingFields = [];
+
+        // Check effectiveDate (from request or existing)
+        const effectiveDate = req.body.effectiveDate !== undefined ? req.body.effectiveDate : prev.effective_date;
+        if (!effectiveDate) {
+          missingFields.push('Fecha Efectiva de Adopción');
+        }
+
+        // Check adoptionLotNumber (from request or existing)
+        const adoptionLotNumber = req.body.adoptionLotNumber !== undefined ? req.body.adoptionLotNumber : prev.adoption_lot_number;
+        if (!adoptionLotNumber) {
+          missingFields.push('No. de Lote/Unidad de Adopción');
+        }
+
+        if (missingFields.length > 0) {
           await client.query('ROLLBACK');
           return res.status(400).json({
             success: false,
-            message: 'ECR-4 no puede marcarse como completado sin pasar por el proceso de cierre. El ECR debe estar cerrado oficialmente.'
+            message: `ECR-4 no puede marcarse como completado. Campos obligatorios faltantes: ${missingFields.join(', ')}. Asegúrese de guardar los cambios antes de marcar como completado.`
           });
         }
       }

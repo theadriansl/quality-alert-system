@@ -524,10 +524,21 @@ const QARCreate = () => {
         `Este correo fue generado automáticamente por el Sistema de Alertas de Calidad.`
       );
 
-      const mailtoLink = `mailto:${responseEmails.join('; ')}?cc=${validationEmails.join('; ')}&subject=${mailtoSubject}&body=${mailtoBody}`;
+      // Only open mailto if there are recipients
+      if (responseEmails.length > 0 || validationEmails.length > 0) {
+        const toEmails = responseEmails.length > 0 ? responseEmails.join('; ') : validationEmails.join('; ');
+        const ccEmails = responseEmails.length > 0 && validationEmails.length > 0 ? validationEmails.join('; ') : '';
 
-      // Open mail client
-      window.open(mailtoLink, '_blank');
+        let mailtoLink = `mailto:${toEmails}?subject=${mailtoSubject}&body=${mailtoBody}`;
+        if (ccEmails) {
+          mailtoLink = `mailto:${toEmails}?cc=${ccEmails}&subject=${mailtoSubject}&body=${mailtoBody}`;
+        }
+
+        console.log('Opening mailto:', mailtoLink);
+        window.open(mailtoLink, '_blank');
+      } else {
+        console.warn('No recipient emails found for QAR notification');
+      }
 
       // Show success modal
       setSuccessData({

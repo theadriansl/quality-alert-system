@@ -1622,7 +1622,23 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
   const getClosureValidationStatus = () => {
     const errors = [];
 
-    // 0. Check stage completion
+    // 0. Check required fields for closure (check both formData and saved data)
+    const savedEffectiveDate = data.effectiveDate;
+    const savedAdoptionLot = data.adoptionLotNumber;
+
+    if (!savedEffectiveDate && !formData.effectiveDate) {
+      errors.push('Falta: Fecha Efectiva de Adopción');
+    } else if (!savedEffectiveDate && formData.effectiveDate) {
+      errors.push('Fecha Efectiva de Adopción: Guarda los cambios primero');
+    }
+
+    if (!savedAdoptionLot && !formData.adoptionLotNumber) {
+      errors.push('Falta: No. de Lote/Unidad de Adopción');
+    } else if (!savedAdoptionLot && formData.adoptionLotNumber) {
+      errors.push('No. de Lote/Unidad: Guarda los cambios primero');
+    }
+
+    // 0b. Check stage completion
     if (!data.stageCompletionStatus?.ecr4?.completed) {
       errors.push('Etapa ECR-4 no está marcada como completada');
     }

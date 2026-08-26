@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-25 (sesión 2)
+> Última actualización: 2026-08-25 (sesión 3)
 
 ---
 
@@ -42,7 +42,7 @@
 | 3 | ~~Export Excel 8D Consultation~~ | 27-Jun | ✅ 16-Ago |
 | 4 | ~~PRINT_LABELS (Kanban)~~ | 02-Jul | ❌ Descartado |
 | 5 | ~~8D generación PDF refactorizada~~ | Arrastrado | ✅ 15-Ago |
-| 6 | ECR pruebas aprobaciones (ECR-3 ✅, ECR-4 pendiente) | Arrastrado | ⏳ |
+| 6 | ECR pruebas aprobaciones (ECR-3 ✅, ECR-4 ciclo OK ✅, **ECR-4 NO ADOPTABLE pendiente**) | Arrastrado | ⏳ |
 | 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
 | 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
 | 9 | ~~**ARQUITECTURA: Particionamiento PostgreSQL por mes**~~ | 16-Ago | ✅ 17-Ago |
@@ -74,6 +74,13 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ ECR-4: Ciclo aprobación OK completo (nivel 1→2→3, cierre, solo lectura) | 25-Ago |
+| ✅ ECR-4: Acceso permitido a admin/emisor/aprobadores durante pending_approval | 25-Ago |
+| ✅ ECR-4: Retención datos auditor (nombres, judgment, deadlines, verified by) | 25-Ago |
+| ✅ ECR-4: Validación campos obligatorios (fecha efectiva, lote adopción) | 25-Ago |
+| ✅ FIX: Mailto separador cambiado de coma a semicolon (;) en todo el sistema | 25-Ago |
+| ✅ FIX: "Verified by" muestra auditor correcto (no líder) | 25-Ago |
+| ✅ FIX: QARCreate mailto en emisión inicial | 25-Ago |
 | ✅ ECR-3: Testing completo (firmas validación, log sin falsos positivos) | 25-Ago |
 | ✅ Fix: Open Items muestra ECRs pendientes de aprobación (query corregido) | 25-Ago |
 | ✅ ECR: Flujo aprobaciones nivel 1→2→3 funcionando | 25-Ago |

@@ -736,10 +736,22 @@ const ECRWorkflow = () => {
     const status = workflowData.status;
     if (status === 'closed' || status === 'closed_rejected') return true;
 
-    // ECR-4 requires ECR to be approved first (applies to everyone including admins)
+    // ECR-4 requires ECR to be approved first
+    // Allow access during pending_approval for: admins, creator, and assigned approvers (read-only)
     const ecr4Index = STAGES.findIndex(s => s.id === 'ecr4');
     if (index >= ecr4Index) {
-      if (status !== 'approved' && status !== 'pending_closure') {
+      const allowedStatuses = ['approved', 'pending_closure'];
+      // Check if user can access during pending_approval
+      if (status === 'pending_approval') {
+        const currentUserId = getCurrentUser()?.id;
+        const isCreator = workflowData.createdBy === currentUserId;
+        const approvers = workflowData.approvers || {};
+        const isApprover = [approvers.level1, approvers.level2, approvers.level3].includes(currentUserId);
+        if (isAdmin() || isCreator || isApprover) {
+          allowedStatuses.push('pending_approval');
+        }
+      }
+      if (!allowedStatuses.includes(status)) {
         return false;
       }
     }
@@ -779,9 +791,20 @@ const ECRWorkflow = () => {
     }
 
     // Validate ECR-3: Must be approved before advancing to ECR-4
+    // Allow access during pending_approval for: admins, creator, and assigned approvers
     if (STAGES[currentStage].id === 'ecr3') {
       const status = workflowData.status;
-      if (status !== 'approved' && status !== 'closed' && status !== 'pending_closure') {
+      const allowedStatuses = ['approved', 'closed', 'pending_closure'];
+      if (status === 'pending_approval') {
+        const currentUserId = getCurrentUser()?.id;
+        const isCreator = workflowData.createdBy === currentUserId;
+        const approvers = workflowData.approvers || {};
+        const isApprover = [approvers.level1, approvers.level2, approvers.level3].includes(currentUserId);
+        if (isAdmin() || isCreator || isApprover) {
+          allowedStatuses.push('pending_approval');
+        }
+      }
+      if (!allowedStatuses.includes(status)) {
         showError('El ECR debe estar aprobado antes de avanzar a ECR-4. Envía a aprobación y espera las firmas.');
         return;
       }
@@ -858,13 +881,24 @@ const ECRWorkflow = () => {
       }
 
       // Validate ECR-3: Must be approved before going to ECR-4 (not for closed ECRs)
+      // Allow access during pending_approval for: admins, creator, and assigned approvers
       if (!isClosed && index > currentStage) {
         // Check if trying to go to ECR-4 (index 4) and ECR-3 is not approved
         const ecr3Index = STAGES.findIndex(s => s.id === 'ecr3');
         const ecr4Index = STAGES.findIndex(s => s.id === 'ecr4');
         if (index >= ecr4Index && currentStage <= ecr3Index) {
           const status = workflowData.status;
-          if (status !== 'approved' && status !== 'pending_closure') {
+          const allowedStatuses = ['approved', 'pending_closure'];
+          if (status === 'pending_approval') {
+            const currentUserId = getCurrentUser()?.id;
+            const isCreator = workflowData.createdBy === currentUserId;
+            const approvers = workflowData.approvers || {};
+            const isApprover = [approvers.level1, approvers.level2, approvers.level3].includes(currentUserId);
+            if (isAdmin() || isCreator || isApprover) {
+              allowedStatuses.push('pending_approval');
+            }
+          }
+          if (!allowedStatuses.includes(status)) {
             showError('El ECR debe estar aprobado antes de avanzar a ECR-4. Envía a aprobación y espera las firmas.');
             return;
           }
