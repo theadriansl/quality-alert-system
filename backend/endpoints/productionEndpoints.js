@@ -3,6 +3,7 @@ const router = express.Router();
 const path = require('path');
 const { pool, getClient } = require('../config/database');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 const multer = require('multer');
 const csv = require('csv-parse');
 const { Readable } = require('stream');
@@ -147,6 +148,14 @@ router.post('/entries', async (req, res) => {
       partStatus,
       req.user?.id || null
     ]);
+
+    // Emit WebSocket event
+    socketEvents.broadcast('production:created', {
+      id: result.rows[0].id,
+      serialNumber,
+      partId: finalPartId,
+      createdBy: req.user?.id
+    });
 
     res.status(201).json({
       success: true,

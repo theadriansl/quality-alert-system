@@ -121,9 +121,9 @@ async function seed() {
             part_id, client_id, project_id, defect_type_id,
             severity_id, stage_id, disposition_id, station_id, shift_id,
             inspector_id, department_id, lot_number, downtime_minutes,
-            notes, quantity, captured_by_user_id, captured_at, status
+            notes, quantity, captured_by_user_id, captured_at, status, repair_status
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'OPEN'
           )`,
           [
             part.part_id, part.client_id, part.project_id, defect.id,

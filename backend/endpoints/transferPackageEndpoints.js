@@ -8,6 +8,7 @@ const router = express.Router();
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 
 // ============================================================================
 // GET /transfer-packages - Listar paquetes con filtros
@@ -489,6 +490,16 @@ router.post('/', authenticateToken, async (req, res) => {
       FROM defect_entries_v2 WHERE id = ANY($3)
     `, [userId, `Agregado a paquete ${packageNumber}`, defectIds]);
 
+    // Emit WebSocket event
+    socketEvents.broadcast('package:created', {
+      id: packageId,
+      packageNumber,
+      originType,
+      destinationType,
+      itemCount: itemsAdded.length,
+      createdBy: userId
+    });
+
     res.json({
       success: true,
       package: transformToCamelCase(packageResult.rows[0]),
@@ -589,6 +600,17 @@ router.post('/:id/receive', authenticateToken, async (req, res) => {
     // Calcular tiempo de transferencia en minutos
     const transferMinutes = (new Date() - new Date(pkg.created_at)) / (1000 * 60);
 
+    // Emit WebSocket event
+    socketEvents.broadcast('package:received', {
+      id: packageId,
+      packageNumber: pkg.package_number,
+      originType: pkg.origin_type,
+      destinationType: pkg.destination_type,
+      itemCount: updatedDefects.rows.length,
+      receivedBy: userId,
+      transferMinutes: Math.round(transferMinutes)
+    });
+
     res.json({
       success: true,
       package: transformToCamelCase(updateResult.rows[0]),
@@ -638,6 +660,14 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
           updated_at = CURRENT_TIMESTAMP
       WHERE transfer_package_id = $1
     `, [id]);
+
+    // Emit WebSocket event
+    socketEvents.broadcast('package:cancelled', {
+      id: parseInt(id),
+      packageNumber: pkg.package_number,
+      cancelledBy: userId,
+      reason
+    });
 
     res.json({
       success: true,

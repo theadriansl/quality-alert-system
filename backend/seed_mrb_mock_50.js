@@ -250,8 +250,8 @@ async function run() {
                 client_id, project_id, part_id, defect_type_id,
                 quantity, captured_by_user_id, captured_at,
                 severity_id, stage_id, disposition_id, shift_id, inspector_id,
-                department_id, mrb_campaign_id, lot_number, created_at, updated_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+                department_id, mrb_campaign_id, lot_number, created_at, updated_at, repair_status
+              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'OPEN')
             `, [
               part.clientId, part.projectId, part.id, defectTypeId,
               g.qty, pick(USERS), entryDate.toISOString(),

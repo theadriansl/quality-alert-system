@@ -249,6 +249,9 @@ async function processReportJob(jobId) {
       case 'audit_findings':
         filePath = await generateAuditReport(jobId, params);
         break;
+      case 'station_traceability':
+        filePath = await generateStationTraceabilityReport(jobId, params);
+        break;
       default:
         throw new Error(`Tipo de reporte no soportado: ${job.report_type}`);
     }
@@ -802,6 +805,193 @@ async function generateAuditReport(jobId, params) {
   await updateProgress(jobId, 80);
 
   const filePath = path.join(REPORTS_DIR, `audit_findings_${jobId}_${Date.now()}.xlsx`);
+  await workbook.xlsx.writeFile(filePath);
+
+  return filePath;
+}
+
+// ============================================================================
+// STATION TRACEABILITY REPORT
+// ============================================================================
+async function generateStationTraceabilityReport(jobId, params) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Trazabilidad');
+
+  await updateProgress(jobId, 10);
+
+  // Build query combining unit_history, defect_entries, and station inspections
+  let sql = `
+    WITH traceability AS (
+      -- Events from unit_history
+      SELECT
+        ur.serial_number,
+        cp.part_number,
+        ur.lot_number,
+        ist.name AS station_name,
+        ist.id AS station_id,
+        uh.event_type,
+        uh.event_at AS timestamp,
+        CASE
+          WHEN uh.event_type IN ('SPEC_OK', 'RELEASED', 'RELEASE_OK') THEN 'OK'
+          WHEN uh.event_type IN ('SPEC_NOK', 'DEFECT_FOUND') THEN 'NOK'
+          WHEN uh.event_type = 'SCRAPPED' THEN 'SCRAP'
+          WHEN uh.event_type IN ('REPAIR_COMPLETED', 'REPAIRED') THEN 'REPAIRED'
+          ELSE uh.event_type
+        END AS result,
+        NULL AS defect_code,
+        NULL AS defect_name,
+        CONCAT(u.first_name, ' ', u.last_name) AS performed_by,
+        NULL AS repaired_by,
+        NULL AS released_by,
+        uh.description AS notes
+      FROM unit_history uh
+      JOIN unit_registry ur ON uh.unit_id = ur.id
+      LEFT JOIN client_parts cp ON ur.part_id = cp.id
+      LEFT JOIN inspection_stations ist ON uh.station_id = ist.id
+      LEFT JOIN users u ON uh.performed_by = u.id
+      WHERE uh.event_at >= $1::date
+        AND uh.event_at <= $2::date + INTERVAL '1 day'
+
+      UNION ALL
+
+      -- Defect entries with repair/release info
+      SELECT
+        de.serial_number,
+        cp.part_number,
+        ur.lot_number,
+        ist.name AS station_name,
+        ist.id AS station_id,
+        'DEFECT' AS event_type,
+        de.created_at AS timestamp,
+        de.repair_status AS result,
+        dt.code AS defect_code,
+        dt.name AS defect_name,
+        CONCAT(ui.first_name, ' ', ui.last_name) AS performed_by,
+        CONCAT(urep.first_name, ' ', urep.last_name) AS repaired_by,
+        CONCAT(urel.first_name, ' ', urel.last_name) AS released_by,
+        de.notes
+      FROM defect_entries_v2 de
+      LEFT JOIN client_parts cp ON de.part_id = cp.id
+      LEFT JOIN unit_registry ur ON de.unit_id = ur.id
+      LEFT JOIN inspection_stations ist ON de.station_id = ist.id
+      LEFT JOIN defect_types dt ON de.defect_type_id = dt.id
+      LEFT JOIN users ui ON de.inspector_id = ui.id
+      LEFT JOIN users urep ON de.repaired_by = urep.id
+      LEFT JOIN users urel ON de.released_by = urel.id
+      WHERE de.created_at >= $1::date
+        AND de.created_at <= $2::date + INTERVAL '1 day'
+    )
+    SELECT * FROM traceability t
+    WHERE 1=1
+  `;
+
+  const queryParams = [params.dateFrom || '2020-01-01', params.dateTo || new Date().toISOString().split('T')[0]];
+
+  // Filter by stations if provided
+  if (params.stationIds && Array.isArray(params.stationIds) && params.stationIds.length > 0) {
+    queryParams.push(params.stationIds);
+    sql += ` AND t.station_id = ANY($${queryParams.length}::int[])`;
+  }
+
+  // Filter by part
+  if (params.partNumber) {
+    queryParams.push(`%${params.partNumber}%`);
+    sql += ` AND t.part_number ILIKE $${queryParams.length}`;
+  }
+
+  // Filter by serial
+  if (params.serialNumber) {
+    queryParams.push(`%${params.serialNumber}%`);
+    sql += ` AND t.serial_number ILIKE $${queryParams.length}`;
+  }
+
+  // Filter by lot
+  if (params.lotNumber) {
+    queryParams.push(`%${params.lotNumber}%`);
+    sql += ` AND t.lot_number ILIKE $${queryParams.length}`;
+  }
+
+  sql += ' ORDER BY t.serial_number, t.timestamp ASC LIMIT 50000';
+
+  await updateProgress(jobId, 30);
+  const result = await query(sql, queryParams);
+  await updateProgress(jobId, 50);
+
+  // Define columns
+  sheet.columns = [
+    { header: 'Serial', key: 'serial_number', width: 22 },
+    { header: 'Parte', key: 'part_number', width: 15 },
+    { header: 'Lote', key: 'lot_number', width: 15 },
+    { header: 'Estación', key: 'station_name', width: 18 },
+    { header: 'Evento', key: 'event_type', width: 18 },
+    { header: 'Fecha/Hora', key: 'timestamp', width: 18 },
+    { header: 'Resultado', key: 'result', width: 12 },
+    { header: 'Cód. Defecto', key: 'defect_code', width: 12 },
+    { header: 'Defecto', key: 'defect_name', width: 25 },
+    { header: 'Inspector/Operador', key: 'performed_by', width: 20 },
+    { header: 'Reparador', key: 'repaired_by', width: 20 },
+    { header: 'Liberador', key: 'released_by', width: 20 },
+    { header: 'Notas', key: 'notes', width: 35 }
+  ];
+
+  // Style header
+  sheet.getRow(1).font = { bold: true };
+  sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+  sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+  // Add data with conditional formatting
+  result.rows.forEach(row => {
+    const newRow = sheet.addRow({
+      ...row,
+      timestamp: row.timestamp ? new Date(row.timestamp).toLocaleString('es-MX') : ''
+    });
+
+    // Color code results
+    const resultCell = newRow.getCell('result');
+    if (row.result === 'OK' || row.result === 'RELEASED') {
+      resultCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+      resultCell.font = { color: { argb: 'FF065F46' } };
+    } else if (row.result === 'NOK' || row.result === 'DEFECT') {
+      resultCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+      resultCell.font = { color: { argb: 'FF991B1B' } };
+    } else if (row.result === 'SCRAP' || row.result === 'SCRAPPED') {
+      resultCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+      resultCell.font = { color: { argb: 'FF92400E' } };
+    } else if (row.result === 'REPAIRED') {
+      resultCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+      resultCell.font = { color: { argb: 'FF1E40AF' } };
+    }
+  });
+
+  await updateProgress(jobId, 80);
+
+  // Add summary sheet
+  const summarySheet = workbook.addWorksheet('Resumen');
+  summarySheet.columns = [
+    { header: 'Métrica', key: 'metric', width: 30 },
+    { header: 'Valor', key: 'value', width: 15 }
+  ];
+  summarySheet.getRow(1).font = { bold: true };
+  summarySheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+  summarySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+  const totalRows = result.rows.length;
+  const uniqueSerials = new Set(result.rows.map(r => r.serial_number)).size;
+  const okCount = result.rows.filter(r => r.result === 'OK' || r.result === 'RELEASED').length;
+  const nokCount = result.rows.filter(r => r.result === 'NOK' || r.result === 'DEFECT').length;
+  const repairCount = result.rows.filter(r => r.result === 'REPAIRED').length;
+
+  summarySheet.addRow({ metric: 'Total Eventos', value: totalRows });
+  summarySheet.addRow({ metric: 'Seriales Únicos', value: uniqueSerials });
+  summarySheet.addRow({ metric: 'Eventos OK/Released', value: okCount });
+  summarySheet.addRow({ metric: 'Eventos NOK/Defecto', value: nokCount });
+  summarySheet.addRow({ metric: 'Reparaciones', value: repairCount });
+  summarySheet.addRow({ metric: 'Rango Fechas', value: `${params.dateFrom || 'Inicio'} - ${params.dateTo || 'Hoy'}` });
+  if (params.stationIds && params.stationIds.length > 0) {
+    summarySheet.addRow({ metric: 'Estaciones Filtradas', value: params.stationIds.length });
+  }
+
+  const filePath = path.join(REPORTS_DIR, `station_traceability_${jobId}_${Date.now()}.xlsx`);
   await workbook.xlsx.writeFile(filePath);
 
   return filePath;

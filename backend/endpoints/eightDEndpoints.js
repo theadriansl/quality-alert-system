@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 
 // Crear nuevo reporte 8D con partes seleccionadas
 async function createEightDReport(req, res) {
@@ -249,6 +250,15 @@ async function createEightDReport(req, res) {
     ]);
 
     await client.query('COMMIT');
+
+    // Emit WebSocket event
+    socketEvents.eightDCreated({
+      id: newReportId,
+      reportNumber: report_id,
+      title,
+      severity,
+      createdBy: created_by
+    });
 
     // Return complete report data
     res.json({
@@ -1207,6 +1217,15 @@ async function updateEightDReport(req, res) {
     } catch (auditError) {
       console.error('Error logging audit:', auditError);
     }
+
+    // Emit WebSocket event for 8D updates
+    const updatedReport = result.rows[0];
+    socketEvents.broadcast('8d:updated', {
+      id: updatedReport.id,
+      reportNumber: updatedReport.report_id,
+      title: updatedReport.title,
+      updatedBy: req.user?.id
+    });
 
     res.json({
       success: true,

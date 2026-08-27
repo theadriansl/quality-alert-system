@@ -33,6 +33,7 @@ import {
   receiveTransferPackage,
   createTransferPackage
 } from '../services/repairService';
+import { useSocket } from '../context/SocketContext';
 
 const API_URL = 'http://localhost:5000';
 
@@ -40,6 +41,7 @@ const HospitalTransferPackages = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
   const { language } = useLanguage();
+  const { subscribe } = useSocket();
 
   // Tabs: 'send' | 'sent' | 'receive' | 'alerts'
   const [activeTab, setActiveTab] = useState('sent');
@@ -220,6 +222,19 @@ const HospitalTransferPackages = () => {
       loadAlerts();
     }
   }, [activeTab, loadSendData, loadSentData, loadReceiveData, loadAlerts]);
+
+  // WebSocket: actualizar en tiempo real
+  useEffect(() => {
+    const reload = () => {
+      if (activeTab === 'send') loadSendData();
+      else if (activeTab === 'sent') loadSentData();
+      else if (activeTab === 'receive') loadReceiveData();
+      else if (activeTab === 'alerts') loadAlerts();
+    };
+    const events = ['package:created', 'package:received', 'package:cancelled'];
+    const unsubscribes = events.map(event => subscribe(event, reload));
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe, activeTab, loadSendData, loadSentData, loadReceiveData, loadAlerts]);
 
   // Cargar conteos al montar
   useEffect(() => {

@@ -10,6 +10,7 @@
 
 const { query } = require('../config/database');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 
 // ============================================================================
 // HELPER: Obtener información completa de validación
@@ -304,6 +305,14 @@ const setupReleaseOkEndpoints = (app) => {
           VALUES ($1, $2, $3, $4, false, 0)
         `, [serialNumber.trim(), stationResult.rows[0].id, unit.partId, parseInt(userId)]);
       }
+
+      // Emit WebSocket event
+      socketEvents.broadcast('release:ok', {
+        unitId: unit.id,
+        serialNumber: serialNumber.trim(),
+        partNumber: unit.partNumber,
+        releasedBy: parseInt(userId)
+      });
 
       res.json({
         success: true,

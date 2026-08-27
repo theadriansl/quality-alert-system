@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -21,6 +22,7 @@ const HomeReminders = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
   const { language } = useLanguage();
+  const { subscribe } = useSocket();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [counts, setCounts] = useState({ overdue: 0, today: 0, week: 0, future: 0, total: 0 });
@@ -43,6 +45,15 @@ const HomeReminders = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // WebSocket: Actualizar cuando hay cambios en actividades
+  useEffect(() => {
+    const events = ['8d:created', '8d:updated', 'qar:created', 'ecr:created', 'ecr:approved'];
+    const unsubscribes = events.map(event =>
+      subscribe(event, () => load())
+    );
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe, load]);
 
   const totalPending = counts.total || (counts.overdue + counts.today + counts.week + counts.noDate);
 

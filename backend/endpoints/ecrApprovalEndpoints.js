@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const { logECRAction } = require('../utils/ecrAuditLog');
 const { sendEcrNotificationToReviewBoard, sendEcrPendingApprovalNotification } = require('../utils/emailService');
+const { socketEvents } = require('../config/socket');
 
 /**
  * Get approval status for an ECR
@@ -523,6 +524,25 @@ async function approveECR(req, res) {
       }
     } catch (mailtoErr) {
       console.error('Error preparing mailto data:', mailtoErr);
+    }
+
+    // Emit WebSocket event
+    if (newStatus === 'approved') {
+      socketEvents.ecrApproved({
+        id: parseInt(id),
+        ecrNumber: ecrData?.ecr_number,
+        approvedBy: req.user?.id,
+        createdBy: ecr.created_by
+      });
+    } else if (newLevel) {
+      // Notify next approver
+      const nextApproverId = ecr[`level${newLevel}_approver`];
+      if (nextApproverId) {
+        socketEvents.ecrApprovalRequired({
+          id: parseInt(id),
+          ecrNumber: ecrData?.ecr_number
+        }, nextApproverId);
+      }
     }
 
     res.json({

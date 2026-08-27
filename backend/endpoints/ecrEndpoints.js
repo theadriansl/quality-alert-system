@@ -1,6 +1,7 @@
 const { query, pool } = require('../config/database');
 const { transformToCamelCase } = require('../utils/caseTransform');
 const { logECRAction, getECRAuditLog: fetchECRAuditLog } = require('../utils/ecrAuditLog');
+const { socketEvents } = require('../config/socket');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -436,6 +437,14 @@ async function createECRReport(req, res) {
 
     const creatorName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() : 'Sistema';
     logECRAction({ ecrId: newECR.id, actionType: 'created', actionCategory: 'report', userId: req.user?.id, userName: creatorName, description: `ECR creado: ${ecrNumber}` });
+
+    // Emit WebSocket event
+    socketEvents.ecrCreated({
+      id: newECR.id,
+      ecrNumber,
+      title: changeTitle,
+      createdBy
+    });
 
     res.status(201).json({
       success: true,

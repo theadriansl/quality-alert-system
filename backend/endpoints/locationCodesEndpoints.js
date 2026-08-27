@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
+const { socketEvents } = require('../config/socket');
 
 // GET /location-codes - Listar todos los códigos de ubicación
 router.get('/', authenticateToken, async (req, res) => {
@@ -317,11 +318,15 @@ router.post('/assign', authenticateToken, async (req, res) => {
     for (const serial of serials) {
       try {
         // Buscar TODOS los defectos activos de este serial (una pieza = una ubicación)
+        // Incluye NULL para defectos recién capturados y excluye los ya cerrados
         const defects = await query(`
           SELECT id, serial_number, repair_status
           FROM defect_entries_v2
           WHERE serial_number = $1
-            AND repair_status IN ('OPEN', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION')
+            AND (
+              repair_status IS NULL
+              OR repair_status IN ('OPEN', 'PENDING_REPAIR', 'IN_REPAIR', 'REPAIRED', 'IN_VALIDATION', 'PENDING_RELEASE')
+            )
           ORDER BY captured_at DESC
         `, [serial.trim()]);
 
@@ -371,6 +376,19 @@ router.post('/assign', authenticateToken, async (req, res) => {
     }
 
     console.log(`✅ Location assign: ${results.assigned.length} assigned, ${results.notFound.length} not found`);
+
+    // Emitir evento WebSocket para actualización en tiempo real
+    if (results.assigned.length > 0) {
+      console.log('🔌 Emitting hospital:location-assigned event');
+      socketEvents.broadcast('hospital:location-assigned', {
+        locationId: loc.id,
+        locationCode: loc.code,
+        locationType: loc.location_type,
+        assignedCount: results.assigned.length,
+        assigned: results.assigned,
+        assignedBy: req.user.id
+      });
+    }
 
     res.json({
       success: true,

@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-26
+> Última actualización: 2026-08-27
 
 ---
 
@@ -15,6 +15,8 @@
 | 6 | ~~Estaciones MRB mal configuradas~~ | 26-Jul | ✅ 19-Ago (MRB01/MRB02 existen) |
 | 7 | ~~Módulo Reportes Masivos (async servidor + UI)~~ | 16-Ago | ✅ 21-Ago |
 | 8 | ~~BUG: Error 500 en capture-nok (falta part_id + trigger entry_number)~~ | 19-Ago | ✅ 21-Ago |
+| 9 | ~~BUG: repair_status NULL en defectos MRB (4 INSERTs faltaban repair_status)~~ | 27-Ago | ✅ 27-Ago |
+| 10 | **WebSocket no actualiza tiempo real entre ventanas (Hospital)** | 27-Ago | ⏳ En debug |
 
 ---
 
@@ -43,13 +45,14 @@
 | 4 | ~~PRINT_LABELS (Kanban)~~ | 02-Jul | ❌ Descartado |
 | 5 | ~~8D generación PDF refactorizada~~ | Arrastrado | ✅ 15-Ago |
 | 6 | ~~ECR pruebas aprobaciones (ECR-3 ✅, ECR-4 ciclo OK ✅, ECR-4 NO ADOPTABLE ✅)~~ | Arrastrado | ✅ 26-Ago |
-| 7 | Módulo Outgoing (envíos) | 16-Jul | ⏳ |
-| 8 | Archivo datos históricos | 16-Jul | ⏳ Depende servidor |
+| 7 | ~~Módulo Outgoing (envíos)~~ | 16-Jul | ❌ Fuera de alcance (ReleaseOK cierra ciclo) |
+| 8 | ~~Archivo datos históricos~~ | 16-Jul | ❌ No aplica (automotriz retiene 7+ años, particionamiento cubre performance) |
 | 9 | ~~**ARQUITECTURA: Particionamiento PostgreSQL por mes**~~ | 16-Ago | ✅ 17-Ago |
 | ~~10~~ | ~~ARQUITECTURA: Módulo Reportes Masivos~~ | 16-Ago | ↑ Movido a Alta |
 | 9 | ~~Vista inventario WIP por ubicación~~ | 26-Jul | ✅ 17-Ago |
 | 10 | ~~Alertas paquetes no recibidos~~ | 26-Jul | ✅ 18-Ago |
-| 11 | **WebSockets tiempo real (socket.io)** - Notificaciones push | 18-Ago | ⏳ |
+| 11 | ~~**WebSockets tiempo real (socket.io)** - Notificaciones push~~ | 18-Ago | ✅ 26-Ago (completo: defectos, QAR, 8D, ECR, MRB) |
+| 12 | ~~**Reporte Trazabilidad por Estaciones** - Multi-estación seleccionable, serial, timestamp, defecto, resultado, usuario, info completa~~ | 26-Ago | ✅ 26-Ago |
 
 ---
 
@@ -74,6 +77,13 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Fix: repair_status NULL en defectos creados desde MRB (4 INSERT statements + 2 seeds) | 27-Ago |
+| ✅ Fix: Query location-codes/assign incluye repair_status IS NULL (defectos recién capturados) | 27-Ago |
+| ✅ Fix: Open Items filter excluye 'closed_rejected' y 'closed_not_adopted' para ECRs | 27-Ago |
+| ✅ WebSocket listeners agregados: HospitalDashboard (10 eventos), HospitalTransferPackages (3), MRBCampaigns (6), MRBCampaignDetail (5) | 27-Ago |
+| ✅ WebSocket events backend: mrb:created, mrb:updated, mrb:closed en mrbEndpoints.js | 27-Ago |
+| ✅ WebSocket event: hospital:location-assigned en locationCodesEndpoints.js | 27-Ago |
+| ✅ WebSockets: Eventos completos (defect:*, qar:*, 8d:*, ecr:*, mrb:*, package:*, spec:*, release:*, production:*, deviation:*) | 26-Ago |
 | ✅ ECR: Exportar PDF completo (captura todas las etapas + historial) | 26-Ago |
 | ✅ ECR: Modal centrado para confirmación de envío a aprobación | 26-Ago |
 | ✅ ECR: Ciclo completo con 1 solo aprobador (sin errores) | 26-Ago |
@@ -234,6 +244,20 @@
 | ✅ Inspección masiva MRB (950 OK, 50 NOK) | 17-Jul |
 | ✅ Grid configuración defectos | 06-Jul |
 | ✅ MRB: Ligar seriales a campaña desde listado | 11-Jul |
+
+---
+
+## Notas Sesión 27-Ago-2026
+
+### Completado hoy:
+1. **FIX repair_status NULL**: 4 INSERT en mrbEndpoints.js + 2 seed scripts no tenían repair_status. Corregidos + query para actualizar 59 registros existentes.
+2. **FIX location-codes/assign**: Query ahora incluye `repair_status IS NULL` para encontrar defectos recién capturados.
+3. **FIX Open Items ECR**: Filter ahora excluye 'closed_rejected' y 'closed_not_adopted'.
+4. **WebSocket listeners agregados**: HospitalDashboard, HospitalTransferPackages, MRBCampaigns, MRBCampaignDetail.
+5. **WebSocket events backend**: mrb:created, mrb:updated, mrb:closed, hospital:location-assigned.
+
+### Pendiente para mañana:
+- **WebSocket no actualiza en tiempo real entre ventanas**: Se agregaron logs de debug (`📡 Broadcasting:` y `🔌 Emitting`). Verificar que los eventos se emitan y que el frontend los reciba.
 
 ---
 

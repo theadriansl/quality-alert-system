@@ -3,6 +3,7 @@ const router = express.Router();
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 
 // ============================================================================
 // SPEC INSPECTION - Captura de inspección de especificaciones
@@ -180,6 +181,17 @@ router.post('/entries', authenticateToken, async (req, res) => {
       `, [serialNumber, partId]);
     }
 
+    // Emit WebSocket event
+    socketEvents.broadcast('spec:inspected', {
+      id: entry.id,
+      entryNumber,
+      serialNumber,
+      specId,
+      result,
+      stationId,
+      inspectedBy: req.user.id
+    });
+
     res.json({
       success: true,
       entry: transformToCamelCase(entry),
@@ -345,6 +357,16 @@ router.post('/bulk', authenticateToken, async (req, res) => {
         WHERE serial_number = $1 AND part_id = $2 AND inspection_status = 'PENDING'
       `, [serialNumber, partId]);
     }
+
+    // Emit WebSocket event
+    socketEvents.broadcast('spec:bulk-inspected', {
+      serialNumber,
+      stationId,
+      okCount,
+      nokCount,
+      total: entries.length,
+      inspectedBy: req.user.id
+    });
 
     res.json({
       success: true,

@@ -8,6 +8,7 @@ const { query, getClient } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
 const { sendMrbBulkNotifications } = require('../utils/emailService');
+const { socketEvents } = require('../config/socket');
 
 // Helper: check if user is admin or recipient of an MRB campaign
 async function isMrbAuthorized(userId, userRole, campaignId, recipientType = null) {
@@ -562,6 +563,15 @@ router.post('/:id/capture-ok', authenticateToken, async (req, res) => {
       shiftId ? [id, shiftId] : [id]
     );
 
+    // Emit WebSocket event
+    socketEvents.mrbInspection({
+      campaignId: parseInt(id),
+      campaignNumber: mrb.campaign_number,
+      serialNumber: serial,
+      result: 'OK',
+      inspectedBy: inspectorId
+    });
+
     res.json({
       success: true,
       mrb: transformToCamelCase(result.rows[0]),
@@ -742,8 +752,8 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
         part_id, defect_type_id, severity_id, stage_id, disposition_id,
         station_id, shift_id, inspector_id, captured_by_user_id, department_id,
         lot_number, serial_number, unit_id, downtime_minutes, notes, quantity,
-        mrb_campaign_id, status, affected_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'OPEN', $17)
+        mrb_campaign_id, status, affected_status, repair_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'OPEN', $17, 'OPEN')
       RETURNING *
     `, [
       effectivePartId,
@@ -837,6 +847,15 @@ router.post('/:id/capture-nok', authenticateToken, async (req, res) => {
        ${shiftId ? 'AND shift_id = $2' : ''}`,
       shiftId ? [id, shiftId] : [id]
     );
+
+    // Emit WebSocket event
+    socketEvents.mrbInspection({
+      campaignId: parseInt(id),
+      campaignNumber: updateResult.rows[0].campaign_number,
+      serialNumber: serial,
+      result: 'NOK',
+      inspectedBy: req.user.id
+    });
 
     res.json({
       success: true,
@@ -3197,6 +3216,14 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     }
 
+    // Emit WebSocket event
+    socketEvents.broadcast('mrb:created', {
+      campaignId: mrbId,
+      campaignNumber: alertNumber,
+      status: status,
+      createdBy: req.user.id
+    });
+
     res.json({
       success: true,
       mrb: transformToCamelCase(result.rows[0]),
@@ -3358,6 +3385,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
           );
         }
 
+        // Emit WebSocket event
+        socketEvents.broadcast('mrb:updated', {
+          campaignId: parseInt(id),
+          status: result.rows[0].status,
+          updatedBy: req.user.id
+        });
+
         // Return recipients for client-side mailto fallback
         return res.json({
           success: true,
@@ -3371,6 +3405,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
         });
       }
     }
+
+    // Emit WebSocket event
+    socketEvents.broadcast('mrb:updated', {
+      campaignId: parseInt(id),
+      status: result.rows[0].status,
+      updatedBy: req.user.id
+    });
 
     res.json({
       success: true,
@@ -3771,6 +3812,13 @@ router.post('/:id/respond', authenticateToken, async (req, res) => {
       WHERE r.mrb_campaign_id = $1 AND r.recipient_type = 'validation'
     `, [id]);
 
+    // Emit WebSocket event
+    socketEvents.broadcast('mrb:updated', {
+      campaignId: parseInt(id),
+      status: 'EN_PROCESO',
+      respondedBy: req.user.id
+    });
+
     res.json({
       success: true,
       mrb: transformToCamelCase(result.rows[0]),
@@ -3856,6 +3904,13 @@ router.post('/:id/validate', authenticateToken, async (req, res) => {
         );
       }
 
+      // Emit WebSocket event for closed campaign
+      socketEvents.broadcast('mrb:closed', {
+        campaignId: parseInt(id),
+        status: 'CERRADA',
+        validatedBy: req.user.id
+      });
+
       res.json({
         success: true,
         mrb: transformToCamelCase(result.rows[0]),
@@ -3887,6 +3942,14 @@ router.post('/:id/validate', authenticateToken, async (req, res) => {
         'INSERT INTO mrb_comments (mrb_campaign_id, user_id, comment, comment_type) VALUES ($1, $2, $3, $4)',
         [id, req.user.id, `Respuesta rechazada: ${rejectionReason || 'Sin motivo especificado'}`, 'rejection']
       );
+
+      // Emit WebSocket event for rejection
+      socketEvents.broadcast('mrb:updated', {
+        campaignId: parseInt(id),
+        status: 'EN_PROCESO',
+        rejected: true,
+        validatedBy: req.user.id
+      });
 
       res.json({
         success: true,
@@ -6004,8 +6067,8 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
         await query(`
           INSERT INTO defect_entries_v2 (
             entry_number, part_id, defect_type_id, disposition_id, quantity,
-            lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, captured_at, inspection_round, notes, captured_by_user_id
-          ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, NOW(), $10, $11, $8)
+            lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, captured_at, inspection_round, notes, captured_by_user_id, repair_status
+          ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, NOW(), $10, $11, $8, 'OPEN')
         `, [
           entryNumber, partId, defectTypeId, dispositionId,
           campaign.lot_number || null, serial, shiftId, inspectorId, id, inspectionRound, noteText
@@ -6057,8 +6120,8 @@ router.post('/:id/import-mass', authenticateToken, multer({ storage: multer.memo
           await query(`
             INSERT INTO defect_entries_v2 (
               entry_number, part_id, defect_type_id, disposition_id, quantity,
-              lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, captured_at, inspection_round, notes, captured_by_user_id
-            ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, NOW(), $10, $11, $8)
+              lot_number, serial_number, shift_id, inspector_id, mrb_campaign_id, captured_at, inspection_round, notes, captured_by_user_id, repair_status
+            ) VALUES ($1, $2, $3, $4, 1, $5, $6, $7, $8, $9, NOW(), $10, $11, $8, 'OPEN')
           `, [
             entryNumber, conflict.partId, defectTypeId, dispositionId,
             campaign.lot_number || null, conflict.serial, shiftId, inspectorId, id, conflict.newRound, noteText
@@ -6455,8 +6518,8 @@ router.post('/:id/import-tally', authenticateToken, multer({ storage: multer.mem
       await query(`
         INSERT INTO defect_entries_v2 (
           entry_number, client_id, project_id, part_id, defect_type_id,
-          serial_number, mrb_campaign_id, quantity, captured_by_user_id, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, 'open')
+          serial_number, mrb_campaign_id, quantity, captured_by_user_id, status, repair_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, 'open', 'OPEN')
         ON CONFLICT DO NOTHING
       `, [
         entry.entry_number,

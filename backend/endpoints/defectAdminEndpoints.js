@@ -6,6 +6,7 @@ const fs = require('fs');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 
 // ============================================================================
 // HELPER: Obtener defectos de un serial con info de estaciones
@@ -1278,6 +1279,17 @@ router.post('/entries', authenticateToken, async (req, res) => {
       `, [serial.trim(), partId]);
     }
 
+    // Emit WebSocket event
+    socketEvents.defectCreated({
+      id: defectEntry.id,
+      entryNumber: defectEntry.entry_number,
+      serialNumber: serial,
+      partId,
+      stationId,
+      status: initialRepairStatus,
+      createdBy: req.user.id
+    });
+
     res.json({
       success: true,
       entry: transformToCamelCase(defectEntry),
@@ -2221,6 +2233,13 @@ router.post('/entries/:id/repair-inline', authenticateToken, async (req, res) =>
       `, [defect.rows[0].unit_id, id, req.user.id]);
     }
 
+    // Emit WebSocket event
+    socketEvents.defectRepaired({
+      id: parseInt(id),
+      serialNumber: defect.rows[0].serial_number,
+      repairedBy: req.user.id
+    });
+
     res.json({
       success: true,
       message: 'Defecto marcado como reparado',
@@ -2293,6 +2312,13 @@ router.post('/entries/:id/release-inline', authenticateToken, async (req, res) =
       `, [defect.rows[0].unit_id]);
     }
 
+    // Emit WebSocket event
+    socketEvents.defectReleased({
+      id: parseInt(id),
+      serialNumber: defect.rows[0].serial_number,
+      releasedBy: req.user.id
+    });
+
     res.json({
       success: true,
       message: 'Defecto liberado',
@@ -2348,6 +2374,16 @@ router.post('/entries/:id/reject-inline', authenticateToken, async (req, res) =>
       `, [defect.rows[0].unit_id, id, req.user.id]);
     }
 
+    // Emit WebSocket event
+    socketEvents.broadcast('defect:rejected', {
+      id,
+      serialNumber: defect.rows[0].serial_number,
+      entryNumber: defect.rows[0].entry_number,
+      newStatus: 'OPEN',
+      rejectedBy: req.user.id,
+      type: 'inline'
+    });
+
     res.json({
       success: true,
       message: 'Reparación rechazada - defecto vuelve a OPEN',
@@ -2400,6 +2436,13 @@ router.post('/entries/:id/repair/start', authenticateToken, async (req, res) => 
         VALUES ($1, 'REPAIR_STARTED', 'defect_entries_v2', $2, 'Reparación iniciada', $3)
       `, [defect.rows[0].unit_id, id, req.user.id]);
     }
+
+    // Emit WebSocket event
+    socketEvents.broadcast('defect:repair-started', {
+      id: parseInt(id),
+      serialNumber: defect.rows[0].serial_number,
+      startedBy: req.user.id
+    });
 
     res.json({
       success: true,
@@ -2515,6 +2558,14 @@ router.post('/entries/:id/repair/complete', authenticateToken, async (req, res) 
         WHERE id = $1
       `, [defect.rows[0].unit_id]);
     }
+
+    // Emit WebSocket event
+    socketEvents.defectRepaired({
+      id: parseInt(id),
+      serialNumber: defect.rows[0].serial_number,
+      repairedBy: req.user.id,
+      requiresApproval
+    });
 
     res.json({
       success: true,
@@ -2774,6 +2825,16 @@ router.post('/entries/:id/release', authenticateToken, async (req, res) => {
       `, [defect.rows[0].unit_id]);
     }
 
+    // Emit WebSocket event
+    socketEvents.defectReleased({
+      id,
+      serialNumber: defect.rows[0].serial_number,
+      entryNumber: defect.rows[0].entry_number,
+      releasedBy: req.user.id,
+      requiresApproval,
+      status: newStatus
+    });
+
     res.json({
       success: true,
       entry: transformToCamelCase(result.rows[0]),
@@ -2843,6 +2904,17 @@ router.post('/bulk-reassign', authenticateToken, async (req, res) => {
       } catch (err) {
         console.error(`Error updating defect ${defectId}:`, err);
       }
+    }
+
+    // Emit WebSocket event for bulk reassign
+    if (updatedCount > 0) {
+      socketEvents.broadcast('defect:bulk-reassigned', {
+        defectIds,
+        newDepartmentId,
+        newDepartmentName: deptName,
+        count: updatedCount,
+        reassignedBy: req.user.id
+      });
     }
 
     res.json({
@@ -2953,6 +3025,17 @@ router.post('/entries/:id/reject', authenticateToken, async (req, res) => {
       }
     }
 
+    // Emit WebSocket event
+    socketEvents.broadcast('defect:rejected', {
+      id,
+      serialNumber: defect.rows[0].serial_number,
+      entryNumber: defect.rows[0].entry_number,
+      destination,
+      newStatus,
+      rejectedBy: req.user.id,
+      type: 'full'
+    });
+
     res.json({
       success: true,
       destination,
@@ -3010,6 +3093,16 @@ router.post('/entries/:id/approve', authenticateToken, async (req, res) => {
       VALUES ($1, $2, 'PENDING_APPROVAL', $3, $4, $5)
     `, [id, approved ? 'APPROVED' : 'REJECTED', newStatus, req.user.id, notes]);
 
+    // Emit WebSocket event
+    socketEvents.broadcast(approved ? 'defect:approved' : 'defect:rejected', {
+      id,
+      serialNumber: defect.rows[0].serial_number,
+      entryNumber: defect.rows[0].entry_number,
+      newStatus,
+      approvedBy: req.user.id,
+      approved
+    });
+
     res.json({
       success: true,
       entry: transformToCamelCase(result.rows[0])
@@ -3066,6 +3159,14 @@ router.post('/entries/:id/quarantine', authenticateToken, async (req, res) => {
         UPDATE unit_registry SET current_status = 'QUARANTINE' WHERE id = $1
       `, [defect.rows[0].unit_id]);
     }
+
+    // Emit WebSocket event
+    socketEvents.broadcast('defect:quarantined', {
+      id,
+      serialNumber: defect.rows[0].serial_number,
+      entryNumber: defect.rows[0].entry_number,
+      quarantinedBy: req.user.id
+    });
 
     res.json({
       success: true,
@@ -3125,6 +3226,14 @@ router.post('/entries/:id/scrap', authenticateToken, async (req, res) => {
         UPDATE unit_registry SET current_status = 'SCRAPPED' WHERE id = $1
       `, [defect.rows[0].unit_id]);
     }
+
+    // Emit WebSocket event
+    socketEvents.broadcast('defect:scrapped', {
+      id,
+      serialNumber: defect.rows[0].serial_number,
+      entryNumber: defect.rows[0].entry_number,
+      scrappedBy: req.user.id
+    });
 
     res.json({
       success: true,

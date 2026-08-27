@@ -6,6 +6,7 @@ const fs = require('fs');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 
 // ============================================================================
 // FILE UPLOAD CONFIGURATION FOR DEVIATIONS
@@ -235,6 +236,15 @@ router.post('/', authenticateToken, checkDeviationPermission, async (req, res) =
     // Fetch complete data with joins
     const fullResult = await query(`SELECT * FROM v_deviations WHERE id = $1`, [deviationId]);
 
+    // Emit WebSocket event
+    socketEvents.broadcast('deviation:created', {
+      id: deviationId,
+      deviationNumber: fullResult.rows[0].deviation_number,
+      deviationType,
+      clientId,
+      createdBy: req.user.id
+    });
+
     res.json({
       success: true,
       deviation: transformToCamelCase(fullResult.rows[0]),
@@ -310,6 +320,14 @@ router.put('/:id', authenticateToken, checkDeviationPermission, async (req, res)
     }
 
     const fullResult = await query(`SELECT * FROM v_deviations WHERE id = $1`, [id]);
+
+    // Emit WebSocket event
+    socketEvents.broadcast('deviation:updated', {
+      id: parseInt(id),
+      deviationNumber: fullResult.rows[0].deviation_number,
+      status,
+      updatedBy: req.user.id
+    });
 
     res.json({
       success: true,

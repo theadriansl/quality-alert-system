@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { emitToUser } = require('../config/socket');
 
 // ============================================================================
 // GET /hospital-roles - Listar todos los usuarios con roles de hospital
@@ -180,6 +181,13 @@ async function assignHospitalRole(req, res) {
         RETURNING *
       `, [assignedStations, canManageRoles, canManageDeviations, canScrap, canUploadProduction, notes, userId, hospitalRole]);
 
+      // Emit WebSocket event
+      emitToUser(userId, 'user:hospital-role-updated', {
+        userId,
+        hospitalRole,
+        requiresRefresh: true
+      });
+
       return res.json({
         success: true,
         message: 'Rol de hospital actualizado',
@@ -193,6 +201,13 @@ async function assignHospitalRole(req, res) {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `, [userId, hospitalRole, assignedStations, canManageRoles, canManageDeviations, canScrap, canUploadProduction, notes, createdBy]);
+
+    // Emit WebSocket event
+    emitToUser(userId, 'user:hospital-role-assigned', {
+      userId,
+      hospitalRole,
+      requiresRefresh: true
+    });
 
     res.status(201).json({
       success: true,
@@ -236,6 +251,14 @@ async function updateHospitalRole(req, res) {
       });
     }
 
+    // Emit WebSocket event
+    const userId = result.rows[0].user_id;
+    emitToUser(userId, 'user:hospital-role-updated', {
+      userId,
+      hospitalRole: result.rows[0].hospital_role,
+      requiresRefresh: true
+    });
+
     res.json({
       success: true,
       message: 'Rol de hospital actualizado',
@@ -270,6 +293,14 @@ async function deleteHospitalRole(req, res) {
         message: 'Rol de hospital no encontrado'
       });
     }
+
+    // Emit WebSocket event
+    const userId = result.rows[0].user_id;
+    emitToUser(userId, 'user:hospital-role-revoked', {
+      userId,
+      hospitalRole: result.rows[0].hospital_role,
+      requiresRefresh: true
+    });
 
     res.json({
       success: true,

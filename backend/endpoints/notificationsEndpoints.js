@@ -103,7 +103,7 @@ router.get('/my-pending', authenticateToken, async (req, res) => {
         e.closure_approval_status,
         e.created_at
       FROM ecr_reports e
-      WHERE e.status NOT IN ('cancelled', 'closed')
+      WHERE e.status NOT IN ('cancelled', 'closed', 'closed_rejected', 'closed_not_adopted')
         AND (
           -- Creador: ve sus ECRs abiertos
           e.created_by = $1

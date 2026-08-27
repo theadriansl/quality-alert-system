@@ -6,6 +6,7 @@ const fs = require('fs');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth');
 const { transformToCamelCase } = require('../utils/caseTransform');
+const { socketEvents } = require('../config/socket');
 
 // ============================================================================
 // HELPER: GET USER FROZEN NAME
@@ -1274,6 +1275,15 @@ router.post('/', authenticateToken, async (req, res) => {
       'INSERT INTO qar_comments (qar_id, user_id, user_name, comment, comment_type) VALUES ($1, $2, $3, $4, $5)',
       [qarId, req.user.id, reportedByName, 'QAR emitido', 'status_change']
     );
+
+    // Emit WebSocket event
+    socketEvents.qarCreated({
+      id: qarId,
+      alertNumber,
+      title,
+      assignedTo,
+      createdBy: req.user.id
+    });
 
     res.json({
       success: true,

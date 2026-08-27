@@ -31,6 +31,7 @@ import {
 } from '../services/hospitalDashboardService';
 import { checkMyHospitalPermissions, cacheHospitalPermissions, getCachedHospitalPermissions } from '../services/hospitalRolesService';
 import CustomDashboard from '../components/CustomDashboard';
+import { useSocket } from '../context/SocketContext';
 
 const COLORS = {
   green: '#16a34a',
@@ -1033,6 +1034,7 @@ const HospitalDashboard = () => {
   const { language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { subscribe } = useSocket();
   const PRESETS = getPresets(language);
   const stored = getStoredFilters();
 
@@ -1516,6 +1518,26 @@ const HospitalDashboard = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // WebSocket: actualizar dashboard en tiempo real
+  useEffect(() => {
+    const events = [
+      'hospital:location-assigned',
+      'defect:created',
+      'defect:repaired',
+      'defect:released',
+      'defect:rejected',
+      'defect:repair-started',
+      'defect:approved',
+      'defect:quarantined',
+      'defect:scrapped',
+      'defect:bulk-reassigned'
+    ];
+    const unsubscribes = events.map(event =>
+      subscribe(event, () => loadData())
+    );
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe, loadData]);
 
   // ============================================================================
   // EXPORTACIÓN A PDF

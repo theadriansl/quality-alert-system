@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const STORAGE_KEY = 'openItems_dismissed';
@@ -22,6 +23,7 @@ const HomeNotifications = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
   const { language } = useLanguage();
+  const { subscribe } = useSocket();
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [counts, setCounts] = useState({ qar: 0, eightD: 0, ecr: 0, total: 0 });
@@ -69,6 +71,15 @@ const HomeNotifications = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // WebSocket: Actualizar cuando hay cambios en QAR, 8D, ECR
+  useEffect(() => {
+    const events = ['qar:created', '8d:created', '8d:updated', 'ecr:created', 'ecr:approved'];
+    const unsubscribes = events.map(event =>
+      subscribe(event, () => load())
+    );
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe, load]);
 
   const getItemKey = (item) => `${item.type}-${item.id}`;
 

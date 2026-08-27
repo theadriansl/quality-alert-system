@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import MRBShiftReport from './MRBShiftReport';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 import {
   AlertTriangle, ArrowLeft, Send, Check, Clock, User, MapPin,
   FileText, Camera, MessageSquare, CheckCircle, XCircle, Users,
@@ -76,6 +77,7 @@ const MRBCampaignDetail = () => {
   const { id } = useParams();
   const { theme: t } = useTheme();
   const { t: tr, language, changeLanguage } = useLanguage();
+  const { subscribe } = useSocket();
   const API_URL = 'http://localhost:5000';
 
   // Traducciones locales
@@ -268,6 +270,18 @@ const MRBCampaignDetail = () => {
     loadMrb();
     loadCurrentUser();
   }, [id]);
+
+  // WebSocket: actualizar en tiempo real
+  useEffect(() => {
+    const events = ['mrb:updated', 'mrb:inspection', 'mrb:closed', 'package:created', 'package:received'];
+    const unsubscribes = events.map(event => subscribe(event, (data) => {
+      if (!data.campaignId || data.campaignId === parseInt(id)) {
+        loadMrb();
+      }
+    }));
+    return () => unsubscribes.forEach(unsub => unsub());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscribe, id]);
 
   const loadCurrentUser = async () => {
     try {

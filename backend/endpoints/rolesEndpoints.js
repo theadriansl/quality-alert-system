@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { transformToCamelCase, transformToSnakeCase } = require('../utils/caseTransform');
+const { socketEvents, emitToUser } = require('../config/socket');
 
 // ============================================================================
 // MIDDLEWARE: Verificar permisos por módulo
@@ -405,6 +406,15 @@ async function assignRoleToUser(req, res) {
     const user = userExists.rows[0];
     const role = roleExists.rows[0];
 
+    // Emit WebSocket event to affected user
+    emitToUser(userId, 'user:role-assigned', {
+      userId,
+      roleId,
+      roleName: role.name,
+      permissions: role.permissions,
+      requiresRefresh: true
+    });
+
     res.json({
       success: true,
       message: `Rol "${role.name}" asignado a ${user.first_name} ${user.last_name}`
@@ -440,6 +450,13 @@ async function revokeRoleFromUser(req, res) {
         message: 'Asignación no encontrada'
       });
     }
+
+    // Emit WebSocket event to affected user
+    emitToUser(userId, 'user:role-revoked', {
+      userId,
+      roleId,
+      requiresRefresh: true
+    });
 
     res.json({
       success: true,

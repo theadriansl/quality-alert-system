@@ -1,6 +1,7 @@
 const { query } = require('../config/database');
 const { transformToCamelCase, transformToSnakeCase } = require('../utils/caseTransform');
 const bcrypt = require('bcryptjs');
+const { socketEvents, emitToUser } = require('../config/socket');
 
 // Middleware to require admin role
 async function requireAdmin(req, res, next) {
@@ -218,6 +219,25 @@ async function updateUser(req, res) {
     }
 
     const updatedUser = transformToCamelCase(result.rows[0]);
+
+    // Emit WebSocket event to the affected user
+    // Detect if critical fields changed (role, permissions, system_role)
+    const criticalFieldsChanged = snakeData.system_role || snakeData.role ||
+                                   snakeData.department_id || snakeData.permissions;
+
+    emitToUser(userId, 'user:updated', {
+      userId,
+      changes: Object.keys(snakeData),
+      criticalChange: !!criticalFieldsChanged,
+      requiresRefresh: !!criticalFieldsChanged
+    });
+
+    // Also broadcast to admins
+    socketEvents.broadcast('user:modified', {
+      userId,
+      userName: `${updatedUser.firstName} ${updatedUser.lastName}`,
+      modifiedBy: req.user.id
+    });
 
     res.json({
       success: true,
@@ -439,6 +459,14 @@ async function createUser(req, res) {
     ]);
 
     const newUser = transformToCamelCase(result.rows[0]);
+
+    // Emit WebSocket event
+    socketEvents.broadcast('user:created', {
+      userId: newUser.id,
+      userName: `${newUser.firstName || ''} ${newUser.lastName || ''}`.trim(),
+      email: newUser.email,
+      createdBy: req.user?.id
+    });
 
     res.status(201).json({
       success: true,

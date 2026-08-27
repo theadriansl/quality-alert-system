@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw, FileText, List, ChevronDown, Download, Calendar } from 'lucide-react';
 
 
@@ -77,6 +78,7 @@ const MRBCampaigns = () => {
   const navigate = useNavigate();
   const { theme: currentTheme } = useTheme();
   const { language } = useLanguage();
+  const { subscribe } = useSocket();
   const API_URL = 'http://localhost:5000';
 
   // Traducciones locales
@@ -204,6 +206,14 @@ const MRBCampaigns = () => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterStatus]);
+
+  // WebSocket: actualizar en tiempo real
+  useEffect(() => {
+    const events = ['mrb:created', 'mrb:updated', 'mrb:inspection', 'mrb:closed', 'package:created', 'package:received'];
+    const unsubscribes = events.map(event => subscribe(event, () => loadData()));
+    return () => unsubscribes.forEach(unsub => unsub());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscribe]);
 
   const loadData = async () => {
     try {
