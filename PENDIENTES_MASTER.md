@@ -77,6 +77,12 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Marcadores diarios Gantt: Restaurados (5px, t.accent, hoy t.primary, tooltip detalle) | 27-Ago |
+| ✅ Fix línea HOY Gantt: z-index 1, 1px, t.textMuted, etiqueta solo en header | 27-Ago |
+| ✅ Fix porcentaje barra Gantt: Fuera de barra (6px derecha), mono 10.5px | 27-Ago |
+| ✅ Fix botones toolbar Gantt: "Hoy" t.primary, resto borde neutro | 27-Ago |
+| ✅ Rediseño Vista Lista WorkloadManager: Tabla 44px, StatusChip, ProgressBar, 2 columnas expandida | 27-Ago |
+| ✅ GanttChart responsive: Panel colapsa columnas (1280px/1024px breakpoints) | 27-Ago |
 | ✅ Rediseño GanttChart: Header 2 niveles, agrupamiento, barras duales, panel 5 columnas, leyenda | 27-Ago |
 | ✅ Fix: repair_status NULL en defectos creados desde MRB (4 INSERT statements + 2 seeds) | 27-Ago |
 | ✅ Fix: Query location-codes/assign incluye repair_status IS NULL (defectos recién capturados) | 27-Ago |
@@ -272,6 +278,20 @@
     - Helpers puros: getTaskGroup(), calcCompliance()
     - Filas compactas de 40px
     - Removida columna ComplianceCell (ahora integrada en panel izquierdo)
+11. **GanttChart responsive**: Panel izquierdo colapsa columnas según ancho de ventana (≥1280px todas, ≥1024px sin fechas/estado, <1024px solo actividad).
+12. **Rediseño Vista Lista WorkloadManager**:
+    - Nuevo archivo `ListViewComponents.js` con componentes puros de presentación
+    - De tarjetas a tabla con filas 44px
+    - Header de columnas: Actividad · Inicio·Fin · Avance · Real/Esp · Estado
+    - StatusChip discreto (punto 5px + texto)
+    - ProgressBar con marca de esperado
+    - Fila expandida en dos columnas (Meta + Historial/Evidencia)
+    - Tabs con subrayado 2px (no pastillas)
+    - Fix "undefined undefined" en archivos de evidencia
+13. **Fix línea HOY en Gantt**: z-index 1 (detrás de barras), 1px, color t.textMuted, etiqueta solo en header.
+14. **Fix porcentaje barra Gantt**: Movido fuera de la barra (6px a la derecha), mono 10.5px, t.textMuted.
+15. **Fix botones toolbar Gantt**: "Hoy" primario (t.primary), resto secundarios (borde neutro).
+16. **Marcadores diarios Gantt**: Restaurados debajo de barra real (5px alto), color t.accent (hoy t.primary), tooltip con detalle.
 
 ---
 

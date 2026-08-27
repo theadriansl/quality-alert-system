@@ -97,6 +97,8 @@ const LAYOUT = {
   PRIORITY_BAR_WIDTH: 3,    // Barra de prioridad
   PLAN_BAR_HEIGHT: 7,       // Barra planeada
   REAL_BAR_HEIGHT: 9,       // Barra real
+  DAILY_MARKER_HEIGHT: 5,   // Marcadores diarios
+  BAR_GAP: 2,               // Separación entre bandas
   BAR_RADIUS: 2             // Radio de barras
 };
 
@@ -253,33 +255,48 @@ const getStyles = (t, panelWidth = 470) => ({
     fontWeight: '500',
     lineHeight: 1
   },
-  // Línea de HOY
+  // Línea de HOY (detrás de las barras)
   todayLine: {
     position: 'absolute',
-    top: 0,
+    top: `${LAYOUT.HEADER_HEIGHT}px`,  // Empieza debajo del header
     bottom: 0,
-    width: '2px',
-    background: t.error,
-    zIndex: 15,
+    width: '1px',
+    background: t.textMuted,
+    opacity: 0.5,
+    zIndex: 1,  // Detrás de las barras
     pointerEvents: 'none'
   },
+  // Etiqueta HOY (solo en el header)
   todayLabel: {
     position: 'absolute',
-    top: '2px',
+    top: '4px',
     left: '50%',
     transform: 'translateX(-50%)',
     background: t.error,
     color: 'white',
-    padding: '1px 6px',
+    padding: '2px 6px',
     borderRadius: '2px',
     fontSize: '9px',
     fontWeight: '700',
     fontFamily: "'IBM Plex Mono', monospace",
     whiteSpace: 'nowrap'
   },
-  // Grid de tareas
+  // Contenedor de etiqueta HOY en el header
+  todayLabelContainer: {
+    position: 'absolute',
+    top: 0,
+    height: `${LAYOUT.HEADER_HEIGHT}px`,
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    zIndex: 25,
+    pointerEvents: 'none'
+  },
+  // Grid de tareas (encima de la línea de HOY)
   grid: {
-    background: t.bgCard
+    background: t.bgCard,
+    position: 'relative',
+    zIndex: 2
   },
   // Banda de grupo
   groupBand: {
@@ -442,12 +459,30 @@ const getStyles = (t, panelWidth = 470) => ({
     justifyContent: 'flex-end',
     paddingRight: '4px'
   },
+  // Label de porcentaje FUERA de la barra (a la derecha)
   barRealLabel: {
-    fontSize: '9px',
-    fontWeight: '600',
+    position: 'absolute',
+    left: '100%',
+    marginLeft: '6px',
+    fontSize: '10.5px',
+    fontWeight: '500',
     fontFamily: "'IBM Plex Mono', monospace",
-    color: 'white',
-    textShadow: '0 1px 1px rgba(0,0,0,0.3)'
+    color: t.textMuted,
+    whiteSpace: 'nowrap'
+  },
+  // Marcador de progreso diario
+  dailyMarker: {
+    position: 'absolute',
+    height: `${LAYOUT.DAILY_MARKER_HEIGHT}px`,
+    borderRadius: '1px',
+    cursor: 'default'
+  },
+  // Contenedor de marcadores diarios
+  dailyMarkersContainer: {
+    position: 'relative',
+    height: `${LAYOUT.DAILY_MARKER_HEIGHT}px`,
+    width: '100%',
+    marginTop: `${LAYOUT.BAR_GAP}px`
   },
   // Leyenda al pie
   legend: {
@@ -947,8 +982,8 @@ const GanttRow = memo(({
             />
           </div>
 
-          {/* BARRA REAL (abajo, color) - solo si no es pending y tiene progreso */}
-          <div style={{ position: 'relative', height: `${LAYOUT.REAL_BAR_HEIGHT}px`, width: '100%' }}>
+          {/* BARRA REAL (medio, color) - solo si no es pending y tiene progreso */}
+          <div style={{ position: 'relative', height: `${LAYOUT.REAL_BAR_HEIGHT}px`, width: '100%', marginTop: `${LAYOUT.BAR_GAP}px` }}>
             {!isPending && task.dailyProgress && task.dailyProgress.length > 0 ? (
               (() => {
                 // Calcular rango de barras reales (desde primer progreso hasta último)
@@ -975,20 +1010,54 @@ const GanttRow = memo(({
                       ...styles.barReal,
                       left: `${leftPx}px`,
                       width: `${widthPx}px`,
-                      background: barColor
+                      background: barColor,
+                      position: 'relative'
                     }}
                     title={`Real: ${compliance.actualProg}%`}
                   >
-                    {widthPx > 30 && (
-                      <span style={styles.barRealLabel}>
-                        {compliance.actualProg}%
-                      </span>
-                    )}
+                    {/* Label de porcentaje FUERA de la barra */}
+                    <span style={styles.barRealLabel}>
+                      {compliance.actualProg}%
+                    </span>
                   </div>
                 );
               })()
             ) : null}
           </div>
+
+          {/* MARCADORES DIARIOS (abajo) - solo si tiene daily_progress */}
+          {task.dailyProgress && task.dailyProgress.length > 0 && (
+            <div style={styles.dailyMarkersContainer}>
+              {task.dailyProgress.map((entry, idx) => {
+                const entryDate = parseLocalDate(entry.date);
+                const colIndex = columns.findIndex(col => col.toDateString() === entryDate.toDateString());
+
+                if (colIndex < 0) return null;
+
+                // Verificar si es el día de hoy
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isToday = entryDate.toDateString() === today.toDateString();
+
+                // Formatear fecha para el tooltip
+                const dateStr = entryDate.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+                const tooltipText = `${dateStr} · ${entry.activities || 'Sin descripción'} · ${entry.hours || 0}h · +${entry.progress}% → ${entry.accumulated || entry.progress}%`;
+
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      ...styles.dailyMarker,
+                      left: `${colIndex * cellWidth}px`,
+                      width: `${cellWidth - 1}px`,
+                      background: isToday ? t.primary : t.accent
+                    }}
+                    title={tooltipText}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1601,17 +1670,16 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
             disabled={todayIndex < 0}
             style={{
               padding: '6px 12px',
-              backgroundColor: todayIndex >= 0 ? t.accent : t.bgPanel,
-              border: '1px solid',
-              borderColor: todayIndex >= 0 ? t.accent : t.border,
+              backgroundColor: todayIndex >= 0 ? t.primary : t.bgPanel,
+              border: `1px solid ${todayIndex >= 0 ? t.primary : t.border}`,
               borderRadius: '6px',
               cursor: todayIndex >= 0 ? 'pointer' : 'not-allowed',
               fontSize: '12px',
               fontWeight: '600',
-              color: todayIndex >= 0 ? 'white' : '#9ca3af',
-                          }}
+              color: todayIndex >= 0 ? 'white' : t.textDim
+            }}
             title="Ir a HOY">
-             Hoy
+            Hoy
           </button>
           <button
             onClick={scrollToEnd}
@@ -1726,16 +1794,26 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
             <TimelineHeader columns={columns} cellWidth={cellWidth} t={t} />
           </div>
 
-          {/* Línea de HOY */}
+          {/* Etiqueta HOY (solo en el header) */}
+          {todayIndex >= 0 && (
+            <div
+              style={{
+                ...styles.todayLabelContainer,
+                left: `${panelWidth + todayIndex * cellWidth + cellWidth / 2}px`
+              }}
+            >
+              <div style={styles.todayLabel}>HOY</div>
+            </div>
+          )}
+
+          {/* Línea de HOY (detrás de las barras) */}
           {todayIndex >= 0 && (
             <div
               style={{
                 ...styles.todayLine,
                 left: `${panelWidth + todayIndex * cellWidth + cellWidth / 2}px`
               }}
-            >
-              <div style={styles.todayLabel}>HOY</div>
-            </div>
+            />
           )}
 
           {/* Grid con tareas agrupadas */}

@@ -8,6 +8,12 @@ import { useLanguage } from '../context/LanguageContext';
 import GanttChart from '../components/8D/GanttChart';
 import UserFormModal from '../components/UserFormModal';
 import WorkloadDashboard from '../components/WorkloadDashboard';
+import {
+  ListHeader,
+  ListTabs,
+  ActivityRowCollapsed,
+  ActivityRowExpanded
+} from '../components/Workload/ListViewComponents';
 
 // ============================================================================
 // OrgChart Component - Horizontal layout with auto-adjusting boxes
@@ -4755,810 +4761,80 @@ const WorkloadManager = () => {
               </div>
             ) : (
               <div style={styles.card}>
-                {/* Tabs: Pendientes / Completadas */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '16px',
-                  borderBottom: `2px solid ${t.border}`,
-                  paddingBottom: '0'
-                }}>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                  <button
-                    onClick={() => setActivityStatusTab('pending')}
-                    style={{
-                      padding: '10px 20px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      backgroundColor: activityStatusTab === 'pending' ? `${t.warning}15` : 'transparent',
-                      color: activityStatusTab === 'pending' ? t.warning : t.textMuted,
-                      border: 'none',
-                      borderBottom: activityStatusTab === 'pending' ? '3px solid ${t.warning}' : '3px solid transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '-2px',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                     Pendientes
-                    <span style={{
-                      backgroundColor: activityStatusTab === 'pending' ? t.warning : t.textMuted,
-                      color: 'white',
-                      padding: '2px 8px',
-                      borderRadius: '10px',
-                      fontSize: '12px',
-                      fontWeight: '700'
-                    }}>
-                      {pendingActivities.length}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setActivityStatusTab('completed')}
-                    style={{
-                      padding: '10px 20px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      backgroundColor: activityStatusTab === 'completed' ? `${t.success}15` : 'transparent',
-                      color: activityStatusTab === 'completed' ? t.success : t.textMuted,
-                      border: 'none',
-                      borderBottom: activityStatusTab === 'completed' ? '3px solid ${t.success}' : '3px solid transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '-2px',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                     Completadas
-                    <span style={{
-                      backgroundColor: activityStatusTab === 'completed' ? t.success : t.textMuted,
-                      color: 'white',
-                      padding: '2px 8px',
-                      borderRadius: '10px',
-                      fontSize: '12px',
-                      fontWeight: '700'
-                    }}>
-                      {completedActivities.length}
-                    </span>
-                  </button>
-                  </div>
-                  {/* Collapse/Expand All Button */}
-                  {displayedActivities.length > 0 && (
-                    <button
-                      onClick={() => {
-                        const allCollapsed = displayedActivities.every(a => collapsedActivities[a.id]);
-                        toggleCollapseAll(displayedActivities, !allCollapsed);
-                      }}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        backgroundColor: t.bgPanel,
-                        color: t.text,
-                        border: `1px solid ${t.border}`,
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        marginBottom: '4px',
-                        transition: 'all 0.2s'
-                      }}
-                      title={displayedActivities.every(a => collapsedActivities[a.id]) ? 'Expandir todas' : 'Colapsar todas'}
-                    >
-                      {displayedActivities.every(a => collapsedActivities[a.id]) ? (
-                        <> Expandir Todo</>
-                      ) : (
-                        <>▼ Colapsar Todo</>
-                      )}
-                    </button>
-                  )}
-                </div>
+                {/* Tabs con subrayado - usando componente */}
+                <ListTabs
+                  activeTab={activityStatusTab}
+                  pendingCount={pendingActivities.length}
+                  completedCount={completedActivities.length}
+                  onTabChange={setActivityStatusTab}
+                  onCollapseAll={() => {
+                    const allCollapsed = displayedActivities.every(a => collapsedActivities[a.id]);
+                    toggleCollapseAll(displayedActivities, !allCollapsed);
+                  }}
+                  allCollapsed={displayedActivities.every(a => collapsedActivities[a.id])}
+                  t={t}
+                />
 
                 {displayedActivities.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
                     {activityStatusTab === 'pending'
-                      ? ' No hay actividades pendientes'
+                      ? 'No hay actividades pendientes'
                       : 'No hay actividades completadas aún'}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ border: `1px solid ${t.border}`, borderRadius: '6px', overflow: 'hidden' }}>
+                    {/* Header de tabla */}
+                    <ListHeader t={t} />
+
+                    {/* Filas de actividades */}
                     {displayedActivities.map(activity => {
-                      // Format dates nicely
-                      const formatShortDate = (dateStr) => {
-                        if (!dateStr) return '-';
-                        const d = new Date(dateStr);
-                        return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-                      };
+                      const activityCompliance = calculateCompliance([activity]);
+                      const isCollapsed = collapsedActivities[activity.id];
+
                       return (
-                      <div key={activity.id} style={{
-                        padding: '16px',
-                        backgroundColor: activity.status === 'cancelled' ? t.bgPanel : t.bg,
-                        borderRadius: '8px',
-                        borderLeft: `4px solid ${activity.status === 'cancelled' ? t.textMuted : (activity.kpi_color || t.textMuted)}`,
-                        opacity: activity.status === 'cancelled' ? 0.7 : 1
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                              <button
-                                onClick={() => toggleActivityCollapse(activity.id)}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '2px',
-                                  fontSize: '12px',
-                                  color: t.textMuted,
-                                  transition: 'transform 0.2s',
-                                  transform: collapsedActivities[activity.id] ? 'rotate(-90deg)' : 'rotate(0deg)'
-                                }}
-                                title={collapsedActivities[activity.id] ? 'Expandir' : 'Colapsar'}
-                              >
-                                ▼
-                              </button>
-                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '600', textDecoration: activity.status === 'cancelled' ? 'line-through' : 'none', color: activity.status === 'cancelled' ? t.textMuted : 'inherit' }}>
-                                {activity.title}
-                              </h4>
-                              {activity.source_type === '8D' && (
-                                <span style={{
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  fontSize: '10px',
-                                  fontWeight: '600',
-                                  backgroundColor: t.error,
-                                  color: 'white'
-                                }}>
-                                  8D
-                                </span>
-                              )}
-                              {activity.is_recurring && (
-                                <span style={{
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  fontSize: '10px',
-                                  fontWeight: '600',
-                                  backgroundColor: t.accent,
-                                  color: 'white'
-                                }}>
-                                   {activity.frequency === 'weekly' ? 'SEM' : activity.frequency === 'biweekly' ? 'QUIN' : activity.frequency === 'monthly' ? 'MEN' : 'REC'}
-                                </span>
-                              )}
-                              {activity.source_type === '8D' && !activity.estimated_hours && (
-                                <span style={{
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  fontSize: '10px',
-                                  fontWeight: '600',
-                                  backgroundColor: `${t.warning}15`,
-                                  color: t.warning,
-                                  border: '1px solid ${t.warning}'
-                                }}>
-                                   Sin horas
-                                </span>
-                              )}
-                            </div>
+                        <React.Fragment key={activity.id}>
+                          {/* Fila colapsada */}
+                          <ActivityRowCollapsed
+                            activity={activity}
+                            compliance={activityCompliance}
+                            isCollapsed={isCollapsed}
+                            onToggleCollapse={() => toggleActivityCollapse(activity.id)}
+                            onEdit={() => { setEditingActivity(activity); setShowActivityModal(true); }}
+                            onFeedback={() => { setSelectedActivityForFeedback(activity); setShowSupervisorFeedbackModal(true); }}
+                            onDelete={() => handleDeleteActivity(activity.id)}
+                            canEdit={canEdit}
+                            t={t}
+                          />
 
-                            {/* Collapsible Content */}
-                            {!collapsedActivities[activity.id] && (
-                            <>
-                            {/* Row 1: Person & Project */}
-                            <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: t.text, marginBottom: '4px' }}>
-                              <span> {activity.assigned_to_name || 'Sin asignar'}</span>
-                              {activity.project_name && <span> {activity.project_name}</span>}
-                            </div>
-                            {/* Row 2: KPI, Dates, Hours, Weight */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: t.textMuted }}>
-                              <span style={{ backgroundColor: activity.kpi_color ? `${activity.kpi_color}20` : t.bg, padding: '2px 6px', borderRadius: '4px' }}>
-                                {activity.kpi_icon || ''} {activity.kpi_name || 'Sin KPI'}
-                              </span>
-                              <span> {formatShortDate(activity.start_date)} → {formatShortDate(activity.end_date)}</span>
-                              {(activity.estimated_hours > 0 || activity.actual_hours > 0) && (
-                                <span style={{
-                                  color: activity.actual_hours > activity.estimated_hours ? t.error : t.text
-                                }}>
-                                   {activity.actual_hours || 0}h / {activity.estimated_hours || '?'}h
-                                  {activity.actual_hours > 0 && activity.estimated_hours > 0 && (
-                                    activity.actual_hours > activity.estimated_hours
-                                      ? ` (+${(activity.actual_hours - activity.estimated_hours).toFixed(1)})`
-                                      : ` (-${(activity.estimated_hours - activity.actual_hours).toFixed(1)})`
-                                  )}
-                                </span>
-                              )}
-                              {activity.weight_percent > 0 && (
-                                <span style={{ backgroundColor: `${t.warning}15`, padding: '2px 6px', borderRadius: '4px', color: t.warning }}>
-                                   {activity.weight_percent}%
-                                </span>
-                              )}
-                            </div>
-                            {/* Progress Bar with Compliance (Real vs Expected) */}
-                            {(() => {
-                              const activityCompliance = calculateCompliance([activity]);
-                              const isOnTrack = activityCompliance.real >= activityCompliance.expected;
-                              return (
-                                <div style={{ marginTop: '10px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <span style={{ fontSize: '12px', color: t.textMuted, minWidth: '60px' }}>Progreso:</span>
-                                    <div style={{
-                                      flex: 1,
-                                      height: '8px',
-                                      backgroundColor: t.bgPanel,
-                                      borderRadius: '4px',
-                                      overflow: 'hidden',
-                                      position: 'relative'
-                                    }}>
-                                      {/* Expected progress marker */}
-                                      <div style={{
-                                        position: 'absolute',
-                                        left: `${activityCompliance.expected}%`,
-                                        top: '-2px',
-                                        bottom: '-2px',
-                                        width: '2px',
-                                        backgroundColor: t.textDim,
-                                        zIndex: 2
-                                      }} />
-                                      {/* Real progress bar */}
-                                      <div style={{
-                                        width: `${activity.progress || 0}%`,
-                                        height: '100%',
-                                        backgroundColor: isOnTrack ? t.success : t.error,
-                                        borderRadius: '4px',
-                                        transition: 'width 0.3s ease'
-                                      }} />
-                                    </div>
-                                    <span style={{
-                                      minWidth: '90px',
-                                      textAlign: 'right',
-                                      fontSize: '13px',
-                                      fontWeight: '600',
-                                      color: isOnTrack ? t.success : t.error
-                                    }}>
-                                      {activityCompliance.real}% / {activityCompliance.expected}%
-                                    </span>
-                                  </div>
-                                  <div style={{ fontSize: '10px', color: t.textMuted, textAlign: 'right', marginTop: '2px' }}>
-                                    Real / Esperado
-                                  </div>
-                                </div>
-                              );
-                            })()}
-
-                            {/* Activity Log Section (like ECR-3) */}
-                            <div style={{ marginTop: '12px', padding: '12px', backgroundColor: t.bg, borderRadius: '6px', border: `1px solid ${t.border}` }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: collapsedHistory[activity.id] ? '0' : '8px' }}>
-                                <div
-                                  onClick={() => setCollapsedHistory(prev => {
-                                    const newState = { ...prev, [activity.id]: !prev[activity.id] };
-                                    localStorage.setItem('workload_collapsed_history', JSON.stringify(newState));
-                                    return newState;
-                                  })}
-                                  style={{ fontSize: '12px', fontWeight: '600', color: t.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', userSelect: 'none' }}
-                                >
-                                  <span style={{ transition: 'transform 0.2s', transform: collapsedHistory[activity.id] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-block' }}>▼</span>
-                                   Historial de Actividades {activity.daily_progress && activity.daily_progress.length > 0 && `(${activity.daily_progress.length})`}
-                                </div>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); toggleActivityLogForm(activity.id); }}
-                                  style={{
-                                    padding: '4px 8px',
-                                    backgroundColor: expandedActivityLog[activity.id] ? t.textMuted : t.accent,
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    fontSize: '11px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  {expandedActivityLog[activity.id] ? ' Cancelar' : '+ Agregar'}
-                                </button>
-                              </div>
-
-                              {/* Add Progress Form */}
-                              {expandedActivityLog[activity.id] && (
-                                <div style={{ padding: '12px', backgroundColor: t.bgCard, borderRadius: '6px', border: '2px solid ${t.accent}', marginBottom: '12px' }}>
-                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                                    <div>
-                                      <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Fecha</label>
-                                      <input
-                                        type="date"
-                                        style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '4px' }}
-                                        value={dailyEntries[activity.id]?.date || ''}
-                                        onChange={(e) => setDailyEntries(prev => ({
-                                          ...prev,
-                                          [activity.id]: { ...prev[activity.id], date: e.target.value }
-                                        }))}
-                                      />
-                                    </div>
-                                    <div>
-                                      <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>
-                                        Progreso (%)
-                                        {getDailyProgressLimit(activity) && (
-                                          <span style={{ color: t.warning, marginLeft: '4px' }}>
-                                            (máx: {getDailyProgressLimit(activity)}%)
-                                          </span>
-                                        )}
-                                      </label>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        style={{
-                                          width: '100%',
-                                          padding: '6px 8px',
-                                          fontSize: '12px',
-                                          border: `1px solid ${getDailyProgressLimit(activity) && parseFloat(dailyEntries[activity.id]?.progress) > getDailyProgressLimit(activity) ? t.warning : t.border}`,
-                                          borderRadius: '4px',
-                                          backgroundColor: getDailyProgressLimit(activity) && parseFloat(dailyEntries[activity.id]?.progress) > getDailyProgressLimit(activity) ? `${t.warning}10` : t.bgCard
-                                        }}
-                                        value={dailyEntries[activity.id]?.progress || ''}
-                                        onChange={(e) => setDailyEntries(prev => ({
-                                          ...prev,
-                                          [activity.id]: { ...prev[activity.id], progress: e.target.value }
-                                        }))}
-                                        placeholder={getDailyProgressLimit(activity) ? `0-${getDailyProgressLimit(activity)}` : '0-100'}
-                                      />
-                                    </div>
-                                  </div>
-                                  <div style={{ marginBottom: '8px' }}>
-                                    <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Actividades realizadas</label>
-                                    <textarea
-                                      style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '4px', minHeight: '50px', resize: 'vertical' }}
-                                      value={dailyEntries[activity.id]?.activities || ''}
-                                      onChange={(e) => setDailyEntries(prev => ({
-                                        ...prev,
-                                        [activity.id]: { ...prev[activity.id], activities: e.target.value }
-                                      }))}
-                                      placeholder="Describe las actividades realizadas..."
-                                    />
-                                  </div>
-                                  <div style={{ marginBottom: '8px' }}>
-                                    <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}> Horas invertidas</label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.5"
-                                      style={{ width: '100%', padding: '6px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '4px' }}
-                                      value={dailyEntries[activity.id]?.hours || ''}
-                                      onChange={(e) => setDailyEntries(prev => ({
-                                        ...prev,
-                                        [activity.id]: { ...prev[activity.id], hours: e.target.value }
-                                      }))}
-                                      placeholder="Ej: 2.5"
-                                    />
-                                  </div>
-                                  <button
-                                    onClick={() => handleAddDailyProgress(activity.id)}
-                                    style={{
-                                      width: '100%',
-                                      padding: '8px',
-                                      backgroundColor: t.success,
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      fontSize: '12px',
-                                      fontWeight: '600',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                     Guardar Actividad
-                                  </button>
-                                </div>
-                              )}
-
-                              {/* History List */}
-                              {!collapsedHistory[activity.id] && activity.daily_progress && activity.daily_progress.length > 0 && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  {[...activity.daily_progress].reverse().map((entry, idx) => (
-                                    <div key={idx} style={{
-                                      padding: '8px 12px',
-                                      backgroundColor: t.bgCard,
-                                      borderRadius: '4px',
-                                      border: `1px solid ${t.border}`,
-                                      display: 'flex',
-                                      alignItems: 'flex-start',
-                                      gap: '12px'
-                                    }}>
-                                      <div style={{ minWidth: '80px' }}>
-                                        <div style={{ fontSize: '11px', fontWeight: '600', color: t.text }}>
-                                          {new Date(entry.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
-                                        </div>
-                                        <div style={{
-                                          fontSize: '12px',
-                                          fontWeight: '700',
-                                          color: (entry.accumulated || entry.progress) >= 100 ? t.success :
-                                                 (entry.accumulated || entry.progress) >= 50 ? t.accent : t.warning
-                                        }}>
-                                          +{entry.progress}% → {entry.accumulated || entry.progress}%
-                                        </div>
-                                        {entry.hours > 0 && (
-                                          <div style={{ fontSize: '10px', color: t.textMuted }}>
-                                             {entry.hours}h
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div style={{ flex: 1, fontSize: '12px', color: t.text }}>
-                                        {entry.activities || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>Sin descripción</span>}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Empty state */}
-                              {!collapsedHistory[activity.id] && (!activity.daily_progress || activity.daily_progress.length === 0) && (
-                                <div style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontSize: '12px' }}>
-                                  No hay actividades registradas. Usa "+ Agregar" para registrar avance.
-                                </div>
-                              )}
-                            </div>
-                            </>
-                            )}
-                            {/* End Collapsible Content */}
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {/* MoSCoW Priority Badge */}
-                            {activity.moscow_priority && (
-                              <span style={{
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '10px',
-                                fontWeight: '600',
-                                textTransform: 'uppercase',
-                                backgroundColor:
-                                  activity.moscow_priority === 'must' ? `${t.error}10` :
-                                  activity.moscow_priority === 'should' ? `${t.warning}10` :
-                                  activity.moscow_priority === 'could' ? `${t.info}10` : t.bg,
-                                color:
-                                  activity.moscow_priority === 'must' ? t.error :
-                                  activity.moscow_priority === 'should' ? t.warning :
-                                  activity.moscow_priority === 'could' ? t.accent : t.textMuted
-                              }}>
-                                {activity.moscow_priority}
-                              </span>
-                            )}
-                            {/* Evidence Required Indicator */}
-                            {activity.requires_evidence && (
-                              <span style={{ fontSize: '12px', color: t.warning }} title="Requiere Evidencia">
-                                
-                              </span>
-                            )}
-                            {/* Coverage Indicator - Someone covering this activity */}
-                            {activeCoverages.coveringForMe?.some(cov =>
-                              cov.activityId === null || cov.activityId === activity.id
-                            ) && (
-                              <span style={{
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '10px',
-                                fontWeight: '500',
-                                backgroundColor: `${t.success}10`,
-                                color: t.success,
-                                border: '1px solid ${t.success}40'
-                              }} title={`Cubierta por ${activeCoverages.coveringForMe.find(cov =>
-                                cov.activityId === null || cov.activityId === activity.id
-                              )?.substitute?.firstName || ''}`}>
-                                 Cubierta
-                              </span>
-                            )}
-                            {/* Coverage Indicator - I'm covering this for someone else */}
-                            {activeCoverages.iAmCovering?.some(cov =>
-                              cov.activityId === null || cov.activityId === activity.id
-                            ) && (
-                              <span style={{
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '10px',
-                                fontWeight: '500',
-                                backgroundColor: `${t.info}10`,
-                                color: t.accent,
-                                border: '1px solid ${t.accent}40'
-                              }} title={`Cubriendo a ${activeCoverages.iAmCovering.find(cov =>
-                                cov.activityId === null || cov.activityId === activity.id
-                              )?.originalAssignee?.firstName || ''}`}>
-                                 Cubriendo
-                              </span>
-                            )}
-                            <span style={{
-                              padding: '4px 12px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              backgroundColor: activity.status === 'completed' ? `${t.success}15` :
-                                             activity.status === 'in_progress' ? `${t.accent}15` :
-                                             activity.status === 'cancelled' ? t.bgPanel : t.bg,
-                              color: activity.status === 'completed' ? t.success :
-                                    activity.status === 'in_progress' ? t.accent :
-                                    activity.status === 'cancelled' ? t.textMuted : t.textMuted
-                            }}>
-                              {activity.status === 'completed' ? 'Completada' :
-                               activity.status === 'in_progress' ? 'En Progreso' :
-                               activity.status === 'cancelled' ? '🚫 Cancelada' : 'Pendiente'}
-                            </span>
-                            {canEdit && (
-                              <button
-                                onClick={() => { setEditingActivity(activity); setShowActivityModal(true); }}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: `${t.info}10`,
-                                  color: t.accent,
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '12px'
-                                }}
-                                title="Editar actividad"
-                              >
-                                
-                              </button>
-                            )}
-                            <button
-                              onClick={() => { setSelectedActivityForFeedback(activity); setShowSupervisorFeedbackModal(true); }}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: `${t.success}10`,
-                                color: t.success,
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}
-                              title="Agregar feedback"
-                            >
-                              
-                            </button>
-                            <button
-                              onClick={() => handleDeleteActivity(activity.id)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: `${t.error}15`,
-                                color: t.error,
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}
-                              title="Eliminar actividad"
-                            >
-                              
-                            </button>
-                          </div>
-                        </div>
-                        {/* Collapsible: Feedback and Evidence */}
-                        {!collapsedActivities[activity.id] && (
-                        <>
-                        {/* Feedback Section */}
-                        {activityFeedbackMap[activity.id] && activityFeedbackMap[activity.id].length > 0 && (
-                          <div style={{
-                            marginTop: '12px',
-                            paddingTop: '12px',
-                            borderTop: `1px dashed ${t.border}`
-                          }}>
-                            <div style={{ fontSize: '12px', fontWeight: '600', color: t.textMuted, marginBottom: '8px' }}>
-                               Feedback ({activityFeedbackMap[activity.id].length})
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {activityFeedbackMap[activity.id].map(fb => {
-                                const typeConfig = {
-                                  recognition: { icon: '', color: t.success, label: 'Felicitación' },
-                                  warning: { icon: '', color: t.warning, label: 'Llamada de atención' },
-                                  coaching: { icon: '', color: t.accent, label: 'Retroalimentación' },
-                                  achievement: { icon: '', color: t.accent, label: 'Logro' },
-                                  improvement_needed: { icon: '', color: t.error, label: 'Área de mejora' },
-                                  note: { icon: '', color: t.textMuted, label: 'Nota' }
-                                }[fb.feedbackType] || { icon: '', color: t.textMuted, label: 'Nota' };
-
-                                return (
-                                  <div key={fb.id} style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: t.bgCard,
-                                    borderRadius: '6px',
-                                    borderLeft: `3px solid ${typeConfig.color}`,
-                                    fontSize: '12px'
-                                  }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                      <span style={{ fontWeight: '600', color: typeConfig.color }}>
-                                        {typeConfig.icon} {typeConfig.label}
-                                        {fb.title && `: ${fb.title}`}
-                                      </span>
-                                      <span style={{ color: t.textDim, fontSize: '11px' }}>
-                                        {new Date(fb.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
-                                      </span>
-                                    </div>
-                                    <div style={{ color: t.textMuted }}>{fb.comment}</div>
-                                    <div style={{ fontSize: '11px', color: t.textDim, marginTop: '4px' }}>
-                                      — {fb.supervisor?.firstName} {fb.supervisor?.lastName}
-                                    </div>
-                                  </div>
-                                );
+                          {/* Fila expandida */}
+                          {!isCollapsed && (
+                            <ActivityRowExpanded
+                              activity={activity}
+                              compliance={activityCompliance}
+                              dailyEntries={dailyEntries[activity.id]}
+                              expandedActivityLog={expandedActivityLog[activity.id]}
+                              collapsedHistory={collapsedHistory[activity.id]}
+                              uploadingEvidence={uploadingEvidence === activity.id}
+                              feedbackList={activityFeedbackMap[activity.id]}
+                              getDailyProgressLimit={getDailyProgressLimit}
+                              onToggleActivityLog={() => toggleActivityLogForm(activity.id)}
+                              onDailyEntryChange={(newEntry) => setDailyEntries(prev => ({
+                                ...prev,
+                                [activity.id]: newEntry
+                              }))}
+                              onAddDailyProgress={() => handleAddDailyProgress(activity.id)}
+                              onToggleHistory={() => setCollapsedHistory(prev => {
+                                const newState = { ...prev, [activity.id]: !prev[activity.id] };
+                                localStorage.setItem('workload_collapsed_history', JSON.stringify(newState));
+                                return newState;
                               })}
-                            </div>
-                          </div>
-                        )}
-                        {/* Evidence Section - Show for ALL activities */}
-                        <div style={{
-                            marginTop: '12px',
-                            paddingTop: '12px',
-                            borderTop: `1px dashed ${t.border}`
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: '600', color: activity.requires_evidence ? t.warning : t.textMuted }}>
-                                 {activity.requires_evidence ? 'Evidencia Requerida' : 'Evidencia (Opcional)'}
-                                {activity.evidence_files && activity.evidence_files.length > 0 && (
-                                  <span style={{ marginLeft: '8px', color: t.success }}>
-                                    ({activity.evidence_files.length} archivo{activity.evidence_files.length !== 1 ? 's' : ''})
-                                  </span>
-                                )}
-                              </div>
-                              <label style={{
-                                padding: '4px 12px',
-                                backgroundColor: t.accent,
-                                color: 'white',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                cursor: uploadingEvidence === activity.id ? 'not-allowed' : 'pointer',
-                                opacity: uploadingEvidence === activity.id ? 0.7 : 1
-                              }}>
-                                {uploadingEvidence === activity.id ? 'Subiendo...' : '+ Subir Archivo'}
-                                <input
-                                  type="file"
-                                  style={{ display: 'none' }}
-                                  disabled={uploadingEvidence === activity.id}
-                                  onChange={(e) => {
-                                    if (e.target.files[0]) {
-                                      handleUploadEvidence(activity.id, e.target.files[0]);
-                                      e.target.value = ''; // Reset input
-                                    }
-                                  }}
-                                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv"
-                                />
-                              </label>
-                            </div>
-                            {/* Show uploaded files */}
-                            {activity.evidence_files && activity.evidence_files.length > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                {/* Filter duplicates: prefer Workload files over 8D files with same name */}
-                                {activity.evidence_files
-                                  .reduce((unique, file) => {
-                                    const fileName = file.originalName || file.file_name || file.name || '';
-                                    const existingIndex = unique.findIndex(f =>
-                                      (f.originalName || f.file_name || f.name || '') === fileName
-                                    );
-                                    if (existingIndex === -1) {
-                                      unique.push(file);
-                                    } else {
-                                      // If duplicate, prefer Workload file (has id and serverName)
-                                      const existing = unique[existingIndex];
-                                      if (!existing.id && file.id) {
-                                        unique[existingIndex] = file;
-                                      }
-                                    }
-                                    return unique;
-                                  }, [])
-                                  .map((file, fileIndex) => {
-                                  // Handle both Workload files (with id) and 8D files (with file_url/url)
-                                  // 8D files have source='8D' and file_url starting with /uploads/
-                                  const fileUrl = file.file_url || file.url;
-                                  const isFrom8D = file.source === '8D' || (fileUrl && fileUrl.startsWith('/uploads/'));
-                                  const fileName = file.originalName || file.file_name || file.name || 'Archivo';
-                                  const fileType = file.mimeType || file.file_type || file.type || '';
-                                  const fileSize = file.size || file.file_size || 0;
-
-                                  // Build full URL for 8D files (only for /uploads/ paths)
-                                  let fullUrl = null;
-                                  if (isFrom8D && fileUrl && fileUrl.startsWith('/uploads/')) {
-                                    fullUrl = `http://localhost:5000${fileUrl}`;
-                                  }
-
-                                  return (
-                                  <div key={file.id || `8d-${fileIndex}`} style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '8px 12px',
-                                    backgroundColor: isFrom8D ? `${t.warning}15` : t.bgCard,
-                                    borderRadius: '6px',
-                                    border: isFrom8D ? '1px solid ${t.warning}' : `1px solid ${t.border}`
-                                  }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                                      <span style={{ fontSize: '18px' }}>
-                                        {fileType?.includes('pdf') ? '' :
-                                         fileType?.includes('image') ? '' :
-                                         fileType?.includes('excel') || fileType?.includes('spreadsheet') ? '' :
-                                         fileType?.includes('word') ? '' : ''}
-                                      </span>
-                                      <div>
-                                        <div style={{ fontSize: '12px', fontWeight: '500', color: t.text }}>
-                                          {fileName}
-                                          {isFrom8D && <span style={{ marginLeft: '6px', fontSize: '10px', color: t.warning, fontWeight: '600' }}>(8D)</span>}
-                                        </div>
-                                        <div style={{ fontSize: '11px', color: t.textDim }}>
-                                          {fileSize ? `${(fileSize / 1024).toFixed(1)} KB` : ''}
-                                          {file.uploadedByName ? ` • ${file.uploadedByName}` : ''}
-                                          {(file.uploadedAt || file.uploaded_at) ? ` • ${new Date(file.uploadedAt || file.uploaded_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}` : ''}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                      {isFrom8D && fullUrl ? (
-                                        <a
-                                          href={fullUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          style={{
-                                            padding: '4px 8px',
-                                            backgroundColor: `${t.warning}15`,
-                                            color: t.warning,
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontSize: '12px',
-                                            textDecoration: 'none'
-                                          }}
-                                          title="Abrir (8D)"
-                                        >
-                                          
-                                        </a>
-                                      ) : (
-                                        <button
-                                          onClick={() => handleDownloadEvidence(activity.id, file.id, fileName)}
-                                          style={{
-                                            padding: '4px 8px',
-                                            backgroundColor: `${t.info}10`,
-                                            color: t.accent,
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontSize: '12px'
-                                          }}
-                                          title="Descargar"
-                                        >
-                                          
-                                        </button>
-                                      )}
-                                      {!isFrom8D && (
-                                        <button
-                                          onClick={() => handleDeleteEvidence(activity.id, file.id)}
-                                          style={{
-                                            padding: '4px 8px',
-                                            backgroundColor: `${t.error}15`,
-                                            color: t.error,
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontSize: '12px'
-                                          }}
-                                          title="Eliminar"
-                                        >
-                                          
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  );
-                                })}
-                              </div>
-                            ) : activity.requires_evidence ? (
-                              <div style={{
-                                padding: '16px',
-                                backgroundColor: `${t.warning}10`,
-                                borderRadius: '6px',
-                                textAlign: 'center',
-                                color: t.warning,
-                                fontSize: '12px'
-                              }}>
-                                 No se ha subido evidencia. Esta actividad requiere evidencia obligatoria.
-                              </div>
-                            ) : null}
-                          </div>
-                        </>
-                        )}
-                        {/* End Collapsible: Feedback and Evidence */}
-                      </div>
+                              onUploadEvidence={(file) => handleUploadEvidence(activity.id, file)}
+                              onDownloadEvidence={(file) => handleDownloadEvidence(activity.id, file.id, file.originalName || file.file_name || file.name)}
+                              onDeleteEvidence={(file) => handleDeleteEvidence(activity.id, file.id)}
+                              t={t}
+                            />
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </div>
