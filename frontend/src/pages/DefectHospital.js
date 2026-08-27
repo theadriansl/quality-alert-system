@@ -12,6 +12,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 import { ChevronDown, ChevronRight, Package } from 'lucide-react';
 import ActionBar from '../components/ActionBar';
 // Permisos vienen del backend via hospitalRolesService
@@ -156,6 +157,7 @@ const DefectHospital = () => {
   const location = useLocation();
   const { theme: t } = useTheme();
   const { language, changeLanguage } = useLanguage();
+  const { subscribe, isConnected } = useSocket();
 
   // Check if redirected from DefectCapture due to access denied (via URL param)
   const accessDeniedParam = searchParams.get('accessDenied');
@@ -1082,6 +1084,32 @@ const DefectHospital = () => {
       setLoading(false);
     }
   }, [clientId]);
+
+  // WebSocket: Escuchar eventos de defectos para actualización en tiempo real
+  useEffect(() => {
+    const events = [
+      'defect:created',
+      'defect:repaired',
+      'defect:released',
+      'defect:rejected',
+      'defect:approved',
+      'defect:quarantined',
+      'defect:scrapped',
+      'defect:repair-started',
+      'defect:repair-completed',
+      'package:received'
+    ];
+
+    const unsubscribes = events.map(event =>
+      subscribe(event, (data) => {
+        console.log(`🔄 WebSocket [${event}]:`, data);
+        // Refrescar datos del tab activo
+        loadData();
+      })
+    );
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe, loadData]);
 
   // Cargar datos del tab activo cuando cambia (optimizado)
   useEffect(() => {

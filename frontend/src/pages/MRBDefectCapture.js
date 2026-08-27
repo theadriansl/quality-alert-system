@@ -381,6 +381,12 @@ const MRBDefectCapture = () => {
     setDetectedPart(null);
     lastDetectedPartId.current = null;
     lastPartIdForAdditional.current = null;
+    // Reset serial validation states
+    setSerialPartMismatch(null);
+    setSerialValidated(false);
+    setProductionInfo(null);
+    setAffectedStatus({});
+    setPriorInspectionResults({});
     if (!campaign) { setCampaignParts([]); setSelectedPart(null); return; }
     localStorage.setItem('mrbCaptureCampaignId', campaign.id);
 

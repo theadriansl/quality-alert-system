@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 
 // Default colors for subcomponents (outside main component)
 const DEFAULT_COLORS = {
@@ -173,6 +174,7 @@ const ECRDashboard = () => {
   // Global Theme
   const { theme: t } = useTheme();
   const { t: tr, language, changeLanguage } = useLanguage();
+  const { subscribe } = useSocket();
 
   // Dynamic colors based on theme
   const COLORS = {
@@ -283,6 +285,19 @@ const ECRDashboard = () => {
     loadECRs();
     loadClients();
   }, [loadDashboardData, loadECRs, loadClients]);
+
+  // WebSocket: Escuchar eventos de ECR para actualización en tiempo real
+  useEffect(() => {
+    const events = ['ecr:created', 'ecr:approved'];
+    const unsubscribes = events.map(event =>
+      subscribe(event, (data) => {
+        console.log(`🔄 WebSocket [${event}]:`, data);
+        loadDashboardData();
+        loadECRs();
+      })
+    );
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe, loadDashboardData, loadECRs]);
 
   const handleDeleteECR = async (ecrId, ecrNumber) => {
     if (!isAdmin) return;

@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { isUserAdmin } from '../utils/permissions';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 
 // Helpers
 const TODAY = new Date().toISOString().split('T')[0];
@@ -32,9 +33,11 @@ const EightDConsultation = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
   const { t: tr, language, changeLanguage } = useLanguage();
+  const { subscribe } = useSocket();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -80,7 +83,19 @@ const EightDConsultation = () => {
       }
     };
     loadReports();
-  }, []);
+  }, [refreshTrigger]);
+
+  // WebSocket: Escuchar eventos de 8D para actualización en tiempo real
+  useEffect(() => {
+    const events = ['8d:created', '8d:updated'];
+    const unsubscribes = events.map(event =>
+      subscribe(event, (data) => {
+        console.log(`🔄 WebSocket [${event}]:`, data);
+        setRefreshTrigger(prev => prev + 1);
+      })
+    );
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe]);
 
   // Derived data for filters
   const departments = useMemo(() => [...new Set(reports.map(r => r.createdByDepartment).filter(Boolean))].sort(), [reports]);

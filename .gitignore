@@ -29,3 +29,29 @@ Thumbs.db
 backend/nul
 frontend/nul
 nul
+
+# Uploads (archivos subidos por usuarios)
+backend/uploads/
+
+# Archivos de prueba/datos
+*.csv
+*.xlsx
+*.pptx
+*.pdf
+*.zip
+*.txt
+*.docx
+seriales_*.txt
+produccion_*.csv
+
+# Documentación interna / sesiones
+RESUMEN_*.md
+PAGINA WEB/
+ISO/
+Mejoras Claude Sonnet/
+
+# Scripts temporales
+backend/check-serial.js
+backend/create_partition.js
+backend/test-update.js
+backend/temp_*.json

@@ -24,132 +24,453 @@ const countBusinessDays = (startDate, endDate) => {
   return count;
 };
 
-// Estilos del componente (definidos antes de los componentes para evitar hoisting issues)
-const getStyles = (t) => ({
+// ============================================================================
+// HELPERS PUROS DE PRESENTACIÓN
+// ============================================================================
+
+/**
+ * Determina el grupo de una tarea para agrupamiento visual
+ * Orden de precedencia: Recurrentes > 8D/CAPA > Proyecto > Actividades
+ */
+const getTaskGroup = (task) => {
+  if (task.isRecurring) return 'Recurrentes';
+  if (task.source_type === '8D') return '8D / CAPA';
+  if (task.project_name) return task.project_name;
+  return 'Actividades';
+};
+
+/**
+ * Calcula el estado de cumplimiento de una tarea
+ * @param {Object} task - tarea con startDate, endDate, actualProgress
+ * @param {Object} t - tema con colores (success, error, warning, accent)
+ * @returns {{ expectedProg: number, actualProg: number, status: string, color: string }}
+ */
+const calcCompliance = (task, t) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(task.startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(task.endDate);
+  end.setHours(0, 0, 0, 0);
+
+  let expectedProg = 0;
+  if (today >= end) {
+    expectedProg = 100;
+  } else if (today > start) {
+    const total = (end - start) / 86400000;
+    const passed = (today - start) / 86400000;
+    expectedProg = Math.round((passed / total) * 100);
+  }
+
+  const actualProg = Math.round(task.actualProgress || 0);
+  let status, color;
+
+  if (today > end && actualProg < 100) {
+    // Pasó la fecha y no está completo → Atrasado (rojo)
+    status = 'Atrasado';
+    color = t.error;
+  } else if (expectedProg > 0 && actualProg < expectedProg - 20) {
+    // Más de 20% por debajo de lo esperado → En riesgo (ámbar)
+    status = 'En riesgo';
+    color = t.warning;
+  } else if (actualProg >= 100) {
+    // Completado → verde
+    status = 'Completado';
+    color = t.success;
+  } else {
+    // En curso (incluye "a tiempo" y "atrás" menores) → acento primario
+    status = 'En curso';
+    color = t.accent;
+  }
+
+  return { expectedProg, actualProg, status, color };
+};
+
+// ============================================================================
+// CONSTANTES DE LAYOUT
+// ============================================================================
+const LAYOUT = {
+  ROW_HEIGHT: 40,           // Filas compactas
+  GROUP_BAND_HEIGHT: 30,    // Banda de grupo
+  HEADER_HEIGHT: 56,        // Header principal
+  TOOLBAR_HEIGHT: 48,       // Barra de herramientas
+  PRIORITY_BAR_WIDTH: 3,    // Barra de prioridad
+  PLAN_BAR_HEIGHT: 7,       // Barra planeada
+  REAL_BAR_HEIGHT: 9,       // Barra real
+  BAR_RADIUS: 2             // Radio de barras
+};
+
+// Anchos de columnas del panel izquierdo
+const COL_WIDTHS = {
+  priority: 3,
+  activity: 200,
+  dates: 140,      // Inicio + Fin
+  progress: 80,    // Real/Esp
+  status: 47       // Estado chip
+};
+
+// Breakpoints para responsive
+const BREAKPOINTS = {
+  FULL: 1280,    // Todas las columnas
+  MEDIUM: 1024   // Solo actividad + %
+};
+
+// Calcular ancho del panel según breakpoint
+const getLeftPanelWidth = (windowWidth) => {
+  if (windowWidth >= BREAKPOINTS.FULL) {
+    // Todas las columnas: priority + activity + dates + progress + status
+    return COL_WIDTHS.priority + COL_WIDTHS.activity + COL_WIDTHS.dates + COL_WIDTHS.progress + COL_WIDTHS.status;
+  } else if (windowWidth >= BREAKPOINTS.MEDIUM) {
+    // Sin dates y status: priority + activity + progress
+    return COL_WIDTHS.priority + COL_WIDTHS.activity + COL_WIDTHS.progress;
+  } else {
+    // Solo actividad: priority + activity
+    return COL_WIDTHS.priority + COL_WIDTHS.activity;
+  }
+};
+
+// Determinar qué columnas mostrar
+const getVisibleColumns = (windowWidth) => ({
+  dates: windowWidth >= BREAKPOINTS.FULL,
+  progress: windowWidth >= BREAKPOINTS.MEDIUM,
+  status: windowWidth >= BREAKPOINTS.FULL
+});
+
+// Hook para detectar tamaño de ventana
+const useWindowWidth = () => {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1920);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return width;
+};
+
+// Estilos del componente (panelWidth es dinámico según breakpoint)
+const getStyles = (t, panelWidth = 470) => ({
+  // Contenedor principal
   container: {
     width: '100%',
     background: t.bgCard,
     borderRadius: '8px',
     border: `1px solid ${t.border}`,
-    overflow: 'auto',
-    position: 'relative',
-    maxHeight: '600px'
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    overflow: 'hidden',
+    position: 'relative'
   },
+  // Toolbar superior
+  toolbar: {
+    height: `${LAYOUT.TOOLBAR_HEIGHT}px`,
+    padding: '0 12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    background: t.bg,
+    borderBottom: `1px solid ${t.border}`,
+    gap: '16px'
+  },
+  // Contenedor scrolleable
+  scrollContainer: {
+    maxHeight: '600px',
+    overflow: 'auto'
+  },
+  // Header con dos niveles (mes + día)
   header: {
     display: 'flex',
-    borderBottom: `2px solid ${t.border}`,
+    borderBottom: `1px solid ${t.border}`,
     background: t.bgPanel,
     position: 'sticky',
     top: 0,
-    zIndex: 10,
-    height: '42px',
-    boxSizing: 'border-box'
+    zIndex: 20,
+    minHeight: `${LAYOUT.HEADER_HEIGHT}px`
   },
-  taskHeader: {
-    width: '200px',
-    padding: '12px 16px',
-    fontWeight: '600',
-    fontSize: '14px',
-    borderRight: `2px solid ${t.border}`,
-    background: t.bgPanel,
-    height: '42px',
-    boxSizing: 'border-box',
+  // Panel izquierdo del header (ancho dinámico)
+  headerLeftPanel: {
+    width: `${panelWidth}px`,
+    minWidth: `${panelWidth}px`,
     display: 'flex',
-    alignItems: 'center'
+    alignItems: 'center',
+    borderRight: `1px solid ${t.border}`,
+    background: t.bgPanel,
+    padding: '0 12px',
+    gap: '8px',
+    fontSize: '11px',
+    fontWeight: '600',
+    color: t.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em'
   },
+  // Timeline header (meses + días)
   timelineHeader: {
     flex: 1,
     position: 'relative',
-    height: '40px',
-    background: t.bgPanel
+    display: 'flex',
+    flexDirection: 'column'
   },
-  dateLabel: {
-    position: 'absolute',
-    top: '12px',
+  // Banda de mes
+  monthBand: {
+    height: '24px',
+    display: 'flex',
+    borderBottom: `1px solid ${t.border}`
+  },
+  monthLabel: {
+    padding: '4px 8px',
     fontSize: '11px',
+    fontWeight: '600',
     color: t.textMuted,
-    fontWeight: '500',
-    whiteSpace: 'nowrap'
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    borderRight: `1px solid ${t.border}`,
+    display: 'flex',
+    alignItems: 'center'
   },
+  // Banda de días
+  dayBand: {
+    height: '32px',
+    display: 'flex',
+    position: 'relative'
+  },
+  dayLabel: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '10px',
+    fontFamily: "'IBM Plex Mono', monospace",
+    color: t.textMuted,
+    borderRight: `1px solid ${t.border}`
+  },
+  dayLetter: {
+    fontSize: '9px',
+    fontWeight: '600',
+    lineHeight: 1
+  },
+  dayNumber: {
+    fontSize: '11px',
+    fontWeight: '500',
+    lineHeight: 1
+  },
+  // Línea de HOY
   todayLine: {
     position: 'absolute',
-    top: '40px',
+    top: 0,
     bottom: 0,
     width: '2px',
-    background: '#ef4444',
-    zIndex: 5,
+    background: t.error,
+    zIndex: 15,
     pointerEvents: 'none'
   },
   todayLabel: {
     position: 'absolute',
-    top: '-25px',
-    left: '-15px',
-    background: '#ef4444',
+    top: '2px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: t.error,
     color: 'white',
-    padding: '2px 8px',
-    borderRadius: '4px',
-    fontSize: '10px',
-    fontWeight: 'bold'
+    padding: '1px 6px',
+    borderRadius: '2px',
+    fontSize: '9px',
+    fontWeight: '700',
+    fontFamily: "'IBM Plex Mono', monospace",
+    whiteSpace: 'nowrap'
   },
+  // Grid de tareas
   grid: {
     background: t.bgCard
   },
+  // Banda de grupo
+  groupBand: {
+    height: `${LAYOUT.GROUP_BAND_HEIGHT}px`,
+    background: t.bgPanel,
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 12px',
+    fontSize: '10.5px',
+    fontWeight: '600',
+    color: t.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    borderBottom: `1px solid ${t.border}`,
+    position: 'sticky',
+    left: 0
+  },
+  // Fila de tarea
   row: {
     display: 'flex',
     borderBottom: `1px solid ${t.border}`,
-    height: '80px',
+    height: `${LAYOUT.ROW_HEIGHT}px`,
     boxSizing: 'border-box',
-    position: 'relative'
-  },
-  taskName: {
-    width: '200px',
-    padding: '12px 16px',
-    borderRight: `2px solid ${t.border}`,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
+    position: 'relative',
     background: t.bgCard
   },
+  rowCancelled: {
+    opacity: 0.5
+  },
+  // Panel izquierdo de la fila (tabla de info - ancho dinámico)
+  rowLeftPanel: {
+    width: `${panelWidth}px`,
+    minWidth: `${panelWidth}px`,
+    display: 'flex',
+    alignItems: 'center',
+    borderRight: `1px solid ${t.border}`,
+    background: t.bgCard,
+    position: 'sticky',
+    left: 0,
+    zIndex: 10
+  },
+  // Barra de prioridad
+  priorityBar: {
+    width: `${LAYOUT.PRIORITY_BAR_WIDTH}px`,
+    height: '100%',
+    flexShrink: 0
+  },
+  // Celda de actividad
+  cellActivity: {
+    width: `${COL_WIDTHS.activity}px`,
+    padding: '0 8px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    overflow: 'hidden'
+  },
+  activityTitle: {
+    fontSize: '13px',
+    fontWeight: '500',
+    color: t.text,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  activityTitleCancelled: {
+    textDecoration: 'line-through',
+    color: t.textMuted
+  },
+  recurringChip: {
+    fontSize: '9px',
+    fontWeight: '700',
+    fontFamily: "'IBM Plex Mono', monospace",
+    padding: '1px 4px',
+    borderRadius: '2px',
+    background: t.accent,
+    color: 'white',
+    flexShrink: 0
+  },
+  // Celda de fechas
+  cellDates: {
+    width: `${COL_WIDTHS.dates}px`,
+    padding: '0 8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    fontSize: '11px',
+    fontFamily: "'IBM Plex Mono', monospace",
+    color: t.textMuted
+  },
+  // Celda de progreso
+  cellProgress: {
+    width: `${COL_WIDTHS.progress}px`,
+    padding: '0 8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    fontFamily: "'IBM Plex Mono', monospace"
+  },
+  // Celda de estado (chip)
+  cellStatus: {
+    width: `${COL_WIDTHS.status}px`,
+    padding: '0 4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  statusChip: {
+    fontSize: '9px',
+    fontWeight: '600',
+    padding: '2px 6px',
+    borderRadius: '2px',
+    whiteSpace: 'nowrap'
+  },
+  // Timeline de la fila
   timeline: {
     flex: 1,
     position: 'relative',
     display: 'flex'
   },
+  // Celda del grid (día)
   gridCell: {
-    flex: 1,
-    borderRight: `1px solid ${t.bgPanel}`,
-    minWidth: '1px'
-  },
-  bar: {
-    position: 'absolute',
-    height: '32px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    borderRadius: '6px',
+    borderRight: `1px solid ${t.border}`,
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    position: 'relative'
+  },
+  gridCellWeekend: {
+    background: `${t.bgPanel}`
+  },
+  // Contenedor de barras (plan arriba, real abajo)
+  barsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: '2px',
+    padding: '4px 0',
+    pointerEvents: 'none'
+  },
+  // Barra planeada (arriba, gris)
+  barPlan: {
+    height: `${LAYOUT.PLAN_BAR_HEIGHT}px`,
+    background: t.border,
+    border: `1px solid ${t.textDim}`,
+    borderRadius: `${LAYOUT.BAR_RADIUS}px`,
+    position: 'absolute'
+  },
+  // Barra real (abajo, color)
+  barReal: {
+    height: `${LAYOUT.REAL_BAR_HEIGHT}px`,
+    borderRadius: `${LAYOUT.BAR_RADIUS}px`,
+    position: 'absolute',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    overflow: 'hidden'
+    justifyContent: 'flex-end',
+    paddingRight: '4px'
   },
-  progressBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    background: 'rgba(255,255,255,0.3)',
-    borderRadius: '6px 0 0 6px',
-      },
-  barLabel: {
-    color: 'white',
-    fontSize: '12px',
+  barRealLabel: {
+    fontSize: '9px',
     fontWeight: '600',
-    position: 'relative',
-    zIndex: 1,
-    textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+    fontFamily: "'IBM Plex Mono', monospace",
+    color: 'white',
+    textShadow: '0 1px 1px rgba(0,0,0,0.3)'
   },
+  // Leyenda al pie
+  legend: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 12px',
+    borderTop: `1px solid ${t.border}`,
+    background: t.bg,
+    fontSize: '10px',
+    color: t.textMuted
+  },
+  legendItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
+  },
+  legendSwatch: {
+    width: '16px',
+    height: '6px',
+    borderRadius: '1px'
+  },
+  // Para mantener compatibilidad con ComplianceCell mientras se migra
   complianceColumn: {
     width: '100px',
     padding: '12px 16px',
@@ -440,7 +761,7 @@ const EditDayPopup = memo(({ date, existingEntry, onSave, onCancel, formatDate, 
   );
 });
 
-// Subcomponente memoizado para cada fila del Gantt
+// Subcomponente memoizado para cada fila del Gantt (REDISEÑO V2 - Responsive)
 const GanttRow = memo(({
   task,
   index,
@@ -457,67 +778,104 @@ const GanttRow = memo(({
   formatDate,
   getPriorityColor,
   calculateBarPosition,
-  generateRecurrenceOccurrences
+  generateRecurrenceOccurrences,
+  visibleColumns,
+  panelWidth
 }) => {
   const { theme: t } = useTheme();
-  const styles = getStyles(t);
-  const user = task.responsible ? users.find(u => Number(u.id) === Number(task.responsible)) : null;
-  const userName = user
-    ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || 'Sin nombre'
-    : 'Sin asignar';
-  const position = calculateBarPosition(task, columns, cellWidth);
+  const styles = getStyles(t, panelWidth);
 
-  // Memoizar ocurrencias para tareas recurrentes
-  const occurrences = useMemo(() => {
-    if (!task.isRecurring) return null;
-    return generateRecurrenceOccurrences(task);
-  }, [task, generateRecurrenceOccurrences]);
+  // Calcular cumplimiento usando helper puro
+  const compliance = calcCompliance(task, t);
+  const position = calculateBarPosition(task, columns, cellWidth);
+  const isCancelled = task.status === 'cancelled';
+  const isPending = task.status === 'pending';
+
+  // Color de prioridad para barra lateral
+  const priorityColors = {
+    alta: t.error,
+    media: t.warning,
+    baja: t.accent
+  };
+  const priorityColor = priorityColors[task.priority] || t.textMuted;
+
+  // Chip de frecuencia para recurrentes
+  const freqLabel = task.isRecurring ? (
+    task.frequency === 'weekly' ? 'SEM' :
+    task.frequency === 'biweekly' ? 'QUI' :
+    task.frequency === 'monthly' ? 'MEN' : 'REC'
+  ) : null;
+
+  // Formatear fechas cortas
+  const formatShortDate = (dateStr) => {
+    if (!dateStr) return '--';
+    const d = new Date(dateStr);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
 
   return (
-    <div style={styles.row}>
-      {/* Nombre de la tarea - Sticky */}
+    <div style={{
+      ...styles.row,
+      ...(isCancelled ? styles.rowCancelled : {})
+    }}>
+      {/* Panel izquierdo - Tabla de info (sticky) */}
       <div style={{
-        ...styles.taskName,
-        position: 'sticky',
-        left: 0,
-        zIndex: 10,
-        background: t.bgCard,
-        boxShadow: '4px 0 8px rgba(0,0,0,0.05)'
+        ...styles.rowLeftPanel,
+        boxShadow: '2px 0 4px rgba(0,0,0,0.04)'
       }}>
-        <div style={{ fontWeight: '500', fontSize: '14px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {task.isRecurring && (
-            <span style={{
-              backgroundColor: '#8b5cf6',
-              color: 'white',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: '600'
-            }}>
-               {task.frequency === 'weekly' ? 'SEM' : task.frequency === 'biweekly' ? 'QUIN' : task.frequency === 'monthly' ? 'MEN' : 'REC'}
-            </span>
+        {/* Barra de prioridad (3px) */}
+        <div style={{
+          ...styles.priorityBar,
+          background: priorityColor
+        }} title={`Prioridad: ${task.priority || 'normal'}`} />
+
+        {/* Columna: Actividad (siempre visible) */}
+        <div style={styles.cellActivity}>
+          {freqLabel && (
+            <span style={styles.recurringChip}>{freqLabel}</span>
           )}
-          {task.status === 'cancelled' && (
+          <span
+            style={{
+              ...styles.activityTitle,
+              ...(isCancelled ? styles.activityTitleCancelled : {})
+            }}
+            title={task.action || task.description}
+          >
+            {task.action || task.description || `Tarea ${index + 1}`}
+          </span>
+        </div>
+
+        {/* Columna: Inicio - Fin (responsive) */}
+        {visibleColumns.dates && (
+          <div style={styles.cellDates}>
+            <span>{formatShortDate(task.startDate)}</span>
+            <span style={{ color: t.textDim }}>→</span>
+            <span>{formatShortDate(task.endDate)}</span>
+          </div>
+        )}
+
+        {/* Columna: Real / Esperado (responsive) */}
+        {visibleColumns.progress && (
+          <div style={{
+            ...styles.cellProgress,
+            color: compliance.color
+          }}>
+            {compliance.actualProg}/{compliance.expectedProg}%
+          </div>
+        )}
+
+        {/* Columna: Estado (chip) (responsive) */}
+        {visibleColumns.status && (
+          <div style={styles.cellStatus}>
             <span style={{
-              backgroundColor: t.bgPanel,
-              color: t.textMuted,
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: '600',
-              border: `1px solid ${t.border}`
+              ...styles.statusChip,
+              background: `${compliance.color}18`,
+              color: compliance.color
             }}>
-              🚫 Cancelada
+              {compliance.status}
             </span>
-          )}
-          <span style={{
-            textDecoration: task.status === 'cancelled' ? 'line-through' : 'none',
-            color: task.status === 'cancelled' ? '#9ca3af' : 'inherit'
-          }}>{task.action || task.description || `Tarea ${index + 1}`}</span>
-        </div>
-        <div style={{ fontSize: '12px', color: t.textMuted }}>
-           {userName}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Timeline */}
@@ -529,44 +887,34 @@ const GanttRow = memo(({
           const progressEntry = task.dailyProgress?.find(
             d => parseLocalDate(d.date).toDateString() === col.toDateString()
           );
-          const hasProgress = !!progressEntry;
+          const isWeekend = col.getDay() === 0 || col.getDay() === 6;
 
-          // Crear tooltip dinámico
+          // Tooltip dinámico
           let tooltip = `Click para agregar progreso: ${formatDate(col)}`;
           if (progressEntry) {
             tooltip = `${formatDate(col)}: +${progressEntry.progress}% (Acum: ${progressEntry.accumulated}%)`;
-            if (progressEntry.hours) {
-              tooltip += `\n ${progressEntry.hours} hrs`;
-            }
-            if (progressEntry.activities) {
-              tooltip += `\n ${progressEntry.activities}`;
-            }
+            if (progressEntry.hours) tooltip += `\n${progressEntry.hours} hrs`;
+            if (progressEntry.activities) tooltip += `\n${progressEntry.activities}`;
             tooltip += '\n\nClick para editar';
           }
-
-          if (disabled) {
-            tooltip = ' Bloqueado - No se pueden realizar cambios';
-          }
+          if (disabled) tooltip = 'Bloqueado';
 
           return (
             <div
               key={colIndex}
-              onClick={() => onDayClick(task.id, col)}
-              className="gantt-cell"
+              onClick={() => !disabled && onDayClick(task.id, col)}
               style={{
                 ...styles.gridCell,
                 width: `${cellWidth}px`,
                 minWidth: `${cellWidth}px`,
-                maxWidth: `${cellWidth}px`,
-                background: colIndex % 7 === 0 ? t.bgPanel : t.bgCard,
+                ...(isWeekend ? styles.gridCellWeekend : {}),
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                position: 'relative',
-                border: isEditing ? `2px solid ${t.accent}` : hasProgress ? `1px solid ${t.border}` : 'none',
-                opacity: disabled ? 0.6 : 1
+                opacity: disabled ? 0.6 : 1,
+                outline: isEditing ? `2px solid ${t.accent}` : 'none',
+                outlineOffset: '-2px'
               }}
               title={tooltip}
             >
-              {/* Popup de edición */}
               {isEditing && (
                 <EditDayPopup
                   date={col}
@@ -574,7 +922,7 @@ const GanttRow = memo(({
                   onSave={(data) => onSaveProgress(task.id, col, data)}
                   onCancel={onCancelEdit}
                   formatDate={formatDate}
-                  priorityColor={getPriorityColor(task.priority)}
+                  priorityColor={priorityColor}
                   isRecurring={task.isRecurring}
                   frequency={task.frequency}
                   frequencyDetails={task.frequencyDetails}
@@ -586,139 +934,60 @@ const GanttRow = memo(({
           );
         })}
 
-        {/* Contenedor de barras (dos filas) */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          gap: '4px',
-          padding: '8px 0',
-          pointerEvents: 'none',
-          zIndex: 1
-        }}>
-          {/* BARRA SUPERIOR - PLANEADO */}
-          <div style={{
-            position: 'relative',
-            height: '20px',
-            width: '100%'
-          }}>
-            {task.isRecurring && occurrences ? (
-              occurrences.map((occDate, occIdx) => {
-                const occIndex = columns.findIndex(col =>
-                  col.toDateString() === occDate.toDateString()
-                );
-                if (occIndex < 0) return null;
-
-                const occLeft = occIndex * cellWidth;
-                const dayName = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'][occDate.getDay()];
-
-                return (
-                  <div
-                    key={occIdx}
-                    style={{
-                      position: 'absolute',
-                      left: `${occLeft}px`,
-                      width: `${cellWidth}px`,
-                      height: '100%',
-                      background: '#8b5cf6',
-                      borderRadius: '4px',
-                      border: '2px solid #7c3aed',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title={` ${dayName} ${formatDate(occDate)} - ${task.frequency === 'weekly' ? 'Semanal' : task.frequency === 'biweekly' ? 'Quincenal' : task.frequency === 'monthly' ? 'Mensual' : task.frequency}`}
-                  >
-                    <span style={{ fontSize: '10px', color: 'white', fontWeight: '600' }}></span>
-                  </div>
-                );
-              })
-            ) : (
-              <div
-                style={{
-                  position: 'absolute',
-                  ...position,
-                  height: '100%',
-                  background: '#d1d5db',
-                  borderRadius: '4px',
-                  opacity: 0.7,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title={`Plan: ${task.startDate} - ${task.endDate}`}
-              >
-                <span style={{
-                  fontSize: '10px',
-                  color: t.textMuted,
-                  fontWeight: '600'
-                }}>
-                  PLAN
-                </span>
-              </div>
-            )}
+        {/* Contenedor de barras (plan arriba, real abajo) */}
+        <div style={styles.barsContainer}>
+          {/* BARRA PLAN (arriba, gris) - siempre visible */}
+          <div style={{ position: 'relative', height: `${LAYOUT.PLAN_BAR_HEIGHT}px`, width: '100%' }}>
+            <div
+              style={{
+                ...styles.barPlan,
+                ...position
+              }}
+              title={`Plan: ${task.startDate} → ${task.endDate}`}
+            />
           </div>
 
-          {/* BARRA INFERIOR - REAL */}
-          <div style={{
-            position: 'relative',
-            height: '20px',
-            width: '100%'
-          }}>
-            {task.dailyProgress && task.dailyProgress.length > 0 ? (
-              task.dailyProgress.map((entry, entryIdx) => {
-                const entryDate = parseLocalDate(entry.date);
-                const entryIndex = columns.findIndex(col =>
-                  col.toDateString() === entryDate.toDateString()
+          {/* BARRA REAL (abajo, color) - solo si no es pending y tiene progreso */}
+          <div style={{ position: 'relative', height: `${LAYOUT.REAL_BAR_HEIGHT}px`, width: '100%' }}>
+            {!isPending && task.dailyProgress && task.dailyProgress.length > 0 ? (
+              (() => {
+                // Calcular rango de barras reales (desde primer progreso hasta último)
+                const sortedProgress = [...task.dailyProgress].sort(
+                  (a, b) => new Date(a.date) - new Date(b.date)
                 );
+                const firstDate = parseLocalDate(sortedProgress[0].date);
+                const lastDate = parseLocalDate(sortedProgress[sortedProgress.length - 1].date);
 
-                if (entryIndex < 0) return null;
+                const firstIndex = columns.findIndex(col => col.toDateString() === firstDate.toDateString());
+                const lastIndex = columns.findIndex(col => col.toDateString() === lastDate.toDateString());
 
-                // Usar píxeles basados en cellWidth (igual que las celdas del grid)
-                const entryLeftPx = entryIndex * cellWidth;
-                const entryWidthPx = cellWidth;
+                if (firstIndex < 0 || lastIndex < 0) return null;
+
+                const leftPx = firstIndex * cellWidth;
+                const widthPx = (lastIndex - firstIndex + 1) * cellWidth;
+
+                // Color basado en estado de cumplimiento
+                const barColor = isCancelled ? t.textMuted : compliance.color;
 
                 return (
                   <div
-                    key={entryIdx}
                     style={{
-                      position: 'absolute',
-                      left: `${entryLeftPx}px`,
-                      width: `${entryWidthPx}px`,
-                      height: '100%',
-                      background: task.status === 'cancelled' ? '#d1d5db' : (task.actualProgress >= 100) ? '#2E7D32' : getPriorityColor(task.priority),
-                      borderRadius: '2px',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      boxSizing: 'border-box'
+                      ...styles.barReal,
+                      left: `${leftPx}px`,
+                      width: `${widthPx}px`,
+                      background: barColor
                     }}
-                    title={`${entry.date}: +${entry.progress}% (Acum: ${entry.accumulated}%)${entry.hours ? '\n ' + entry.hours + ' hrs' : ''}${entry.activities ? '\n ' + entry.activities : ''}`}
-                  />
+                    title={`Real: ${compliance.actualProg}%`}
+                  >
+                    {widthPx > 30 && (
+                      <span style={styles.barRealLabel}>
+                        {compliance.actualProg}%
+                      </span>
+                    )}
+                  </div>
                 );
-              })
-            ) : (
-              <div style={{
-                position: 'absolute',
-                left: 0,
-                height: '100%',
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                paddingLeft: '8px'
-              }}>
-                <span style={{
-                  fontSize: '9px',
-                  color: t.textDim,
-                  fontStyle: 'italic'
-                }}>
-                  Sin progreso registrado
-                </span>
-              </div>
-            )}
+              })()
+            ) : null}
           </div>
         </div>
       </div>
@@ -728,62 +997,25 @@ const GanttRow = memo(({
   // Comparador personalizado - solo re-renderiza si cambian datos relevantes
   if (prevProps.task.id !== nextProps.task.id) return false;
   if (prevProps.task.actualProgress !== nextProps.task.actualProgress) return false;
+  if (prevProps.task.status !== nextProps.task.status) return false;
   if (prevProps.cellWidth !== nextProps.cellWidth) return false;
   if (prevProps.disabled !== nextProps.disabled) return false;
-  // Comparar editingDay solo para esta tarea
   const prevEditing = prevProps.editingDay?.taskId === prevProps.task.id;
   const nextEditing = nextProps.editingDay?.taskId === nextProps.task.id;
   if (prevEditing !== nextEditing) return false;
-  // Comparar dailyProgress por longitud (optimización)
   const prevLen = prevProps.task.dailyProgress?.length || 0;
   const nextLen = nextProps.task.dailyProgress?.length || 0;
   if (prevLen !== nextLen) return false;
-  return true; // No re-renderizar
+  return true;
 });
 
 // Subcomponente memoizado para columna de cumplimiento
 const ComplianceCell = memo(({ task, index }) => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDate = new Date(task.startDate);
-  startDate.setHours(0, 0, 0, 0);
-  const endDate = new Date(task.endDate);
-  endDate.setHours(0, 0, 0, 0);
 
-  let currentPlannedProgress = 0;
-  if (today < startDate) {
-    currentPlannedProgress = 0;
-  } else if (today > endDate) {
-    currentPlannedProgress = 100;
-  } else {
-    const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
-    const daysPassed = (today - startDate) / (1000 * 60 * 60 * 24);
-    currentPlannedProgress = Math.round((daysPassed / totalDays) * 100);
-  }
-
-  const actualProg = Math.round(task.actualProgress || 0);
-  const expectedProg = Math.round(currentPlannedProgress);
-  const isOnTrack = actualProg >= expectedProg;
-  let complianceColor, complianceStatus;
-
-  if (today > endDate && actualProg < 100) {
-    complianceColor = '#ef4444';
-    complianceStatus = 'Atrasado';
-  } else if (expectedProg > 0 && actualProg < expectedProg - 20) {
-    complianceColor = '#C77700';
-    complianceStatus = 'En riesgo';
-  } else if (actualProg >= 100) {
-    complianceColor = '#2E7D32';
-    complianceStatus = 'Completado';
-  } else if (isOnTrack) {
-    complianceColor = '#2E7D32';
-    complianceStatus = 'A tiempo';
-  } else {
-    complianceColor = '#C77700';
-    complianceStatus = 'Atrás';
-  }
+  // Usar helper puro de cumplimiento
+  const { expectedProg, actualProg, status, color } = calcCompliance(task, t);
 
   return (
     <div style={{
@@ -795,8 +1027,9 @@ const ComplianceCell = memo(({ task, index }) => {
       <div style={{
         fontSize: '14px',
         fontWeight: 'bold',
-        color: complianceColor,
-        marginBottom: '2px'
+        color: color,
+        marginBottom: '2px',
+        fontFamily: "'IBM Plex Mono', monospace"
       }}>
         {actualProg}% / {expectedProg}%
       </div>
@@ -809,10 +1042,10 @@ const ComplianceCell = memo(({ task, index }) => {
       </div>
       <div style={{
         fontSize: '10px',
-        color: complianceStatus === 'Atrasado' ? '#ef4444' : complianceStatus === 'En riesgo' || complianceStatus === 'Atrás' ? '#C77700' : '#2E7D32',
+        color: color,
         fontWeight: '600'
       }}>
-        {complianceStatus}
+        {status}
       </div>
     </div>
   );
@@ -822,9 +1055,137 @@ const ComplianceCell = memo(({ task, index }) => {
          prevProps.task.actualProgress === nextProps.task.actualProgress;
 });
 
-const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disabled = false }) => {
+// ============================================================================
+// COMPONENTE: Leyenda del Gantt
+// ============================================================================
+const GanttLegend = memo(() => {
   const { theme: t } = useTheme();
   const styles = getStyles(t);
+
+  const legendItems = [
+    { label: 'Planeado', color: t.border, border: t.textDim },
+    { label: 'Completado', color: t.success },
+    { label: 'En curso', color: t.accent },
+    { label: 'En riesgo', color: t.warning },
+    { label: 'Atrasado', color: t.error }
+  ];
+
+  return (
+    <div style={styles.legend}>
+      <div style={{ display: 'flex', gap: '16px' }}>
+        {legendItems.map(item => (
+          <div key={item.label} style={styles.legendItem}>
+            <div style={{
+              ...styles.legendSwatch,
+              background: item.color,
+              border: item.border ? `1px solid ${item.border}` : 'none'
+            }} />
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: '9px', color: t.textDim }}>
+        Barra superior: Plan | Barra inferior: Real
+      </div>
+    </div>
+  );
+});
+
+// ============================================================================
+// COMPONENTE: Header de Timeline con dos niveles (mes + día)
+// ============================================================================
+const TimelineHeader = memo(({ columns, cellWidth, t }) => {
+  const styles = getStyles(t);
+
+  // Agrupar columnas por mes
+  const monthGroups = useMemo(() => {
+    const groups = [];
+    let currentMonth = null;
+    let startIdx = 0;
+
+    columns.forEach((col, idx) => {
+      const monthKey = `${col.getFullYear()}-${col.getMonth()}`;
+      if (monthKey !== currentMonth) {
+        if (currentMonth !== null) {
+          groups.push({ month: currentMonth, start: startIdx, end: idx - 1 });
+        }
+        currentMonth = monthKey;
+        startIdx = idx;
+      }
+    });
+    // Último grupo
+    if (currentMonth !== null) {
+      groups.push({ month: currentMonth, start: startIdx, end: columns.length - 1 });
+    }
+    return groups;
+  }, [columns]);
+
+  // Nombres de meses en español
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const dayLetters = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+
+  return (
+    <div style={styles.timelineHeader}>
+      {/* Banda de meses */}
+      <div style={styles.monthBand}>
+        {monthGroups.map((group, idx) => {
+          const [year, month] = group.month.split('-').map(Number);
+          const width = (group.end - group.start + 1) * cellWidth;
+          return (
+            <div key={idx} style={{ ...styles.monthLabel, width: `${width}px` }}>
+              {monthNames[month]} {year}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Banda de días */}
+      <div style={styles.dayBand}>
+        {columns.map((col, idx) => {
+          const isWeekend = col.getDay() === 0 || col.getDay() === 6;
+          return (
+            <div
+              key={idx}
+              style={{
+                ...styles.dayLabel,
+                width: `${cellWidth}px`,
+                minWidth: `${cellWidth}px`,
+                background: isWeekend ? t.bgPanel : 'transparent',
+                opacity: isWeekend ? 0.7 : 1
+              }}
+            >
+              <span style={styles.dayLetter}>{dayLetters[col.getDay()]}</span>
+              <span style={styles.dayNumber}>{col.getDate()}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+// ============================================================================
+// COMPONENTE: Banda de grupo
+// ============================================================================
+const GroupBand = memo(({ groupName, taskCount, t }) => {
+  const styles = getStyles(t);
+  return (
+    <div style={styles.groupBand}>
+      <span>{groupName}</span>
+      <span style={{ marginLeft: '8px', opacity: 0.6 }}>({taskCount})</span>
+    </div>
+  );
+});
+
+const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disabled = false }) => {
+  const { theme: t } = useTheme();
+
+  // Responsive: detectar ancho de ventana
+  const windowWidth = useWindowWidth();
+  const panelWidth = useMemo(() => getLeftPanelWidth(windowWidth), [windowWidth]);
+  const visibleColumns = useMemo(() => getVisibleColumns(windowWidth), [windowWidth]);
+
+  const styles = getStyles(t, panelWidth);
   const [editingDay, setEditingDay] = useState(null); // { taskId, date, existingEntry }
 
   // Ref for the scrollable timeline container
@@ -1123,6 +1484,43 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
   // Memoizar todayIndex
   const todayIndex = useMemo(() => getTodayIndex(columns), [columns]);
 
+  // Agrupar tareas usando getTaskGroup
+  const groupedTasks = useMemo(() => {
+    const groups = {};
+    const order = ['Recurrentes', '8D / CAPA']; // Prioridad de orden
+
+    tasks.forEach(task => {
+      const groupName = getTaskGroup(task);
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(task);
+    });
+
+    // Ordenar grupos: primero los de orden fijo, luego proyectos alfabéticamente, luego "Actividades"
+    const sortedGroupNames = Object.keys(groups).sort((a, b) => {
+      const aIdx = order.indexOf(a);
+      const bIdx = order.indexOf(b);
+
+      // Ambos están en orden predefinido
+      if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx;
+      // Solo a está en orden
+      if (aIdx >= 0) return -1;
+      // Solo b está en orden
+      if (bIdx >= 0) return 1;
+      // "Actividades" siempre al final
+      if (a === 'Actividades') return 1;
+      if (b === 'Actividades') return -1;
+      // Otros (proyectos) alfabéticamente
+      return a.localeCompare(b);
+    });
+
+    return sortedGroupNames.map(name => ({
+      name,
+      tasks: groups[name]
+    }));
+  }, [tasks]);
+
   // Navigation functions
   const scrollToStart = () => {
     if (timelineRef.current) {
@@ -1297,85 +1695,35 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
         </div>
       </div>
 
-      {/* Gantt Content with Zoom - usando ancho fijo por celda */}
-      <div style={{ display: 'flex', position: 'relative' }}>
-        {/* Área scrolleable (Tarea sticky + Timeline) */}
-        <div ref={timelineRef} style={{ flex: 1, overflowX: 'auto', overflowY: 'visible' }}>
-          <div style={{ width: `${200 + columns.length * cellWidth}px`, minWidth: '100%', position: 'relative' }}>
-            {/* Header con fechas */}
-            <div style={{ ...styles.header, paddingRight: 0 }}>
-              {/* Header Tarea - Sticky */}
-              <div style={{
-                ...styles.taskHeader,
-                position: 'sticky',
-                left: 0,
-                zIndex: 15,
-                background: t.bgPanel,
-                boxShadow: '4px 0 8px rgba(0,0,0,0.1)'
-              }}>Tarea</div>
-              <div style={{ ...styles.timelineHeader, width: `${columns.length * cellWidth}px` }}>
-          {columns.map((col, index) => {
-            // Ajustar frecuencia de fechas según nivel de zoom
-            let showFrequency;
-            let dateFormat;
-            if (zoomLevel >= 500) {
-              showFrequency = 1; // Cada día
-              dateFormat = 'day';
-            } else if (zoomLevel >= 400) {
-              showFrequency = 2; // Cada 2 días
-              dateFormat = 'day';
-            } else if (zoomLevel >= 300) {
-              showFrequency = 2; // Cada 2 días
-              dateFormat = 'day';
-            } else if (zoomLevel >= 200) {
-              showFrequency = 3; // Cada 3 días
-              dateFormat = 'day';
-            } else if (zoomLevel >= 150) {
-              showFrequency = 5; // Cada 5 días
-              dateFormat = 'day';
-            } else if (zoomLevel >= 100) {
-              showFrequency = 7; // Cada 7 días (semana)
-              dateFormat = 'week';
-            } else if (zoomLevel >= 50) {
-              showFrequency = 14; // Cada 14 días
-              dateFormat = 'biweek';
-            } else {
-              showFrequency = 30; // Cada mes aprox
-              dateFormat = 'month';
-            }
-
-            // Días de la semana en formato corto español
-            const dayLetters = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
-
-            // Formatear según el tipo
-            const formatLabel = (date) => {
-              const dayLetter = dayLetters[date.getDay()];
-              if (dateFormat === 'month') {
-                return date.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
-              } else if (dateFormat === 'biweek' || dateFormat === 'week') {
-                return `${dayLetter} ${date.getDate()}/${date.getMonth() + 1}`;
-              }
-              // Para vista diaria, mostrar letra del día + número
-              return `${dayLetter} ${date.getDate()}`;
-            };
-
-            if (index % showFrequency === 0) {
-              return (
-                <div
-                  key={index}
-                  style={{
-                    ...styles.dateLabel,
-                    left: `${index * cellWidth}px`,
-                    width: `${cellWidth * showFrequency}px`
-                  }}
-                >
-                  {formatLabel(col)}
-                </div>
-              );
-            }
-            return null;
-          })}
+      {/* Gantt Content - Scroll Container */}
+      <div ref={timelineRef} style={styles.scrollContainer}>
+        <div style={{
+          width: `${panelWidth + columns.length * cellWidth}px`,
+          minWidth: '100%',
+          position: 'relative'
+        }}>
+          {/* Header de dos niveles */}
+          <div style={styles.header}>
+            {/* Header del panel izquierdo (columnas de info) */}
+            <div style={{
+              ...styles.headerLeftPanel,
+              boxShadow: '2px 0 4px rgba(0,0,0,0.04)'
+            }}>
+              <div style={{ width: `${COL_WIDTHS.priority}px` }} />
+              <div style={{ width: `${COL_WIDTHS.activity}px` }}>Actividad</div>
+              {visibleColumns.dates && (
+                <div style={{ width: `${COL_WIDTHS.dates}px`, textAlign: 'center' }}>Inicio - Fin</div>
+              )}
+              {visibleColumns.progress && (
+                <div style={{ width: `${COL_WIDTHS.progress}px`, textAlign: 'center' }}>%</div>
+              )}
+              {visibleColumns.status && (
+                <div style={{ width: `${COL_WIDTHS.status}px`, textAlign: 'center' }}>Estado</div>
+              )}
             </div>
+
+            {/* Timeline Header (mes + día) */}
+            <TimelineHeader columns={columns} cellWidth={cellWidth} t={t} />
           </div>
 
           {/* Línea de HOY */}
@@ -1383,74 +1731,56 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
             <div
               style={{
                 ...styles.todayLine,
-                left: `${200 + todayIndex * cellWidth + cellWidth / 2}px`
+                left: `${panelWidth + todayIndex * cellWidth + cellWidth / 2}px`
               }}
             >
               <div style={styles.todayLabel}>HOY</div>
             </div>
           )}
 
-          {/* Grid con tareas - usando subcomponente memoizado */}
+          {/* Grid con tareas agrupadas */}
           <div style={styles.grid}>
-            {tasks.map((task, index) => (
-              <GanttRow
-                key={task.id || index}
-                task={task}
-                index={index}
-                columns={columns}
-                cellWidth={cellWidth}
-                users={users}
-                disabled={disabled}
-                editingDay={editingDay}
-                onDayClick={handleDayClick}
-                onSaveProgress={handleSaveDayProgress}
-                onCancelEdit={handleCancelEdit}
-                parseLocalDate={parseLocalDate}
-                formatDateToString={formatDateToString}
-                formatDate={formatDate}
-                getPriorityColor={getPriorityColor}
-                calculateBarPosition={calculateBarPosition}
-                generateRecurrenceOccurrences={generateRecurrenceOccurrences}
-              />
+            {groupedTasks.map((group, groupIndex) => (
+              <React.Fragment key={group.name}>
+                {/* Banda de grupo */}
+                <GroupBand
+                  groupName={group.name}
+                  taskCount={group.tasks.length}
+                  t={t}
+                />
+
+                {/* Tareas del grupo */}
+                {group.tasks.map((task, taskIndex) => (
+                  <GanttRow
+                    key={task.id || `${groupIndex}-${taskIndex}`}
+                    task={task}
+                    index={taskIndex}
+                    columns={columns}
+                    cellWidth={cellWidth}
+                    users={users}
+                    disabled={disabled}
+                    editingDay={editingDay}
+                    onDayClick={handleDayClick}
+                    onSaveProgress={handleSaveDayProgress}
+                    onCancelEdit={handleCancelEdit}
+                    parseLocalDate={parseLocalDate}
+                    formatDateToString={formatDateToString}
+                    formatDate={formatDate}
+                    getPriorityColor={getPriorityColor}
+                    calculateBarPosition={calculateBarPosition}
+                    generateRecurrenceOccurrences={generateRecurrenceOccurrences}
+                    visibleColumns={visibleColumns}
+                    panelWidth={panelWidth}
+                  />
+                ))}
+              </React.Fragment>
             ))}
           </div>
         </div>
       </div>
 
-        {/* Columna de Cumplimiento - Sticky a la derecha */}
-        <div style={{
-          position: 'sticky',
-          right: 0,
-          top: 0,
-          zIndex: 15,
-          background: t.bgCard,
-          boxShadow: '-4px 0 8px rgba(0,0,0,0.1)'
-        }}>
-          {/* Header de Cumplimiento */}
-          <div style={{
-            width: '100px',
-            padding: '12px 16px',
-            fontWeight: '600',
-            fontSize: '14px',
-            borderLeft: `2px solid ${t.border}`,
-            borderBottom: `2px solid ${t.border}`,
-            background: t.bgPanel,
-            textAlign: 'center',
-            height: '42px',
-            boxSizing: 'border-box',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            Cumplimiento
-          </div>
-
-          {/* Valores de Cumplimiento por tarea - usando subcomponente memoizado */}
-          {tasks.map((task, index) => (
-            <ComplianceCell key={task.id || index} task={task} index={index} />
-          ))}
-        </div>
-      </div>
+      {/* Leyenda al pie */}
+      <GanttLegend />
     </div>
   );
 });

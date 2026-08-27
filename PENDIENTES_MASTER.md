@@ -16,7 +16,7 @@
 | 7 | ~~Módulo Reportes Masivos (async servidor + UI)~~ | 16-Ago | ✅ 21-Ago |
 | 8 | ~~BUG: Error 500 en capture-nok (falta part_id + trigger entry_number)~~ | 19-Ago | ✅ 21-Ago |
 | 9 | ~~BUG: repair_status NULL en defectos MRB (4 INSERTs faltaban repair_status)~~ | 27-Ago | ✅ 27-Ago |
-| 10 | **WebSocket no actualiza tiempo real entre ventanas (Hospital)** | 27-Ago | ⏳ En debug |
+| 10 | ~~WebSocket no actualiza tiempo real entre ventanas (Hospital)~~ | 27-Ago | ✅ 27-Ago (era servidores viejos) |
 
 ---
 
@@ -63,7 +63,7 @@
 | 2 | ~~Limpieza ESLint warnings (parcial: 536→497)~~ | Arrastrado | ✅ 17-Ago |
 | 3 | ~~UX modal desviación~~ | Arrastrado | ✅ 17-Ago |
 | 4 | ~~Historial desviaciones (migración)~~ | Arrastrado | ✅ 17-Ago |
-| 5 | Refactor temas (WorkloadManager) | Arrastrado | ⏳ |
+| 5 | ~~Refactor temas (WorkloadManager)~~ | Arrastrado | ✅ 27-Ago |
 | 6 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
@@ -77,6 +77,7 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Rediseño GanttChart: Header 2 niveles, agrupamiento, barras duales, panel 5 columnas, leyenda | 27-Ago |
 | ✅ Fix: repair_status NULL en defectos creados desde MRB (4 INSERT statements + 2 seeds) | 27-Ago |
 | ✅ Fix: Query location-codes/assign incluye repair_status IS NULL (defectos recién capturados) | 27-Ago |
 | ✅ Fix: Open Items filter excluye 'closed_rejected' y 'closed_not_adopted' para ECRs | 27-Ago |
@@ -256,8 +257,21 @@
 4. **WebSocket listeners agregados**: HospitalDashboard, HospitalTransferPackages, MRBCampaigns, MRBCampaignDetail.
 5. **WebSocket events backend**: mrb:created, mrb:updated, mrb:closed, hospital:location-assigned.
 
-### Pendiente para mañana:
-- **WebSocket no actualiza en tiempo real entre ventanas**: Se agregaron logs de debug (`📡 Broadcasting:` y `🔌 Emitting`). Verificar que los eventos se emitan y que el frontend los reciba.
+### Resuelto (continuación 27-Ago):
+6. **WebSocket Hospital**: Funcionando correctamente. El problema era servidores desactualizados.
+7. **WebSocket MRB**: Funcionando correctamente entre ventanas.
+8. **Fix MRBDefectCapture**: Alerta "PARTE INCORRECTA" persistía al cambiar campaña. Agregado reset de estados de validación en `selectCampaign()`.
+9. **Refactor temas WorkloadManager**: 260→1 colores hardcodeados. Estandarizado a `{ theme: t }` y variables del tema.
+10. **Rediseño completo GanttChart** (WorkloadManager):
+    - Header de dos niveles (banda mes + banda día con letra/número)
+    - Agrupamiento automático de tareas (Recurrentes > 8D/CAPA > Proyectos > Actividades)
+    - Panel izquierdo compacto 470px con 5 columnas (prioridad, actividad, fechas, %, estado)
+    - Barras duales: plan arriba (7px gris), real abajo (9px color según estado)
+    - Leyenda al pie con todos los estados
+    - Componentes memoizados: TimelineHeader, GroupBand, GanttLegend
+    - Helpers puros: getTaskGroup(), calcCompliance()
+    - Filas compactas de 40px
+    - Removida columna ComplianceCell (ahora integrada en panel izquierdo)
 
 ---
 

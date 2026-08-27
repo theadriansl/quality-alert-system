@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 import { isUserAdmin } from '../utils/permissions';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -748,6 +749,7 @@ const MRBDashboard = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
   const { language, changeLanguage } = useLanguage();
+  const { subscribe } = useSocket();
   const PRESETS = getPresets(language);
 
   // Traducciones locales
@@ -986,6 +988,18 @@ const MRBDashboard = () => {
   }, [dateFrom, dateTo, deptId, clientId, severityId]);
 
   useEffect(() => { if (dateFrom !== undefined) loadData(); }, [loadData]);
+
+  // WebSocket: Escuchar eventos de MRB para actualización en tiempo real
+  useEffect(() => {
+    const events = ['mrb:inspection', 'package:received'];
+    const unsubscribes = events.map(event =>
+      subscribe(event, (data) => {
+        console.log(`🔄 WebSocket [${event}]:`, data);
+        loadData();
+      })
+    );
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [subscribe, loadData]);
 
   // ============================================================================
   // FUNCIONES DE EXPORTACIÓN

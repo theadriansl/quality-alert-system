@@ -13,20 +13,20 @@ import WorkloadDashboard from '../components/WorkloadDashboard';
 // OrgChart Component - Horizontal layout with auto-adjusting boxes
 // ============================================================================
 const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
-  const { theme } = useTheme();
+  const { theme: t } = useTheme();
   const defaultLevels = [
-    { levelOrder: 0, name: 'Director', color: '#7c3aed' },
-    { levelOrder: 1, name: 'Gerente', color: '#2563eb' },
-    { levelOrder: 2, name: 'Supervisor', color: '#2E7D32' },
-    { levelOrder: 3, name: 'Ingeniero', color: '#C77700' },
-    { levelOrder: 4, name: 'Staff', color: '#6b7280' }
+    { levelOrder: 0, name: 'Director', color: t.accent },
+    { levelOrder: 1, name: 'Gerente', color: t.primary },
+    { levelOrder: 2, name: 'Supervisor', color: t.success },
+    { levelOrder: 3, name: 'Ingeniero', color: t.warning },
+    { levelOrder: 4, name: 'Staff', color: t.textMuted }
   ];
 
   const levels = (hierarchyLevels && hierarchyLevels.length > 0)
     ? hierarchyLevels.map(l => ({
         levelOrder: l.levelOrder ?? l.value ?? 0,
         name: l.name || l.label || 'Nivel',
-        color: l.color || '#6b7280'
+        color: l.color || t.textMuted
       }))
     : defaultLevels;
 
@@ -64,7 +64,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
   const cardStyle = {
     width: '190px',
     padding: '10px 12px',
-    backgroundColor: theme.bgCard,
+    backgroundColor: t.bgCard,
     borderRadius: '8px',
     cursor: 'pointer',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -103,7 +103,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
               height: '32px',
               borderRadius: '6px',
               backgroundColor: levelConfig.color,
-              color: '#fff',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -114,14 +114,14 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
               {user.firstName?.[0]}{user.lastName?.[0]}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontWeight: '600', fontSize: '12px', color: theme.text }}>
+              <div style={{ fontWeight: '600', fontSize: '12px', color: t.text }}>
                 {user.firstName} {user.lastName}
               </div>
-              <div style={{ fontSize: '10px', color: theme.textMuted }}>
+              <div style={{ fontSize: '10px', color: t.textMuted }}>
                 {user.position || levelConfig.name}
               </div>
               {dept && (
-                <div style={{ fontSize: '9px', color: theme.textDim, marginTop: '1px' }}>
+                <div style={{ fontSize: '9px', color: t.textDim, marginTop: '1px' }}>
                   {dept}
                 </div>
               )}
@@ -130,8 +130,8 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: '2px' }}>
                   {user.managedDepartments.map((md, idx) => (
                     <span key={idx} style={{
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      color: '#2E7D32',
+                      background: `${t.success}20`,
+                      color: t.success,
                       padding: '1px 4px',
                       borderRadius: '3px',
                       fontSize: '8px',
@@ -145,8 +145,8 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
             </div>
             {hasChildren && (
               <div style={{
-                backgroundColor: '#e0e7ff',
-                color: '#4f46e5',
+                backgroundColor: `${t.accent}20`,
+                color: t.accent,
                 fontSize: '10px',
                 fontWeight: '600',
                 padding: '2px 6px',
@@ -163,7 +163,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
           <>
             {/* Horizontal line from card */}
             <td style={{ verticalAlign: 'middle', width: '24px' }}>
-              <div style={{ width: '24px', height: '2px', backgroundColor: theme.border }} />
+              <div style={{ width: '24px', height: '2px', backgroundColor: t.border }} />
             </td>
 
             {/* Vertical line + children */}
@@ -185,7 +185,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
                           left: 0,
                           width: '24px',
                           height: '2px',
-                          backgroundColor: theme.border
+                          backgroundColor: t.border
                         }} />
                         {/* Vertical line segment */}
                         {user.children.length > 1 && (
@@ -195,7 +195,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
                             top: idx === 0 ? '50%' : 0,
                             bottom: idx === user.children.length - 1 ? '50%' : 0,
                             width: '2px',
-                            backgroundColor: theme.border
+                            backgroundColor: t.border
                           }} />
                         )}
                         <div style={{ width: '24px', height: '100%', minHeight: '48px' }} />
@@ -224,7 +224,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
 
   if (tree.length === 0 && unassignedUsers.length === 0) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: theme.textMuted, backgroundColor: theme.bg, borderRadius: '8px' }}>
+      <div style={{ padding: '40px', textAlign: 'center', color: t.textMuted, backgroundColor: t.bg, borderRadius: '8px' }}>
         <p style={{ margin: 0 }}>No hay usuarios con jerarquía definida</p>
         <p style={{ fontSize: '13px', margin: '8px 0 0' }}>Ve a "Gestión Personal" para configurar</p>
       </div>
@@ -240,18 +240,18 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
         gap: '16px',
         marginBottom: '16px',
         padding: '10px 14px',
-        backgroundColor: theme.bg,
+        backgroundColor: t.bg,
         borderRadius: '8px',
-        border: `1px solid ${theme.border}`,
+        border: `1px solid ${t.border}`,
         flexWrap: 'wrap'
       }}>
         {levels.map(level => (
           <div key={level.levelOrder} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '12px', height: '12px', backgroundColor: level.color, borderRadius: '3px' }} />
-            <span style={{ fontSize: '12px', color: theme.textMuted }}>{level.name}</span>
+            <span style={{ fontSize: '12px', color: t.textMuted }}>{level.name}</span>
           </div>
         ))}
-        <span style={{ marginLeft: 'auto', fontSize: '11px', color: theme.textMuted }}>
+        <span style={{ marginLeft: 'auto', fontSize: '11px', color: t.textMuted }}>
           Click en tarjeta para editar
         </span>
       </div>
@@ -262,9 +262,9 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
         overflowY: 'auto',
         maxHeight: '600px',
         padding: '20px',
-        backgroundColor: theme.bg,
+        backgroundColor: t.bg,
         borderRadius: '10px',
-        border: `1px solid ${theme.border}`
+        border: `1px solid ${t.border}`
       }}>
         {tree.map(root => (
           <table key={root.id} style={{ borderCollapse: 'collapse', marginBottom: '16px' }}>
@@ -280,11 +280,11 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
         <div style={{
           marginTop: '16px',
           padding: '14px',
-          backgroundColor: '#fef3c7',
+          backgroundColor: `${t.warning}15`,
           borderRadius: '8px',
-          border: '1px solid #fcd34d'
+          border: '1px solid ${t.warning}60'
         }}>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: '#92400e', marginBottom: '10px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: t.warning, marginBottom: '10px' }}>
              Sin jefe asignado ({unassignedUsers.length})
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -296,7 +296,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
                   onClick={() => onEditUser && onEditUser(user)}
                   style={{
                     padding: '6px 12px',
-                    backgroundColor: theme.bgCard,
+                    backgroundColor: t.bgCard,
                     borderLeft: `3px solid ${levelConfig.color}`,
                     borderRadius: '6px',
                     cursor: 'pointer',
@@ -305,7 +305,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
                   }}
                 >
                   <span style={{ fontWeight: '500' }}>{user.firstName} {user.lastName}</span>
-                  <span style={{ color: theme.textMuted, marginLeft: '6px' }}>({levelConfig.name})</span>
+                  <span style={{ color: t.textMuted, marginLeft: '6px' }}>({levelConfig.name})</span>
                 </div>
               );
             })}
@@ -320,7 +320,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
 // ObjectivesTreeView Component - Cascading objectives visualization
 // ============================================================================
 const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
-  const { theme } = useTheme();
+  const { theme: t } = useTheme();
   const getLevelLabel = (level) => {
     const labels = { 0: 'Dirección', 1: 'Gerencia', 2: 'Supervisión', 3: 'Staff' };
     return labels[level] || 'Staff';
@@ -328,19 +328,19 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
 
   const getStatusColor = (status) => {
     const colors = {
-      'active': { bg: '#d1fae5', text: '#065f46' },
-      'completed': { bg: '#dbeafe', text: '#0F3B5F' },
-      'draft': { bg: '#F4F6F8', text: '#6b7280' },
-      'cancelled': { bg: '#fee2e2', text: '#B00020' }
+      'active': { bg: `${t.success}15`, text: t.success },
+      'completed': { bg: `${t.accent}15`, text: t.primary },
+      'draft': { bg: t.bg, text: t.textMuted },
+      'cancelled': { bg: `${t.error}15`, text: t.error }
     };
     return colors[status] || colors['draft'];
   };
 
   const getProgressColor = (progress) => {
-    if (progress >= 90) return '#2E7D32';
-    if (progress >= 70) return '#0072CE';
-    if (progress >= 50) return '#C77700';
-    return '#ef4444';
+    if (progress >= 90) return t.success;
+    if (progress >= 70) return t.accent;
+    if (progress >= 50) return t.warning;
+    return t.error;
   };
 
   const renderObjective = (obj, level = 0) => {
@@ -352,10 +352,10 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
         <div style={{
           padding: '16px',
           marginBottom: '12px',
-          backgroundColor: theme.bgCard,
+          backgroundColor: t.bgCard,
           borderRadius: '8px',
-          border: `1px solid ${theme.border}`,
-          borderLeft: `4px solid ${obj.kpiColor || '#6b7280'}`,
+          border: `1px solid ${t.border}`,
+          borderLeft: `4px solid ${obj.kpiColor || t.textMuted}`,
           boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
         }}>
           {/* Header */}
@@ -365,7 +365,7 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
                 <span style={{ fontSize: '20px' }}>{obj.kpiIcon || ''}</span>
                 <span style={{
                   padding: '2px 8px',
-                  backgroundColor: obj.kpiColor || '#6b7280',
+                  backgroundColor: obj.kpiColor || t.textMuted,
                   color: 'white',
                   borderRadius: '4px',
                   fontSize: '11px',
@@ -385,19 +385,19 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
                 </span>
                 <span style={{
                   padding: '2px 8px',
-                  backgroundColor: '#e0e7ff',
-                  color: '#4338ca',
+                  backgroundColor: `${t.accent}20`,
+                  color: t.accent,
                   borderRadius: '4px',
                   fontSize: '11px'
                 }}>
                   {getLevelLabel(obj.ownerLevel)}
                 </span>
               </div>
-              <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600', color: theme.text }}>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600', color: t.text }}>
                 {obj.name}
               </h4>
               {obj.ownerName && (
-                <p style={{ margin: 0, fontSize: '12px', color: theme.textMuted }}>
+                <p style={{ margin: 0, fontSize: '12px', color: t.textMuted }}>
                    {obj.ownerName}
                 </p>
               )}
@@ -407,12 +407,12 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
                 onClick={() => onEdit(obj)}
                 style={{
                   padding: '4px 12px',
-                  backgroundColor: theme.bgPanel,
-                  border: `1px solid ${theme.border}`,
+                  backgroundColor: t.bgPanel,
+                  border: `1px solid ${t.border}`,
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '12px',
-                  color: theme.text
+                  color: t.text
                 }}
               >
                  Editar
@@ -422,12 +422,12 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
                   onClick={() => onDelete(obj)}
                   style={{
                     padding: '4px 12px',
-                    backgroundColor: '#fef2f2',
-                    border: '1px solid #fecaca',
+                    backgroundColor: `${t.error}10`,
+                    border: '1px solid ${t.error}40',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '12px',
-                    color: '#B00020'
+                    color: t.error
                   }}
                 >
                    Eliminar
@@ -439,7 +439,7 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
           {/* Progress */}
           <div style={{ marginBottom: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-              <span style={{ color: theme.textMuted }}>
+              <span style={{ color: t.textMuted }}>
                 Meta: {obj.targetValue} {obj.targetUnit}
               </span>
               <span style={{ fontWeight: '600', color: getProgressColor(obj.progressPercent) }}>
@@ -448,7 +448,7 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
             </div>
             <div style={{
               height: '8px',
-              backgroundColor: theme.bgPanel,
+              backgroundColor: t.bgPanel,
               borderRadius: '4px',
               overflow: 'hidden'
             }}>
@@ -465,8 +465,8 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
           {level > 0 && obj.contributionPercent && (
             <div style={{
               fontSize: '11px',
-              color: theme.textMuted,
-              backgroundColor: theme.bg,
+              color: t.textMuted,
+              backgroundColor: t.bg,
               padding: '4px 8px',
               borderRadius: '4px',
               display: 'inline-block'
@@ -480,7 +480,7 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
             <div style={{
               marginTop: '8px',
               fontSize: '12px',
-              color: theme.textMuted
+              color: t.textMuted
             }}>
                {obj.children.length} objetivo(s) vinculado(s)
             </div>
@@ -489,7 +489,7 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
 
         {/* Render children */}
         {hasChildren && (
-          <div style={{ borderLeft: `2px solid ${theme.border}`, marginLeft: '16px', paddingLeft: '8px' }}>
+          <div style={{ borderLeft: `2px solid ${t.border}`, marginLeft: '16px', paddingLeft: '8px' }}>
             {obj.children.map(child => renderObjective(child, level + 1))}
           </div>
         )}
@@ -508,7 +508,7 @@ const ObjectivesTreeView = ({ tree, onEdit, onDelete, onRefresh }) => {
 // ObjectiveFormModal Component - Create/Edit objectives
 // ============================================================================
 const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, onClose, onSave }) => {
-  const { theme } = useTheme();
+  const { theme: t } = useTheme();
   const [formData, setFormData] = useState({
     code: objective?.code || 'Q',
     name: objective?.name || '',
@@ -548,7 +548,7 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
       zIndex: 1000
     },
     modal: {
-      backgroundColor: theme.bgCard,
+      backgroundColor: t.bgCard,
       borderRadius: '12px',
       padding: '24px',
       width: '600px',
@@ -562,20 +562,20 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
       alignItems: 'center',
       marginBottom: '20px',
       paddingBottom: '16px',
-      borderBottom: `1px solid ${theme.border}`
+      borderBottom: `1px solid ${t.border}`
     },
     title: {
       margin: 0,
       fontSize: '18px',
       fontWeight: '600',
-      color: theme.text
+      color: t.text
     },
     closeBtn: {
       background: 'none',
       border: 'none',
       fontSize: '24px',
       cursor: 'pointer',
-      color: theme.textMuted
+      color: t.textMuted
     },
     formGroup: {
       marginBottom: '16px'
@@ -585,39 +585,39 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
       marginBottom: '4px',
       fontSize: '13px',
       fontWeight: '500',
-      color: theme.text
+      color: t.text
     },
     input: {
       width: '100%',
       padding: '10px 12px',
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${t.border}`,
       borderRadius: '8px',
       fontSize: '14px',
       boxSizing: 'border-box',
-      backgroundColor: theme.bgCard,
-      color: theme.text
+      backgroundColor: t.bgCard,
+      color: t.text
     },
     select: {
       width: '100%',
       padding: '10px 12px',
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${t.border}`,
       borderRadius: '8px',
       fontSize: '14px',
-      backgroundColor: theme.bgCard,
-      color: theme.text,
+      backgroundColor: t.bgCard,
+      color: t.text,
       boxSizing: 'border-box'
     },
     textarea: {
       width: '100%',
       padding: '10px 12px',
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${t.border}`,
       borderRadius: '8px',
       fontSize: '14px',
       boxSizing: 'border-box',
       minHeight: '80px',
       resize: 'vertical',
-      backgroundColor: theme.bgCard,
-      color: theme.text
+      backgroundColor: t.bgCard,
+      color: t.text
     },
     row: {
       display: 'grid',
@@ -635,14 +635,14 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
       gap: '12px',
       marginTop: '24px',
       paddingTop: '16px',
-      borderTop: `1px solid ${theme.border}`
+      borderTop: `1px solid ${t.border}`
     },
     btnCancel: {
       padding: '10px 20px',
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${t.border}`,
       borderRadius: '8px',
-      backgroundColor: theme.bgCard,
-      color: theme.text,
+      backgroundColor: t.bgCard,
+      color: t.text,
       cursor: 'pointer',
       fontSize: '14px',
       fontWeight: '500'
@@ -651,7 +651,7 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
       padding: '10px 20px',
       border: 'none',
       borderRadius: '8px',
-      backgroundColor: '#8b5cf6',
+      backgroundColor: t.accent,
       color: 'white',
       cursor: 'pointer',
       fontSize: '14px',
@@ -732,16 +732,16 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
           <div style={{
             padding: '16px',
             marginBottom: '16px',
-            backgroundColor: inheritedFromParent ? '#f0fdf4' : theme.bg,
+            backgroundColor: inheritedFromParent ? `${t.success}10` : t.bg,
             borderRadius: '8px',
-            border: inheritedFromParent ? '2px solid #86efac' : `1px solid ${theme.border}`
+            border: inheritedFromParent ? '2px solid ${t.success}60' : `1px solid ${t.border}`
           }}>
             <div style={modalStyles.row}>
               <div style={modalStyles.formGroup}>
                 <label style={modalStyles.label}>
                    Objetivo Padre (Cascadeo)
                   {inheritedFromParent && (
-                    <span style={{ marginLeft: '8px', fontSize: '11px', color: '#2E7D32', fontWeight: 'normal' }}>
+                    <span style={{ marginLeft: '8px', fontSize: '11px', color: t.success, fontWeight: 'normal' }}>
                        Campos heredados del padre
                     </span>
                   )}
@@ -749,7 +749,7 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
                 <select
                   style={{
                     ...modalStyles.select,
-                    border: `1px solid ${inheritedFromParent ? '#86efac' : theme.border}`
+                    border: `1px solid ${inheritedFromParent ? `${t.success}60` : t.border}`
                   }}
                   value={formData.parentObjectiveId}
                   onChange={handleParentChange}
@@ -777,7 +777,7 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
               )}
             </div>
             {inheritedFromParent && (
-              <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#2E7D32' }}>
+              <p style={{ margin: '8px 0 0', fontSize: '12px', color: t.success }}>
                  Los campos fueron pre-llenados del objetivo padre. Puedes editarlos según necesites.
               </p>
             )}
@@ -949,7 +949,7 @@ const ObjectiveFormModal = ({ objective, objectives, users, kpis, fiscalYear, on
 // FeedbackFormModal Component - Quarterly performance review form
 // ============================================================================
 const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose, onSave, onSign }) => {
-  const { theme } = useTheme();
+  const { theme: t } = useTheme();
   const isNew = !feedback;
   const isEditable = !feedback || feedback.status === 'draft' || feedback.status === 'in_review';
 
@@ -992,7 +992,7 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
       zIndex: 1000
     },
     modal: {
-      backgroundColor: theme.bgCard,
+      backgroundColor: t.bgCard,
       borderRadius: '12px',
       padding: '24px',
       width: '700px',
@@ -1006,19 +1006,19 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
       alignItems: 'center',
       marginBottom: '20px',
       paddingBottom: '16px',
-      borderBottom: `1px solid ${theme.border}`
+      borderBottom: `1px solid ${t.border}`
     },
     section: {
       marginBottom: '24px',
       padding: '16px',
-      backgroundColor: theme.bg,
+      backgroundColor: t.bg,
       borderRadius: '8px'
     },
     sectionTitle: {
       margin: '0 0 12px 0',
       fontSize: '14px',
       fontWeight: '600',
-      color: theme.text
+      color: t.text
     },
     formGroup: {
       marginBottom: '12px'
@@ -1028,38 +1028,38 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
       marginBottom: '4px',
       fontSize: '12px',
       fontWeight: '500',
-      color: theme.textMuted
+      color: t.textMuted
     },
     input: {
       width: '100%',
       padding: '8px 10px',
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${t.border}`,
       borderRadius: '6px',
       fontSize: '14px',
       boxSizing: 'border-box',
-      backgroundColor: theme.bgCard,
-      color: theme.text
+      backgroundColor: t.bgCard,
+      color: t.text
     },
     textarea: {
       width: '100%',
       padding: '8px 10px',
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${t.border}`,
       borderRadius: '6px',
       fontSize: '14px',
       boxSizing: 'border-box',
       minHeight: '60px',
       resize: 'vertical',
-      backgroundColor: theme.bgCard,
-      color: theme.text
+      backgroundColor: t.bgCard,
+      color: t.text
     },
     select: {
       width: '100%',
       padding: '8px 10px',
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${t.border}`,
       borderRadius: '6px',
       fontSize: '14px',
-      backgroundColor: theme.bgCard,
-      color: theme.text,
+      backgroundColor: t.bgCard,
+      color: t.text,
       boxSizing: 'border-box'
     },
     row: {
@@ -1106,7 +1106,7 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
             {isNew ? 'Nueva Evaluación' : 'Evaluación de Desempeño'} - Q{fiscalQuarter} {fiscalYear}
           </h3>
           <button
-            style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: theme.textMuted }}
+            style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: t.textMuted }}
             onClick={onClose}
           >
             &times;
@@ -1154,9 +1154,9 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
 
           {/* Employee info for existing */}
           {!isNew && feedback?.employee && (
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: theme.bgPanel, borderRadius: '8px' }}>
+            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
               <strong>{feedback.employee.name}</strong>
-              <span style={{ color: theme.textMuted, marginLeft: '12px' }}>
+              <span style={{ color: t.textMuted, marginLeft: '12px' }}>
                 {feedback.employee.position} - {feedback.employee.department}
               </span>
             </div>
@@ -1259,12 +1259,12 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
               ))}
             </div>
             <div style={{ marginTop: '12px', textAlign: 'center' }}>
-              <span style={{ fontSize: '14px', color: theme.textMuted }}>Puntuación General: </span>
+              <span style={{ fontSize: '14px', color: t.textMuted }}>Puntuación General: </span>
               <span style={{
                 fontSize: '24px',
                 fontWeight: '700',
-                color: formData.overallScore >= 80 ? '#2E7D32' :
-                       formData.overallScore >= 60 ? '#C77700' : '#ef4444'
+                color: formData.overallScore >= 80 ? t.success :
+                       formData.overallScore >= 60 ? t.warning : t.error
               }}>
                 {formData.overallScore.toFixed(1)}%
               </span>
@@ -1347,13 +1347,13 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
 
           {/* Signatures */}
           {!isNew && (
-            <div style={{ ...modalStyles.section, backgroundColor: '#f0fdf4' }}>
+            <div style={{ ...modalStyles.section, backgroundColor: `${t.success}10` }}>
               <h4 style={modalStyles.sectionTitle}> Firmas</h4>
               <div style={modalStyles.row}>
                 <div style={{ textAlign: 'center', padding: '12px' }}>
-                  <div style={{ fontSize: '13px', color: theme.textMuted, marginBottom: '8px' }}>Empleado</div>
+                  <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Empleado</div>
                   {feedback?.employeeSignature ? (
-                    <div style={{ color: '#2E7D32', fontWeight: '600' }}>
+                    <div style={{ color: t.success, fontWeight: '600' }}>
                        Firmado {feedback.employeeSignedAt ? new Date(feedback.employeeSignedAt).toLocaleDateString() : ''}
                     </div>
                   ) : (
@@ -1362,7 +1362,7 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
                       onClick={() => onSign('employee')}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: '#2E7D32',
+                        backgroundColor: t.success,
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
@@ -1375,9 +1375,9 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
                   )}
                 </div>
                 <div style={{ textAlign: 'center', padding: '12px' }}>
-                  <div style={{ fontSize: '13px', color: theme.textMuted, marginBottom: '8px' }}>Evaluador</div>
+                  <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Evaluador</div>
                   {feedback?.reviewerSignature ? (
-                    <div style={{ color: '#2E7D32', fontWeight: '600' }}>
+                    <div style={{ color: t.success, fontWeight: '600' }}>
                        Firmado {feedback.reviewerSignedAt ? new Date(feedback.reviewerSignedAt).toLocaleDateString() : ''}
                     </div>
                   ) : (
@@ -1386,7 +1386,7 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
                       onClick={() => onSign('reviewer')}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: theme.accent,
+                        backgroundColor: t.accent,
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
@@ -1409,7 +1409,7 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
             alignItems: 'center',
             marginTop: '20px',
             paddingTop: '16px',
-            borderTop: `1px solid ${theme.border}`
+            borderTop: `1px solid ${t.border}`
           }}>
             <div>
               {isEditable && !isNew && (
@@ -1430,10 +1430,10 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
                 onClick={onClose}
                 style={{
                   padding: '10px 20px',
-                  border: `1px solid ${theme.border}`,
+                  border: `1px solid ${t.border}`,
                   borderRadius: '8px',
-                  backgroundColor: theme.bgCard,
-                  color: theme.text,
+                  backgroundColor: t.bgCard,
+                  color: t.text,
                   cursor: 'pointer'
                 }}
               >
@@ -1446,7 +1446,7 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
                     padding: '10px 20px',
                     border: 'none',
                     borderRadius: '8px',
-                    backgroundColor: '#8b5cf6',
+                    backgroundColor: t.accent,
                     color: 'white',
                     cursor: 'pointer',
                     fontWeight: '600'
@@ -1470,7 +1470,7 @@ const ActivityFormModal = ({
   activity, users, kpis, projects, objectives, deliverableTypes,
   subordinates, onClose, onSave, onFetchObjectivesByKpi, defaultAssignedTo
 }) => {
-  const { theme } = useTheme();
+  const { theme: t } = useTheme();
   const isNew = !activity;
   const [selectedKpiCode, setSelectedKpiCode] = useState(activity?.kpi_code || '');
 
@@ -1593,43 +1593,43 @@ const ActivityFormModal = ({
       alignItems: 'center', justifyContent: 'center', zIndex: 1000
     },
     modal: {
-      backgroundColor: theme.bgCard, borderRadius: '12px', padding: '24px',
+      backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px',
       width: '700px', maxHeight: '90vh', overflowY: 'auto',
       boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
     },
     header: {
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${theme.border}`
+      marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${t.border}`
     },
     section: {
-      marginBottom: '20px', padding: '16px', backgroundColor: theme.bg,
-      borderRadius: '8px', border: `1px solid ${theme.border}`
+      marginBottom: '20px', padding: '16px', backgroundColor: t.bg,
+      borderRadius: '8px', border: `1px solid ${t.border}`
     },
     sectionTitle: {
-      margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: theme.text
+      margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: t.text
     },
     row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
     row3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' },
     formGroup: { marginBottom: '12px' },
     label: {
       display: 'block', marginBottom: '4px', fontSize: '13px',
-      fontWeight: '500', color: theme.text
+      fontWeight: '500', color: t.text
     },
     input: {
-      width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
+      width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
       borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box',
-      backgroundColor: theme.bgCard, color: theme.text
+      backgroundColor: t.bgCard, color: t.text
     },
     select: {
-      width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
-      borderRadius: '8px', fontSize: '14px', backgroundColor: theme.bgCard,
-      color: theme.text, boxSizing: 'border-box'
+      width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
+      borderRadius: '8px', fontSize: '14px', backgroundColor: t.bgCard,
+      color: t.text, boxSizing: 'border-box'
     },
     textarea: {
-      width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
+      width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
       borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box',
       minHeight: '60px', resize: 'vertical',
-      backgroundColor: theme.bgCard, color: theme.text
+      backgroundColor: t.bgCard, color: t.text
     },
     checkbox: { marginRight: '8px' }
   };
@@ -1657,11 +1657,11 @@ const ActivityFormModal = ({
     <div style={modalStyles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div style={modalStyles.modal}>
         <div style={modalStyles.header}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: theme.text }}>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: t.text }}>
             {isNew ? 'Nueva Actividad' : 'Editar Actividad'}
           </h3>
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: theme.textMuted
+            background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: t.textMuted
           }}>&times;</button>
         </div>
 
@@ -1793,8 +1793,8 @@ const ActivityFormModal = ({
             {/* Warning for missing estimated hours */}
             {activity?.source_type === '8D' && !formData.estimated_hours && (
               <div style={{
-                backgroundColor: '#fef3c7',
-                border: '1px solid #C77700',
+                backgroundColor: `${t.warning}15`,
+                border: '1px solid ${t.warning}',
                 borderRadius: '6px',
                 padding: '12px',
                 marginBottom: '16px',
@@ -1804,10 +1804,10 @@ const ActivityFormModal = ({
               }}>
                 <span style={{ fontSize: '18px' }}></span>
                 <div>
-                  <div style={{ fontWeight: '600', color: '#92400e', fontSize: '13px' }}>
+                  <div style={{ fontWeight: '600', color: t.warning, fontSize: '13px' }}>
                     Horas no estimadas
                   </div>
-                  <div style={{ fontSize: '12px', color: '#a16207' }}>
+                  <div style={{ fontSize: '12px', color: t.warning }}>
                     Esta actividad proviene de 8D. Por favor capture las horas estimadas antes de cerrarla.
                   </div>
                 </div>
@@ -1842,7 +1842,7 @@ const ActivityFormModal = ({
                   min="0"
                   style={{
                     ...modalStyles.input,
-                    border: `1px solid ${activity?.source_type === '8D' && !formData.estimated_hours ? '#C77700' : theme.border}`
+                    border: `1px solid ${activity?.source_type === '8D' && !formData.estimated_hours ? t.warning : t.border}`
                   }}
                   value={formData.estimated_hours}
                   onChange={(e) => setFormData({ ...formData, estimated_hours: e.target.value })}
@@ -1855,8 +1855,8 @@ const ActivityFormModal = ({
                 <label style={modalStyles.label}>Horas Reales (calculado)</label>
                 <div style={{
                   ...modalStyles.input,
-                  backgroundColor: theme.bgPanel,
-                  color: theme.textMuted,
+                  backgroundColor: t.bgPanel,
+                  color: t.textMuted,
                   display: 'flex',
                   alignItems: 'center'
                 }}>
@@ -1865,7 +1865,7 @@ const ActivityFormModal = ({
                     const dailyHours = (activity?.daily_progress || []).reduce((sum, d) => sum + (d.hours || 0), 0);
                     return dailyHours.toFixed(1);
                   })()}h
-                  <span style={{ marginLeft: '8px', fontSize: '10px', color: theme.textDim }}>
+                  <span style={{ marginLeft: '8px', fontSize: '10px', color: t.textDim }}>
                     (suma de actividades diarias)
                   </span>
                 </div>
@@ -1875,7 +1875,7 @@ const ActivityFormModal = ({
                     marginTop: '4px',
                     color: (() => {
                       const dailyHours = (activity?.daily_progress || []).reduce((sum, d) => sum + (d.hours || 0), 0);
-                      return dailyHours > parseFloat(formData.estimated_hours) ? '#B00020' : '#16a34a';
+                      return dailyHours > parseFloat(formData.estimated_hours) ? t.error : t.success;
                     })()
                   }}>
                     {(() => {
@@ -1949,9 +1949,9 @@ const ActivityFormModal = ({
                             width: '40px',
                             height: '40px',
                             borderRadius: '8px',
-                            border: `2px solid ${(formData.recurring_days || []).includes(day.value) ? '#8b5cf6' : theme.border}`,
-                            backgroundColor: (formData.recurring_days || []).includes(day.value) ? '#8b5cf6' : theme.bgCard,
-                            color: (formData.recurring_days || []).includes(day.value) ? 'white' : theme.text,
+                            border: `2px solid ${(formData.recurring_days || []).includes(day.value) ? t.accent : t.border}`,
+                            backgroundColor: (formData.recurring_days || []).includes(day.value) ? t.accent : t.bgCard,
+                            color: (formData.recurring_days || []).includes(day.value) ? 'white' : t.text,
                             fontWeight: '600',
                             fontSize: '14px',
                             cursor: 'pointer',
@@ -1963,7 +1963,7 @@ const ActivityFormModal = ({
                       ))}
                     </div>
                     {formData.recurring_days && formData.recurring_days.length > 0 && (
-                      <div style={{ marginTop: '8px', fontSize: '12px', color: theme.textMuted }}>
+                      <div style={{ marginTop: '8px', fontSize: '12px', color: t.textMuted }}>
                         Seleccionados: {formData.recurring_days
                           .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
                           .map(d => weekDays.find(wd => wd.value === d)?.fullLabel)
@@ -2008,12 +2008,12 @@ const ActivityFormModal = ({
           {/* Actions */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
             <button type="button" onClick={onClose} style={{
-              padding: '10px 20px', border: `1px solid ${theme.border}`, borderRadius: '8px',
-              backgroundColor: theme.bgCard, color: theme.text, cursor: 'pointer'
+              padding: '10px 20px', border: `1px solid ${t.border}`, borderRadius: '8px',
+              backgroundColor: t.bgCard, color: t.text, cursor: 'pointer'
             }}>Cancelar</button>
             <button type="submit" style={{
               padding: '10px 20px', border: 'none', borderRadius: '8px',
-              backgroundColor: '#2E7D32', color: 'white', cursor: 'pointer', fontWeight: '600'
+              backgroundColor: t.success, color: 'white', cursor: 'pointer', fontWeight: '600'
             }}>{isNew ? 'Crear Actividad' : 'Guardar Cambios'}</button>
           </div>
         </form>
@@ -2026,7 +2026,7 @@ const ActivityFormModal = ({
 // CoverageFormModal Component - Vacation/Sick leave coverage
 // ============================================================================
 const CoverageFormModal = ({ coverage, users, activities, onClose, onSave }) => {
-  const { theme } = useTheme();
+  const { theme: t } = useTheme();
   const isNew = !coverage;
 
   const [formData, setFormData] = useState({
@@ -2069,20 +2069,20 @@ const CoverageFormModal = ({ coverage, users, activities, onClose, onSave }) => 
       alignItems: 'center', justifyContent: 'center', zIndex: 1000
     },
     modal: {
-      backgroundColor: theme.bgCard, borderRadius: '12px', padding: '24px',
+      backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px',
       width: '500px', maxHeight: '90vh', overflowY: 'auto'
     },
     formGroup: { marginBottom: '16px' },
-    label: { display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '500', color: theme.text },
+    label: { display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '500', color: t.text },
     input: {
-      width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
+      width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
       borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box',
-      backgroundColor: theme.bgCard, color: theme.text
+      backgroundColor: t.bgCard, color: t.text
     },
     select: {
-      width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
-      borderRadius: '8px', fontSize: '14px', backgroundColor: theme.bgCard,
-      color: theme.text, boxSizing: 'border-box'
+      width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
+      borderRadius: '8px', fontSize: '14px', backgroundColor: t.bgCard,
+      color: t.text, boxSizing: 'border-box'
     },
     row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }
   };
@@ -2094,7 +2094,7 @@ const CoverageFormModal = ({ coverage, users, activities, onClose, onSave }) => 
           <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
             {isNew ? 'Nueva Cobertura' : 'Editar Cobertura'}
           </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: theme.textMuted }}>&times;</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: t.textMuted }}>&times;</button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -2190,12 +2190,12 @@ const CoverageFormModal = ({ coverage, users, activities, onClose, onSave }) => 
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
             <button type="button" onClick={onClose} style={{
-              padding: '10px 20px', border: `1px solid ${theme.border}`, borderRadius: '8px',
-              backgroundColor: theme.bgCard, color: theme.text, cursor: 'pointer'
+              padding: '10px 20px', border: `1px solid ${t.border}`, borderRadius: '8px',
+              backgroundColor: t.bgCard, color: t.text, cursor: 'pointer'
             }}>Cancelar</button>
             <button type="submit" style={{
               padding: '10px 20px', border: 'none', borderRadius: '8px',
-              backgroundColor: '#8b5cf6', color: 'white', cursor: 'pointer', fontWeight: '600'
+              backgroundColor: t.accent, color: 'white', cursor: 'pointer', fontWeight: '600'
             }}>{isNew ? 'Crear Cobertura' : 'Guardar'}</button>
           </div>
         </form>
@@ -2208,7 +2208,7 @@ const CoverageFormModal = ({ coverage, users, activities, onClose, onSave }) => 
 // SupervisorFeedbackModal Component - Add feedback to employee/activity
 // ============================================================================
 const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
-  const { theme } = useTheme();
+  const { theme: t } = useTheme();
   const [formData, setFormData] = useState({
     activityId: activity?.id || '',
     employeeId: activity?.assigned_to || '',
@@ -2222,12 +2222,12 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
   });
 
   const feedbackTypes = [
-    { value: 'recognition', label: 'Felicitacion', icon: '', color: '#2E7D32' },
-    { value: 'warning', label: 'Llamada de atencion', icon: '', color: '#C77700' },
-    { value: 'coaching', label: 'Retroalimentacion constructiva', icon: '', color: '#0072CE' },
-    { value: 'achievement', label: 'Logro destacado', icon: '', color: '#8b5cf6' },
-    { value: 'improvement_needed', label: 'Area de mejora', icon: '', color: '#ef4444' },
-    { value: 'note', label: 'Nota general', icon: '', color: '#6b7280' }
+    { value: 'recognition', label: 'Felicitacion', icon: '', color: t.success },
+    { value: 'warning', label: 'Llamada de atencion', icon: '', color: t.warning },
+    { value: 'coaching', label: 'Retroalimentacion constructiva', icon: '', color: t.accent },
+    { value: 'achievement', label: 'Logro destacado', icon: '', color: t.accent },
+    { value: 'improvement_needed', label: 'Area de mejora', icon: '', color: t.error },
+    { value: 'note', label: 'Nota general', icon: '', color: t.textMuted }
   ];
 
   const handleSubmit = (e) => {
@@ -2248,14 +2248,14 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
       alignItems: 'center', justifyContent: 'center', zIndex: 1000
     }} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div style={{
-        backgroundColor: theme.bgCard, borderRadius: '12px', padding: '24px',
+        backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px',
         width: '500px', maxHeight: '90vh', overflowY: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: theme.text }}>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: t.text }}>
             Agregar Feedback {activity && `- ${activity.title}`}
           </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: theme.textMuted }}>&times;</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: t.textMuted }}>&times;</button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -2271,9 +2271,9 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
                   onClick={() => setFormData({ ...formData, feedbackType: type.value })}
                   style={{
                     padding: '10px',
-                    border: formData.feedbackType === type.value ? `2px solid ${type.color}` : `1px solid ${theme.border}`,
+                    border: formData.feedbackType === type.value ? `2px solid ${type.color}` : `1px solid ${t.border}`,
                     borderRadius: '8px',
-                    backgroundColor: formData.feedbackType === type.value ? `${type.color}10` : theme.bgCard,
+                    backgroundColor: formData.feedbackType === type.value ? `${type.color}10` : t.bgCard,
                     cursor: 'pointer',
                     textAlign: 'left'
                   }}
@@ -2292,8 +2292,8 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
               </label>
               <select
                 style={{
-                  width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
-                  borderRadius: '8px', fontSize: '14px', backgroundColor: theme.bgCard, color: theme.text
+                  width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
+                  borderRadius: '8px', fontSize: '14px', backgroundColor: t.bgCard, color: t.text
                 }}
                 value={formData.employeeId}
                 onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
@@ -2313,9 +2313,9 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
             </label>
             <input
               style={{
-                width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
+                width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
                 borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box',
-                backgroundColor: theme.bgCard, color: theme.text
+                backgroundColor: t.bgCard, color: t.text
               }}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -2329,9 +2329,9 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
             </label>
             <textarea
               style={{
-                width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
+                width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
                 borderRadius: '8px', fontSize: '14px', minHeight: '100px', boxSizing: 'border-box',
-                backgroundColor: theme.bgCard, color: theme.text
+                backgroundColor: t.bgCard, color: t.text
               }}
               value={formData.comment}
               onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
@@ -2347,8 +2347,8 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
               </label>
               <select
                 style={{
-                  width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
-                  borderRadius: '8px', fontSize: '14px', backgroundColor: theme.bgCard, color: theme.text
+                  width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
+                  borderRadius: '8px', fontSize: '14px', backgroundColor: t.bgCard, color: t.text
                 }}
                 value={formData.severity}
                 onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
@@ -2390,9 +2390,9 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
               <input
                 type="date"
                 style={{
-                  width: '100%', padding: '10px 12px', border: `1px solid ${theme.border}`,
+                  width: '100%', padding: '10px 12px', border: `1px solid ${t.border}`,
                   borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box',
-                  backgroundColor: theme.bgCard, color: theme.text
+                  backgroundColor: t.bgCard, color: t.text
                 }}
                 value={formData.followupDate}
                 onChange={(e) => setFormData({ ...formData, followupDate: e.target.value })}
@@ -2402,12 +2402,12 @@ const SupervisorFeedbackModal = ({ activity, users, onClose, onSave }) => {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
             <button type="button" onClick={onClose} style={{
-              padding: '10px 20px', border: `1px solid ${theme.border}`, borderRadius: '8px',
-              backgroundColor: theme.bgCard, color: theme.text, cursor: 'pointer'
+              padding: '10px 20px', border: `1px solid ${t.border}`, borderRadius: '8px',
+              backgroundColor: t.bgCard, color: t.text, cursor: 'pointer'
             }}>Cancelar</button>
             <button type="submit" style={{
               padding: '10px 20px', border: 'none', borderRadius: '8px',
-              backgroundColor: selectedType?.color || '#8b5cf6', color: 'white',
+              backgroundColor: selectedType?.color || t.accent, color: 'white',
               cursor: 'pointer', fontWeight: '600'
             }}>Guardar Feedback</button>
           </div>
@@ -2539,12 +2539,12 @@ const ExportActivitiesModal = ({ users, onClose }) => {
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: '12px', fontWeight: '600', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Fecha inicio</label>
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: `1px solid ${t.border || '#e5e7eb'}`, backgroundColor: t.bgPanel, color: t.text, fontSize: '13px' }} />
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: `1px solid ${t.border || t.border}`, backgroundColor: t.bgPanel, color: t.text, fontSize: '13px' }} />
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: '12px', fontWeight: '600', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Fecha fin</label>
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: `1px solid ${t.border || '#e5e7eb'}`, backgroundColor: t.bgPanel, color: t.text, fontSize: '13px' }} />
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: `1px solid ${t.border || t.border}`, backgroundColor: t.bgPanel, color: t.text, fontSize: '13px' }} />
           </div>
         </div>
 
@@ -2553,14 +2553,14 @@ const ExportActivitiesModal = ({ users, onClose }) => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <label style={{ fontSize: '12px', fontWeight: '600', color: t.textMuted }}>Personas ({selectedUserIds.length}/{users.length})</label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={selectAll} style={{ fontSize: '11px', color: '#8b5cf6', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>Todos</button>
+              <button onClick={selectAll} style={{ fontSize: '11px', color: t.accent, background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>Todos</button>
               <button onClick={clearAll} style={{ fontSize: '11px', color: t.textMuted, background: 'none', border: 'none', cursor: 'pointer' }}>Ninguno</button>
             </div>
           </div>
-          <div style={{ maxHeight: '200px', overflow: 'auto', border: `1px solid ${t.border || '#e5e7eb'}`, borderRadius: '8px', padding: '8px' }}>
+          <div style={{ maxHeight: '200px', overflow: 'auto', border: `1px solid ${t.border || t.border}`, borderRadius: '8px', padding: '8px' }}>
             {users.map(u => (
-              <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: selectedUserIds.includes(u.id) ? '#f5f3ff' : 'transparent' }}>
-                <input type="checkbox" checked={selectedUserIds.includes(u.id)} onChange={() => toggleUser(u.id)} style={{ accentColor: '#8b5cf6' }} />
+              <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: selectedUserIds.includes(u.id) ? `${t.accent}10` : 'transparent' }}>
+                <input type="checkbox" checked={selectedUserIds.includes(u.id)} onChange={() => toggleUser(u.id)} style={{ accentColor: t.accent }} />
                 <span style={{ fontSize: '13px', color: t.text, fontWeight: selectedUserIds.includes(u.id) ? '600' : '400' }}>
                   {u.firstName} {u.lastName}
                 </span>
@@ -2572,13 +2572,13 @@ const ExportActivitiesModal = ({ users, onClose }) => {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${t.border || '#e5e7eb'}`, backgroundColor: 'transparent', color: t.text, cursor: 'pointer', fontSize: '14px' }}>
+          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${t.border || t.border}`, backgroundColor: 'transparent', color: t.text, cursor: 'pointer', fontSize: '14px' }}>
             Cancelar
           </button>
           <button
             onClick={handleExport}
             disabled={loading || selectedUserIds.length === 0}
-            style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: selectedUserIds.length === 0 ? t.border : '#2E7D32', color: 'white', cursor: selectedUserIds.length === 0 ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '600' }}
+            style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: selectedUserIds.length === 0 ? t.border : t.success, color: 'white', cursor: selectedUserIds.length === 0 ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '600' }}
           >
             {loading ? ' Generando...' : ` Exportar Excel (${selectedUserIds.length} personas)`}
           </button>
@@ -3709,7 +3709,10 @@ const WorkloadManager = () => {
     isRecurring: a.isRecurring || a.is_recurring,
     frequency: a.frequency,
     frequencyDetails: a.frequencyDetails || a.frequency_details,
-    recurringDuration: a.recurringDuration || a.recurring_duration
+    recurringDuration: a.recurringDuration || a.recurring_duration,
+    // Grouping fields (passthrough)
+    source_type: a.source_type,
+    project_name: a.project_name
   })), [filteredActivities]);
 
   // Dynamic filter options - only show options that have matching activities
@@ -3913,15 +3916,15 @@ const WorkloadManager = () => {
       {/* Read-only banner */}
       {readOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          borderBottom: '2px solid #C77700',
+          backgroundColor: `${t.warning}15`,
+          borderBottom: '2px solid ${t.warning}',
           padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}></span>
-          <span style={{ color: '#92400e', fontWeight: '600', fontSize: '14px' }}>
+          <span style={{ color: t.warning, fontWeight: '600', fontSize: '14px' }}>
             Modo Solo Lectura - No tienes permisos para modificar la carga de trabajo
           </span>
         </div>
@@ -4031,7 +4034,7 @@ const WorkloadManager = () => {
             {/* Summary Cards (personal weekly) */}
             {weeklySummary && <div style={styles.grid}>
               {/* Hours Available */}
-              <div style={{ ...styles.statCard, borderLeft: '4px solid #6b7280' }}>
+              <div style={{ ...styles.statCard, borderLeft: '4px solid ${t.textMuted}' }}>
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Disponibles</div>
                 <div style={{ fontSize: '32px', fontWeight: '700', color: t.text }}>
                   {weeklySummary.hours_available}
@@ -4040,7 +4043,7 @@ const WorkloadManager = () => {
               </div>
 
               {/* Hours Planned */}
-              <div style={{ ...styles.statCard, borderLeft: '4px solid #0072CE' }}>
+              <div style={{ ...styles.statCard, borderLeft: '4px solid ${t.accent}' }}>
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Planeadas</div>
                 <div style={{ fontSize: '32px', fontWeight: '700', color: t.accent }}>
                   {weeklySummary.hours_planned.toFixed(1)}
@@ -4064,13 +4067,13 @@ const WorkloadManager = () => {
               {/* Hours Actual */}
               <div style={{
                 ...styles.statCard,
-                borderLeft: `4px solid ${weeklySummary.hours_actual > weeklySummary.hours_available ? '#ef4444' : '#2E7D32'}`
+                borderLeft: `4px solid ${weeklySummary.hours_actual > weeklySummary.hours_available ? t.error : t.success}`
               }}>
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Reales</div>
                 <div style={{
                   fontSize: '32px',
                   fontWeight: '700',
-                  color: weeklySummary.hours_actual > weeklySummary.hours_available ? '#ef4444' : '#2E7D32'
+                  color: weeklySummary.hours_actual > weeklySummary.hours_available ? t.error : t.success
                 }}>
                   {weeklySummary.hours_actual.toFixed(1)}
                 </div>
@@ -4085,7 +4088,7 @@ const WorkloadManager = () => {
                   <div style={{
                     width: `${Math.min(100, (weeklySummary.hours_actual / weeklySummary.hours_available) * 100)}%`,
                     height: '100%',
-                    backgroundColor: weeklySummary.hours_actual > weeklySummary.hours_available ? '#ef4444' : '#2E7D32'
+                    backgroundColor: weeklySummary.hours_actual > weeklySummary.hours_available ? t.error : t.success
                   }} />
                 </div>
               </div>
@@ -4093,13 +4096,13 @@ const WorkloadManager = () => {
               {/* Utilization */}
               <div style={{
                 ...styles.statCard,
-                borderLeft: `4px solid ${weeklySummary.utilization_percent > 100 ? '#ef4444' : '#8b5cf6'}`
+                borderLeft: `4px solid ${weeklySummary.utilization_percent > 100 ? t.error : t.accent}`
               }}>
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Utilización</div>
                 <div style={{
                   fontSize: '32px',
                   fontWeight: '700',
-                  color: weeklySummary.utilization_percent > 100 ? '#ef4444' : '#8b5cf6'
+                  color: weeklySummary.utilization_percent > 100 ? t.error : t.accent
                 }}>
                   {weeklySummary.utilization_percent}%
                 </div>
@@ -4107,8 +4110,8 @@ const WorkloadManager = () => {
                   <div style={{
                     marginTop: '8px',
                     padding: '4px 8px',
-                    backgroundColor: '#fee2e2',
-                    color: '#B00020',
+                    backgroundColor: `${t.error}15`,
+                    color: t.error,
                     borderRadius: '4px',
                     fontSize: '12px',
                     fontWeight: '600'
@@ -4167,17 +4170,17 @@ const WorkloadManager = () => {
                     <div style={{
                       textAlign: 'center',
                       padding: '16px',
-                      backgroundColor: isOnTrack ? '#d1fae5' : '#fee2e2',
+                      backgroundColor: isOnTrack ? `${t.success}15` : `${t.error}15`,
                       borderRadius: '8px'
                     }}>
                       <div style={{
                         fontSize: '28px',
                         fontWeight: '700',
-                        color: isOnTrack ? '#2E7D32' : '#B00020'
+                        color: isOnTrack ? t.success : t.error
                       }}>
                         {compliance.real}% / {compliance.expected}%
                       </div>
-                      <div style={{ fontSize: '13px', color: isOnTrack ? '#2E7D32' : '#B00020' }}>
+                      <div style={{ fontSize: '13px', color: isOnTrack ? t.success : t.error }}>
                         Cumplimiento
                       </div>
                       <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
@@ -4186,20 +4189,20 @@ const WorkloadManager = () => {
                     </div>
                   );
                 })()}
-                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#dbeafe', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#2563eb' }}>
+                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.accent}15`, borderRadius: '8px' }}>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: t.accent }}>
                     {weeklySummary.activities_completed} / {weeklySummary.activities_total}
                   </div>
-                  <div style={{ fontSize: '13px', color: '#2563eb' }}>Actividades</div>
+                  <div style={{ fontSize: '13px', color: t.accent }}>Actividades</div>
                   <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Completadas / Total</div>
                 </div>
-                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#C77700' }}>{weeklySummary.activities_pending}</div>
-                  <div style={{ fontSize: '13px', color: '#C77700' }}>Pendientes</div>
+                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.warning}15`, borderRadius: '8px' }}>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: t.warning }}>{weeklySummary.activities_pending}</div>
+                  <div style={{ fontSize: '13px', color: t.warning }}>Pendientes</div>
                 </div>
-                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#fee2e2', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#B00020' }}>{weeklySummary.activities_unplanned}</div>
-                  <div style={{ fontSize: '13px', color: '#B00020' }}>No Planeadas</div>
+                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.error}15`, borderRadius: '8px' }}>
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: t.error }}>{weeklySummary.activities_unplanned}</div>
+                  <div style={{ fontSize: '13px', color: t.error }}>No Planeadas</div>
                 </div>
               </div>
             </div>
@@ -4217,7 +4220,7 @@ const WorkloadManager = () => {
                   onClick={() => updateViewMode('gantt')}
                   style={{
                     ...styles.button,
-                    backgroundColor: viewMode === 'gantt' ? '#8b5cf6' : t.bgPanel,
+                    backgroundColor: viewMode === 'gantt' ? t.accent : t.bgPanel,
                     color: viewMode === 'gantt' ? 'white' : t.text
                   }}
                 >
@@ -4227,7 +4230,7 @@ const WorkloadManager = () => {
                   onClick={() => updateViewMode('table')}
                   style={{
                     ...styles.button,
-                    backgroundColor: viewMode === 'table' ? '#8b5cf6' : t.bgPanel,
+                    backgroundColor: viewMode === 'table' ? t.accent : t.bgPanel,
                     color: viewMode === 'table' ? 'white' : t.text
                   }}
                 >
@@ -4245,7 +4248,7 @@ const WorkloadManager = () => {
                   if (directReports.length === 0) return null;
                   const viewingMember = viewingMemberId ? users.find(u => u.id === viewingMemberId) : null;
                   return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: `1px solid ${t.border || '#e5e7eb'}`, paddingLeft: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: `1px solid ${t.border || t.border}`, paddingLeft: '12px' }}>
                       <span style={{ fontSize: '13px', color: t.textMuted }}> Ver:</span>
                       <select
                         value={viewingMemberId || ''}
@@ -4254,8 +4257,8 @@ const WorkloadManager = () => {
                           ...styles.select,
                           width: '180px',
                           fontSize: '13px',
-                          borderColor: viewingMemberId ? '#8b5cf6' : (t.border || '#e5e7eb'),
-                          backgroundColor: viewingMemberId ? '#f5f3ff' : t.bg
+                          borderColor: viewingMemberId ? t.accent : (t.border || t.border),
+                          backgroundColor: viewingMemberId ? `${t.accent}10` : t.bg
                         }}
                       >
                         <option value="">Mis actividades</option>
@@ -4277,7 +4280,7 @@ const WorkloadManager = () => {
                         })}
                       </select>
                       {viewingMember && (
-                        <span style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: '600' }}>
+                        <span style={{ fontSize: '12px', color: t.accent, fontWeight: '600' }}>
                           {viewingMember.firstName} {viewingMember.lastName}
                         </span>
                       )}
@@ -4290,7 +4293,7 @@ const WorkloadManager = () => {
                   onClick={() => setShowFilters(!showFilters)}
                   style={{
                     ...styles.button,
-                    backgroundColor: showFilters || Object.values(activityFilters).some(f => f.length > 0) ? '#C77700' : t.bgPanel,
+                    backgroundColor: showFilters || Object.values(activityFilters).some(f => f.length > 0) ? t.warning : t.bgPanel,
                     color: showFilters || Object.values(activityFilters).some(f => f.length > 0) ? 'white' : t.text
                   }}
                 >
@@ -4301,7 +4304,7 @@ const WorkloadManager = () => {
                     onClick={() => setShowAddForm(!showAddForm)}
                     style={{
                       ...styles.button,
-                      backgroundColor: showAddForm ? '#6b7280' : '#2E7D32',
+                      backgroundColor: showAddForm ? t.textMuted : t.success,
                       color: 'white'
                     }}
                   >
@@ -4324,7 +4327,7 @@ const WorkloadManager = () => {
                   onClick={() => setShowExportModal(true)}
                   style={{
                     ...styles.button,
-                    backgroundColor: '#059669',
+                    backgroundColor: t.success,
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',
@@ -4338,7 +4341,7 @@ const WorkloadManager = () => {
 
             {/* Activity Filters - Compact Dropdowns */}
             {showFilters && (
-              <div style={{ ...styles.card, backgroundColor: '#fffbeb', border: '1px solid #fcd34d', padding: '12px 16px' }}>
+              <div style={{ ...styles.card, backgroundColor: `${t.warning}10`, border: '1px solid ${t.warning}60', padding: '12px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   {/* KPI Dropdown */}
                   <div style={{ position: 'relative' }}>
@@ -4346,7 +4349,7 @@ const WorkloadManager = () => {
                       onClick={() => setOpenFilterDropdown(openFilterDropdown === 'kpis' ? null : 'kpis')}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: activityFilters.kpis.length > 0 ? '#8b5cf6' : t.bgCard,
+                        backgroundColor: activityFilters.kpis.length > 0 ? t.accent : t.bgCard,
                         color: activityFilters.kpis.length > 0 ? 'white' : t.text,
                         border: `1px solid ${t.border}`,
                         borderRadius: '6px',
@@ -4415,7 +4418,7 @@ const WorkloadManager = () => {
                       onClick={() => setOpenFilterDropdown(openFilterDropdown === 'projects' ? null : 'projects')}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: activityFilters.projects.length > 0 ? '#0072CE' : t.bgCard,
+                        backgroundColor: activityFilters.projects.length > 0 ? t.accent : t.bgCard,
                         color: activityFilters.projects.length > 0 ? 'white' : t.text,
                         border: `1px solid ${t.border}`,
                         borderRadius: '6px',
@@ -4484,7 +4487,7 @@ const WorkloadManager = () => {
                       onClick={() => setOpenFilterDropdown(openFilterDropdown === 'users' ? null : 'users')}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: activityFilters.users.length > 0 ? '#2E7D32' : t.bgCard,
+                        backgroundColor: activityFilters.users.length > 0 ? t.success : t.bgCard,
                         color: activityFilters.users.length > 0 ? 'white' : t.text,
                         border: `1px solid ${t.border}`,
                         borderRadius: '6px',
@@ -4553,7 +4556,7 @@ const WorkloadManager = () => {
                       onClick={() => setOpenFilterDropdown(openFilterDropdown === 'statuses' ? null : 'statuses')}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: activityFilters.statuses.length > 0 ? '#C77700' : t.bgCard,
+                        backgroundColor: activityFilters.statuses.length > 0 ? t.warning : t.bgCard,
                         color: activityFilters.statuses.length > 0 ? 'white' : t.text,
                         border: `1px solid ${t.border}`,
                         borderRadius: '6px',
@@ -4618,7 +4621,7 @@ const WorkloadManager = () => {
 
                   {/* Clear & Count */}
                   <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '12px', color: '#92400e' }}>
+                    <span style={{ fontSize: '12px', color: t.warning }}>
                       {filteredActivities.length}/{activities.length}
                     </span>
                     {Object.values(activityFilters).some(f => f.length > 0) && (
@@ -4627,8 +4630,8 @@ const WorkloadManager = () => {
                         style={{
                           padding: '4px 10px',
                           fontSize: '12px',
-                          backgroundColor: '#fee2e2',
-                          color: '#B00020',
+                          backgroundColor: `${t.error}15`,
+                          color: t.error,
                           border: 'none',
                           borderRadius: '4px',
                           cursor: 'pointer'
@@ -4644,8 +4647,8 @@ const WorkloadManager = () => {
 
             {/* Add Activity Form */}
             {showAddForm && (
-              <div style={{ ...styles.card, backgroundColor: '#f0fdf4', border: '2px solid #86efac' }}>
-                <h4 style={{ margin: '0 0 16px 0', color: '#166534' }}>Nueva Actividad</h4>
+              <div style={{ ...styles.card, backgroundColor: `${t.success}10`, border: '2px solid ${t.success}60' }}>
+                <h4 style={{ margin: '0 0 16px 0', color: t.success }}>Nueva Actividad</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '500' }}>
@@ -4727,7 +4730,7 @@ const WorkloadManager = () => {
                 </div>
                 <button
                   onClick={handleNewActivitySubmit}
-                  style={{ ...styles.button, backgroundColor: '#2E7D32', color: 'white' }}
+                  style={{ ...styles.button, backgroundColor: t.success, color: 'white' }}
                 >
                    Crear Actividad
                 </button>
@@ -4768,10 +4771,10 @@ const WorkloadManager = () => {
                       padding: '10px 20px',
                       fontSize: '14px',
                       fontWeight: '600',
-                      backgroundColor: activityStatusTab === 'pending' ? '#fef3c7' : 'transparent',
-                      color: activityStatusTab === 'pending' ? '#92400e' : '#6b7280',
+                      backgroundColor: activityStatusTab === 'pending' ? `${t.warning}15` : 'transparent',
+                      color: activityStatusTab === 'pending' ? t.warning : t.textMuted,
                       border: 'none',
-                      borderBottom: activityStatusTab === 'pending' ? '3px solid #C77700' : '3px solid transparent',
+                      borderBottom: activityStatusTab === 'pending' ? '3px solid ${t.warning}' : '3px solid transparent',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -4782,7 +4785,7 @@ const WorkloadManager = () => {
                   >
                      Pendientes
                     <span style={{
-                      backgroundColor: activityStatusTab === 'pending' ? '#C77700' : '#9ca3af',
+                      backgroundColor: activityStatusTab === 'pending' ? t.warning : t.textMuted,
                       color: 'white',
                       padding: '2px 8px',
                       borderRadius: '10px',
@@ -4798,10 +4801,10 @@ const WorkloadManager = () => {
                       padding: '10px 20px',
                       fontSize: '14px',
                       fontWeight: '600',
-                      backgroundColor: activityStatusTab === 'completed' ? '#dcfce7' : 'transparent',
-                      color: activityStatusTab === 'completed' ? '#166534' : '#6b7280',
+                      backgroundColor: activityStatusTab === 'completed' ? `${t.success}15` : 'transparent',
+                      color: activityStatusTab === 'completed' ? t.success : t.textMuted,
                       border: 'none',
-                      borderBottom: activityStatusTab === 'completed' ? '3px solid #22c55e' : '3px solid transparent',
+                      borderBottom: activityStatusTab === 'completed' ? '3px solid ${t.success}' : '3px solid transparent',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -4812,7 +4815,7 @@ const WorkloadManager = () => {
                   >
                      Completadas
                     <span style={{
-                      backgroundColor: activityStatusTab === 'completed' ? '#22c55e' : '#9ca3af',
+                      backgroundColor: activityStatusTab === 'completed' ? t.success : t.textMuted,
                       color: 'white',
                       padding: '2px 8px',
                       borderRadius: '10px',
@@ -4876,7 +4879,7 @@ const WorkloadManager = () => {
                         padding: '16px',
                         backgroundColor: activity.status === 'cancelled' ? t.bgPanel : t.bg,
                         borderRadius: '8px',
-                        borderLeft: `4px solid ${activity.status === 'cancelled' ? '#9ca3af' : (activity.kpi_color || '#6b7280')}`,
+                        borderLeft: `4px solid ${activity.status === 'cancelled' ? t.textMuted : (activity.kpi_color || t.textMuted)}`,
                         opacity: activity.status === 'cancelled' ? 0.7 : 1
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
@@ -4898,7 +4901,7 @@ const WorkloadManager = () => {
                               >
                                 ▼
                               </button>
-                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '600', textDecoration: activity.status === 'cancelled' ? 'line-through' : 'none', color: activity.status === 'cancelled' ? '#9ca3af' : 'inherit' }}>
+                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '600', textDecoration: activity.status === 'cancelled' ? 'line-through' : 'none', color: activity.status === 'cancelled' ? t.textMuted : 'inherit' }}>
                                 {activity.title}
                               </h4>
                               {activity.source_type === '8D' && (
@@ -4907,7 +4910,7 @@ const WorkloadManager = () => {
                                   borderRadius: '4px',
                                   fontSize: '10px',
                                   fontWeight: '600',
-                                  backgroundColor: '#B00020',
+                                  backgroundColor: t.error,
                                   color: 'white'
                                 }}>
                                   8D
@@ -4919,7 +4922,7 @@ const WorkloadManager = () => {
                                   borderRadius: '4px',
                                   fontSize: '10px',
                                   fontWeight: '600',
-                                  backgroundColor: '#8b5cf6',
+                                  backgroundColor: t.accent,
                                   color: 'white'
                                 }}>
                                    {activity.frequency === 'weekly' ? 'SEM' : activity.frequency === 'biweekly' ? 'QUIN' : activity.frequency === 'monthly' ? 'MEN' : 'REC'}
@@ -4931,9 +4934,9 @@ const WorkloadManager = () => {
                                   borderRadius: '4px',
                                   fontSize: '10px',
                                   fontWeight: '600',
-                                  backgroundColor: '#fef3c7',
-                                  color: '#92400e',
-                                  border: '1px solid #C77700'
+                                  backgroundColor: `${t.warning}15`,
+                                  color: t.warning,
+                                  border: '1px solid ${t.warning}'
                                 }}>
                                    Sin horas
                                 </span>
@@ -4950,13 +4953,13 @@ const WorkloadManager = () => {
                             </div>
                             {/* Row 2: KPI, Dates, Hours, Weight */}
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: t.textMuted }}>
-                              <span style={{ backgroundColor: activity.kpi_color ? `${activity.kpi_color}20` : '#F4F6F8', padding: '2px 6px', borderRadius: '4px' }}>
+                              <span style={{ backgroundColor: activity.kpi_color ? `${activity.kpi_color}20` : t.bg, padding: '2px 6px', borderRadius: '4px' }}>
                                 {activity.kpi_icon || ''} {activity.kpi_name || 'Sin KPI'}
                               </span>
                               <span> {formatShortDate(activity.start_date)} → {formatShortDate(activity.end_date)}</span>
                               {(activity.estimated_hours > 0 || activity.actual_hours > 0) && (
                                 <span style={{
-                                  color: activity.actual_hours > activity.estimated_hours ? '#B00020' : '#374151'
+                                  color: activity.actual_hours > activity.estimated_hours ? t.error : t.text
                                 }}>
                                    {activity.actual_hours || 0}h / {activity.estimated_hours || '?'}h
                                   {activity.actual_hours > 0 && activity.estimated_hours > 0 && (
@@ -4967,7 +4970,7 @@ const WorkloadManager = () => {
                                 </span>
                               )}
                               {activity.weight_percent > 0 && (
-                                <span style={{ backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', color: '#92400e' }}>
+                                <span style={{ backgroundColor: `${t.warning}15`, padding: '2px 6px', borderRadius: '4px', color: t.warning }}>
                                    {activity.weight_percent}%
                                 </span>
                               )}
@@ -5002,7 +5005,7 @@ const WorkloadManager = () => {
                                       <div style={{
                                         width: `${activity.progress || 0}%`,
                                         height: '100%',
-                                        backgroundColor: isOnTrack ? '#2E7D32' : '#ef4444',
+                                        backgroundColor: isOnTrack ? t.success : t.error,
                                         borderRadius: '4px',
                                         transition: 'width 0.3s ease'
                                       }} />
@@ -5012,7 +5015,7 @@ const WorkloadManager = () => {
                                       textAlign: 'right',
                                       fontSize: '13px',
                                       fontWeight: '600',
-                                      color: isOnTrack ? '#2E7D32' : '#B00020'
+                                      color: isOnTrack ? t.success : t.error
                                     }}>
                                       {activityCompliance.real}% / {activityCompliance.expected}%
                                     </span>
@@ -5042,7 +5045,7 @@ const WorkloadManager = () => {
                                   onClick={(e) => { e.stopPropagation(); toggleActivityLogForm(activity.id); }}
                                   style={{
                                     padding: '4px 8px',
-                                    backgroundColor: expandedActivityLog[activity.id] ? '#6b7280' : '#0072CE',
+                                    backgroundColor: expandedActivityLog[activity.id] ? t.textMuted : t.accent,
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '4px',
@@ -5057,7 +5060,7 @@ const WorkloadManager = () => {
 
                               {/* Add Progress Form */}
                               {expandedActivityLog[activity.id] && (
-                                <div style={{ padding: '12px', backgroundColor: t.bgCard, borderRadius: '6px', border: '2px solid #0072CE', marginBottom: '12px' }}>
+                                <div style={{ padding: '12px', backgroundColor: t.bgCard, borderRadius: '6px', border: '2px solid ${t.accent}', marginBottom: '12px' }}>
                                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                                     <div>
                                       <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>Fecha</label>
@@ -5075,7 +5078,7 @@ const WorkloadManager = () => {
                                       <label style={{ fontSize: '11px', color: t.textMuted, display: 'block', marginBottom: '4px' }}>
                                         Progreso (%)
                                         {getDailyProgressLimit(activity) && (
-                                          <span style={{ color: '#C77700', marginLeft: '4px' }}>
+                                          <span style={{ color: t.warning, marginLeft: '4px' }}>
                                             (máx: {getDailyProgressLimit(activity)}%)
                                           </span>
                                         )}
@@ -5088,9 +5091,9 @@ const WorkloadManager = () => {
                                           width: '100%',
                                           padding: '6px 8px',
                                           fontSize: '12px',
-                                          border: `1px solid ${getDailyProgressLimit(activity) && parseFloat(dailyEntries[activity.id]?.progress) > getDailyProgressLimit(activity) ? '#C77700' : t.border}`,
+                                          border: `1px solid ${getDailyProgressLimit(activity) && parseFloat(dailyEntries[activity.id]?.progress) > getDailyProgressLimit(activity) ? t.warning : t.border}`,
                                           borderRadius: '4px',
-                                          backgroundColor: getDailyProgressLimit(activity) && parseFloat(dailyEntries[activity.id]?.progress) > getDailyProgressLimit(activity) ? '#fffbeb' : t.bgCard
+                                          backgroundColor: getDailyProgressLimit(activity) && parseFloat(dailyEntries[activity.id]?.progress) > getDailyProgressLimit(activity) ? `${t.warning}10` : t.bgCard
                                         }}
                                         value={dailyEntries[activity.id]?.progress || ''}
                                         onChange={(e) => setDailyEntries(prev => ({
@@ -5133,7 +5136,7 @@ const WorkloadManager = () => {
                                     style={{
                                       width: '100%',
                                       padding: '8px',
-                                      backgroundColor: '#2E7D32',
+                                      backgroundColor: t.success,
                                       color: 'white',
                                       border: 'none',
                                       borderRadius: '4px',
@@ -5167,8 +5170,8 @@ const WorkloadManager = () => {
                                         <div style={{
                                           fontSize: '12px',
                                           fontWeight: '700',
-                                          color: (entry.accumulated || entry.progress) >= 100 ? '#2E7D32' :
-                                                 (entry.accumulated || entry.progress) >= 50 ? '#0072CE' : '#C77700'
+                                          color: (entry.accumulated || entry.progress) >= 100 ? t.success :
+                                                 (entry.accumulated || entry.progress) >= 50 ? t.accent : t.warning
                                         }}>
                                           +{entry.progress}% → {entry.accumulated || entry.progress}%
                                         </div>
@@ -5207,20 +5210,20 @@ const WorkloadManager = () => {
                                 fontWeight: '600',
                                 textTransform: 'uppercase',
                                 backgroundColor:
-                                  activity.moscow_priority === 'must' ? '#fef2f2' :
-                                  activity.moscow_priority === 'should' ? '#fff7ed' :
-                                  activity.moscow_priority === 'could' ? '#eff6ff' : '#F4F6F8',
+                                  activity.moscow_priority === 'must' ? `${t.error}10` :
+                                  activity.moscow_priority === 'should' ? `${t.warning}10` :
+                                  activity.moscow_priority === 'could' ? `${t.info}10` : t.bg,
                                 color:
-                                  activity.moscow_priority === 'must' ? '#B00020' :
-                                  activity.moscow_priority === 'should' ? '#ea580c' :
-                                  activity.moscow_priority === 'could' ? '#2563eb' : '#6b7280'
+                                  activity.moscow_priority === 'must' ? t.error :
+                                  activity.moscow_priority === 'should' ? t.warning :
+                                  activity.moscow_priority === 'could' ? t.accent : t.textMuted
                               }}>
                                 {activity.moscow_priority}
                               </span>
                             )}
                             {/* Evidence Required Indicator */}
                             {activity.requires_evidence && (
-                              <span style={{ fontSize: '12px', color: '#C77700' }} title="Requiere Evidencia">
+                              <span style={{ fontSize: '12px', color: t.warning }} title="Requiere Evidencia">
                                 
                               </span>
                             )}
@@ -5233,9 +5236,9 @@ const WorkloadManager = () => {
                                 borderRadius: '4px',
                                 fontSize: '10px',
                                 fontWeight: '500',
-                                backgroundColor: '#f0fdf4',
-                                color: '#2E7D32',
-                                border: '1px solid #bbf7d0'
+                                backgroundColor: `${t.success}10`,
+                                color: t.success,
+                                border: '1px solid ${t.success}40'
                               }} title={`Cubierta por ${activeCoverages.coveringForMe.find(cov =>
                                 cov.activityId === null || cov.activityId === activity.id
                               )?.substitute?.firstName || ''}`}>
@@ -5251,9 +5254,9 @@ const WorkloadManager = () => {
                                 borderRadius: '4px',
                                 fontSize: '10px',
                                 fontWeight: '500',
-                                backgroundColor: '#eff6ff',
+                                backgroundColor: `${t.info}10`,
                                 color: t.accent,
-                                border: '1px solid #bfdbfe'
+                                border: '1px solid ${t.accent}40'
                               }} title={`Cubriendo a ${activeCoverages.iAmCovering.find(cov =>
                                 cov.activityId === null || cov.activityId === activity.id
                               )?.originalAssignee?.firstName || ''}`}>
@@ -5265,12 +5268,12 @@ const WorkloadManager = () => {
                               borderRadius: '12px',
                               fontSize: '12px',
                               fontWeight: '600',
-                              backgroundColor: activity.status === 'completed' ? '#d1fae5' :
-                                             activity.status === 'in_progress' ? '#dbeafe' :
-                                             activity.status === 'cancelled' ? '#f3f4f6' : '#F4F6F8',
-                              color: activity.status === 'completed' ? '#2E7D32' :
-                                    activity.status === 'in_progress' ? '#2563eb' :
-                                    activity.status === 'cancelled' ? '#6b7280' : '#6b7280'
+                              backgroundColor: activity.status === 'completed' ? `${t.success}15` :
+                                             activity.status === 'in_progress' ? `${t.accent}15` :
+                                             activity.status === 'cancelled' ? t.bgPanel : t.bg,
+                              color: activity.status === 'completed' ? t.success :
+                                    activity.status === 'in_progress' ? t.accent :
+                                    activity.status === 'cancelled' ? t.textMuted : t.textMuted
                             }}>
                               {activity.status === 'completed' ? 'Completada' :
                                activity.status === 'in_progress' ? 'En Progreso' :
@@ -5281,7 +5284,7 @@ const WorkloadManager = () => {
                                 onClick={() => { setEditingActivity(activity); setShowActivityModal(true); }}
                                 style={{
                                   padding: '4px 8px',
-                                  backgroundColor: '#eff6ff',
+                                  backgroundColor: `${t.info}10`,
                                   color: t.accent,
                                   border: 'none',
                                   borderRadius: '4px',
@@ -5297,8 +5300,8 @@ const WorkloadManager = () => {
                               onClick={() => { setSelectedActivityForFeedback(activity); setShowSupervisorFeedbackModal(true); }}
                               style={{
                                 padding: '4px 8px',
-                                backgroundColor: '#f0fdf4',
-                                color: '#2E7D32',
+                                backgroundColor: `${t.success}10`,
+                                color: t.success,
                                 border: 'none',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
@@ -5312,8 +5315,8 @@ const WorkloadManager = () => {
                               onClick={() => handleDeleteActivity(activity.id)}
                               style={{
                                 padding: '4px 8px',
-                                backgroundColor: '#fee2e2',
-                                color: '#B00020',
+                                backgroundColor: `${t.error}15`,
+                                color: t.error,
                                 border: 'none',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
@@ -5341,13 +5344,13 @@ const WorkloadManager = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                               {activityFeedbackMap[activity.id].map(fb => {
                                 const typeConfig = {
-                                  recognition: { icon: '', color: '#2E7D32', label: 'Felicitación' },
-                                  warning: { icon: '', color: '#C77700', label: 'Llamada de atención' },
-                                  coaching: { icon: '', color: '#0072CE', label: 'Retroalimentación' },
-                                  achievement: { icon: '', color: '#8b5cf6', label: 'Logro' },
-                                  improvement_needed: { icon: '', color: '#ef4444', label: 'Área de mejora' },
-                                  note: { icon: '', color: '#6b7280', label: 'Nota' }
-                                }[fb.feedbackType] || { icon: '', color: '#6b7280', label: 'Nota' };
+                                  recognition: { icon: '', color: t.success, label: 'Felicitación' },
+                                  warning: { icon: '', color: t.warning, label: 'Llamada de atención' },
+                                  coaching: { icon: '', color: t.accent, label: 'Retroalimentación' },
+                                  achievement: { icon: '', color: t.accent, label: 'Logro' },
+                                  improvement_needed: { icon: '', color: t.error, label: 'Área de mejora' },
+                                  note: { icon: '', color: t.textMuted, label: 'Nota' }
+                                }[fb.feedbackType] || { icon: '', color: t.textMuted, label: 'Nota' };
 
                                 return (
                                   <div key={fb.id} style={{
@@ -5383,10 +5386,10 @@ const WorkloadManager = () => {
                             borderTop: `1px dashed ${t.border}`
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: '600', color: activity.requires_evidence ? '#C77700' : t.textMuted }}>
+                              <div style={{ fontSize: '12px', fontWeight: '600', color: activity.requires_evidence ? t.warning : t.textMuted }}>
                                  {activity.requires_evidence ? 'Evidencia Requerida' : 'Evidencia (Opcional)'}
                                 {activity.evidence_files && activity.evidence_files.length > 0 && (
-                                  <span style={{ marginLeft: '8px', color: '#2E7D32' }}>
+                                  <span style={{ marginLeft: '8px', color: t.success }}>
                                     ({activity.evidence_files.length} archivo{activity.evidence_files.length !== 1 ? 's' : ''})
                                   </span>
                                 )}
@@ -5457,9 +5460,9 @@ const WorkloadManager = () => {
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
                                     padding: '8px 12px',
-                                    backgroundColor: isFrom8D ? '#fef3c7' : t.bgCard,
+                                    backgroundColor: isFrom8D ? `${t.warning}15` : t.bgCard,
                                     borderRadius: '6px',
-                                    border: isFrom8D ? '1px solid #C77700' : `1px solid ${t.border}`
+                                    border: isFrom8D ? '1px solid ${t.warning}' : `1px solid ${t.border}`
                                   }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
                                       <span style={{ fontSize: '18px' }}>
@@ -5471,7 +5474,7 @@ const WorkloadManager = () => {
                                       <div>
                                         <div style={{ fontSize: '12px', fontWeight: '500', color: t.text }}>
                                           {fileName}
-                                          {isFrom8D && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#C77700', fontWeight: '600' }}>(8D)</span>}
+                                          {isFrom8D && <span style={{ marginLeft: '6px', fontSize: '10px', color: t.warning, fontWeight: '600' }}>(8D)</span>}
                                         </div>
                                         <div style={{ fontSize: '11px', color: t.textDim }}>
                                           {fileSize ? `${(fileSize / 1024).toFixed(1)} KB` : ''}
@@ -5488,8 +5491,8 @@ const WorkloadManager = () => {
                                           rel="noopener noreferrer"
                                           style={{
                                             padding: '4px 8px',
-                                            backgroundColor: '#fef3c7',
-                                            color: '#C77700',
+                                            backgroundColor: `${t.warning}15`,
+                                            color: t.warning,
                                             border: 'none',
                                             borderRadius: '4px',
                                             cursor: 'pointer',
@@ -5505,7 +5508,7 @@ const WorkloadManager = () => {
                                           onClick={() => handleDownloadEvidence(activity.id, file.id, fileName)}
                                           style={{
                                             padding: '4px 8px',
-                                            backgroundColor: '#eff6ff',
+                                            backgroundColor: `${t.info}10`,
                                             color: t.accent,
                                             border: 'none',
                                             borderRadius: '4px',
@@ -5522,8 +5525,8 @@ const WorkloadManager = () => {
                                           onClick={() => handleDeleteEvidence(activity.id, file.id)}
                                           style={{
                                             padding: '4px 8px',
-                                            backgroundColor: '#fee2e2',
-                                            color: '#B00020',
+                                            backgroundColor: `${t.error}15`,
+                                            color: t.error,
                                             border: 'none',
                                             borderRadius: '4px',
                                             cursor: 'pointer',
@@ -5542,10 +5545,10 @@ const WorkloadManager = () => {
                             ) : activity.requires_evidence ? (
                               <div style={{
                                 padding: '16px',
-                                backgroundColor: '#fffbeb',
+                                backgroundColor: `${t.warning}10`,
                                 borderRadius: '6px',
                                 textAlign: 'center',
-                                color: '#92400e',
+                                color: t.warning,
                                 fontSize: '12px'
                               }}>
                                  No se ha subido evidencia. Esta actividad requiere evidencia obligatoria.
@@ -5639,7 +5642,7 @@ const WorkloadManager = () => {
                       cursor: 'pointer',
                       fontSize: '13px',
                       fontWeight: '500',
-                      backgroundColor: teamSubTab === sub.id ? '#8b5cf6' : t.bgPanel,
+                      backgroundColor: teamSubTab === sub.id ? t.accent : t.bgPanel,
                       color: teamSubTab === sub.id ? 'white' : t.text,
                       transition: 'all 0.2s'
                     }}
@@ -5674,7 +5677,7 @@ const WorkloadManager = () => {
                           cursor: 'pointer',
                           fontSize: '12px',
                           fontWeight: '600',
-                          backgroundColor: workloadViewMode === mode ? '#8b5cf6' : t.bgPanel,
+                          backgroundColor: workloadViewMode === mode ? t.accent : t.bgPanel,
                           color: workloadViewMode === mode ? 'white' : t.text,
                           transition: 'all 0.2s'
                         }}
@@ -5722,9 +5725,9 @@ const WorkloadManager = () => {
                       return (
                       <div key={member.id} style={{
                         padding: '16px',
-                        backgroundColor: isOver ? '#fef2f2' : t.bg,
+                        backgroundColor: isOver ? `${t.error}10` : t.bg,
                         borderRadius: '8px',
-                        border: isOver ? '1px solid #fecaca' : `1px solid ${t.border}`
+                        border: isOver ? '1px solid ${t.error}40' : `1px solid ${t.border}`
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                           <div>
@@ -5738,7 +5741,7 @@ const WorkloadManager = () => {
                             {member.managedDepartments && member.managedDepartments.length > 0 && member.managedDepartments.map((md, idx) => (
                               <span key={idx} style={{
                                 background: 'rgba(16, 185, 129, 0.2)',
-                                color: '#2E7D32',
+                                color: t.success,
                                 padding: '2px 8px',
                                 borderRadius: '4px',
                                 fontSize: '12px',
@@ -5756,8 +5759,8 @@ const WorkloadManager = () => {
                               borderRadius: '12px',
                               fontSize: '12px',
                               fontWeight: '600',
-                              backgroundColor: isOver ? '#fee2e2' : '#d1fae5',
-                              color: isOver ? '#B00020' : '#2E7D32'
+                              backgroundColor: isOver ? `${t.error}15` : `${t.success}15`,
+                              color: isOver ? t.error : t.success
                             }}>
                               {isOver ? '' : ''} {isOver ? '' : '+'}{diff.toFixed(1)}{unit}
                             </span>
@@ -5766,13 +5769,13 @@ const WorkloadManager = () => {
                               borderRadius: '12px',
                               fontSize: '13px',
                               fontWeight: '600',
-                              backgroundColor: isOver ? '#fee2e2' : '#d1fae5',
-                              color: isOver ? '#B00020' : '#2E7D32'
+                              backgroundColor: isOver ? `${t.error}15` : `${t.success}15`,
+                              color: isOver ? t.error : t.success
                             }}>
                               {utilizationPct}%
                             </span>
                             {isOver && (
-                              <span style={{ fontSize: '12px', color: '#B00020', fontWeight: '600' }}>
+                              <span style={{ fontSize: '12px', color: t.error, fontWeight: '600' }}>
                                  SOBRECARGA
                               </span>
                             )}
@@ -5788,7 +5791,7 @@ const WorkloadManager = () => {
                             const compliance = calculateCompliance(memberActivities);
                             const isOnTrack = compliance.real >= compliance.expected;
                             return (
-                              <span style={{ color: isOnTrack ? '#2E7D32' : '#B00020', fontWeight: '600' }}>
+                              <span style={{ color: isOnTrack ? t.success : t.error, fontWeight: '600' }}>
                                  Cumplimiento: {compliance.real}% / {compliance.expected}%
                               </span>
                             );
@@ -5804,7 +5807,7 @@ const WorkloadManager = () => {
                           <div style={{
                             width: `${Math.min(100, utilizationPct)}%`,
                             height: '100%',
-                            backgroundColor: isOver ? '#ef4444' : '#2E7D32',
+                            backgroundColor: isOver ? t.error : t.success,
                             transition: 'width 0.3s'
                           }} />
                         </div>
@@ -5851,10 +5854,10 @@ const WorkloadManager = () => {
                       borderRadius: '8px',
                       border: `1px solid ${t.border}`,
                       borderLeft: `4px solid ${
-                        member.hierarchyLevel === 0 ? '#8b5cf6' :
-                        member.hierarchyLevel === 1 ? '#0072CE' :
-                        member.hierarchyLevel === 2 ? '#2E7D32' :
-                        member.hierarchyLevel === 3 ? '#C77700' : '#6b7280'
+                        member.hierarchyLevel === 0 ? t.accent :
+                        member.hierarchyLevel === 1 ? t.accent :
+                        member.hierarchyLevel === 2 ? t.success :
+                        member.hierarchyLevel === 3 ? t.warning : t.textMuted
                       }`
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -5865,8 +5868,8 @@ const WorkloadManager = () => {
                           <span style={{
                             marginLeft: '12px',
                             padding: '2px 8px',
-                            backgroundColor: '#e0e7ff',
-                            color: '#4338ca',
+                            backgroundColor: `${t.accent}20`,
+                            color: t.accent,
                             borderRadius: '4px',
                             fontSize: '11px',
                             fontWeight: '600'
@@ -5903,7 +5906,7 @@ const WorkloadManager = () => {
                         {member.managedDepartments && member.managedDepartments.length > 0 && member.managedDepartments.map((md, idx) => (
                           <span key={idx} style={{
                             background: 'rgba(16, 185, 129, 0.2)',
-                            color: '#2E7D32',
+                            color: t.success,
                             padding: '2px 8px',
                             borderRadius: '4px',
                             fontSize: '12px',
@@ -5988,7 +5991,7 @@ const WorkloadManager = () => {
                       onClick={() => { setEditingObjective(null); setShowObjectiveForm(true); }}
                       style={{
                         ...styles.button,
-                        backgroundColor: '#2E7D32',
+                        backgroundColor: t.success,
                         color: 'white'
                       }}
                     >
@@ -6134,7 +6137,7 @@ const WorkloadManager = () => {
                             cursor: 'pointer',
                             fontSize: '13px',
                             fontWeight: '600',
-                            backgroundColor: selectedQuarter === q ? '#8b5cf6' : t.bgPanel,
+                            backgroundColor: selectedQuarter === q ? t.accent : t.bgPanel,
                             color: selectedQuarter === q ? 'white' : t.text
                           }}
                         >
@@ -6161,7 +6164,7 @@ const WorkloadManager = () => {
                       onClick={() => { setEditingFeedback(null); setShowFeedbackForm(true); }}
                       style={{
                         ...styles.button,
-                        backgroundColor: '#2E7D32',
+                        backgroundColor: t.success,
                         color: 'white'
                       }}
                     >
@@ -6202,9 +6205,9 @@ const WorkloadManager = () => {
                           borderRadius: '8px',
                           border: `1px solid ${t.border}`,
                           borderLeft: `4px solid ${
-                            fb.status === 'completed' ? '#2E7D32' :
-                            fb.status === 'pending_signature' ? '#C77700' :
-                            fb.status === 'in_review' ? '#0072CE' : '#6b7280'
+                            fb.status === 'completed' ? t.success :
+                            fb.status === 'pending_signature' ? t.warning :
+                            fb.status === 'in_review' ? t.accent : t.textMuted
                           }`
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
@@ -6219,13 +6222,13 @@ const WorkloadManager = () => {
                                   fontSize: '11px',
                                   fontWeight: '500',
                                   backgroundColor:
-                                    fb.status === 'completed' ? '#d1fae5' :
-                                    fb.status === 'pending_signature' ? '#fef3c7' :
-                                    fb.status === 'in_review' ? '#dbeafe' : '#F4F6F8',
+                                    fb.status === 'completed' ? `${t.success}15` :
+                                    fb.status === 'pending_signature' ? `${t.warning}15` :
+                                    fb.status === 'in_review' ? `${t.accent}15` : t.bg,
                                   color:
-                                    fb.status === 'completed' ? '#065f46' :
-                                    fb.status === 'pending_signature' ? '#92400e' :
-                                    fb.status === 'in_review' ? '#0F3B5F' : '#6b7280'
+                                    fb.status === 'completed' ? t.success :
+                                    fb.status === 'pending_signature' ? t.warning :
+                                    fb.status === 'in_review' ? t.primary : t.textMuted
                                 }}>
                                   {fb.status === 'completed' ? 'Completada' :
                                    fb.status === 'pending_signature' ? 'Pendiente Firma' :
@@ -6241,8 +6244,8 @@ const WorkloadManager = () => {
                                 <div style={{
                                   fontSize: '24px',
                                   fontWeight: '700',
-                                  color: fb.overallScore >= 80 ? '#2E7D32' :
-                                         fb.overallScore >= 60 ? '#C77700' : '#ef4444'
+                                  color: fb.overallScore >= 80 ? t.success :
+                                         fb.overallScore >= 60 ? t.warning : t.error
                                 }}>
                                   {fb.overallScore.toFixed(0)}%
                                 </div>
@@ -6364,7 +6367,7 @@ const WorkloadManager = () => {
                       onClick={() => { setSelectedActivityForFeedback(null); setShowSupervisorFeedbackModal(true); }}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: '#8b5cf6',
+                        backgroundColor: t.accent,
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
@@ -6400,13 +6403,13 @@ const WorkloadManager = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {filteredQuickFeedback.map(fb => {
                         const typeConfig = {
-                          recognition: { icon: '', color: '#2E7D32', label: 'Felicitación', bg: '#d1fae5' },
-                          warning: { icon: '', color: '#C77700', label: 'Llamada de atención', bg: '#fef3c7' },
-                          coaching: { icon: '', color: '#0072CE', label: 'Retroalimentación', bg: '#dbeafe' },
-                          achievement: { icon: '', color: '#8b5cf6', label: 'Logro destacado', bg: '#ede9fe' },
-                          improvement_needed: { icon: '', color: '#ef4444', label: 'Área de mejora', bg: '#fee2e2' },
-                          note: { icon: '', color: '#6b7280', label: 'Nota general', bg: t.bgPanel }
-                        }[fb.feedbackType] || { icon: '', color: '#6b7280', label: 'Nota', bg: t.bgPanel };
+                          recognition: { icon: '', color: t.success, label: 'Felicitación', bg: `${t.success}15` },
+                          warning: { icon: '', color: t.warning, label: 'Llamada de atención', bg: `${t.warning}15` },
+                          coaching: { icon: '', color: t.accent, label: 'Retroalimentación', bg: `${t.accent}15` },
+                          achievement: { icon: '', color: t.accent, label: 'Logro destacado', bg: `${t.accent}15` },
+                          improvement_needed: { icon: '', color: t.error, label: 'Área de mejora', bg: `${t.error}15` },
+                          note: { icon: '', color: t.textMuted, label: 'Nota general', bg: t.bgPanel }
+                        }[fb.feedbackType] || { icon: '', color: t.textMuted, label: 'Nota', bg: t.bgPanel };
 
                         return (
                           <div key={fb.id} style={{
@@ -6445,8 +6448,8 @@ const WorkloadManager = () => {
                                     <span style={{
                                       padding: '2px 6px',
                                       borderRadius: '4px',
-                                      backgroundColor: fb.severity === 'high' ? '#fee2e2' : fb.severity === 'medium' ? '#fef3c7' : '#F4F6F8',
-                                      color: fb.severity === 'high' ? '#B00020' : fb.severity === 'medium' ? '#C77700' : '#6b7280'
+                                      backgroundColor: fb.severity === 'high' ? `${t.error}15` : fb.severity === 'medium' ? `${t.warning}15` : t.bg,
+                                      color: fb.severity === 'high' ? t.error : fb.severity === 'medium' ? t.warning : t.textMuted
                                     }}>
                                       Severidad: {fb.severity === 'high' ? 'Alta' : fb.severity === 'medium' ? 'Media' : 'Baja'}
                                     </span>
@@ -6456,10 +6459,10 @@ const WorkloadManager = () => {
                                   <div style={{
                                     marginTop: '8px',
                                     padding: '6px 10px',
-                                    backgroundColor: '#fffbeb',
+                                    backgroundColor: `${t.warning}10`,
                                     borderRadius: '6px',
                                     fontSize: '12px',
-                                    color: '#92400e'
+                                    color: t.warning
                                   }}>
                                      Requiere seguimiento
                                     {fb.followupDate && ` - Fecha: ${new Date(fb.followupDate).toLocaleDateString('es-MX')}`}
@@ -6503,7 +6506,7 @@ const WorkloadManager = () => {
                       onClick={() => { setEditingCoverage(null); setShowCoverageModal(true); }}
                       style={{
                         ...styles.button,
-                        backgroundColor: '#2E7D32',
+                        backgroundColor: t.success,
                         color: 'white'
                       }}
                     >
@@ -6516,7 +6519,7 @@ const WorkloadManager = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                   {/* Coverages for me (someone covering my work) */}
                   <div style={styles.card}>
-                    <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#2E7D32' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: t.success }}>
                        Mis Ausencias Cubiertas ({activeCoverages.coveringForMe?.length || 0})
                     </h4>
                     {activeCoverages.coveringForMe?.length === 0 ? (
@@ -6526,9 +6529,9 @@ const WorkloadManager = () => {
                         {activeCoverages.coveringForMe?.map(cov => (
                           <div key={cov.id} style={{
                             padding: '10px 12px',
-                            backgroundColor: '#f0fdf4',
+                            backgroundColor: `${t.success}10`,
                             borderRadius: '6px',
-                            border: '1px solid #bbf7d0'
+                            border: '1px solid ${t.success}40'
                           }}>
                             <div style={{ fontWeight: '500', fontSize: '13px' }}>
                               Cubierto por: {cov.substitute?.firstName} {cov.substitute?.lastName}
@@ -6555,9 +6558,9 @@ const WorkloadManager = () => {
                         {activeCoverages.iAmCovering?.map(cov => (
                           <div key={cov.id} style={{
                             padding: '10px 12px',
-                            backgroundColor: '#eff6ff',
+                            backgroundColor: `${t.info}10`,
                             borderRadius: '6px',
-                            border: '1px solid #bfdbfe'
+                            border: '1px solid ${t.accent}40'
                           }}>
                             <div style={{ fontWeight: '500', fontSize: '13px' }}>
                               Cubriendo a: {cov.originalAssignee?.firstName} {cov.originalAssignee?.lastName}
@@ -6601,9 +6604,9 @@ const WorkloadManager = () => {
                           borderRadius: '8px',
                           border: `1px solid ${t.border}`,
                           borderLeft: `4px solid ${
-                            cov.status === 'active' ? '#2E7D32' :
-                            cov.status === 'pending' ? '#C77700' :
-                            cov.status === 'completed' ? '#6b7280' : '#ef4444'
+                            cov.status === 'active' ? t.success :
+                            cov.status === 'pending' ? t.warning :
+                            cov.status === 'completed' ? t.textMuted : t.error
                           }`
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
@@ -6622,13 +6625,13 @@ const WorkloadManager = () => {
                                   fontSize: '11px',
                                   fontWeight: '500',
                                   backgroundColor:
-                                    cov.status === 'active' ? '#d1fae5' :
-                                    cov.status === 'pending' ? '#fef3c7' :
-                                    cov.status === 'completed' ? '#F4F6F8' : '#fee2e2',
+                                    cov.status === 'active' ? `${t.success}15` :
+                                    cov.status === 'pending' ? `${t.warning}15` :
+                                    cov.status === 'completed' ? t.bg : `${t.error}15`,
                                   color:
-                                    cov.status === 'active' ? '#065f46' :
-                                    cov.status === 'pending' ? '#92400e' :
-                                    cov.status === 'completed' ? '#6b7280' : '#B00020'
+                                    cov.status === 'active' ? t.success :
+                                    cov.status === 'pending' ? t.warning :
+                                    cov.status === 'completed' ? t.textMuted : t.error
                                 }}>
                                   {cov.status === 'active' ? 'Activa' :
                                    cov.status === 'pending' ? 'Pendiente' :
@@ -6672,7 +6675,7 @@ const WorkloadManager = () => {
                                   }}
                                   style={{
                                     padding: '6px 12px',
-                                    backgroundColor: '#2E7D32',
+                                    backgroundColor: t.success,
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '4px',
@@ -6724,8 +6727,8 @@ const WorkloadManager = () => {
                                   style={{
                                     padding: '6px 12px',
                                     backgroundColor: t.bgCard,
-                                    color: '#ef4444',
-                                    border: '1px solid #ef4444',
+                                    color: t.error,
+                                    border: '1px solid ${t.error}',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
                                     fontSize: '12px'
@@ -6801,7 +6804,7 @@ const WorkloadManager = () => {
                     onClick={() => { setEditingProject(null); setProjectClientMode('select'); setSelectedProjectClientId(null); setClientProjectsList([]); setProjectNameMode('select'); setShowProjectForm(true); }}
                     style={{
                       padding: '8px 16px',
-                      backgroundColor: '#2E7D32',
+                      backgroundColor: t.success,
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
@@ -6820,9 +6823,9 @@ const WorkloadManager = () => {
                 <div style={{
                   padding: '16px',
                   marginBottom: '16px',
-                  backgroundColor: '#f0fdf4',
+                  backgroundColor: `${t.success}10`,
                   borderRadius: '8px',
-                  border: '1px solid #86efac'
+                  border: '1px solid ${t.success}60'
                 }}>
                   <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
                     {editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto'}
@@ -7018,7 +7021,7 @@ const WorkloadManager = () => {
                         <input
                           name="color"
                           type="color"
-                          defaultValue={editingProject?.color || '#0072CE'}
+                          defaultValue={editingProject?.color || t.accent}
                           style={{ width: '100%', height: '38px', padding: '2px', border: `1px solid ${t.border}`, borderRadius: '6px', boxSizing: 'border-box' }}
                         />
                       </div>
@@ -7033,7 +7036,7 @@ const WorkloadManager = () => {
                       </button>
                       <button
                         type="submit"
-                        style={{ padding: '8px 16px', backgroundColor: '#2E7D32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+                        style={{ padding: '8px 16px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
                       >
                         Guardar
                       </button>
@@ -7053,7 +7056,7 @@ const WorkloadManager = () => {
                       padding: '12px 16px',
                       backgroundColor: t.bg,
                       borderRadius: '6px',
-                      borderLeft: `4px solid ${project.color || '#0072CE'}`,
+                      borderLeft: `4px solid ${project.color || t.accent}`,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
@@ -7076,10 +7079,10 @@ const WorkloadManager = () => {
                           padding: '4px 8px',
                           borderRadius: '4px',
                           fontSize: '12px',
-                          backgroundColor: project.status === 'active' ? '#d1fae5' :
-                                          project.status === 'completed' ? '#dbeafe' : '#F4F6F8',
-                          color: project.status === 'active' ? '#2E7D32' :
-                                project.status === 'completed' ? '#0F3B5F' : '#6b7280'
+                          backgroundColor: project.status === 'active' ? `${t.success}15` :
+                                          project.status === 'completed' ? `${t.accent}15` : t.bg,
+                          color: project.status === 'active' ? t.success :
+                                project.status === 'completed' ? t.primary : t.textMuted
                         }}>
                           {project.status === 'active' ? 'Activo' :
                            project.status === 'completed' ? 'Completado' :
@@ -7108,8 +7111,8 @@ const WorkloadManager = () => {
                             }}
                             style={{
                               padding: '4px 8px',
-                              backgroundColor: '#fee2e2',
-                              color: '#B00020',
+                              backgroundColor: `${t.error}15`,
+                              color: t.error,
                               border: 'none',
                               borderRadius: '4px',
                               cursor: 'pointer',
@@ -7140,7 +7143,7 @@ const WorkloadManager = () => {
                       padding: '12px 16px',
                       backgroundColor: t.bg,
                       borderRadius: '6px',
-                      borderLeft: `4px solid ${rec.kpi_color || '#6b7280'}`
+                      borderLeft: `4px solid ${rec.kpi_color || t.textMuted}`
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
@@ -7198,7 +7201,7 @@ const WorkloadManager = () => {
                       padding: '12px 16px',
                       backgroundColor: t.bg,
                       borderRadius: '6px',
-                      borderLeft: `4px solid ${level.color || '#6b7280'}`,
+                      borderLeft: `4px solid ${level.color || t.textMuted}`,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
@@ -7207,7 +7210,7 @@ const WorkloadManager = () => {
                         <span style={{
                           width: '28px',
                           height: '28px',
-                          backgroundColor: level.color || '#6b7280',
+                          backgroundColor: level.color || t.textMuted,
                           borderRadius: '50%',
                           display: 'flex',
                           alignItems: 'center',
@@ -7267,8 +7270,8 @@ const WorkloadManager = () => {
                             style={{
                               padding: '6px 12px',
                               backgroundColor: t.bgCard,
-                              color: '#ef4444',
-                              border: '1px solid #ef4444',
+                              color: t.error,
+                              border: '1px solid ${t.error}',
                               borderRadius: '4px',
                               cursor: 'pointer',
                               fontSize: '12px'
@@ -7392,7 +7395,7 @@ const WorkloadManager = () => {
                         <input
                           name="color"
                           type="color"
-                          defaultValue={editingLevel?.color || '#6b7280'}
+                          defaultValue={editingLevel?.color || t.textMuted}
                           style={{
                             width: '50px',
                             height: '40px',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileSpreadsheet, Download, Clock, CheckCircle, XCircle, RefreshCw,
-  Trash2, Play, Calendar, Filter, Loader
+  Trash2, Play, Calendar, Filter, Loader, MapPin
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -12,12 +12,32 @@ export default function ReportCenter() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
+  const [stations, setStations] = useState([]);
   const [params, setParams] = useState({
     dateFrom: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    dateTo: new Date().toISOString().split('T')[0]
+    dateTo: new Date().toISOString().split('T')[0],
+    stationIds: [],
+    serialNumber: '',
+    partNumber: '',
+    lotNumber: ''
   });
 
   const token = localStorage.getItem('token');
+
+  // Load stations for traceability report
+  const loadStations = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/station-config/stations`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success || Array.isArray(data)) {
+        setStations(Array.isArray(data) ? data : (data.stations || data || []));
+      }
+    } catch (e) {
+      console.error('Error loading stations:', e);
+    }
+  }, [token]);
 
   const loadData = useCallback(async () => {
     try {
@@ -43,6 +63,30 @@ export default function ReportCenter() {
     const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  // Load stations when traceability report is selected
+  useEffect(() => {
+    if (selectedType?.code === 'station_traceability' && stations.length === 0) {
+      loadStations();
+    }
+  }, [selectedType, stations.length, loadStations]);
+
+  const toggleStation = (stationId) => {
+    setParams(p => ({
+      ...p,
+      stationIds: p.stationIds.includes(stationId)
+        ? p.stationIds.filter(id => id !== stationId)
+        : [...p.stationIds, stationId]
+    }));
+  };
+
+  const selectAllStations = () => {
+    setParams(p => ({ ...p, stationIds: stations.map(s => s.id) }));
+  };
+
+  const clearAllStations = () => {
+    setParams(p => ({ ...p, stationIds: [] }));
+  };
 
   const handleGenerate = async () => {
     if (!selectedType) return;
@@ -233,6 +277,115 @@ export default function ReportCenter() {
                     }}
                   />
                 </div>
+              )}
+
+              {/* Station Traceability specific filters */}
+              {selectedType.code === 'station_traceability' && (
+                <>
+                  {/* Multi-station selector */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>
+                        <MapPin size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                        Estaciones ({params.stationIds.length} seleccionadas)
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={selectAllStations}
+                          style={{ fontSize: '10px', color: '#1e40af', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          Todas
+                        </button>
+                        <button
+                          type="button"
+                          onClick={clearAllStations}
+                          style={{ fontSize: '10px', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          Ninguna
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{
+                      border: '1px solid #d1d5db', borderRadius: '6px', padding: '8px',
+                      maxHeight: '150px', overflowY: 'auto', background: '#f9fafb'
+                    }}>
+                      {stations.length === 0 ? (
+                        <div style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
+                          Cargando estaciones...
+                        </div>
+                      ) : (
+                        stations.map(station => (
+                          <label
+                            key={station.id}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px',
+                              cursor: 'pointer', borderRadius: '4px', fontSize: '12px',
+                              background: params.stationIds.includes(station.id) ? '#dbeafe' : 'transparent'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={params.stationIds.includes(station.id)}
+                              onChange={() => toggleStation(station.id)}
+                              style={{ margin: 0 }}
+                            />
+                            <span style={{ fontWeight: params.stationIds.includes(station.id) ? '500' : '400' }}>
+                              {station.name}
+                            </span>
+                            {station.stationType && (
+                              <span style={{ fontSize: '10px', color: '#9ca3af', marginLeft: 'auto' }}>
+                                {station.stationType}
+                              </span>
+                            )}
+                          </label>
+                        ))
+                      )}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>
+                      Dejar vacío para incluir todas las estaciones
+                    </div>
+                  </div>
+
+                  {/* Additional filters */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '4px', color: '#6b7280' }}>
+                      Filtros adicionales (opcional)
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={params.serialNumber || ''}
+                        onChange={(e) => setParams(p => ({ ...p, serialNumber: e.target.value }))}
+                        placeholder="Serial (parcial)"
+                        style={{
+                          width: '100%', padding: '8px', border: '1px solid #d1d5db',
+                          borderRadius: '6px', fontSize: '12px'
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={params.partNumber || ''}
+                        onChange={(e) => setParams(p => ({ ...p, partNumber: e.target.value }))}
+                        placeholder="Parte (parcial)"
+                        style={{
+                          width: '100%', padding: '8px', border: '1px solid #d1d5db',
+                          borderRadius: '6px', fontSize: '12px'
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={params.lotNumber || ''}
+                        onChange={(e) => setParams(p => ({ ...p, lotNumber: e.target.value }))}
+                        placeholder="Lote (parcial)"
+                        style={{
+                          width: '100%', padding: '8px', border: '1px solid #d1d5db',
+                          borderRadius: '6px', fontSize: '12px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               <button

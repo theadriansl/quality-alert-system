@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -7,6 +8,9 @@ require('dotenv').config();
 
 // Database connection
 const { query, pool } = require('./config/database');
+
+// Socket.IO
+const { initializeSocket } = require('./config/socket');
 
 // Import endpoints modules
 const authEndpoints = require('./endpoints/authEndpoints');
@@ -977,18 +981,22 @@ app.use('/report-jobs', reportJobsEndpoints);
 console.log('✅ Report Jobs endpoints registered');
 
 // ============================================================================
-// START SERVER
+// START SERVER WITH SOCKET.IO
 // ============================================================================
-app.listen(PORT, async () => {
+const httpServer = http.createServer(app);
+const io = initializeSocket(httpServer);
+
+httpServer.listen(PORT, async () => {
   try {
     // Test database connection
     const result = await query('SELECT COUNT(*) FROM users');
     const userCount = parseInt(result.rows[0].count);
 
     console.log('\n');
-    console.log('🔧 QUALITY ALERT SYSTEM - 8D MODULE v2.0 (PostgreSQL)');
+    console.log('🔧 QUALITY ALERT SYSTEM - 8D MODULE v2.0 (PostgreSQL + WebSocket)');
     console.log('============================================');
     console.log(`📊 Server running on: http://localhost:${PORT}`);
+    console.log(`🔌 WebSocket ready on: ws://localhost:${PORT}`);
     console.log(`🏥 Health check: http://localhost:${PORT}/health`);
     console.log(`🔐 Login endpoint: http://localhost:${PORT}/auth/login`);
     console.log(`🎯 8D Dashboard: http://localhost:${PORT}/8d/dashboard-data`);

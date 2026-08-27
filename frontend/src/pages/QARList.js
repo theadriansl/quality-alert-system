@@ -4,11 +4,13 @@ import * as XLSX from 'xlsx';
 import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw, Download, Calendar, ChevronDown } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useSocket } from '../context/SocketContext';
 
 const QARList = () => {
   const { theme: t } = useTheme();
   const { language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
+  const { subscribe } = useSocket();
   const API_URL = 'http://localhost:5000';
 
   const [allQars, setAllQars] = useState([]);
@@ -103,6 +105,15 @@ const QARList = () => {
       setLoading(false);
     }
   };
+
+  // WebSocket: Escuchar eventos de QAR para actualización en tiempo real
+  useEffect(() => {
+    const unsubscribe = subscribe('qar:created', (data) => {
+      console.log('🔄 WebSocket [qar:created]:', data);
+      loadData();
+    });
+    return () => unsubscribe();
+  }, [subscribe]);
 
   // Get unique values for column filters
   // eslint-disable-next-line react-hooks/exhaustive-deps

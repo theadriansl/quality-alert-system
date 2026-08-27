@@ -5,6 +5,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ConfirmationProvider } from './context/ConfirmationContext';
+import { SocketProvider } from './context/SocketContext';
 import Login from './components/Auth/Login';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -172,6 +173,7 @@ function App() {
         <ToastProvider>
           <ConfirmationProvider>
           <AuthProvider>
+            <SocketProvider>
             <Router>
               <div className="App">
               <style>
@@ -674,6 +676,7 @@ function App() {
               </Routes>
             </div>
             </Router>
+            </SocketProvider>
           </AuthProvider>
           </ConfirmationProvider>
         </ToastProvider>
