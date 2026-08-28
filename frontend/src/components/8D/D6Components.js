@@ -123,17 +123,18 @@ export const ProgressBar = ({ actual, expected, status, t, width = 120 }) => {
 // Priority Indicator - Vertical bar 3px
 // ─────────────────────────────────────────────────────────────
 export const PriorityBar = ({ priority, t }) => {
+  const p = String(priority || '').toLowerCase();
   const colors = {
-    alta: t.error,
-    media: t.warning,
-    baja: t.border
+    alta: t.error, high: t.error,
+    media: t.warning, medium: t.warning,
+    baja: t.accent, low: t.accent
   };
   return (
     <div style={{
       width: 3,
       height: 28,
       borderRadius: 2,
-      backgroundColor: colors[priority] || t.border
+      backgroundColor: colors[p] || t.border
     }} />
   );
 };
@@ -177,7 +178,7 @@ export const ActionTableHeader = ({ t, language = 'es' }) => {
       height: 30,
       backgroundColor: t.bgPanel,
       borderBottom: `1px solid ${t.border}`,
-      paddingLeft: 40,
+      paddingLeft: 43,
       paddingRight: 16
     }}>
       {headers.map(h => (
@@ -218,10 +219,12 @@ export const ActionTableRow = ({
   const actual = action.actualProgress || 0;
   const expected = calcPlanned(action.startDate, action.endDate);
 
-  // Determine status
+  // Determine status - evaluate pending first
   let status = 'pending';
   if (actual >= 100) {
     status = 'completed';
+  } else if (actual === 0 && expected === 0) {
+    status = 'pending';
   } else if (actual >= expected - 5) {
     status = 'on_track';
   } else if (actual >= expected - 20) {
@@ -351,7 +354,7 @@ export const ExpandedRowContent = ({
   collapsedHistory,
   onToggleHistory
 }) => {
-  const isHistoryCollapsed = collapsedHistory[action.id] ?? true;
+  const isHistoryCollapsed = collapsedHistory[action.id] ?? false;
   const dailyProgress = action.dailyProgress || [];
 
   // Calculate accumulated progress
@@ -458,56 +461,96 @@ export const ExpandedRowContent = ({
               {language === 'es' ? 'EVIDENCIA' : 'EVIDENCE'} ({(action.evidenceFiles || []).length})
             </div>
 
-            {(action.evidenceFiles || []).map((file, idx) => (
-              <div key={idx} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '6px 10px',
-                marginBottom: 4,
-                backgroundColor: t.bgPanel,
-                borderRadius: 4,
-                border: `1px solid ${t.line}`
-              }}>
-                <span style={{ fontSize: 12, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {file.name || file.originalName || 'Archivo'}
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {file.workloadFileId && (
-                    <button
-                      onClick={() => onWorkloadDownload(file)}
-                      style={{
-                        padding: '2px 8px',
-                        fontSize: 11,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${t.border}`,
+            {(action.evidenceFiles || []).map((file, idx) => {
+              const fileName = file.name || file.originalName || 'Archivo';
+              const ext = fileName.includes('.') ? fileName.split('.').pop().toUpperCase() : '';
+              const isWorkload = file.workloadFileId || file.source === 'workload';
+              const fileSize = file.size ? (file.size > 1024 ? `${(file.size / 1024).toFixed(1)}KB` : `${file.size}B`) : '';
+              const fileDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '';
+
+              return (
+                <div key={idx} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 10px',
+                  marginBottom: 4,
+                  backgroundColor: t.bgPanel,
+                  borderRadius: 4,
+                  border: `1px solid ${t.line}`
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, overflow: 'hidden' }}>
+                    {/* Chip WL para Workload */}
+                    {isWorkload && (
+                      <span style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        fontFamily: "'IBM Plex Mono', monospace",
+                        color: t.warningFg,
+                        backgroundColor: t.warningBg,
+                        border: `1px solid ${t.warningBorder}`,
+                        padding: '2px 5px',
                         borderRadius: 3,
-                        color: t.accent,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {language === 'es' ? 'Descargar' : 'Download'}
-                    </button>
-                  )}
-                  {!isReadOnly && (
-                    <button
-                      onClick={() => onFileRemove(action.id, idx)}
-                      style={{
-                        padding: '2px 8px',
-                        fontSize: 11,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${t.errorBorder}`,
-                        borderRadius: 3,
-                        color: t.errorFg,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
+                        flexShrink: 0
+                      }}>WL</span>
+                    )}
+                    {/* Extension chip */}
+                    {ext && (
+                      <span style={{
+                        fontSize: 9,
+                        fontFamily: "'IBM Plex Mono', monospace",
+                        color: t.textMuted,
+                        backgroundColor: t.field,
+                        padding: '2px 4px',
+                        borderRadius: 2,
+                        flexShrink: 0
+                      }}>{ext}</span>
+                    )}
+                    <span style={{ fontSize: 12, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {fileName}
+                    </span>
+                    {/* Size and date */}
+                    <span style={{ fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", color: t.textDim, flexShrink: 0 }}>
+                      {fileSize}{fileSize && fileDate ? ' · ' : ''}{fileDate}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    {isWorkload && (
+                      <button
+                        onClick={() => onWorkloadDownload(file)}
+                        style={{
+                          padding: '2px 8px',
+                          fontSize: 11,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: 3,
+                          color: t.accent,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {language === 'es' ? 'Descargar' : 'Download'}
+                      </button>
+                    )}
+                    {!isReadOnly && !isWorkload && (
+                      <button
+                        onClick={() => onFileRemove(action.id, idx)}
+                        style={{
+                          padding: '2px 8px',
+                          fontSize: 11,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${t.errorBorder}`,
+                          borderRadius: 3,
+                          color: t.errorFg,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {!isReadOnly && (
               <label style={{
