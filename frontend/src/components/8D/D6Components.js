@@ -127,7 +127,7 @@ export const PriorityBar = ({ priority, t }) => {
   const colors = {
     alta: t.error, high: t.error,
     media: t.warning, medium: t.warning,
-    baja: t.accent, low: t.accent
+    baja: t.border, low: t.border
   };
   return (
     <div style={{
@@ -480,20 +480,8 @@ export const ExpandedRowContent = ({
                   border: `1px solid ${t.line}`
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, overflow: 'hidden' }}>
-                    {/* Chip WL para Workload */}
-                    {isWorkload && (
-                      <span style={{
-                        fontSize: 9,
-                        fontWeight: 600,
-                        fontFamily: "'IBM Plex Mono', monospace",
-                        color: t.warningFg,
-                        backgroundColor: t.warningBg,
-                        border: `1px solid ${t.warningBorder}`,
-                        padding: '2px 5px',
-                        borderRadius: 3,
-                        flexShrink: 0
-                      }}>WL</span>
-                    )}
+                    {/* Chip WL para Workload - usa WorkloadBadge para consistencia */}
+                    {isWorkload && <WorkloadBadge t={t} />}
                     {/* Extension chip */}
                     {ext && (
                       <span style={{
@@ -531,7 +519,7 @@ export const ExpandedRowContent = ({
                         {language === 'es' ? 'Descargar' : 'Download'}
                       </button>
                     )}
-                    {!isReadOnly && !isWorkload && (
+                    {!isReadOnly && (
                       <button
                         onClick={() => onFileRemove(action.id, idx)}
                         style={{
