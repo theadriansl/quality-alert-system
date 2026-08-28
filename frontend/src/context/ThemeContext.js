@@ -96,6 +96,98 @@ export const THEMES = {
 // Storage key for global theme
 const THEME_STORAGE_KEY = 'qms_global_theme';
 
+// ─────────────────────────────────────────────────────────────
+// Derived Tokens: Calculate tints based on theme luminance
+// ─────────────────────────────────────────────────────────────
+
+// Parse hex color to RGB
+const hexToRgb = (hex) => {
+  const h = hex.replace('#', '');
+  return {
+    r: parseInt(h.substring(0, 2), 16),
+    g: parseInt(h.substring(2, 4), 16),
+    b: parseInt(h.substring(4, 6), 16)
+  };
+};
+
+// Convert RGB to hex
+const rgbToHex = (r, g, b) => {
+  const toHex = (c) => Math.round(Math.min(255, Math.max(0, c))).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+// Calculate relative luminance (0 = black, 1 = white)
+const getLuminance = (hex) => {
+  const { r, g, b } = hexToRgb(hex);
+  const [rs, gs, bs] = [r, g, b].map(c => {
+    c = c / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+};
+
+// Mix two colors by percentage (0-100)
+const mixColors = (color1, color2, percent) => {
+  const c1 = hexToRgb(color1);
+  const c2 = hexToRgb(color2);
+  const p = percent / 100;
+  return rgbToHex(
+    c1.r + (c2.r - c1.r) * p,
+    c1.g + (c2.g - c1.g) * p,
+    c1.b + (c2.b - c1.b) * p
+  );
+};
+
+// Generate derived tokens for a theme
+const generateDerivedTokens = (baseTheme) => {
+  const isDark = getLuminance(baseTheme.bgCard) < 0.4;
+
+  // Mixing percentages based on theme darkness
+  const bgMix = isDark ? 20 : 10;
+  const borderMix = isDark ? 42 : 30;
+  const fgMix = isDark ? 55 : 0; // Lighten text on dark themes
+
+  const white = '#ffffff';
+  const black = '#000000';
+
+  return {
+    ...baseTheme,
+
+    // Success tints (green)
+    successBg: mixColors(baseTheme.bgCard, baseTheme.success, bgMix),
+    successBorder: mixColors(baseTheme.bgCard, baseTheme.success, borderMix),
+    successFg: isDark ? mixColors(baseTheme.success, white, fgMix) : baseTheme.success,
+
+    // Warning tints (amber/orange)
+    warningBg: mixColors(baseTheme.bgCard, baseTheme.warning, bgMix),
+    warningBorder: mixColors(baseTheme.bgCard, baseTheme.warning, borderMix),
+    warningFg: isDark ? mixColors(baseTheme.warning, white, fgMix) : baseTheme.warning,
+
+    // Error tints (red)
+    errorBg: mixColors(baseTheme.bgCard, baseTheme.error, bgMix),
+    errorBorder: mixColors(baseTheme.bgCard, baseTheme.error, borderMix),
+    errorFg: isDark ? mixColors(baseTheme.error, white, fgMix) : baseTheme.error,
+
+    // Accent tints (blue)
+    accentBg: mixColors(baseTheme.bgCard, baseTheme.accent, bgMix),
+    accentBorder: mixColors(baseTheme.bgCard, baseTheme.accent, borderMix),
+    accentFg: isDark ? mixColors(baseTheme.accent, white, fgMix) : baseTheme.accent,
+
+    // Info tints
+    infoBg: mixColors(baseTheme.bgCard, baseTheme.info, bgMix),
+    infoBorder: mixColors(baseTheme.bgCard, baseTheme.info, borderMix),
+    infoFg: isDark ? mixColors(baseTheme.info, white, fgMix) : baseTheme.info,
+
+    // Utility tokens
+    field: isDark ? mixColors(baseTheme.bgCard, black, 15) : baseTheme.bgCard,
+    hover: isDark ? mixColors(baseTheme.bgCard, white, 8) : mixColors(baseTheme.bgCard, black, 4),
+    line: isDark ? mixColors(baseTheme.border, baseTheme.bgCard, 40) : mixColors(baseTheme.border, baseTheme.bgCard, 50),
+
+    // Meta
+    isDark
+  };
+};
+
 // Create context
 const ThemeContext = createContext(null);
 
@@ -106,7 +198,8 @@ export const ThemeProvider = ({ children }) => {
     return saved && THEMES[saved] ? saved : 'industrial';
   });
 
-  const theme = THEMES[themeName] || THEMES.industrial;
+  // Generate theme with derived tokens (calculated once per theme change)
+  const theme = generateDerivedTokens(THEMES[themeName] || THEMES.industrial);
 
   const setTheme = (newTheme) => {
     if (THEMES[newTheme]) {

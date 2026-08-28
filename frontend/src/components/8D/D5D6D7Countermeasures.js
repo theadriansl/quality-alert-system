@@ -4,6 +4,13 @@ import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import GanttChart from './GanttChart';
 import D7Validation from './D7Validation';
+import {
+  RootCauseCard,
+  CountermeasureCard,
+  ActionTableHeader,
+  ActionTableRow,
+  ExpandedRowContent
+} from './D6Components';
 import { getCurrentUser, isUserAdmin } from '../../utils/permissions';
 
 const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked = false, activeSection, isReadOnly = false }) => {
@@ -699,6 +706,34 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
     } catch (error) {
       console.error('Error deleting file:', error);
       showError(' Error al eliminar archivo');
+    }
+  };
+
+  // Download workload evidence file
+  const handleDownloadWorkloadFile = async (file) => {
+    if (!file?.url) {
+      showError('No hay URL de descarga disponible');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${baseUrl}${file.url}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error downloading file');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name || 'archivo';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error('Error downloading workload file:', error);
+      showError('Error al descargar archivo');
     }
   };
 
@@ -1964,8 +1999,8 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
         {/* Notify D6 Responsibles Button */}
         {getResponsiblesFromD6Actions().length > 0 && (
           <div style={{
-            backgroundColor: themeColors.bgPanel,
-            border: '2px solid #0072CE',
+            backgroundColor: themeColors.accentBg,
+            border: `1px solid ${themeColors.accentBorder}`,
             borderRadius: '8px',
             padding: '16px',
             marginBottom: '20px',
@@ -1976,109 +2011,57 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
             gap: '16px'
           }}>
             <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0F3B5F', marginBottom: '4px' }}>
-                 Notificar a Responsables de D6
+              <h3 style={{ fontSize: '14px', fontWeight: '600', color: themeColors.text, marginBottom: '4px' }}>
+                {language === 'es' ? 'Notificar a Responsables de D6' : 'Notify D6 Responsibles'}
               </h3>
-              <div style={{ fontSize: '13px', color: '#0F3B5F' }}>
-                {getResponsiblesFromD6Actions().length} responsable(s): {getResponsiblesFromD6Actions().map(r => r.name).join(', ')}
+              <div style={{ fontSize: '12px', color: themeColors.textMuted }}>
+                {getResponsiblesFromD6Actions().length} {language === 'es' ? 'responsable(s)' : 'responsible(s)'}: {getResponsiblesFromD6Actions().map(r => r.name).join(', ')}
               </div>
             </div>
             <button
               onClick={notifyD6Responsibles}
               style={{
-                padding: '12px 24px',
-                fontSize: '14px',
+                padding: '10px 20px',
+                fontSize: '13px',
                 fontWeight: '600',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: themeColors.accent,
+                backgroundColor: themeColors.primary,
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
-                transition: 'all 0.2s'
+                gap: '6px',
+                transition: 'opacity 0.2s'
               }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#2563eb'}
             >
-               Enviar Notificacion
+              {language === 'es' ? 'Enviar Notificacion' : 'Send Notification'}
             </button>
           </div>
         )}
 
         {/* Root Cause Reminder from D4 */}
         {data?.d4RootCause && (
-          <div style={{
-            backgroundColor: themeColors.bgPanel,
-            border: '2px solid #fb923c',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '20px',
-            marginTop: '12px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '8px'
-            }}>
-              <span style={{ fontSize: '20px' }}></span>
-              <h4 style={{
-                margin: 0,
-                fontSize: '15px',
-                fontWeight: '600',
-                color: '#9a3412'
-              }}>
-                Causa Raíz Identificada en D4 (Referencia)
-              </h4>
-            </div>
-            <p style={{
-              margin: 0,
-              fontSize: '14px',
-              color: '#7c2d12',
-              lineHeight: '1.6',
-              fontStyle: 'italic'
-            }}>
-              "{data.d4RootCause}"
-            </p>
-            <p style={{
-              margin: '8px 0 0 0',
-              fontSize: '12px',
-              color: '#9a3412'
-            }}>
-               La contramedida definitiva debe eliminar esta causa raíz.
-            </p>
+          <div style={{ marginBottom: 20, marginTop: 12 }}>
+            <RootCauseCard text={data.d4RootCause} t={themeColors} language={language} />
           </div>
         )}
 
         <div style={styles.section}>
           {/* Descripción de la Contramedida Definitiva */}
-          <div style={{
-            background: '#f0fdf4',
-            border: '2px solid #86efac',
-            borderRadius: '8px',
-            padding: '20px',
-            marginBottom: '24px'
-          }}>
-            <label style={{ ...styles.label, fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
-              {t.countermeasureDescription}
-              <span style={styles.required}>*</span>
-            </label>
-            <textarea
-              style={{ ...styles.textarea, minHeight: '120px', fontSize: '14px' }}
-              value={formData.d6CountermeasureDescription}
-              onChange={(e) => handleInputChange('d6CountermeasureDescription', e.target.value)}
-              placeholder={t.countermeasureDescriptionPlaceholder}
-              disabled={isBlocked}
-              rows="5"
+          <div style={{ marginBottom: 24 }}>
+            <CountermeasureCard
+              text={formData.d6CountermeasureDescription}
+              onChange={(value) => handleInputChange('d6CountermeasureDescription', value)}
+              isReadOnly={isBlocked}
+              t={themeColors}
+              language={language}
             />
           </div>
 
           {/* Plan de Implementación */}
           <div style={{
-            borderTop: '2px solid #E6EAEE',
+            borderTop: `1px solid ${themeColors.line || themeColors.border}`,
             paddingTop: '24px',
             marginTop: '8px'
           }}>
@@ -2093,15 +2076,15 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
               </h3>
 
               {/* Toggle View Buttons */}
-              <div style={{ display: 'flex', gap: '8px', background: '#F4F6F8', padding: '4px', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', background: themeColors.bgPanel, padding: '4px', borderRadius: '8px' }}>
                 <button
                   onClick={() => setViewMode('table')}
                   style={{
                     padding: '8px 16px',
                     border: 'none',
                     borderRadius: '6px',
-                    background: viewMode === 'table' ? '#2E7D32' : 'transparent',
-                    color: viewMode === 'table' ? 'white' : '#6b7280',
+                    background: viewMode === 'table' ? themeColors.primary : 'transparent',
+                    color: viewMode === 'table' ? 'white' : themeColors.textMuted,
                     fontSize: '13px',
                     fontWeight: '500',
                     cursor: 'pointer',
@@ -2116,8 +2099,8 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                     padding: '8px 16px',
                     border: 'none',
                     borderRadius: '6px',
-                    background: viewMode === 'gantt' ? '#2E7D32' : 'transparent',
-                    color: viewMode === 'gantt' ? 'white' : '#6b7280',
+                    background: viewMode === 'gantt' ? themeColors.primary : 'transparent',
+                    color: viewMode === 'gantt' ? 'white' : themeColors.textMuted,
                     fontSize: '13px',
                     fontWeight: '500',
                     cursor: 'pointer',
@@ -2135,36 +2118,34 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                 onClick={() => setShowAddActionForm(true)}
                 disabled={isD6FormBlocked}
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '14px 20px',
+                  gap: '6px',
+                  padding: '10px 16px',
                   marginBottom: '16px',
-                  backgroundColor: isD6FormBlocked ? '#E6EAEE' : '#2E7D32',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
+                  backgroundColor: themeColors.bgCard,
+                  color: themeColors.text,
+                  border: `1px solid ${themeColors.border}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '500',
                   cursor: isD6FormBlocked ? 'not-allowed' : 'pointer',
                   opacity: isD6FormBlocked ? 0.5 : 1,
                   transition: 'all 0.2s'
                 }}
               >
-                 Agregar Nueva Acción
+                + {language === 'es' ? 'Agregar Accion' : 'Add Action'}
               </button>
             ) : (
               <div style={{
                 padding: '16px',
                 marginBottom: '16px',
-                backgroundColor: themeColors.bgPanel,
-                border: '2px solid #2E7D32',
+                backgroundColor: themeColors.bgCard,
+                border: `1px solid ${themeColors.border}`,
                 borderRadius: '8px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#2E7D32' }}> Nueva Acción</span>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: themeColors.text }}>{language === 'es' ? 'Nueva Accion' : 'New Action'}</span>
                   <button
                     onClick={() => setShowAddActionForm(false)}
                     style={{
@@ -2305,7 +2286,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
           {/* Lista de Acciones o Vista Gantt */}
           <div style={{ marginBottom: '20px' }}>
             {formData.d6DefinitiveActions.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: themeColors.textMuted, background: '#FAFBFC', borderRadius: '8px', border: '2px dashed #E6EAEE' }}>
+              <div style={{ padding: '40px', textAlign: 'center', color: themeColors.textMuted, background: themeColors.bgCard, borderRadius: '8px', border: `2px dashed ${themeColors.border}` }}>
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
                 <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>{t.noActions}</div>
                 <div style={{ fontSize: '14px', color: themeColors.textDim }}>Agrega acciones definitivas para ver el Gantt</div>
@@ -2319,528 +2300,78 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                 disabled={isD6FormBlocked}
               />
             ) : (
-              formData.d6DefinitiveActions.map(action => {
-                const user = users.find(u => u.id === action.responsible);
-                const responsibleName = user ? `${user.firstName} ${user.lastName}` : 'Sin asignar';
-
-                const getPriorityColor = (priority) => {
-                  switch (priority) {
-                    case 'alta': return '#ef4444';
-                    case 'media': return '#C77700';
-                    case 'baja': return '#0072CE';
-                    default: return '#6b7280';
-                  }
-                };
-
-                const getPriorityBadge = (priority) => {
-                  const colors = {
-                    alta: { bg: '#fee2e2', color: '#991b1b', text: t.priorityHigh },
-                    media: { bg: '#fef3c7', color: '#92400e', text: t.priorityMedium },
-                    baja: { bg: '#dbeafe', color: '#0F3B5F', text: t.priorityLow }
-                  };
-                  const style = colors[priority] || colors.media;
-                  return (
-                    <span style={{
-                      background: style.bg,
-                      color: style.color,
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}>
-                      {style.text}
-                    </span>
-                  );
-                };
-
-                // Recalcular progreso planeado
-                const currentPlannedProgress = calculatePlannedProgress(action.startDate, action.endDate);
+              <div style={{
+                border: `1px solid ${themeColors.border}`,
+                borderRadius: '6px',
+                overflow: 'hidden',
+                backgroundColor: themeColors.bgCard
+              }}>
+                <ActionTableHeader t={themeColors} language={language} />
+                {formData.d6DefinitiveActions.map(action => {
+                const isExpanded = expandedActions[action.id];
 
                 return (
-                  <div key={action.id} id={`d6-action-${action.id}`} style={styles.actionItem}>
-                    <div style={styles.actionContent}>
-                      <div style={styles.actionHeader}>{action.action || action.description}</div>
-                      {action.result && (
-                        <div style={{ fontSize: '13px', color: '#2E7D32', marginTop: '4px', fontStyle: 'italic' }}>
-                           {action.result}
-                        </div>
-                      )}
-                      <div style={styles.actionMeta}>
-                        <span> {responsibleName}</span>
-                        {getPriorityBadge(action.priority)}
-                        {action.startDate && <span> Inicio: {action.startDate}</span>}
-                        {action.endDate && <span> Fin: {action.endDate}</span>}
-                      </div>
-
-                      {/* Progreso Planeado vs Real */}
-                      <div style={{ marginTop: '8px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '11px', color: themeColors.textMuted, marginBottom: '4px' }}>
-                             {t.plannedProgress}: {currentPlannedProgress}%
-                          </div>
-                          <div style={{
-                            width: '100%',
-                            height: '6px',
-                            background: '#E6EAEE',
-                            borderRadius: '3px',
-                            overflow: 'hidden'
-                          }}>
-                            <div style={{
-                              width: `${currentPlannedProgress}%`,
-                              height: '100%',
-                              background: '#9ca3af',
-                              transition: 'width 0.3s'
-                            }} />
-                          </div>
-                        </div>
-
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '11px', color: themeColors.textMuted, marginBottom: '4px' }}>
-                             {t.actualProgress}: {action.actualProgress || 0}%
-                          </div>
-                          <div style={{
-                            width: '100%',
-                            height: '6px',
-                            background: '#E6EAEE',
-                            borderRadius: '3px',
-                            overflow: 'hidden'
-                          }}>
-                            <div style={{
-                              width: `${action.actualProgress || 0}%`,
-                              height: '100%',
-                              background: (action.actualProgress || 0) >= 100 ? '#2E7D32' : getPriorityColor(action.priority),
-                              transition: 'width 0.3s, background 0.3s'
-                            }} />
-                          </div>
-                        </div>
-
-                        {/* Campo para actualizar progreso real */}
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={action.actualProgress || 0}
-                            onChange={(e) => {
-                              const newProgress = parseInt(e.target.value) || 0;
-                              handleUpdateDefinitiveAction(action.id, { actualProgress: Math.min(100, Math.max(0, newProgress)) });
-                            }}
-                            disabled={isBlocked}
-                            style={{
-                              width: '60px',
-                              padding: '4px 8px',
-                              border: `1px solid ${themeColors.border}`,
-                              borderRadius: '4px',
-                              fontSize: '12px'
-                            }}
-                          />
-                          <span style={{ fontSize: '12px', color: themeColors.textMuted }}>%</span>
-                        </div>
-                      </div>
-
-                      {/* Historial de Actividades Diarias */}
-                      <div style={{ marginTop: '12px', padding: '12px', background: '#FAFBFC', borderRadius: '6px', border: `1px solid ${themeColors.border}` }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: collapsedHistory[action.id] ? '0px' : '8px' }}>
-                          <div
-                            onClick={() => {
-                              setCollapsedHistory(prev => {
-                                const newState = {
-                                  ...prev,
-                                  [action.id]: !prev[action.id]
-                                };
-                                // Save to localStorage
-                                localStorage.setItem(`d6_collapsed_history_${data?.id || 'temp'}`, JSON.stringify(newState));
-                                return newState;
-                              });
-                            }}
-                            style={{
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: themeColors.text,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              userSelect: 'none'
-                            }}
-                          >
-                            <span style={{
-                              transition: 'transform 0.2s',
-                              transform: collapsedHistory[action.id] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                              display: 'inline-block'
-                            }}>
-                              ▼
-                            </span>
-                             Historial de Actividades {action.dailyProgress && action.dailyProgress.length > 0 && `(${action.dailyProgress.length} ${action.dailyProgress.length === 1 ? 'registro' : 'registros'})`}
-                          </div>
-                          <button
-                            onClick={() => {
-                              const isExpanded = expandedActions[action.id];
-                              setExpandedActions(prev => ({
-                                ...prev,
-                                [action.id]: !isExpanded
-                              }));
-                              if (!isExpanded) {
-                                // Inicializar con fecha de hoy
-                                setDailyEntries(prev => ({
-                                  ...prev,
-                                  [action.id]: {
-                                    date: new Date().toISOString().split('T')[0],
-                                    progress: '',
-                                    activities: ''
-                                  }
-                                }));
-                              }
-                            }}
-                            disabled={isBlocked}
-                            style={{
-                              padding: '4px 8px',
-                              background: expandedActions[action.id] ? '#6b7280' : getPriorityColor(action.priority),
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              cursor: isBlocked ? 'not-allowed' : 'pointer',
-                              opacity: isBlocked ? 0.5 : 1
-                            }}
-                          >
-                            {expandedActions[action.id] ? ' Cancelar' : '+ Agregar'}
-                          </button>
-                        </div>
-
-                        {/* Formulario de entrada (expandible) */}
-                        {expandedActions[action.id] && (
-                          <div style={{
-                            padding: '12px',
-                            background: 'white',
-                            borderRadius: '6px',
-                            border: '2px solid ' + getPriorityColor(action.priority),
-                            marginBottom: '12px'
-                          }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                              <div>
-                                <label style={{ fontSize: '11px', color: themeColors.textMuted, display: 'block', marginBottom: '4px' }}>
-                                  Fecha
-                                </label>
-                                <input
-                                  type="date"
-                                  value={dailyEntries[action.id]?.date || ''}
-                                  onChange={(e) => setDailyEntries(prev => ({
-                                    ...prev,
-                                    [action.id]: { ...prev[action.id], date: e.target.value }
-                                  }))}
-                                  disabled={isBlocked}
-                                  style={{
-                                    width: '100%',
-                                    padding: '6px 8px',
-                                    border: `1px solid ${themeColors.border}`,
-                                    borderRadius: '4px',
-                                    fontSize: '12px'
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: '11px', color: themeColors.textMuted, display: 'block', marginBottom: '4px' }}>
-                                  Progreso (%)
-                                </label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={dailyEntries[action.id]?.progress || ''}
-                                  onChange={(e) => setDailyEntries(prev => ({
-                                    ...prev,
-                                    [action.id]: { ...prev[action.id], progress: e.target.value }
-                                  }))}
-                                  disabled={isBlocked}
-                                  placeholder="0-100"
-                                  style={{
-                                    width: '100%',
-                                    padding: '6px 8px',
-                                    border: `1px solid ${themeColors.border}`,
-                                    borderRadius: '4px',
-                                    fontSize: '12px'
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            <div style={{ marginBottom: '8px' }}>
-                              <label style={{ fontSize: '11px', color: themeColors.textMuted, display: 'block', marginBottom: '4px' }}>
-                                Actividades realizadas
-                              </label>
-                              <textarea
-                                value={dailyEntries[action.id]?.activities || ''}
-                                onChange={(e) => setDailyEntries(prev => ({
-                                  ...prev,
-                                  [action.id]: { ...prev[action.id], activities: e.target.value }
-                                }))}
-                                disabled={isD6FormBlocked}
-                                placeholder="Describe las actividades realizadas..."
-                                rows="3"
-                                style={{
-                                  width: '100%',
-                                  padding: '6px 8px',
-                                  border: `1px solid ${themeColors.border}`,
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  fontFamily: 'inherit',
-                                  resize: 'vertical'
-                                }}
-                              />
-                            </div>
-                            <button
-                              onClick={() => handleAddDailyProgress(action.id)}
-                              disabled={isD6FormBlocked}
-                              style={{
-                                width: '100%',
-                                padding: '6px 12px',
-                                background: getPriorityColor(action.priority),
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                cursor: isD6FormBlocked ? 'not-allowed' : 'pointer',
-                                opacity: isD6FormBlocked ? 0.5 : 1
-                              }}
-                            >
-                               Guardar Actividad
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Lista de actividades */}
-                        {!collapsedHistory[action.id] && action.dailyProgress && action.dailyProgress.length > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {action.dailyProgress
-                              .sort((a, b) => parseLocalDate(b.date) - parseLocalDate(a.date)) // Más recientes primero
-                              .map((entry, idx) => (
-                                <div key={idx} style={{
-                                  padding: '8px',
-                                  background: 'white',
-                                  borderRadius: '4px',
-                                  border: `1px solid ${themeColors.border}`,
-                                  fontSize: '12px'
-                                }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                    <span style={{ fontWeight: '600', color: themeColors.text }}>
-                                       {parseLocalDate(entry.date).toLocaleDateString('es-ES', {
-                                        weekday: 'short',
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                      })}
-                                    </span>
-                                    <span style={{
-                                      fontSize: '11px',
-                                      fontWeight: '600',
-                                      color: getPriorityColor(action.priority),
-                                      background: `${getPriorityColor(action.priority)}15`,
-                                      padding: '2px 6px',
-                                      borderRadius: '3px'
-                                    }}>
-                                      +{entry.progress}% → {entry.accumulated}%
-                                    </span>
-                                  </div>
-                                  {entry.activities && (
-                                    <div style={{ color: themeColors.textMuted, lineHeight: '1.4' }}>
-                                      {entry.activities}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Sección de Evidencia */}
-                      <div style={{ marginTop: '12px', padding: '12px', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #86efac' }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#15803d', marginBottom: '8px' }}>
-                           Evidencia de Implementación
-                        </div>
-
-                        {action.evidenceFiles && action.evidenceFiles.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                            {/* Filter duplicates: prefer D6 files over Workload files with same name */}
-                            {action.evidenceFiles
-                              .reduce((unique, file) => {
-                                const fileName = file.name || file.filename || '';
-                                const existingIndex = unique.findIndex(f =>
-                                  (f.name || f.filename || '') === fileName
-                                );
-                                if (existingIndex === -1) {
-                                  unique.push(file);
-                                } else {
-                                  // If duplicate, prefer D6 file (no workloadFileId)
-                                  const existing = unique[existingIndex];
-                                  if (existing.workloadFileId && !file.workloadFileId) {
-                                    unique[existingIndex] = file;
-                                  }
-                                }
-                                return unique;
-                              }, [])
-                              .map((file, fileIndex) => {
-                              const isFromWorkload = file.source === 'workload';
-                              const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-                              // For workload files, we need to use fetch with auth token
-                              const fileUrl = file.url ? (file.url.startsWith('http') ? file.url : `${baseUrl}${file.url}`) : null;
-
-                              const handleWorkloadDownload = async (e) => {
-                                e.preventDefault();
-                                if (!file.workloadFileId || !action.workloadActivityId) return;
-                                try {
-                                  const token = localStorage.getItem('token');
-                                  const response = await fetch(
-                                    `${baseUrl}/workload/activities/${action.workloadActivityId}/evidence/${file.workloadFileId}/download`,
-                                    { headers: { 'Authorization': `Bearer ${token}` } }
-                                  );
-                                  const blob = await response.blob();
-                                  const url = window.URL.createObjectURL(blob);
-                                  const link = document.createElement('a');
-                                  link.href = url;
-                                  link.download = file.name || 'archivo';
-                                  link.click();
-                                  window.URL.revokeObjectURL(url);
-                                } catch (err) {
-                                  console.error('Error downloading file:', err);
-                                }
-                              };
-
-                              return (
-                              <div key={fileIndex} style={{
-                                padding: '8px',
-                                background: isFromWorkload ? '#fef3c7' : 'white',
-                                borderRadius: '4px',
-                                border: isFromWorkload ? '1px solid #C77700' : '1px solid #86efac',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between'
-                              }}>
-                                <div style={{ flex: 1 }}>
-                                  {isFromWorkload ? (
-                                    <button
-                                      onClick={handleWorkloadDownload}
-                                      style={{
-                                        fontSize: '12px',
-                                        fontWeight: '500',
-                                        color: '#C77700',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: 0,
-                                        textAlign: 'left'
-                                      }}
-                                    >
-                                       {file.name} <span style={{ fontSize: '10px', fontWeight: '600' }}>(Workload)</span>
-                                    </button>
-                                  ) : (
-                                    <a
-                                      href={fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{
-                                        fontSize: '12px',
-                                        fontWeight: '500',
-                                        color: '#15803d',
-                                        textDecoration: 'none',
-                                        display: 'block'
-                                      }}
-                                      onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                                      onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                                    >
-                                       {file.name}
-                                    </a>
-                                  )}
-                                  <div style={{ fontSize: '10px', color: themeColors.textMuted, marginTop: '2px' }}>
-                                    {file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString('es-MX') : ''}
-                                  </div>
-                                </div>
-                                {!isFromWorkload && (
-                                  <button
-                                    onClick={() => removeEvidenceFileD6(action.id, fileIndex)}
-                                    disabled={isBlocked}
-                                    style={{
-                                      padding: '4px 8px',
-                                      background: '#B00020',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      fontSize: '10px',
-                                      cursor: isBlocked ? 'not-allowed' : 'pointer',
-                                      opacity: isBlocked ? 0.5 : 1
-                                    }}
-                                  >
-                                    
-                                  </button>
-                                )}
-                              </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: '11px', color: themeColors.textMuted, marginBottom: '12px', fontStyle: 'italic' }}>
-                            Sin evidencia adjunta
-                          </div>
-                        )}
-
-                        {!isD6FormBlocked && (
-                          <>
-                            <input
-                              type="file"
-                              id={`evidence-${action.id}`}
-                              style={{ display: 'none' }}
-                              multiple
-                              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-                              onChange={(e) => handleFileUploadD6(action.id, Array.from(e.target.files))}
-                            />
-                            <label
-                              htmlFor={`evidence-${action.id}`}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '6px 12px',
-                                background: '#2E7D32',
-                                color: 'white',
-                                borderRadius: '4px',
-                                fontSize: '11px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s'
-                              }}
-                              onMouseEnter={(e) => e.target.style.background = '#2E7D32'}
-                              onMouseLeave={(e) => e.target.style.background = '#2E7D32'}
-                            >
-                               Subir Evidencia
-                            </label>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveDefinitiveAction(action.id)}
-                      disabled={isD6FormBlocked}
-                      style={{
-                        ...styles.removeButton,
-                        opacity: isD6FormBlocked ? 0.5 : 1,
-                        cursor: isD6FormBlocked ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {t.remove}
-                    </button>
-                  </div>
+                  <React.Fragment key={action.id}>
+                    <ActionTableRow
+                      action={action}
+                      isExpanded={isExpanded}
+                      onToggle={() => setExpandedActions(prev => ({...prev, [action.id]: !prev[action.id]}))}
+                      users={users}
+                      calcPlanned={calculatePlannedProgress}
+                      t={themeColors}
+                      language={language}
+                    />
+                    {isExpanded && (
+                      <ExpandedRowContent
+                        action={action}
+                        dailyEntry={dailyEntries[action.id]}
+                        onDailyEntryChange={(actionId, field, value) => {
+                          if (field === 'init') {
+                            setDailyEntries(prev => ({
+                              ...prev,
+                              [actionId]: { date: new Date().toISOString().split('T')[0], progress: 0, activities: '' }
+                            }));
+                          } else {
+                            setDailyEntries(prev => ({
+                              ...prev,
+                              [actionId]: { ...prev[actionId], [field]: value }
+                            }));
+                          }
+                        }}
+                        onAddDailyProgress={handleAddDailyProgress}
+                        onProgressChange={(actionId, progress) => handleUpdateDefinitiveAction(actionId, { actualProgress: Math.min(100, Math.max(0, progress)) })}
+                        onRemoveAction={handleRemoveDefinitiveAction}
+                        onFileUpload={handleFileUploadD6}
+                        onFileRemove={removeEvidenceFileD6}
+                        onWorkloadDownload={handleDownloadWorkloadFile}
+                        isReadOnly={isD6FormBlocked}
+                        t={themeColors}
+                        language={language}
+                        collapsedHistory={collapsedHistory}
+                        onToggleHistory={(actionId) => {
+                          setCollapsedHistory(prev => {
+                            const newState = { ...prev, [actionId]: !prev[actionId] };
+                            localStorage.setItem(`d6_collapsed_history_${data?.id || 'temp'}`, JSON.stringify(newState));
+                            return newState;
+                          });
+                        }}
+                      />
+                    )}
+                  </React.Fragment>
                 );
-              })
+              })}
+              </div>
             )}
           </div>
           </div>
 
+          
+
           {/* Notify D6 Responsibles Button - Bottom of section */}
           {getResponsiblesFromD6Actions().length > 0 && (
             <div style={{
-              backgroundColor: themeColors.bgPanel,
-              border: '2px solid #0072CE',
+              backgroundColor: themeColors.accentBg,
+              border: `1px solid ${themeColors.accentBorder}`,
               borderRadius: '8px',
               padding: '16px',
               marginTop: '24px',
@@ -2850,34 +2381,31 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
               gap: '16px'
             }}>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0F3B5F', marginBottom: '4px' }}>
-                   Notificar a Responsables de D6
+                <h3 style={{ fontSize: '14px', fontWeight: '600', color: themeColors.text, marginBottom: '4px' }}>
+                  {language === 'es' ? 'Notificar a Responsables de D6' : 'Notify D6 Responsibles'}
                 </h3>
-                <div style={{ fontSize: '13px', color: '#0F3B5F' }}>
-                  {getResponsiblesFromD6Actions().length} responsable(s): {getResponsiblesFromD6Actions().map(r => r.name).join(', ')}
+                <div style={{ fontSize: '12px', color: themeColors.textMuted }}>
+                  {getResponsiblesFromD6Actions().length} {language === 'es' ? 'responsable(s)' : 'responsible(s)'}: {getResponsiblesFromD6Actions().map(r => r.name).join(', ')}
                 </div>
               </div>
               <button
                 onClick={notifyD6Responsibles}
                 style={{
-                  padding: '12px 24px',
-                  fontSize: '14px',
+                  padding: '10px 20px',
+                  fontSize: '13px',
                   fontWeight: '600',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   border: 'none',
                   cursor: 'pointer',
-                  backgroundColor: themeColors.accent,
+                  backgroundColor: themeColors.primary,
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
-                  transition: 'all 0.2s'
+                  gap: '6px',
+                  transition: 'opacity 0.2s'
                 }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#2563eb'}
               >
-                 Enviar Notificacion
+                {language === 'es' ? 'Enviar Notificacion' : 'Send Notification'}
               </button>
             </div>
           )}
@@ -2896,11 +2424,11 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
             {/* ========== SECCIÓN ANTES ========== */}
             <div style={{
               backgroundColor: themeColors.bgPanel,
-              border: '2px solid #ef4444',
+              border: `2px solid ${themeColors.errorBorder}`,
               borderRadius: '8px',
               padding: '20px'
             }}>
-              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#991b1b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: themeColors.errorFg, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span></span>
                 <span>ANTES de la Contramedida</span>
               </h4>
@@ -2908,8 +2436,8 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
               {/* Descripción del Problema de D1 - ANTES */}
               {data?.d1ProblemDescription && (
                 <div style={{
-                  backgroundColor: themeColors.bgPanel,
-                  border: '2px solid #C77700',
+                  backgroundColor: themeColors.warningBg,
+                  border: `2px solid ${themeColors.warningBorder}`,
                   borderRadius: '8px',
                   padding: '12px',
                   marginBottom: '16px'
@@ -2925,7 +2453,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       margin: 0,
                       fontSize: '13px',
                       fontWeight: '600',
-                      color: '#92400e'
+                      color: themeColors.warningFg
                     }}>
                       Descripción del Problema (D1)
                     </h5>
@@ -2933,7 +2461,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                   <p style={{
                     margin: 0,
                     fontSize: '12px',
-                    color: '#78350f',
+                    color: themeColors.textMuted,
                     lineHeight: '1.5',
                     fontStyle: 'italic'
                   }}>
@@ -2977,9 +2505,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                   style={{
                     marginTop: '8px',
                     padding: '20px',
-                    border: '2px dashed #ef4444',
+                    border: `2px dashed ${themeColors.errorBorder}`,
                     borderRadius: '8px',
-                    backgroundColor: isD6PhotoUploadBlocked ? '#FAFBFC' : '#fef2f2',
+                    backgroundColor: isD6PhotoUploadBlocked ? themeColors.bgPanel : themeColors.errorBg,
                     textAlign: 'center',
                     cursor: isD6PhotoUploadBlocked ? 'not-allowed' : 'pointer',
                     opacity: isD6PhotoUploadBlocked ? 0.5 : 1
@@ -2989,7 +2517,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                     display: 'inline-block',
                     padding: '8px 16px',
                     backgroundColor: themeColors.error,
-                    color: 'white',
+                    color: '#fff',
                     borderRadius: '6px',
                     cursor: isD6PhotoUploadBlocked ? 'not-allowed' : 'pointer',
                     fontSize: '13px',
@@ -3073,11 +2601,11 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
             {/* ========== SECCIÓN DESPUÉS ========== */}
             <div style={{
               backgroundColor: themeColors.bgPanel,
-              border: '2px solid #2E7D32',
+              border: `2px solid ${themeColors.successBorder}`,
               borderRadius: '8px',
               padding: '20px'
             }}>
-              <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#065f46', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', color: themeColors.successFg, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span></span>
                 <span>DESPUÉS de la Contramedida</span>
               </h4>
@@ -3085,8 +2613,8 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
               {/* Descripción del Problema de D1 - DESPUÉS */}
               {data?.d1ProblemDescription && (
                 <div style={{
-                  backgroundColor: themeColors.bgPanel,
-                  border: '2px solid #C77700',
+                  backgroundColor: themeColors.warningBg,
+                  border: `2px solid ${themeColors.warningBorder}`,
                   borderRadius: '8px',
                   padding: '12px',
                   marginBottom: '16px'
@@ -3102,7 +2630,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       margin: 0,
                       fontSize: '13px',
                       fontWeight: '600',
-                      color: '#92400e'
+                      color: themeColors.warningFg
                     }}>
                       Descripción del Problema (D1)
                     </h5>
@@ -3110,7 +2638,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                   <p style={{
                     margin: 0,
                     fontSize: '12px',
-                    color: '#78350f',
+                    color: themeColors.textMuted,
                     lineHeight: '1.5',
                     fontStyle: 'italic'
                   }}>
@@ -3154,9 +2682,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                   style={{
                     marginTop: '8px',
                     padding: '20px',
-                    border: '2px dashed #2E7D32',
+                    border: `2px dashed ${themeColors.successBorder}`,
                     borderRadius: '8px',
-                    backgroundColor: isD6PhotoUploadBlocked ? '#FAFBFC' : '#f0fdf4',
+                    backgroundColor: isD6PhotoUploadBlocked ? themeColors.bgPanel : themeColors.successBg,
                     textAlign: 'center',
                     cursor: isD6PhotoUploadBlocked ? 'not-allowed' : 'pointer',
                     opacity: isD6PhotoUploadBlocked ? 0.5 : 1
@@ -3166,7 +2694,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                     display: 'inline-block',
                     padding: '8px 16px',
                     backgroundColor: themeColors.success,
-                    color: 'white',
+                    color: '#fff',
                     borderRadius: '6px',
                     cursor: isD6PhotoUploadBlocked ? 'not-allowed' : 'pointer',
                     fontSize: '13px',

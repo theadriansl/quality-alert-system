@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { isUserAdmin } from '../utils/permissions';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSocket } from '../context/SocketContext';
 
@@ -189,7 +189,11 @@ const EightDConsultation = () => {
       <div style={{ backgroundColor: t.primary, color: 'white', padding: '16px 24px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>📋 Consulta de Reportes 8D</h1>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Theme Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', paddingRight: '12px', borderRight: '1px solid rgba(255,255,255,0.3)' }}>
+              <ThemeSelector />
+            </div>
             <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
               {language === 'es' ? 'EN' : 'ES'}
             </button>
@@ -197,7 +201,7 @@ const EightDConsultation = () => {
             <button
               onClick={exportToExcel}
               disabled={exportingExcel || filtered.length === 0}
-              style={{ padding: '10px 20px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: (exportingExcel || filtered.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingExcel || filtered.length === 0) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ padding: '10px 20px', backgroundColor: t.success, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: (exportingExcel || filtered.length === 0) ? 'not-allowed' : 'pointer', opacity: (exportingExcel || filtered.length === 0) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}
               title="Exportar reportes filtrados a Excel"
             >
               📊 {exportingExcel ? '...' : 'Excel'}

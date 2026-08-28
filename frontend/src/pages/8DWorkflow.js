@@ -9,7 +9,7 @@ import { jsPDF } from 'jspdf';
 import EightDPDF from '../components/8D/EightDPDF';
 import eightDService from '../services/eightDService';
 import { useToast } from '../context/ToastContext';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { isUserAdmin, canUserEdit, isReadOnly } from '../utils/permissions';
 
@@ -2174,6 +2174,11 @@ const EightDWorkflow = () => {
             </p>
           </div>
           
+          {/* Theme Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: '16px', paddingRight: '16px', borderRight: `1px solid ${t.border}` }}>
+            <ThemeSelector />
+          </div>
+
           {/* Navigation Buttons */}
           <div style={styles.headerNavigation}>
             {/* Export Button */}
@@ -2183,8 +2188,8 @@ const EightDWorkflow = () => {
                 disabled={isCapturingPDF}
                 style={{
                   ...styles.headerButton,
-                  backgroundColor: '#dc2626',
-                  color: 'white',
+                  backgroundColor: t.error,
+                  color: '#fff',
                   opacity: isCapturingPDF ? 0.7 : 1
                 }}
                 title="Exportar PDF completo (captura todas las pestañas)"
