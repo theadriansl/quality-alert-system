@@ -3557,9 +3557,13 @@ router.post('/repair-config', authenticateToken, async (req, res) => {
 // GET ALL defects (General tab - no status filter) with pagination
 router.get('/all', authenticateToken, async (req, res) => {
   const { clientId, status, page = 1, pageSize = 100 } = req.query;
+  const isExport = req.query.export === 'true';
   const currentPage = Math.max(1, parseInt(page));
-  const limit = Math.min(500, Math.max(10, parseInt(pageSize)));
-  const offset = (currentPage - 1) * limit;
+  // Si export=true, traer todos los registros (hasta 50000), ignorando pageSize
+  const limit = isExport ? 50000 : Math.min(500, Math.max(10, parseInt(pageSize)));
+  const offset = isExport ? 0 : (currentPage - 1) * limit;
+
+  console.log('📋 /defects-v2/all PARAMS:', { clientId, status, page, pageSize, export: req.query.export, isExport, limit, offset });
 
   try {
     let baseSql = 'FROM v_defects_all';

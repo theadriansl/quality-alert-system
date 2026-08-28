@@ -29,8 +29,8 @@
 | 4 | Testing formal Auditorías | Arrastrado | ⏳ |
 | 5 | Testing Reportes/Dashboard | Arrastrado | ⏳ |
 | 6 | ~~Control 360° MRB (ubicaciones)~~ | 26-Jul | ✅ 23-Ago |
-| 7 | Probar Módulo Reportes Hospital | 05-Ago | ⏳ |
-| 8 | **Testing Tab Inventario MRBCampaignDetail** | 18-Ago | ⏳ |
+| 7 | ~~Probar Módulo Reportes Hospital~~ | 05-Ago | ✅ 28-Ago |
+| 8 | ~~Testing Tab Inventario MRBCampaignDetail~~ | 18-Ago | ✅ 28-Ago |
 | 9 | ~~Testing Modal Multi-Campaña MRB (inspección individual)~~ | 19-Ago | ✅ 23-Ago |
 | 10 | ~~Verificar partes "omitidas" en import-mass~~ | 20-Ago | ✅ 21-Ago (discrepancias claras) |
 

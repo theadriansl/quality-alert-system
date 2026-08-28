@@ -1588,60 +1588,101 @@ const DefectHospital = () => {
     setExpandedSerials({});
   };
 
-  // Exportar a Excel los datos filtrados del tab activo
-  const exportToExcel = () => {
-    if (filteredGroups.length === 0) {
-      alert('No hay datos para exportar');
-      return;
-    }
+  // Exportar a Excel TODOS los datos (llama al backend con export=true)
+  const exportToExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const effectiveClientId = clientId || (allDefects.length > 0 ? (allDefects[0].clientId || allDefects[0].client_id) : null);
 
-    // Aplanar los grupos a filas individuales
-    const rows = [];
-    filteredGroups.forEach(group => {
-      group.defects.forEach(defect => {
-        rows.push({
-          'Entry': defect.entryNumber || defect.entry_number || '',
-          'Serial': defect.serialNumber || defect.serial_number || defect.lotNumber || defect.lot_number || '',
-          [language === 'es' ? 'Parte' : 'Part']: defect.partNumber || defect.part_number || '',
-          [language === 'es' ? 'Ubicación' : 'Location']: defect.locationCode || defect.location_code || '',
-          [language === 'es' ? 'Departamento' : 'Department']: defect.departmentName || defect.department_name || '',
-          [language === 'es' ? 'Tipo Defecto' : 'Defect Type']: defect.defectTypeName || defect.defect_type_name || '',
-          [language === 'es' ? 'Estado' : 'Status']: defect.repairStatus || defect.repair_status || 'OPEN',
-          [language === 'es' ? 'Reprocesos' : 'Reprocesses']: defect.repairAttempts || defect.repair_attempts || 0,
-          [language === 'es' ? 'Últ. Acción' : 'Last Action']: (() => {
-            const st = defect.repairStatus || defect.repair_status || 'OPEN';
-            if (st === 'SCRAPPED' || st === 'SCRAP_CONFIRMED') return defect.scrappedByName || defect.scrapped_by_name || '';
-            if (st === 'RELEASED' || st === 'CLOSED') return defect.releasedByName || defect.released_by_name || '';
-            if (st === 'IN_REPAIR') return defect.repairingByName || defect.repairing_by_name || defect.repairedByName || defect.repaired_by_name || '';
-            if (st === 'REPAIRED' || st === 'IN_VALIDATION' || st === 'QUARANTINE') return defect.repairedByName || defect.repaired_by_name || '';
-            return defect.capturedByName || defect.captured_by_name || '';
-          })(),
-          [language === 'es' ? 'Capturado Por' : 'Captured By']: defect.capturedByName || defect.captured_by_name || '',
-          [language === 'es' ? 'Fecha' : 'Date']: defect.capturedAt || defect.captured_at ? new Date(defect.capturedAt || defect.captured_at).toLocaleDateString('es-MX') : ''
-        });
+      // Llamar al backend con export=true para obtener TODOS los datos
+      const params = new URLSearchParams();
+      params.append('export', 'true');
+      if (effectiveClientId) params.append('clientId', effectiveClientId);
+      if (statusFilter) params.append('status', statusFilter);
+
+      const response = await fetch(`${API_URL}/defects-v2/all?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-    });
+      const result = await response.json();
 
-    // Crear workbook y worksheet
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
+      if (!result.success) {
+        alert(result.message || 'Error obteniendo datos');
+        return;
+      }
 
-    // Nombre del tab según tab activo
-    const tabNames = {
-      general: 'General',
-      repairs: 'Pendientes',
-      inRepair: 'En_Reparacion',
-      releases: 'Liberaciones'
-    };
-    const sheetName = tabNames[activeTab] || 'Datos';
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      let allData = result.defects || [];
 
-    // Generar nombre de archivo con fecha
-    const today = new Date().toISOString().split('T')[0];
-    const fileName = `hospital_defectos_${sheetName.toLowerCase()}_${today}.xlsx`;
+      // Aplicar filtros del frontend
+      if (searchFilter.trim()) {
+        const search = searchFilter.toLowerCase();
+        allData = allData.filter(d => {
+          const entry = (d.entryNumber || d.entry_number || '').toLowerCase();
+          const serial = (d.serialNumber || d.serial_number || d.lotNumber || d.lot_number || '').toLowerCase();
+          const part = (d.partNumber || d.part_number || '').toLowerCase();
+          const partName = (d.partName || d.part_name || '').toLowerCase();
+          const workOrder = (d.workOrder || d.work_order || '').toLowerCase();
+          return entry.includes(search) || serial.includes(search) || part.includes(search) || partName.includes(search) || workOrder.includes(search);
+        });
+      }
 
-    // Descargar
-    XLSX.writeFile(wb, fileName);
+      if (defectTypeFilter) {
+        allData = allData.filter(d => {
+          const typeId = d.defectTypeId || d.defect_type_id;
+          return typeId === parseInt(defectTypeFilter);
+        });
+      }
+
+      if (allData.length === 0) {
+        alert(language === 'es' ? 'No hay datos para exportar' : 'No data to export');
+        return;
+      }
+
+      // Formatear filas
+      const rows = allData.map(defect => ({
+        'Entry': defect.entryNumber || defect.entry_number || '',
+        'Serial': defect.serialNumber || defect.serial_number || defect.lotNumber || defect.lot_number || '',
+        [language === 'es' ? 'Parte' : 'Part']: defect.partNumber || defect.part_number || '',
+        [language === 'es' ? 'Ubicación' : 'Location']: defect.locationCode || defect.location_code || '',
+        [language === 'es' ? 'Departamento' : 'Department']: defect.departmentName || defect.department_name || '',
+        [language === 'es' ? 'Tipo Defecto' : 'Defect Type']: defect.defectTypeName || defect.defect_type_name || '',
+        [language === 'es' ? 'Estado' : 'Status']: defect.repairStatus || defect.repair_status || 'OPEN',
+        [language === 'es' ? 'Reprocesos' : 'Reprocesses']: defect.repairAttempts || defect.repair_attempts || 0,
+        [language === 'es' ? 'Últ. Acción' : 'Last Action']: (() => {
+          const st = defect.repairStatus || defect.repair_status || 'OPEN';
+          if (st === 'SCRAPPED' || st === 'SCRAP_CONFIRMED') return defect.scrappedByName || defect.scrapped_by_name || '';
+          if (st === 'RELEASED' || st === 'CLOSED') return defect.releasedByName || defect.released_by_name || '';
+          if (st === 'IN_REPAIR') return defect.repairingByName || defect.repairing_by_name || defect.repairedByName || defect.repaired_by_name || '';
+          if (st === 'REPAIRED' || st === 'IN_VALIDATION' || st === 'QUARANTINE') return defect.repairedByName || defect.repaired_by_name || '';
+          return defect.capturedByName || defect.captured_by_name || '';
+        })(),
+        [language === 'es' ? 'Capturado Por' : 'Captured By']: defect.capturedByName || defect.captured_by_name || '',
+        [language === 'es' ? 'Fecha' : 'Date']: defect.capturedAt || defect.captured_at ? new Date(defect.capturedAt || defect.captured_at).toLocaleDateString('es-MX') : ''
+      }));
+
+      // Crear workbook y worksheet
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+
+      // Nombre del tab según tab activo
+      const tabNames = {
+        general: 'General',
+        repairs: 'Pendientes',
+        inRepair: 'En_Reparacion',
+        releases: 'Liberaciones'
+      };
+      const sheetName = tabNames[activeTab] || 'Datos';
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+      // Generar nombre de archivo con fecha
+      const today = new Date().toISOString().split('T')[0];
+      const fileName = `hospital_defectos_${sheetName.toLowerCase()}_${today}.xlsx`;
+
+      // Descargar
+      XLSX.writeFile(wb, fileName);
+    } catch (err) {
+      console.error('Error exporting:', err);
+      alert(language === 'es' ? 'Error al exportar' : 'Export error');
+    }
   };
 
   // Generar reporte según tipo y formato
@@ -1728,15 +1769,47 @@ const DefectHospital = () => {
           return;
         }
       } else if (reportType === 'currentTable') {
-        // Usar datos actuales de la tabla
-        const rows = [];
-        filteredGroups.forEach(group => {
-          group.defects.forEach(defect => {
-            rows.push(defect);
-          });
+        // Obtener TODOS los datos del backend con los filtros actuales (sin paginación)
+        const params = new URLSearchParams();
+        params.append('export', 'true');
+        if (effectiveClientId) params.append('clientId', effectiveClientId);
+        if (statusFilter) params.append('status', statusFilter);
+
+        const response = await fetch(`${API_URL}/defects-v2/all?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        reportData = rows;
-        reportTitle = `Reporte_TablaActual`;
+        const result = await response.json();
+
+        if (result.success) {
+          let rows = result.defects || [];
+
+          // Aplicar filtros adicionales del frontend (búsqueda, tipo defecto, fecha)
+          if (searchFilter.trim()) {
+            const search = searchFilter.toLowerCase();
+            rows = rows.filter(d => {
+              const entry = (d.entryNumber || d.entry_number || '').toLowerCase();
+              const serial = (d.serialNumber || d.serial_number || d.lotNumber || d.lot_number || '').toLowerCase();
+              const part = (d.partNumber || d.part_number || '').toLowerCase();
+              const partName = (d.partName || d.part_name || '').toLowerCase();
+              const workOrder = (d.workOrder || d.work_order || '').toLowerCase();
+              return entry.includes(search) || serial.includes(search) || part.includes(search) || partName.includes(search) || workOrder.includes(search);
+            });
+          }
+
+          if (defectTypeFilter) {
+            rows = rows.filter(d => {
+              const typeId = d.defectTypeId || d.defect_type_id;
+              return typeId === parseInt(defectTypeFilter);
+            });
+          }
+
+          reportData = rows;
+          reportTitle = `Reporte_TablaActual`;
+        } else {
+          alert(result.message || 'Error obteniendo datos');
+          setReportLoading(false);
+          return;
+        }
         }
       } // cierre del else de "si ya tenemos preview"
 
