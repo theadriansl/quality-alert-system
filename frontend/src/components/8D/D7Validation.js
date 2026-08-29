@@ -1217,10 +1217,10 @@ Sistema de Gestión de Calidad`
         <div style={styles.blockedMessage}>
           <span style={{ fontSize: '24px' }}></span>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: t.warningFg, marginBottom: '4px' }}>
               Sección Restringida - Solo Calidad
             </div>
-            <div style={{ fontSize: '13px', color: '#78350f' }}>
+            <div style={{ fontSize: '13px', color: t.textMuted }}>
               Esta sección D7 está disponible únicamente para usuarios del equipo de Calidad (Confirmation).
             </div>
           </div>
@@ -1255,22 +1255,23 @@ Sistema de Gestión de Calidad`
         {/* Scroll hint banner */}
         {showScrollHint && canScrollRight && (
           <div style={{
-            backgroundColor: '#0072CE',
-            color: 'white',
+            backgroundColor: t.accentBg,
+            color: t.text,
             padding: '8px 16px',
             fontSize: '13px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            animation: 'fadeIn 0.3s ease-in'
+            animation: 'fadeIn 0.3s ease-in',
+            border: `1px solid ${t.accentBorder}`
           }}>
             <span></span>
             <span>Desliza horizontalmente para ver: <strong>Juicio, Hallazgos, Verificado Por, Ronda, Acciones</strong></span>
             <span></span>
             <button
               onClick={() => setShowScrollHint(false)}
-              style={{ marginLeft: '12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' }}
+              style={{ marginLeft: '12px', background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', fontSize: '16px' }}
             ></button>
           </div>
         )}
@@ -1292,10 +1293,10 @@ Sistema de Gestión de Calidad`
                   <th style={{ ...styles.th, width: '180px', padding: '10px 8px', fontSize: '14px' }}>Comentarios Líder</th>
                   <th style={{ ...styles.th, width: '90px', padding: '10px 8px', fontSize: '14px' }}> Archivos</th>
                   <th style={{ ...styles.th, width: '100px', padding: '10px 8px', fontSize: '14px' }}>Estado</th>
-                  <th style={{ ...styles.th, width: '100px', padding: '10px 8px', fontSize: '14px', backgroundColor: '#dbeafe' }}>Juicio</th>
-                  <th style={{ ...styles.th, width: '200px', padding: '10px 8px', fontSize: '14px', backgroundColor: '#dbeafe' }}>Hallazgos Auditor</th>
-                  <th style={{ ...styles.th, width: '140px', padding: '10px 8px', fontSize: '14px', backgroundColor: '#dbeafe' }}>Verificado Por</th>
-                  <th style={{ ...styles.th, width: '80px', padding: '10px 8px', fontSize: '14px', backgroundColor: '#fef3c7' }}>Ronda</th>
+                  <th style={{ ...styles.th, width: '100px', padding: '10px 8px', fontSize: '14px', backgroundColor: t.accentBg }}>Juicio</th>
+                  <th style={{ ...styles.th, width: '200px', padding: '10px 8px', fontSize: '14px', backgroundColor: t.accentBg }}>Hallazgos Auditor</th>
+                  <th style={{ ...styles.th, width: '140px', padding: '10px 8px', fontSize: '14px', backgroundColor: t.accentBg }}>Verificado Por</th>
+                  <th style={{ ...styles.th, width: '80px', padding: '10px 8px', fontSize: '14px', backgroundColor: t.warningBg }}>Ronda</th>
                   <th style={{ ...styles.th, width: '140px', padding: '10px 8px', fontSize: '14px' }}>Acciones</th>
                 </tr>
               </thead>
@@ -1307,7 +1308,7 @@ Sistema de Gestión de Calidad`
                 return (
                   <tr key={item.id} style={{
                     ...styles.tr,
-                    backgroundColor: item.needsResend ? '#fae8ff' : item.sentToAudit ? (item.auditorCompleted ? '#dcfce7' : '#fef3c7') : t.bgCard
+                    backgroundColor: item.needsResend ? t.infoBg : item.sentToAudit ? (item.auditorCompleted ? t.successBg : t.warningBg) : t.bgCard
                   }}>
                     {/* Category Name */}
                     <td style={styles.td}>
@@ -1316,8 +1317,8 @@ Sistema de Gestión de Calidad`
                         <div style={{
                           marginTop: '4px',
                           fontSize: '11px',
-                          color: '#a21caf',
-                          backgroundColor: '#fae8ff',
+                          color: t.infoFg,
+                          backgroundColor: t.infoBg,
                           padding: '2px 6px',
                           borderRadius: '4px',
                           display: 'inline-block'
@@ -1349,14 +1350,14 @@ Sistema de Gestión de Calidad`
                           padding: '8px',
                           border: `1px solid ${t.border}`,
                           borderRadius: '4px',
-                          backgroundColor: isOverdue ? '#fee2e2' : isDueSoon ? '#fef3c7' : t.bgCard
+                          backgroundColor: isOverdue ? t.errorBg : isDueSoon ? t.warningBg : t.bgCard
                         }}
                         value={item.dueDate || ''}
                         onChange={(e) => updateAuditItem(item.id, 'dueDate', e.target.value)}
                         disabled={actuallyBlocked}
                       />
-                      {isOverdue && <div style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}> Vencido</div>}
-                      {isDueSoon && <div style={{ fontSize: '12px', color: '#C77700', marginTop: '4px' }}> Próximo</div>}
+                      {isOverdue && <div style={{ fontSize: '12px', color: t.errorFg, marginTop: '4px' }}> Vencido</div>}
+                      {isDueSoon && <div style={{ fontSize: '12px', color: t.warningFg, marginTop: '4px' }}> Próximo</div>}
                     </td>
 
                     {/* Assigned Auditors - Always editable to add/modify auditors and resend */}
@@ -1373,10 +1374,10 @@ Sistema de Gestión de Calidad`
                                     alignItems: 'center',
                                     gap: '4px',
                                     padding: '2px 6px',
-                                    backgroundColor: '#dbeafe',
+                                    backgroundColor: t.accentBg,
                                     borderRadius: '12px',
                                     fontSize: '11px',
-                                    color: '#0F3B5F'
+                                    color: t.primary
                                   }}
                                 >
                                    {a.name?.split(' ')[0]}
@@ -1397,7 +1398,7 @@ Sistema de Gestión de Calidad`
                                         cursor: 'pointer',
                                         padding: '0 2px',
                                         fontSize: '12px',
-                                        color: '#B00020',
+                                        color: t.error,
                                         lineHeight: 1
                                       }}
                                       title="Quitar auditor"
@@ -1473,7 +1474,7 @@ Sistema de Gestión de Calidad`
                       {item.files && item.files.length > 0 && (
                         <div style={{ marginTop: '6px', fontSize: '12px' }}>
                           {item.files.slice(0, 2).map(file => (
-                            <a key={file.id} href={`http://localhost:5000${file.file_url || file.fileUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0072CE', display: 'block' }}>
+                            <a key={file.id} href={`http://localhost:5000${file.file_url || file.fileUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: t.primary, display: 'block' }}>
                                {(file.file_name || file.fileName)?.substring(0, 12)}...
                             </a>
                           ))}
@@ -1487,14 +1488,14 @@ Sistema de Gestión de Calidad`
                       {!item.sentToAudit ? (
                         <span style={{ color: t.textMuted }}>Sin enviar</span>
                       ) : item.auditorCompleted ? (
-                        <span style={{ color: '#2E7D32', fontWeight: 'bold' }}> Listo</span>
+                        <span style={{ color: t.success, fontWeight: 'bold' }}> Listo</span>
                       ) : (
-                        <span style={{ color: '#C77700' }}> Pendiente</span>
+                        <span style={{ color: t.warning }}> Pendiente</span>
                       )}
                     </td>
 
                     {/* Judgment - Editable by leader if no auditors assigned */}
-                    <td style={{ ...styles.td, textAlign: 'center', backgroundColor: '#f0f9ff' }}>
+                    <td style={{ ...styles.td, textAlign: 'center', backgroundColor: t.accentBg }}>
                       {(!item.assignedAuditors || item.assignedAuditors.length === 0) ? (
                         // No auditors - Leader can give judgment
                         <div>
@@ -1502,15 +1503,15 @@ Sistema de Gestión de Calidad`
                             style={{
                               padding: '8px 12px',
                               borderRadius: '6px',
-                              border: '2px solid #0072CE',
+                              border: `2px solid ${t.primary}`,
                               fontSize: '14px',
                               fontWeight: '600',
-                              backgroundColor: item.auditorJudgment === 'OK' ? '#dcfce7' :
-                                              item.auditorJudgment === 'NOK' ? '#fee2e2' :
-                                              item.auditorJudgment === 'OBS' ? '#fef3c7' : t.bgCard,
-                              color: item.auditorJudgment === 'OK' ? '#166534' :
-                                     item.auditorJudgment === 'NOK' ? '#991b1b' :
-                                     item.auditorJudgment === 'OBS' ? '#92400e' : t.text,
+                              backgroundColor: item.auditorJudgment === 'OK' ? t.successBg :
+                                              item.auditorJudgment === 'NOK' ? t.errorBg :
+                                              item.auditorJudgment === 'OBS' ? t.warningBg : t.bgCard,
+                              color: item.auditorJudgment === 'OK' ? t.successFg :
+                                     item.auditorJudgment === 'NOK' ? t.errorFg :
+                                     item.auditorJudgment === 'OBS' ? t.warningFg : t.text,
                               cursor: actuallyBlocked ? 'not-allowed' : 'pointer'
                             }}
                             value={item.auditorJudgment || ''}
@@ -1546,12 +1547,12 @@ Sistema de Gestión de Calidad`
                           borderRadius: '6px',
                           fontWeight: '700',
                           fontSize: '14px',
-                          backgroundColor: item.auditorJudgment === 'OK' ? '#dcfce7' :
-                                          item.auditorJudgment === 'NOK' ? '#fee2e2' :
-                                          item.auditorJudgment === 'OBS' ? '#fef3c7' : t.bgPanel,
-                          color: item.auditorJudgment === 'OK' ? '#166534' :
-                                 item.auditorJudgment === 'NOK' ? '#991b1b' :
-                                 item.auditorJudgment === 'OBS' ? '#92400e' : t.text
+                          backgroundColor: item.auditorJudgment === 'OK' ? t.successBg :
+                                          item.auditorJudgment === 'NOK' ? t.errorBg :
+                                          item.auditorJudgment === 'OBS' ? t.warningBg : t.bgPanel,
+                          color: item.auditorJudgment === 'OK' ? t.successFg :
+                                 item.auditorJudgment === 'NOK' ? t.errorFg :
+                                 item.auditorJudgment === 'OBS' ? t.warningFg : t.text
                         }}>
                           {item.auditorJudgment === 'OK' ? ' OK' :
                            item.auditorJudgment === 'NOK' ? ' NOK' :
@@ -1565,14 +1566,14 @@ Sistema de Gestión de Calidad`
                     </td>
 
                     {/* Hallazgos - Editable by leader if no auditors */}
-                    <td style={{ ...styles.td, fontSize: '14px', backgroundColor: '#f0f9ff' }}>
+                    <td style={{ ...styles.td, fontSize: '14px', backgroundColor: t.accentBg }}>
                       {(!item.assignedAuditors || item.assignedAuditors.length === 0) ? (
                         // No auditors - Leader can add comments
                         <textarea
                           style={{
                             width: '100%',
                             padding: '8px',
-                            border: '1px solid #0072CE',
+                            border: `1px solid ${t.primary}`,
                             borderRadius: '4px',
                             fontSize: '14px',
                             minHeight: '60px',
@@ -1602,7 +1603,7 @@ Sistema de Gestión de Calidad`
                     </td>
 
                     {/* Verified By */}
-                    <td style={{ ...styles.td, textAlign: 'center', fontSize: '14px', backgroundColor: '#f0f9ff' }}>
+                    <td style={{ ...styles.td, textAlign: 'center', fontSize: '14px', backgroundColor: t.accentBg }}>
                       {item.auditedByName ? (
                         <div>
                           <div style={{ fontWeight: '600', fontSize: '14px' }}> {item.auditedByName}</div>
@@ -1613,7 +1614,7 @@ Sistema de Gestión de Calidad`
                           )}
                         </div>
                       ) : (!item.assignedAuditors || item.assignedAuditors.length === 0) && item.auditorJudgment ? (
-                        <span style={{ padding: '6px 10px', backgroundColor: '#dbeafe', borderRadius: '4px', fontSize: '13px', fontWeight: '600', color: '#0F3B5F' }}>
+                        <span style={{ padding: '6px 10px', backgroundColor: t.accentBg, borderRadius: '4px', fontSize: '13px', fontWeight: '600', color: t.accentFg }}>
                            Auto-verif.
                         </span>
                       ) : (
@@ -1622,14 +1623,14 @@ Sistema de Gestión de Calidad`
                     </td>
 
                     {/* Audit Round */}
-                    <td style={{ ...styles.td, textAlign: 'center', backgroundColor: '#fffbeb' }}>
+                    <td style={{ ...styles.td, textAlign: 'center', backgroundColor: t.warningBg }}>
                       <span style={{
                         padding: '8px 14px',
                         borderRadius: '12px',
                         fontWeight: '700',
                         fontSize: '16px',
-                        backgroundColor: (item.auditRound || 1) > 1 ? '#fef3c7' : t.bgPanel,
-                        color: (item.auditRound || 1) > 1 ? '#92400e' : t.text
+                        backgroundColor: (item.auditRound || 1) > 1 ? t.warningBg : t.bgPanel,
+                        color: (item.auditRound || 1) > 1 ? t.warningFg : t.text
                       }}>
                         {item.auditRound || 1}
                       </span>
@@ -1639,14 +1640,14 @@ Sistema de Gestión de Calidad`
                     <td style={{
                       ...styles.td,
                       textAlign: 'center',
-                      backgroundColor: item.sentToAudit ? (item.auditorCompleted ? '#dcfce7' : '#fef3c7') : t.bgCard
+                      backgroundColor: item.sentToAudit ? (item.auditorCompleted ? t.successBg : t.warningBg) : t.bgCard
                     }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         {/* Re-send button - only show for NOK items */}
                         {item.auditorCompleted && (item.auditorJudgment === 'NOK' || item.auditorJudgment === 'OBS') && (
                           <button
                             onClick={() => resendToAudit(item)}
-                            style={{ padding: '8px 12px', backgroundColor: '#C77700', color: 'white', border: 'none', borderRadius: '4px', cursor: actuallyBlocked ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: actuallyBlocked ? 0.5 : 1 }}
+                            style={{ padding: '8px 12px', backgroundColor: t.warning, color: t.bgCard, border: 'none', borderRadius: '4px', cursor: actuallyBlocked ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: actuallyBlocked ? 0.5 : 1 }}
                             disabled={actuallyBlocked}
                             title="Re-enviar a auditoría"
                           >↻ Re-enviar</button>
@@ -1655,7 +1656,7 @@ Sistema de Gestión de Calidad`
                         {item.needsResend && (
                           <button
                             onClick={() => updateAuditRequest(item)}
-                            style={{ padding: '8px 12px', backgroundColor: '#a21caf', color: 'white', border: 'none', borderRadius: '4px', cursor: actuallyBlocked ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: actuallyBlocked ? 0.5 : 1 }}
+                            style={{ padding: '8px 12px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: actuallyBlocked ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: actuallyBlocked ? 0.5 : 1 }}
                             disabled={actuallyBlocked}
                             title="Actualizar solicitud de auditoría"
                           >📤 Actualizar</button>
@@ -1664,19 +1665,19 @@ Sistema de Gestión de Calidad`
                         {(item.sentToAudit || item.auditorJudgment || (item.auditRound || 1) > 1) && (
                           <button
                             onClick={() => openHistoryModal(item)}
-                            style={{ padding: '8px 12px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                            style={{ padding: '8px 12px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
                             title="Ver historial de auditoría"
                           > Historial</button>
                         )}
                         <button
                           onClick={() => duplicateAuditItem(item)}
-                          style={{ padding: '8px 12px', backgroundColor: '#0072CE', color: 'white', border: 'none', borderRadius: '4px', cursor: actuallyBlocked ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: actuallyBlocked ? 0.5 : 1 }}
+                          style={{ padding: '8px 12px', backgroundColor: t.primary, color: t.bgCard, border: 'none', borderRadius: '4px', cursor: actuallyBlocked ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: actuallyBlocked ? 0.5 : 1 }}
                           disabled={actuallyBlocked}
                           title={`Agregar otra fila de ${item.name}`}
                         >+ Fila</button>
                         <button
                           onClick={() => deleteAuditItem(item.id)}
-                          style={{ padding: '8px 12px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: (actuallyBlocked || item.sentToAudit) ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: (actuallyBlocked || item.sentToAudit) ? 0.5 : 1 }}
+                          style={{ padding: '8px 12px', backgroundColor: t.error, color: t.bgCard, border: 'none', borderRadius: '4px', cursor: (actuallyBlocked || item.sentToAudit) ? 'not-allowed' : 'pointer', fontSize: '13px', opacity: (actuallyBlocked || item.sentToAudit) ? 0.5 : 1 }}
                           disabled={actuallyBlocked}
                           title="Eliminar item"
                         ></button>
@@ -1698,13 +1699,13 @@ Sistema de Gestión de Calidad`
                 right: 0,
                 top: '50%',
                 transform: 'translateY(-50%)',
-                backgroundColor: 'rgba(59, 130, 246, 0.9)',
-                color: 'white',
+                backgroundColor: t.accent,
+                color: t.bgCard,
                 padding: '20px 8px',
                 borderRadius: '8px 0 0 8px',
                 cursor: 'pointer',
                 zIndex: 10,
-                boxShadow: '-3px 0 8px rgba(0,0,0,0.2)',
+                boxShadow: `0 2px 8px ${t.isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.15)'}`,
                 animation: showScrollHint ? 'pulseArrow 1.5s infinite' : 'none',
                 display: 'flex',
                 flexDirection: 'column',
@@ -1740,9 +1741,9 @@ Sistema de Gestión de Calidad`
               ...styles.fileLabel,
               padding: '10px 20px',
               fontSize: '14px',
-              backgroundColor: '#2E7D32',
-              color: 'white',
-              border: 'none',
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              border: `1px solid ${t.border}`,
               borderRadius: '6px',
               cursor: actuallyBlocked ? 'not-allowed' : 'pointer',
               opacity: actuallyBlocked ? 0.5 : 1
@@ -1758,8 +1759,8 @@ Sistema de Gestión de Calidad`
               ...styles.fileLabel,
               padding: '10px 20px',
               fontSize: '14px',
-              backgroundColor: '#ef4444',
-              color: 'white',
+              backgroundColor: t.primary,
+              color: t.bgCard,
               border: 'none',
               borderRadius: '6px',
               cursor: (sendingToAudit || actuallyBlocked) ? 'not-allowed' : 'pointer',
@@ -1792,11 +1793,11 @@ Sistema de Gestión de Calidad`
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
             <div style={{
               padding: '12px 24px',
-              backgroundColor: '#dcfce7',
-              border: '2px solid #22c55e',
+              backgroundColor: t.successBg,
+              border: `1px solid ${t.successBorder}`,
               borderRadius: '6px',
               fontSize: '14px',
-              color: '#166534',
+              color: t.successFg,
               textAlign: 'center',
               fontWeight: 'bold',
               flex: 1
@@ -1810,15 +1811,15 @@ Sistema de Gestión de Calidad`
                   padding: '12px 24px',
                   fontSize: '14px',
                   fontWeight: 'bold',
-                  backgroundColor: '#dc2626',
-                  color: 'white',
+                  backgroundColor: t.error,
+                  color: t.bgCard,
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = t.error}
+                onMouseLeave={(e) => e.target.style.backgroundColor = t.error}
               >
                 Regresar a Borrador
               </button>
@@ -1832,9 +1833,9 @@ Sistema de Gestión de Calidad`
               disabled={isBlocked || isSaving}
               style={{
                 padding: '12px 24px',
-                backgroundColor: t.textMuted,
-                color: 'white',
-                border: 'none',
+                backgroundColor: t.bgPanel,
+                color: t.text,
+                border: `1px solid ${t.border}`,
                 borderRadius: '6px',
                 fontSize: '16px',
                 fontWeight: '600',
@@ -1854,8 +1855,8 @@ Sistema de Gestión de Calidad`
                   onClick={onApprove}
                   style={{
                     padding: '12px 24px',
-                    backgroundColor: '#2E7D32',
-                    color: 'white',
+                    backgroundColor: t.success,
+                    color: t.bgCard,
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '16px',
@@ -1863,14 +1864,14 @@ Sistema de Gestión de Calidad`
                     cursor: 'pointer'
                   }}
                 >
-                  Aprobar 
+                  Aprobar
                 </button>
                 <button
                   onClick={onReject}
                   style={{
                     padding: '12px 24px',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
+                    backgroundColor: t.error,
+                    color: t.bgCard,
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '16px',
@@ -1878,7 +1879,7 @@ Sistema de Gestión de Calidad`
                     cursor: 'pointer'
                   }}
                 >
-                  Rechazar 
+                  Rechazar
                 </button>
               </>
             )}
@@ -1896,8 +1897,8 @@ Sistema de Gestión de Calidad`
                 disabled={isSending}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#2E7D32',
-                  color: 'white',
+                  backgroundColor: t.success,
+                  color: t.bgCard,
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '16px',
@@ -1918,8 +1919,8 @@ Sistema de Gestión de Calidad`
       {/* Approval Status Section - D7 (Multi-level) */}
       {data && data.escalationPath && (
         <div id="d7-aprobacion" style={{
-          backgroundColor: '#fffbeb',
-          border: '2px solid #C77700',
+          backgroundColor: t.warningBg,
+          border: `1px solid ${t.warningBorder}`,
           borderRadius: '8px',
           padding: '20px',
           marginTop: '32px',
@@ -1929,7 +1930,7 @@ Sistema de Gestión de Calidad`
           <h3 style={{
             fontSize: '17px',
             fontWeight: 'bold',
-            color: '#92400e',
+            color: t.warningFg,
             marginTop: 0,
             marginBottom: '16px',
             display: 'flex',
@@ -1987,10 +1988,10 @@ Sistema de Gestión de Calidad`
                         flex: 1,
                         padding: '12px',
                         borderRadius: '6px',
-                        border: isCurrent ? '3px solid #0072CE' : `1px solid ${t.border}`,
+                        border: isCurrent ? `2px solid ${t.primary}` : `1px solid ${t.border}`,
                         backgroundColor: isPast
-                          ? approval?.status === 'approved' ? '#dcfce7' : approval?.status === 'rejected' ? '#fee2e2' : t.bg
-                          : isCurrent ? '#dbeafe' : t.bg,
+                          ? approval?.status === 'approved' ? t.successBg : approval?.status === 'rejected' ? t.errorBg : t.bg
+                          : isCurrent ? t.accentBg : t.bg,
                         textAlign: 'center'
                       }}
                     >
@@ -2001,7 +2002,7 @@ Sistema de Gestión de Calidad`
                         {approverName}
                       </div>
                       {approverEmail && (
-                        <div style={{ fontSize: '11px', color: '#0072CE', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '11px', color: t.primary, marginBottom: '4px' }}>
                           {approverEmail}
                         </div>
                       )}
@@ -2042,13 +2043,13 @@ Sistema de Gestión de Calidad`
                     <div key={entry.id || index} style={{
                       marginBottom: '10px',
                       padding: '10px',
-                      backgroundColor: isApproved ? '#dcfce7' : isRejected ? '#fef2f2' : '#f0f9ff',
-                      borderLeft: `4px solid ${isApproved ? '#22c55e' : isRejected ? '#ef4444' : '#3b82f6'}`,
+                      backgroundColor: isApproved ? t.successBg : isRejected ? t.errorBg : t.accentBg,
+                      borderLeft: `3px solid ${isApproved ? t.success : isRejected ? t.error : t.accent}`,
                       borderRadius: '4px',
                       fontSize: '13px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ color: isApproved ? '#166534' : isRejected ? '#991b1b' : '#1e40af' }}>
+                        <strong style={{ color: isApproved ? t.successFg : isRejected ? t.errorFg : t.accentFg }}>
                           {entry.userName || 'Usuario'}
                         </strong>
                         <span style={{ fontSize: '11px', color: t.textMuted }}>
@@ -2056,9 +2057,9 @@ Sistema de Gestión de Calidad`
                         </span>
                       </div>
                       <div style={{ marginTop: '4px' }}>
-                        {isApproved && <span style={{ color: '#166534' }}>Aprobado</span>}
-                        {isRejected && <span style={{ color: '#991b1b' }}>Rechazado</span>}
-                        {isSubmitted && <span style={{ color: '#1e40af' }}>Enviado a Aprobacion</span>}
+                        {isApproved && <span style={{ color: t.successFg }}>Aprobado</span>}
+                        {isRejected && <span style={{ color: t.errorFg }}>Rechazado</span>}
+                        {isSubmitted && <span style={{ color: t.accentFg }}>Enviado a Aprobación</span>}
                         {entry.description && (
                           <span style={{ marginLeft: '8px', color: t.textMuted }}>
                             - {entry.description}
@@ -2069,8 +2070,8 @@ Sistema de Gestión de Calidad`
                         <div style={{
                           marginTop: '6px',
                           padding: '6px',
-                          backgroundColor: '#fef3c7',
-                          borderLeft: '3px solid #C77700',
+                          backgroundColor: t.warningBg,
+                          borderLeft: `2px solid ${t.warning}`,
                           fontSize: '12px',
                           fontStyle: 'italic'
                         }}>
@@ -2094,7 +2095,7 @@ Sistema de Gestión de Calidad`
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: t.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2108,7 +2109,7 @@ Sistema de Gestión de Calidad`
             width: '90%',
             maxHeight: '80vh',
             overflowY: 'auto',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+            boxShadow: t.isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 20px rgba(0, 0, 0, 0.15)'
           }}>
             <h3 style={{
               fontSize: '18px',
@@ -2153,20 +2154,20 @@ Sistema de Gestión de Calidad`
                       onClick={() => addAuditItemFromModal(item.name, item.icon, true)}
                       style={{
                         padding: '10px 16px',
-                        backgroundColor: '#eff6ff',
-                        border: '2px solid #0072CE',
+                        backgroundColor: t.accentBg,
+                        border: `1px solid ${t.accentBorder}`,
                         borderRadius: '8px',
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: '500',
-                        color: '#0F3B5F',
+                        color: t.accentFg,
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         transition: 'all 0.2s'
                       }}
-                      onMouseOver={(e) => e.target.style.backgroundColor = '#dbeafe'}
-                      onMouseOut={(e) => e.target.style.backgroundColor = '#eff6ff'}
+                      onMouseOver={(e) => e.target.style.backgroundColor = t.hover}
+                      onMouseOut={(e) => e.target.style.backgroundColor = t.accentBg}
                     >
                       {item.icon} {item.name}
                     </button>
@@ -2208,8 +2209,8 @@ Sistema de Gestión de Calidad`
                   disabled={!customCategoryName.trim()}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: customCategoryName.trim() ? '#2E7D32' : '#d1d5db',
-                    color: 'white',
+                    backgroundColor: customCategoryName.trim() ? t.success : t.bgPanel,
+                    color: customCategoryName.trim() ? t.bgCard : t.textMuted,
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '14px',
@@ -2251,7 +2252,7 @@ Sistema de Gestión de Calidad`
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: t.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2265,7 +2266,7 @@ Sistema de Gestión de Calidad`
             width: '95%',
             maxHeight: '85vh',
             overflowY: 'auto',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+            boxShadow: t.isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 20px rgba(0, 0, 0, 0.15)'
           }}>
             <h3 style={{
               fontSize: '18px',
@@ -2321,7 +2322,7 @@ Sistema de Gestión de Calidad`
                           Ronda {historyData.currentRound.auditRound || 1}
                         </span>
                         {(!historyData.currentRound.assignedAuditors || historyData.currentRound.assignedAuditors.length === 0) && historyData.currentRound.auditorJudgment && (
-                          <span style={{ padding: '2px 8px', backgroundColor: '#dbeafe', color: '#1e40af', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
+                          <span style={{ padding: '2px 8px', backgroundColor: t.accentBg, color: t.accentFg, borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
                             Auto-verificación
                           </span>
                         )}
@@ -2331,10 +2332,10 @@ Sistema de Gestión de Calidad`
                           padding: '4px 12px',
                           borderRadius: '6px',
                           fontWeight: '600',
-                          backgroundColor: historyData.currentRound.auditorJudgment === 'OK' ? '#dcfce7' :
-                                          historyData.currentRound.auditorJudgment === 'NOK' ? '#fee2e2' : '#fef3c7',
-                          color: historyData.currentRound.auditorJudgment === 'OK' ? '#166534' :
-                                 historyData.currentRound.auditorJudgment === 'NOK' ? '#991b1b' : '#92400e'
+                          backgroundColor: historyData.currentRound.auditorJudgment === 'OK' ? t.successBg :
+                                          historyData.currentRound.auditorJudgment === 'NOK' ? t.errorBg : t.warningBg,
+                          color: historyData.currentRound.auditorJudgment === 'OK' ? t.successFg :
+                                 historyData.currentRound.auditorJudgment === 'NOK' ? t.errorFg : t.warningFg
                         }}>
                           {historyData.currentRound.auditorJudgment}
                         </span>
@@ -2351,9 +2352,9 @@ Sistema de Gestión de Calidad`
 
                     {/* Leader Comments/Notes */}
                     {historyData.currentRound.comments && (
-                      <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                        <div style={{ fontSize: '11px', color: '#1e40af', marginBottom: '4px', fontWeight: '600' }}>NOTAS DEL LÍDER:</div>
-                        <div style={{ fontSize: '14px', color: '#1e3a5f' }}>{historyData.currentRound.comments}</div>
+                      <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: t.accentBg, borderRadius: '6px', border: `1px solid ${t.accentBorder}` }}>
+                        <div style={{ fontSize: '11px', color: t.accentFg, marginBottom: '4px', fontWeight: '600' }}>NOTAS DEL LÍDER:</div>
+                        <div style={{ fontSize: '14px', color: t.text }}>{historyData.currentRound.comments}</div>
                       </div>
                     )}
 
@@ -2366,7 +2367,7 @@ Sistema de Gestión de Calidad`
 
                     {/* Auditor Response Section */}
                     {(historyData.currentRound.auditorJudgment || historyData.currentRound.auditorComments) && (
-                      <div style={{ marginTop: '12px', padding: '10px', backgroundColor: historyData.currentRound.auditorJudgment === 'OK' ? '#f0fdf4' : historyData.currentRound.auditorJudgment === 'NOK' ? '#fef2f2' : '#fffbeb', borderRadius: '6px', border: `1px solid ${historyData.currentRound.auditorJudgment === 'OK' ? '#86efac' : historyData.currentRound.auditorJudgment === 'NOK' ? '#fca5a5' : '#fcd34d'}` }}>
+                      <div style={{ marginTop: '12px', padding: '10px', backgroundColor: historyData.currentRound.auditorJudgment === 'OK' ? t.successBg : historyData.currentRound.auditorJudgment === 'NOK' ? t.errorBg : t.warningBg, borderRadius: '6px', border: `1px solid ${historyData.currentRound.auditorJudgment === 'OK' ? t.successBorder : historyData.currentRound.auditorJudgment === 'NOK' ? t.errorBorder : t.warningBorder}` }}>
                         <div style={{ fontSize: '11px', color: t.text, marginBottom: '4px', fontWeight: '600' }}>RESPUESTA DEL AUDITOR:</div>
                         {historyData.currentRound.auditorComments && (
                           <div style={{ fontSize: '14px', color: t.text, marginBottom: '8px' }}>{historyData.currentRound.auditorComments}</div>
@@ -2384,8 +2385,8 @@ Sistema de Gestión de Calidad`
 
                     {/* Status if not yet audited */}
                     {!historyData.currentRound.auditorJudgment && historyData.currentRound.sentToAudit && (
-                      <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #fcd34d' }}>
-                        <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '500' }}>
+                      <div style={{ marginTop: '12px', padding: '10px', backgroundColor: t.warningBg, borderRadius: '6px', border: `1px solid ${t.warningBorder}` }}>
+                        <span style={{ fontSize: '13px', color: t.warningFg, fontWeight: '500' }}>
                           ⏳ Pendiente de respuesta del auditor
                         </span>
                       </div>
@@ -2416,10 +2417,10 @@ Sistema de Gestión de Calidad`
                         borderRadius: '4px',
                         fontSize: '12px',
                         fontWeight: '600',
-                        backgroundColor: round.auditorJudgment === 'OK' ? '#dcfce7' :
-                                        round.auditorJudgment === 'NOK' ? '#fee2e2' : '#fef3c7',
-                        color: round.auditorJudgment === 'OK' ? '#166534' :
-                               round.auditorJudgment === 'NOK' ? '#991b1b' : '#92400e'
+                        backgroundColor: round.auditorJudgment === 'OK' ? t.successBg :
+                                        round.auditorJudgment === 'NOK' ? t.errorBg : t.warningBg,
+                        color: round.auditorJudgment === 'OK' ? t.successFg :
+                               round.auditorJudgment === 'NOK' ? t.errorFg : t.warningFg
                       }}>
                         {round.auditorJudgment || 'Sin juicio'}
                       </span>
@@ -2456,8 +2457,8 @@ Sistema de Gestión de Calidad`
                 onClick={() => setShowHistoryModal(false)}
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: '#0072CE',
-                  color: 'white',
+                  backgroundColor: t.primary,
+                  color: t.bgCard,
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -2480,7 +2481,7 @@ Sistema de Gestión de Calidad`
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: t.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2491,7 +2492,7 @@ Sistema de Gestión de Calidad`
             borderRadius: '8px',
             padding: '24px',
             maxWidth: '400px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            boxShadow: t.isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 20px rgba(0, 0, 0, 0.15)'
           }}>
             <h3 style={{
               fontSize: '18px',
@@ -2533,8 +2534,8 @@ Sistema de Gestión de Calidad`
                 onClick={deleteConfirmModal.onConfirm}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
+                  backgroundColor: t.error,
+                  color: t.bgCard,
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -2557,7 +2558,7 @@ Sistema de Gestión de Calidad`
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: t.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2569,7 +2570,7 @@ Sistema de Gestión de Calidad`
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: t.isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 20px rgba(0, 0, 0, 0.15)'
           }}>
             <h3 style={{
               margin: '0 0 16px 0',
@@ -2581,13 +2582,13 @@ Sistema de Gestión de Calidad`
             </h3>
 
             <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
+              backgroundColor: t.errorBg,
+              border: `1px solid ${t.errorBorder}`,
               borderRadius: '8px',
               padding: '12px',
               marginBottom: '16px'
             }}>
-              <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+              <p style={{ margin: 0, color: t.errorFg, fontSize: '14px' }}>
                 Esta acción revertirá la sección a estado de borrador, permitiendo editar nuevamente. Se eliminará el estado de aprobación actual.
               </p>
             </div>
@@ -2644,8 +2645,8 @@ Sistema de Gestión de Calidad`
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: isReverting || !revertComments.trim() ? '#9ca3af' : '#dc2626',
-                  color: 'white',
+                  backgroundColor: isReverting || !revertComments.trim() ? t.bgPanel : t.error,
+                  color: isReverting || !revertComments.trim() ? t.textMuted : t.bgCard,
                   cursor: isReverting || !revertComments.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: '500'
                 }}
@@ -2670,8 +2671,8 @@ const getStyles = (t) => ({
     maxWidth: 'none'
   },
   header: {
-    backgroundColor: '#0072CE',
-    color: 'white',
+    backgroundColor: t.accent,
+    color: t.bgCard,
     padding: '16px',
     borderRadius: '8px',
     fontSize: '20px',
@@ -2682,8 +2683,8 @@ const getStyles = (t) => ({
     marginBottom: '20px'
   },
   blockedMessage: {
-    backgroundColor: '#fef3c7',
-    border: '2px solid #C77700',
+    backgroundColor: t.warningBg,
+    border: `2px solid ${t.warningBorder}`,
     borderRadius: '8px',
     padding: '16px',
     marginBottom: '20px',
@@ -2739,8 +2740,8 @@ const getStyles = (t) => ({
   fileLabel: {
     display: 'inline-block',
     padding: '8px 16px',
-    backgroundColor: '#0072CE',
-    color: 'white',
+    backgroundColor: t.accent,
+    color: t.bgCard,
     borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '14px',
@@ -2767,8 +2768,8 @@ const getStyles = (t) => ({
     position: 'absolute',
     top: '4px',
     right: '4px',
-    backgroundColor: '#ef4444',
-    color: 'white',
+    backgroundColor: t.error,
+    color: t.bgCard,
     border: 'none',
     borderRadius: '4px',
     padding: '4px 8px',
@@ -2790,8 +2791,8 @@ const getStyles = (t) => ({
   },
   saveButton: {
     padding: '12px 32px',
-    backgroundColor: '#2E7D32',
-    color: 'white',
+    backgroundColor: t.success,
+    color: t.bgCard,
     border: 'none',
     borderRadius: '6px',
     fontSize: '16px',
@@ -2810,16 +2811,16 @@ const getStyles = (t) => ({
     paddingBottom: '8px'
   },
   trainingAddForm: {
-    backgroundColor: '#f0f9ff',
-    border: '1px solid #bfdbfe',
+    backgroundColor: t.accentBg,
+    border: `1px solid ${t.accentBorder}`,
     borderRadius: '8px',
     padding: '16px',
     marginTop: '20px'
   },
   addButton: {
     padding: '8px 16px',
-    backgroundColor: '#2E7D32',
-    color: 'white',
+    backgroundColor: t.success,
+    color: t.bgCard,
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer',

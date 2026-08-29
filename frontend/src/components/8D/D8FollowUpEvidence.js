@@ -575,7 +575,7 @@ const D8FollowUpEvidence = ({
     removeButton: {
       padding: '6px 12px',
       backgroundColor: themeColors.error,
-      color: 'white',
+      color: themeColors.bgCard,
       border: 'none',
       borderRadius: '4px',
       fontSize: '12px',
@@ -591,7 +591,7 @@ const D8FollowUpEvidence = ({
     addButton: {
       padding: '10px 20px',
       backgroundColor: themeColors.success,
-      color: 'white',
+      color: themeColors.bgCard,
       border: 'none',
       borderRadius: '6px',
       fontSize: '14px',
@@ -626,7 +626,7 @@ const D8FollowUpEvidence = ({
     saveButton: {
       padding: '12px 24px',
       backgroundColor: themeColors.success,
-      color: 'white',
+      color: themeColors.bgCard,
       border: 'none',
       borderRadius: '6px',
       fontSize: '14px',
@@ -661,8 +661,8 @@ const D8FollowUpEvidence = ({
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: themeColors.warningBg,
+          border: `1px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -671,7 +671,7 @@ const D8FollowUpEvidence = ({
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: themeColors.warningFg, fontWeight: '500' }}>
             Este 8D está cerrado y es de solo lectura
           </span>
         </div>
@@ -702,12 +702,12 @@ const D8FollowUpEvidence = ({
             <div key={item.id} style={{
               ...styles.followupCard,
               border: item.isEditing ? `2px dashed ${themeColors.success}` : `1px solid ${themeColors.border}`,
-              backgroundColor: item.isEditing ? '#f0fdf4' : themeColors.bgCard
+              backgroundColor: item.isEditing ? themeColors.successBg : themeColors.bgCard
             }}>
               <div style={styles.followupHeader}>
-                <span style={{ fontWeight: '600', color: '#2E7D32' }}>
+                <span style={{ fontWeight: '600', color: themeColors.success }}>
                   Acción #{index + 1}
-                  {!item.isEditing && <span style={{ marginLeft: '8px', color: '#22c55e' }}>✓</span>}
+                  {!item.isEditing && <span style={{ marginLeft: '8px', color: themeColors.success }}>✓</span>}
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {item.isEditing ? (
@@ -715,8 +715,8 @@ const D8FollowUpEvidence = ({
                       onClick={() => handleConfirmFollowup(item.id)}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: '#22c55e',
-                        color: 'white',
+                        backgroundColor: themeColors.success,
+                        color: themeColors.bgCard,
                         border: 'none',
                         borderRadius: '4px',
                         fontSize: '12px',
@@ -732,9 +732,9 @@ const D8FollowUpEvidence = ({
                       onClick={() => handleEditFollowup(item.id)}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
+                        backgroundColor: themeColors.bgPanel,
+                        color: themeColors.text,
+                        border: `1px solid ${themeColors.border}`,
                         borderRadius: '4px',
                         fontSize: '12px',
                         cursor: 'pointer'
@@ -835,8 +835,8 @@ const D8FollowUpEvidence = ({
                     <span style={{
                       padding: '2px 8px',
                       borderRadius: '12px',
-                      backgroundColor: item.status === 'completed' ? '#dcfce7' : item.status === 'in_progress' ? '#fef3c7' : '#f3f4f6',
-                      color: item.status === 'completed' ? '#166534' : item.status === 'in_progress' ? '#92400e' : '#6b7280',
+                      backgroundColor: item.status === 'completed' ? themeColors.successBg : item.status === 'in_progress' ? themeColors.warningBg : themeColors.bgPanel,
+                      color: item.status === 'completed' ? themeColors.successFg : item.status === 'in_progress' ? themeColors.warningFg : themeColors.textMuted,
                       fontWeight: '500'
                     }}>
                       {t.statuses[item.status] || item.status}
@@ -878,7 +878,7 @@ const D8FollowUpEvidence = ({
               {lessonsLearned.map((lesson, index) => (
                 <div key={lesson.id} style={styles.followupCard}>
                   <div style={styles.followupHeader}>
-                    <span style={{ fontWeight: '600', color: '#8b5cf6' }}>Lección #{index + 1}</span>
+                    <span style={{ fontWeight: '600', color: themeColors.accent }}>Lección #{index + 1}</span>
                     <button
                       onClick={() => handleDeleteLesson(lesson.id)}
                       style={styles.removeButton}
@@ -889,9 +889,9 @@ const D8FollowUpEvidence = ({
                   </div>
                   <div style={{
                     padding: '12px',
-                    backgroundColor: '#faf5ff',
+                    backgroundColor: themeColors.accentBg,
                     borderRadius: '6px',
-                    borderLeft: '4px solid #8b5cf6',
+                    borderLeft: `3px solid ${themeColors.accent}`,
                     fontSize: '14px',
                     lineHeight: '1.6'
                   }}>
@@ -915,7 +915,7 @@ const D8FollowUpEvidence = ({
             onClick={() => setShowLessonModal(true)}
             style={{
               ...styles.addButton,
-              backgroundColor: '#8b5cf6'
+              backgroundColor: themeColors.accent
             }}
             disabled={actuallyBlocked}
           >
@@ -984,11 +984,11 @@ const D8FollowUpEvidence = ({
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
               <div style={{
                 padding: '12px 24px',
-                backgroundColor: '#dcfce7',
-                border: '2px solid #22c55e',
+                backgroundColor: themeColors.successBg,
+                border: `1px solid ${themeColors.successBorder}`,
                 borderRadius: '6px',
                 fontSize: '14px',
-                color: '#166534',
+                color: themeColors.successFg,
                 textAlign: 'center',
                 fontWeight: 'bold',
                 flex: 1
@@ -1000,14 +1000,14 @@ const D8FollowUpEvidence = ({
                   onClick={() => setShowRevertModal(true)}
                   style={{
                     ...styles.saveButton,
-                    backgroundColor: '#dc2626',
+                    backgroundColor: themeColors.error,
                     padding: '12px 24px',
                     fontSize: '14px',
                     fontWeight: 'bold',
                     whiteSpace: 'nowrap'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.error}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.error}
                 >
                   {language === 'es' ? 'Regresar a Borrador' : 'Revert to Draft'}
                 </button>
@@ -1036,8 +1036,8 @@ const D8FollowUpEvidence = ({
                     onClick={onApprove}
                     style={{
                       padding: '12px 24px',
-                      backgroundColor: '#2E7D32',
-                      color: 'white',
+                      backgroundColor: themeColors.success,
+                      color: themeColors.bgCard,
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '16px',
@@ -1045,14 +1045,14 @@ const D8FollowUpEvidence = ({
                       cursor: 'pointer'
                     }}
                   >
-                    Aprobar 
+                    Aprobar
                   </button>
                   <button
                     onClick={onReject}
                     style={{
                       padding: '12px 24px',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
+                      backgroundColor: themeColors.error,
+                      color: themeColors.bgCard,
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '16px',
@@ -1060,7 +1060,7 @@ const D8FollowUpEvidence = ({
                       cursor: 'pointer'
                     }}
                   >
-                    Rechazar 
+                    Rechazar
                   </button>
                 </>
               )}
@@ -1078,8 +1078,8 @@ const D8FollowUpEvidence = ({
                   disabled={isSending}
                   style={{
                     padding: '12px 24px',
-                    backgroundColor: '#2E7D32',
-                    color: 'white',
+                    backgroundColor: themeColors.success,
+                    color: themeColors.bgCard,
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '16px',
@@ -1100,8 +1100,8 @@ const D8FollowUpEvidence = ({
         {/* Approval Status Section - D8 (Multi-level) */}
         {data && data.escalationPath && (
           <div style={{
-            backgroundColor: '#fffbeb',
-            border: '2px solid #C77700',
+            backgroundColor: themeColors.warningBg,
+            border: `1px solid ${themeColors.warningBorder}`,
             borderRadius: '8px',
             padding: '20px',
             marginTop: '32px'
@@ -1109,7 +1109,7 @@ const D8FollowUpEvidence = ({
             <h3 style={{
               fontSize: '17px',
               fontWeight: 'bold',
-              color: '#92400e',
+              color: themeColors.warningFg,
               marginTop: 0,
               marginBottom: '16px',
               display: 'flex',
@@ -1172,10 +1172,10 @@ const D8FollowUpEvidence = ({
                           flex: 1,
                           padding: '12px',
                           borderRadius: '6px',
-                          border: isCurrent ? '3px solid #0072CE' : '1px solid #d1d5db',
+                          border: isCurrent ? `2px solid ${themeColors.primary}` : `1px solid ${themeColors.border}`,
                           backgroundColor: isPast
-                            ? approval?.status === 'approved' ? '#dcfce7' : approval?.status === 'rejected' ? '#fee2e2' : '#FAFBFC'
-                            : isCurrent ? '#dbeafe' : '#FAFBFC',
+                            ? approval?.status === 'approved' ? themeColors.successBg : approval?.status === 'rejected' ? themeColors.errorBg : themeColors.bg
+                            : isCurrent ? themeColors.accentBg : themeColors.bg,
                           textAlign: 'center'
                         }}
                       >
@@ -1186,7 +1186,7 @@ const D8FollowUpEvidence = ({
                           {approverName}
                         </div>
                         {approverEmail && (
-                          <div style={{ fontSize: '11px', color: '#0072CE', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '11px', color: themeColors.primary, marginBottom: '4px' }}>
                             {approverEmail}
                           </div>
                         )}
@@ -1227,13 +1227,13 @@ const D8FollowUpEvidence = ({
                       <div key={entry.id || index} style={{
                         marginBottom: '10px',
                         padding: '10px',
-                        backgroundColor: isApproved ? '#dcfce7' : isRejected ? '#fef2f2' : '#f0f9ff',
-                        borderLeft: `4px solid ${isApproved ? '#22c55e' : isRejected ? '#ef4444' : '#3b82f6'}`,
+                        backgroundColor: isApproved ? themeColors.successBg : isRejected ? themeColors.errorBg : themeColors.accentBg,
+                        borderLeft: `3px solid ${isApproved ? themeColors.success : isRejected ? themeColors.error : themeColors.accent}`,
                         borderRadius: '4px',
                         fontSize: '13px'
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ color: isApproved ? '#166534' : isRejected ? '#991b1b' : '#1e40af' }}>
+                          <strong style={{ color: isApproved ? themeColors.successFg : isRejected ? themeColors.errorFg : themeColors.accentFg }}>
                             {entry.userName || 'Usuario'}
                           </strong>
                           <span style={{ fontSize: '11px', color: themeColors.textMuted }}>
@@ -1241,9 +1241,9 @@ const D8FollowUpEvidence = ({
                           </span>
                         </div>
                         <div style={{ marginTop: '4px' }}>
-                          {isApproved && <span style={{ color: '#166534' }}>Aprobado</span>}
-                          {isRejected && <span style={{ color: '#991b1b' }}>Rechazado</span>}
-                          {isSubmitted && <span style={{ color: '#1e40af' }}>Enviado a Aprobacion</span>}
+                          {isApproved && <span style={{ color: themeColors.successFg }}>Aprobado</span>}
+                          {isRejected && <span style={{ color: themeColors.errorFg }}>Rechazado</span>}
+                          {isSubmitted && <span style={{ color: themeColors.accentFg }}>Enviado a Aprobación</span>}
                           {entry.description && (
                             <span style={{ marginLeft: '8px', color: themeColors.textMuted }}>
                               - {entry.description}
@@ -1254,8 +1254,8 @@ const D8FollowUpEvidence = ({
                           <div style={{
                             marginTop: '6px',
                             padding: '6px',
-                            backgroundColor: '#fef3c7',
-                            borderLeft: '3px solid #C77700',
+                            backgroundColor: themeColors.warningBg,
+                            borderLeft: `2px solid ${themeColors.warning}`,
                             fontSize: '12px',
                             fontStyle: 'italic'
                           }}>
@@ -1274,15 +1274,15 @@ const D8FollowUpEvidence = ({
         {/* ================== ESCALATION PATH ================== */}
         <div style={{
           marginTop: '30px',
-          backgroundColor: '#f0f9ff',
-          border: '2px solid #0072CE',
+          backgroundColor: themeColors.accentBg,
+          border: `1px solid ${themeColors.accentBorder}`,
           borderRadius: '8px',
           padding: '20px'
         }}>
           <h3 style={{
             fontSize: '16px',
             fontWeight: 'bold',
-            color: '#0F3B5F',
+            color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',
             display: 'flex',
@@ -1296,7 +1296,7 @@ const D8FollowUpEvidence = ({
 
             if (confirmationUsers.length === 0) {
               return (
-                <div style={{ color: '#ef4444', fontSize: '13px', padding: '12px', backgroundColor: '#fef2f2', borderRadius: '6px' }}>
+                <div style={{ color: themeColors.errorFg, fontSize: '13px', padding: '12px', backgroundColor: themeColors.errorBg, borderRadius: '6px' }}>
                   No hay usuarios asignados. Configure el Escalation Path en la sección "Confirmation (D7-D8)" del tab D1-D2-D3.
                 </div>
               );
@@ -1330,10 +1330,10 @@ const D8FollowUpEvidence = ({
             };
 
             const roles = [
-              { index: 0, label: 'Responsable', color: '#7c3aed', bgColor: '#f5f3ff', borderColor: '#c4b5fd' },
-              { index: 1, label: 'Aprobador 1', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 2, label: 'Aprobador 2', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 3, label: 'Aprobador 3', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' }
+              { index: 0, label: 'Responsable', color: themeColors.accentFg, bgColor: themeColors.accentBg, borderColor: themeColors.accentBorder },
+              { index: 1, label: 'Aprobador 1', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 2, label: 'Aprobador 2', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 3, label: 'Aprobador 3', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder }
             ];
 
             return (
@@ -1360,7 +1360,7 @@ const D8FollowUpEvidence = ({
                         {info.name}
                       </div>
                       {info.email && (
-                        <div style={{ fontSize: '12px', color: '#0072CE', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', color: themeColors.primary, marginTop: '2px' }}>
                           {info.email}
                         </div>
                       )}
@@ -1386,7 +1386,7 @@ const D8FollowUpEvidence = ({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1398,11 +1398,11 @@ const D8FollowUpEvidence = ({
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: themeColors.isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 20px rgba(0, 0, 0, 0.15)'
           }}>
             <h3 style={{
               margin: '0 0 16px 0',
-              color: '#6b21a8',
+              color: themeColors.accent,
               fontSize: '18px',
               fontWeight: '600'
             }}>
@@ -1449,8 +1449,8 @@ const D8FollowUpEvidence = ({
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: !newLesson.trim() ? '#9ca3af' : '#8b5cf6',
-                  color: 'white',
+                  backgroundColor: !newLesson.trim() ? themeColors.bgPanel : themeColors.accent,
+                  color: !newLesson.trim() ? themeColors.textMuted : themeColors.bgCard,
                   cursor: !newLesson.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: '500'
                 }}
@@ -1470,7 +1470,7 @@ const D8FollowUpEvidence = ({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1482,11 +1482,11 @@ const D8FollowUpEvidence = ({
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: themeColors.isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 20px rgba(0, 0, 0, 0.15)'
           }}>
             <h3 style={{
               margin: '0 0 16px 0',
-              color: '#dc2626',
+              color: themeColors.error,
               fontSize: '20px',
               fontWeight: '700',
               display: 'flex',
@@ -1497,18 +1497,18 @@ const D8FollowUpEvidence = ({
             </h3>
 
             <div style={{
-              backgroundColor: '#fef2f2',
-              border: '2px solid #dc2626',
+              backgroundColor: themeColors.errorBg,
+              border: `1px solid ${themeColors.errorBorder}`,
               borderRadius: '8px',
               padding: '16px',
               marginBottom: '16px'
             }}>
-              <p style={{ margin: '0 0 12px 0', color: '#991b1b', fontSize: '15px', fontWeight: '600' }}>
+              <p style={{ margin: '0 0 12px 0', color: themeColors.errorFg, fontSize: '15px', fontWeight: '600' }}>
                 {language === 'es'
                   ? '⚠️ ADVERTENCIA: ACCIÓN IRREVERSIBLE'
                   : '⚠️ WARNING: IRREVERSIBLE ACTION'}
               </p>
-              <ul style={{ margin: '0', paddingLeft: '20px', color: '#991b1b', fontSize: '14px', lineHeight: '1.8' }}>
+              <ul style={{ margin: '0', paddingLeft: '20px', color: themeColors.errorFg, fontSize: '14px', lineHeight: '1.8' }}>
                 <li style={{ marginBottom: '8px' }}>
                   {language === 'es'
                     ? <><strong>TODO el reporte 8D</strong> (D1 a D8) será archivado permanentemente como referencia histórica.</>
@@ -1533,13 +1533,13 @@ const D8FollowUpEvidence = ({
             </div>
 
             <div style={{
-              backgroundColor: '#eff6ff',
-              border: '1px solid #3b82f6',
+              backgroundColor: themeColors.accentBg,
+              border: `1px solid ${themeColors.accentBorder}`,
               borderRadius: '8px',
               padding: '12px',
               marginBottom: '16px',
               fontSize: '13px',
-              color: '#1e40af'
+              color: themeColors.accentFg
             }}>
               <strong>📋 Cumplimiento ISO:</strong> Esta acción mantiene la trazabilidad documental requerida por ISO 9001/IATF 16949.
               El documento original permanecerá inmutable como evidencia de auditoría.
@@ -1597,8 +1597,8 @@ const D8FollowUpEvidence = ({
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: isReverting || !revertComments.trim() ? '#9ca3af' : '#dc2626',
-                  color: 'white',
+                  backgroundColor: isReverting || !revertComments.trim() ? themeColors.bgPanel : themeColors.error,
+                  color: isReverting || !revertComments.trim() ? themeColors.textMuted : themeColors.bgCard,
                   cursor: isReverting || !revertComments.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: '500'
                 }}
