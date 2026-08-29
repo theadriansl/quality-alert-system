@@ -1297,8 +1297,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
               transition: 'all 0.2s'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#2563eb'}
+            onMouseOver={(e) => e.target.style.opacity = '0.85'}
+            onMouseOut={(e) => e.target.style.opacity = '1'}
           >
              Enviar Notificacion
           </button>
@@ -1404,7 +1404,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                 <div style={{ fontSize: '13px', color: themeColors.text, fontWeight: '500', marginBottom: '4px' }}>
                   {t.completedPlans}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: summaryStats.completedPlans === summaryStats.totalPlans ? '#16a34a' : '#C77700' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: summaryStats.completedPlans === summaryStats.totalPlans ? themeColors.successFg : themeColors.warningFg }}>
                   {summaryStats.completedPlans}/{summaryStats.totalPlans}
                 </div>
               </div>
@@ -1423,8 +1423,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   cursor: 'pointer',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#0072CE'}
+                onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
               >
                 {t.expandAll}
               </button>
@@ -1441,8 +1441,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   cursor: 'pointer',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#4b5563'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7280'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.textDim}
+                onMouseLeave={(e) => e.target.style.backgroundColor = themeColors.textMuted}
               >
                 {t.collapseAll}
               </button>
@@ -1456,9 +1456,9 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               style={{
                 marginBottom: '32px',
                 padding: '20px',
-                backgroundColor: action.id.startsWith('auto-') ? '#fefce8' : '#FAFBFC',
+                backgroundColor: action.id.startsWith('auto-') ? themeColors.warningBg : themeColors.bgPanel,
                 border: '2px solid',
-                borderColor: action.id.startsWith('auto-') ? '#fbbf24' : '#E6EAEE',
+                borderColor: action.id.startsWith('auto-') ? themeColors.warningBorder : themeColors.border,
                 borderRadius: '8px',
                 scrollMarginTop: '20px'
               }}>
@@ -1512,7 +1512,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                       marginBottom: planIndex < action.actionPlans.length - 1 ? '24px' : '0',
                       backgroundColor: themeColors.bgCard,
                       border: '2px solid',
-                      borderColor: isExpanded ? '#0072CE' : '#E6EAEE',
+                      borderColor: isExpanded ? themeColors.primary : themeColors.border,
                       borderRadius: '6px',
                       overflow: 'hidden',
                       scrollMarginTop: '20px'
@@ -1525,16 +1525,16 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                         alignItems: 'center',
                         gap: '12px',
                         padding: '12px 16px',
-                        backgroundColor: isExpanded ? '#eff6ff' : '#FAFBFC',
+                        backgroundColor: isExpanded ? themeColors.infoBg : themeColors.bgPanel,
                         cursor: 'pointer',
                         transition: 'background-color 0.2s',
-                        borderBottom: isExpanded ? '1px solid #E6EAEE' : 'none'
+                        borderBottom: isExpanded ? `1px solid ${themeColors.border}` : 'none'
                       }}
                       onMouseEnter={(e) => {
-                        if (!isExpanded) e.currentTarget.style.backgroundColor = '#F4F6F8';
+                        if (!isExpanded) e.currentTarget.style.backgroundColor = themeColors.bg;
                       }}
                       onMouseLeave={(e) => {
-                        if (!isExpanded) e.currentTarget.style.backgroundColor = '#FAFBFC';
+                        if (!isExpanded) e.currentTarget.style.backgroundColor = themeColors.bgPanel;
                       }}
                     >
                       {/* Expand/Collapse Icon */}
@@ -1611,7 +1611,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                               fontWeight: '600',
                               border: `1px solid ${themeColors.border}`,
                               borderRadius: '4px',
-                              backgroundColor: isFormBlocked ? '#F4F6F8' : 'white'
+                              backgroundColor: isFormBlocked ? themeColors.bgPanel : themeColors.bgCard
                             }}
                           />
                           {action.actionPlans.length > 1 && (
@@ -1738,7 +1738,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                                       padding: '6px 10px',
                                       fontSize: '12px',
                                       fontWeight: '500',
-                                      backgroundColor: canSend ? '#7c3aed' : '#d1d5db',
+                                      backgroundColor: canSend ? themeColors.primary : themeColors.textDim,
                                       color: 'white',
                                       border: 'none',
                                       borderRadius: '4px',
@@ -1827,8 +1827,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                                   fontSize: '12px',
                                   transition: 'background-color 0.2s'
                                 }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#B00020'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                                onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                                onMouseLeave={(e) => e.target.style.opacity = '1'}
                               >
                                 {t.removeFile}
                               </button>
@@ -1871,8 +1871,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                             fontWeight: '500',
                             transition: 'background-color 0.2s'
                           }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#2E7D32'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#2E7D32'}
+                          onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                          onMouseLeave={(e) => e.target.style.opacity = '1'}
                         >
                           {t.uploadEvidence}
                         </label>
@@ -1974,8 +1974,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
                   transition: 'all 0.2s'
                 }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#2563eb'}
+                onMouseOver={(e) => e.target.style.opacity = '0.85'}
+                onMouseOut={(e) => e.target.style.opacity = '1'}
               >
                  Enviar Notificacion
               </button>
@@ -2026,8 +2026,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   fontWeight: 'bold',
                   whiteSpace: 'nowrap'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
+                onMouseEnter={(e) => e.target.style.opacity = '0.85'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
               >
                 {language === 'es' ? 'Regresar a Borrador' : 'Revert to Draft'}
               </button>

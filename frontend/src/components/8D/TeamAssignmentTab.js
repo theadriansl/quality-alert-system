@@ -1306,7 +1306,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '8px',
-            border: '1px solid #cbd5e1',
+            border: `1px solid ${themeColors.border}`,
             borderRadius: '4px',
             backgroundColor: disabled ? '#f1f5f9' : 'white',
             cursor: disabled ? 'not-allowed' : 'pointer'
@@ -1314,10 +1314,10 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           onClick={() => !disabled && setActiveCell(cellId)}
           >
             <div style={{ flex: 1, fontSize: '12px' }}>
-              <div style={{ fontWeight: 'bold', color: '#1e293b' }}>
+              <div style={{ fontWeight: 'bold', color: themeColors.text }}>
                 {value.firstName} {value.lastName}
               </div>
-              <div style={{ fontSize: '10px', color: '#64748b' }}>
+              <div style={{ fontSize: '10px', color: themeColors.textMuted }}>
                 {value.position} • {value.department}
               </div>
             </div>
@@ -1330,7 +1330,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#B00020',
+                  color: themeColors.errorFg,
                   cursor: 'pointer',
                   fontSize: '16px',
                   padding: '0 4px'
@@ -1345,10 +1345,10 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           <div
             style={{
               padding: '8px',
-              border: '1px solid #cbd5e1',
+              border: `1px solid ${themeColors.border}`,
               borderRadius: '4px',
               backgroundColor: disabled ? '#f1f5f9' : 'white',
-              color: '#94a3b8',
+              color: themeColors.textDim,
               fontSize: '12px',
               textAlign: 'center',
               cursor: disabled ? 'not-allowed' : 'pointer'
@@ -1367,7 +1367,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             left: 0,
             right: 0,
             backgroundColor: themeColors.bgCard,
-            border: '2px solid #0072CE',
+            border: `2px solid ${themeColors.primary}`,
             borderRadius: '6px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: 1000,
@@ -1377,7 +1377,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             flexDirection: 'column'
           }}>
             {/* Campo de búsqueda */}
-            <div style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ padding: '12px', borderBottom: `1px solid ${themeColors.border}` }}>
               <input
                 type="text"
                 placeholder="Buscar por nombre, puesto o correo..."
@@ -1387,7 +1387,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  border: '1px solid #cbd5e1',
+                  border: `1px solid ${themeColors.border}`,
                   borderRadius: '4px',
                   fontSize: '13px',
                   outline: 'none'
@@ -1395,7 +1395,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               />
               <div style={{
                 fontSize: '11px',
-                color: '#64748b',
+                color: themeColors.textMuted,
                 marginTop: '6px'
               }}>
                 {filteredUsers.length} usuario(s) encontrado(s)
@@ -1421,13 +1421,13 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                     onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f9ff'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                   >
-                    <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#1e293b', marginBottom: '4px' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '13px', color: themeColors.text, marginBottom: '4px' }}>
                       {user.firstName} {user.lastName}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '12px', color: themeColors.textMuted, marginBottom: '2px' }}>
                        {user.position} • {user.department}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '11px', color: themeColors.textDim }}>
                        {user.email}
                     </div>
                   </div>
@@ -1436,7 +1436,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 <div style={{
                   padding: '20px',
                   textAlign: 'center',
-                  color: '#94a3b8',
+                  color: themeColors.textDim,
                   fontSize: '12px'
                 }}>
                   No se encontraron usuarios
@@ -1459,7 +1459,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 style={{
                   flex: 1,
                   padding: '6px 12px',
-                  backgroundColor: '#f1f5f9',
+                  backgroundColor: themeColors.bgPanel,
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '12px',
@@ -1475,7 +1475,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
         {disabled && (
           <div style={{
             fontSize: '10px',
-            color: '#64748b',
+            color: themeColors.textMuted,
             marginTop: '4px',
             fontStyle: 'italic'
           }}>
@@ -2019,7 +2019,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       backgroundColor: themeColors.bgCard
     },
     disciplineHeader: {
-      backgroundColor: '#0F3B5F',
+      backgroundColor: themeColors.primary,
       color: 'white',
       padding: '12px 20px',
       borderRadius: '8px',
@@ -2033,17 +2033,17 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
     },
     section: {
       marginBottom: '30px',
-      border: '1px solid #e2e8f0',
+      border: `1px solid ${themeColors.border}`,
       borderRadius: '8px',
       padding: '20px',
-      backgroundColor: '#fafafa'
+      backgroundColor: themeColors.bgPanel
     },
     sectionTitle: {
       fontSize: '18px',
       fontWeight: 'bold',
-      color: '#2c3e50',
+      color: themeColors.text,
       marginBottom: '15px',
-      borderBottom: '2px solid #0072CE',
+      borderBottom: `2px solid ${themeColors.primary}`,
       paddingBottom: '8px'
     },
     grid: {
@@ -2059,17 +2059,17 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       fontSize: '12px',
       fontWeight: 'bold',
       marginBottom: '5px',
-      color: '#333'
+      color: themeColors.text
     },
     input: {
       padding: '8px',
-      border: '1px solid #ccc',
+      border: `1px solid ${themeColors.border}`,
       borderRadius: '4px',
       fontSize: '14px'
     },
     select: {
       padding: '8px',
-      border: '1px solid #ccc',
+      border: `1px solid ${themeColors.border}`,
       borderRadius: '4px',
       fontSize: '14px',
       backgroundColor: themeColors.bgCard
@@ -2083,11 +2083,11 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
     },
     arrow: {
       fontSize: '24px',
-      color: '#666',
+      color: themeColors.textMuted,
       textAlign: 'center'
     },
     saveButton: {
-      backgroundColor: '#22c55e',
+      backgroundColor: themeColors.success,
       color: 'white',
       border: 'none',
       borderRadius: '8px',
@@ -2101,12 +2101,12 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       transition: 'all 0.2s ease',
       ':hover': {
-        backgroundColor: '#16a34a'
+        backgroundColor: themeColors.success
       }
     },
     buttonContainer: {
       padding: '20px',
-      borderTop: '2px solid #e2e8f0',
+      borderTop: `2px solid ${themeColors.border}`,
       backgroundColor: themeColors.bg,
       marginTop: '30px'
     }
@@ -2117,8 +2117,8 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: themeColors.warningBg,
+          border: `1px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -2127,7 +2127,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: themeColors.warningFg, fontWeight: '500' }}>
             Este 8D está cerrado y es de solo lectura
           </span>
         </div>
@@ -2214,8 +2214,8 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           marginBottom: '20px'
         }}>
           <div style={{
-            backgroundColor: '#f0fdf4',
-            border: '2px solid #22c55e',
+            backgroundColor: themeColors.successBg,
+            border: `2px solid ${themeColors.successBorder}`,
             borderRadius: '8px',
             padding: '15px'
           }}>
@@ -2223,7 +2223,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               fontSize: '14px',
               fontWeight: 'bold',
               marginBottom: '10px',
-              color: '#166534'
+              color: themeColors.successFg
             }}>
                Cargar Atajo Guardado
             </div>
@@ -2310,7 +2310,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                               style={{
                                 flex: 1,
                                 padding: '4px',
-                                backgroundColor: '#ef4444',
+                                backgroundColor: themeColors.error,
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '3px',
@@ -2342,11 +2342,11 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             ) : (
               <div style={{
                 padding: '12px',
-                backgroundColor: '#fef3c7',
+                backgroundColor: themeColors.warningBg,
                 border: '1px solid #fbbf24',
                 borderRadius: '6px',
                 fontSize: '13px',
-                color: '#92400e',
+                color: themeColors.warningFg,
                 textAlign: 'center'
               }}>
                  No tienes atajos guardados aún. Asigna tu equipo y guárdalo abajo usando el botón " Guardar Atajo"
@@ -2357,13 +2357,13 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
         {/* Info message */}
         <div style={{
-          backgroundColor: '#fef3c7',
+          backgroundColor: themeColors.warningBg,
           border: '1px solid #fbbf24',
           borderRadius: '6px',
           padding: '12px',
           marginBottom: '20px',
           fontSize: '12px',
-          color: '#92400e'
+          color: themeColors.warningFg
         }}>
           <strong> Nota:</strong> Los atajos cargan las 3 secciones (Issue, Countermeasure, Confirmation) con tus configuraciones guardadas. Los miembros son siempre editables.
         </div>
@@ -2422,20 +2422,20 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           </thead>
           <tbody>
             {/* ISSUE - Fila Roja */}
-            <tr style={{ backgroundColor: '#fef2f2' }}>
+            <tr style={{ backgroundColor: themeColors.errorBg }}>
               <td style={{
                 padding: '12px',
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: `1px solid ${themeColors.border}`,
                 fontWeight: 'bold',
-                color: '#B00020',
+                color: themeColors.errorFg,
                 fontSize: '12px'
               }}>
                  ISSUE<br/>
-                <span style={{ fontSize: '10px', fontWeight: 'normal', color: '#64748b' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'normal', color: themeColors.textMuted }}>
                   (Emisor del problema)
                 </span>
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="issueSection"
                   role="primary"
@@ -2444,7 +2444,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={true}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="issueSection"
                   role="approver"
@@ -2453,7 +2453,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={isApproverFieldLocked(0)}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="issueSection"
                   role="approver"
@@ -2462,7 +2462,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={isApproverFieldLocked(1)}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="issueSection"
                   role="approver"
@@ -2477,17 +2477,17 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             <tr style={{ backgroundColor: '#fefce8' }}>
               <td style={{
                 padding: '12px',
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: `1px solid ${themeColors.border}`,
                 fontWeight: 'bold',
                 color: '#ca8a04',
                 fontSize: '12px'
               }}>
                  COUNTERMEASURE<br/>
-                <span style={{ fontSize: '10px', fontWeight: 'normal', color: '#64748b' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'normal', color: themeColors.textMuted }}>
                   (Responsable de contramedidas)
                 </span>
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="countermeasureSection"
                   role="primary"
@@ -2496,7 +2496,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={fieldsLocked}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="countermeasureSection"
                   role="approver"
@@ -2505,7 +2505,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={fieldsLocked}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="countermeasureSection"
                   role="approver"
@@ -2514,7 +2514,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={fieldsLocked}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="countermeasureSection"
                   role="approver"
@@ -2526,20 +2526,20 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             </tr>
 
             {/* CONFIRMATION - Fila Verde */}
-            <tr style={{ backgroundColor: '#f0fdf4' }}>
+            <tr style={{ backgroundColor: themeColors.successBg }}>
               <td style={{
                 padding: '12px',
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: `1px solid ${themeColors.border}`,
                 fontWeight: 'bold',
                 color: '#16a34a',
                 fontSize: '12px'
               }}>
                  CONFIRMATION<br/>
-                <span style={{ fontSize: '10px', fontWeight: 'normal', color: '#64748b' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'normal', color: themeColors.textMuted }}>
                   (Auditor de confirmación)
                 </span>
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="confirmationSection"
                   role="primary"
@@ -2548,7 +2548,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={fieldsLocked}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="confirmationSection"
                   role="approver"
@@ -2557,7 +2557,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={fieldsLocked}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="confirmationSection"
                   role="approver"
@@ -2566,7 +2566,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   disabled={fieldsLocked}
                 />
               </td>
-              <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '8px', borderBottom: `1px solid ${themeColors.border}` }}>
                 <UserSearchCell
                   section="confirmationSection"
                   role="approver"
@@ -2620,7 +2620,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           >
             {fieldsLocked ? ' Campos Bloqueados' : (teamPresets.length >= 12 ? ' Límite alcanzado (12/12)' : ' Guardar Nuevo Atajo')}
           </button>
-          <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', color: themeColors.textMuted, fontStyle: 'italic', textAlign: 'center' }}>
             Guarda los miembros asignados en las 3 secciones (Issue, Countermeasure y Confirmation)
           </div>
         </div>
@@ -2748,7 +2748,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               padding: '12px',
               maxHeight: '400px',
               overflowY: 'auto',
-              backgroundColor: '#fafafa'
+              backgroundColor: themeColors.bgPanel
             }}>
               {/* Grid de 6 columnas compactas */}
               <div style={{
@@ -2784,10 +2784,10 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                         {part.partNumber}
                       </div>
                     </div>
-                    <div style={{ fontSize: '10px', color: '#333', marginBottom: '3px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <div style={{ fontSize: '10px', color: themeColors.text, marginBottom: '3px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {part.partName}
                     </div>
-                    <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '9px', color: themeColors.textMuted, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {part.clientPartNumber}
                     </div>
                     <div style={{ fontSize: '11px', color: '#d32f2f', fontWeight: '600', marginTop: 'auto' }}>
@@ -2945,7 +2945,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
         {/* Sección de Fotos: No Good y OK */}
         <div id="d2-fotos" style={{ marginTop: '20px', scrollMarginTop: '20px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#333', marginBottom: '12px' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: themeColors.text, marginBottom: '12px' }}>
              Evidencia Visual
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -2955,13 +2955,13 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               border: '2px dashed #ef4444',
               borderRadius: '8px',
               padding: '16px',
-              backgroundColor: '#fef2f2'
+              backgroundColor: themeColors.errorBg
             }}>
               <label style={{
                 display: 'block',
                 fontSize: '13px',
                 fontWeight: 'bold',
-                color: '#B00020',
+                color: themeColors.errorFg,
                 marginBottom: '8px'
               }}>
                  Foto No Good (Problema)
@@ -2982,7 +2982,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   opacity: fieldsLocked ? 0.6 : 1
                 }}>
                   <span style={{ fontSize: '32px', marginBottom: '8px' }}>{fieldsLocked ? '' : ''}</span>
-                  <span style={{ fontSize: '12px', color: '#666' }}>{fieldsLocked ? 'Bloqueado' : 'Click para seleccionar imagen'}</span>
+                  <span style={{ fontSize: '12px', color: themeColors.textMuted }}>{fieldsLocked ? 'Bloqueado' : 'Click para seleccionar imagen'}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -3036,7 +3036,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                       ×
                     </button>
                   )}
-                  <p style={{ fontSize: '11px', color: '#666', marginTop: '6px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', color: themeColors.textMuted, marginTop: '6px', textAlign: 'center' }}>
                     {photoNoGood.name} {fieldsLocked && ' Click para ver'}
                   </p>
                 </div>
@@ -3048,7 +3048,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               border: '2px dashed #22c55e',
               borderRadius: '8px',
               padding: '16px',
-              backgroundColor: '#f0fdf4'
+              backgroundColor: themeColors.successBg
             }}>
               <label style={{
                 display: 'block',
@@ -3075,7 +3075,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   opacity: fieldsLocked ? 0.6 : 1
                 }}>
                   <span style={{ fontSize: '32px', marginBottom: '8px' }}>{fieldsLocked ? '' : ''}</span>
-                  <span style={{ fontSize: '12px', color: '#666' }}>{fieldsLocked ? 'Bloqueado' : 'Click para seleccionar imagen'}</span>
+                  <span style={{ fontSize: '12px', color: themeColors.textMuted }}>{fieldsLocked ? 'Bloqueado' : 'Click para seleccionar imagen'}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -3113,7 +3113,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                         position: 'absolute',
                         top: '8px',
                         right: '8px',
-                        backgroundColor: '#16a34a',
+                        backgroundColor: themeColors.success,
                         color: 'white',
                         border: 'none',
                         borderRadius: '50%',
@@ -3129,7 +3129,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                       ×
                     </button>
                   )}
-                  <p style={{ fontSize: '11px', color: '#666', marginTop: '6px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', color: themeColors.textMuted, marginTop: '6px', textAlign: 'center' }}>
                     {photoOK.name} {fieldsLocked && ' Click para ver'}
                   </p>
                 </div>
@@ -3140,7 +3140,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
         {/* Sección de Documentos Adjuntos */}
         <div style={{ marginTop: '20px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#333', marginBottom: '12px' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: themeColors.text, marginBottom: '12px' }}>
              Documentos Adjuntos
           </h4>
           <div style={{
@@ -3222,7 +3222,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                               {doc.name}
                             </p>
                           )}
-                          <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>
+                          <p style={{ fontSize: '10px', color: themeColors.textMuted, margin: 0 }}>
                             {(doc.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
@@ -3231,7 +3231,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                         <button
                           onClick={() => removeDocument(index)}
                           style={{
-                            backgroundColor: '#ef4444',
+                            backgroundColor: themeColors.error,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -3514,7 +3514,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             display: 'block',
             fontSize: '14px',
             fontWeight: 'bold',
-            color: '#333',
+            color: themeColors.text,
             marginBottom: '12px'
           }}>
             ¿Implica retrabajo? *
@@ -3713,7 +3713,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       {data && data.id && currentApprovalStep > 0 && (
         <div style={{
           marginTop: '30px',
-          border: '2px solid #0072CE',
+          border: `2px solid ${themeColors.primary}`,
           borderRadius: '8px',
           padding: '20px',
           backgroundColor: '#eff6ff'
@@ -3832,7 +3832,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                       <div style={{
                         marginTop: '4px',
                         padding: '6px',
-                        backgroundColor: '#fef3c7',
+                        backgroundColor: themeColors.warningBg,
                         borderLeft: '3px solid #C77700',
                         fontSize: '12px',
                         fontStyle: 'italic'
@@ -3881,7 +3881,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                         </span>
                       </div>
                       <div style={{ marginTop: '4px' }}>
-                        {isApproved && <span style={{ color: '#166534' }}>Aprobado</span>}
+                        {isApproved && <span style={{ color: themeColors.successFg }}>Aprobado</span>}
                         {isRejected && <span style={{ color: '#991b1b' }}>Rechazado</span>}
                         {isSubmitted && <span style={{ color: '#1e40af' }}>Enviado a Aprobacion</span>}
                         {entry.description && (
@@ -3894,7 +3894,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                         <div style={{
                           marginTop: '6px',
                           padding: '6px',
-                          backgroundColor: '#fef3c7',
+                          backgroundColor: themeColors.warningBg,
                           borderLeft: '3px solid #C77700',
                           fontSize: '12px',
                           fontStyle: 'italic'
@@ -3920,7 +3920,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 onClick={() => handleApprove(currentApprovalStep)}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#22c55e',
+                  backgroundColor: themeColors.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -3937,7 +3937,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 onClick={() => setShowRejectModal(true)}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#ef4444',
+                  backgroundColor: themeColors.error,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -3957,11 +3957,11 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           {currentApprovalStep > 0 && currentApprovalStep <= 3 && !isCurrentApprover() && (
             <div style={{
               padding: '12px',
-              backgroundColor: '#fef3c7',
+              backgroundColor: themeColors.warningBg,
               border: '1px solid #fbbf24',
               borderRadius: '6px',
               fontSize: '13px',
-              color: '#92400e',
+              color: themeColors.warningFg,
               textAlign: 'center'
             }}>
               ℹ Este reporte está esperando la aprobación del Aprobador {currentApprovalStep}
@@ -3973,10 +3973,10 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             <div style={{
               padding: '12px',
               backgroundColor: '#dcfce7',
-              border: '2px solid #22c55e',
+              border: `2px solid ${themeColors.successBorder}`,
               borderRadius: '6px',
               fontSize: '14px',
-              color: '#166534',
+              color: themeColors.successFg,
               textAlign: 'center',
               fontWeight: 'bold'
             }}>
@@ -4036,7 +4036,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               fontSize: '18px',
               fontWeight: 'bold',
               marginBottom: '15px',
-              color: '#B00020'
+              color: themeColors.errorFg
             }}>
                Rechazar Aprobación
             </h3>
@@ -4376,7 +4376,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
         <div style={{
           marginTop: '30px',
           backgroundColor: '#f0f9ff',
-          border: '2px solid #0072CE',
+          border: `2px solid ${themeColors.primary}`,
           borderRadius: '8px',
           padding: '20px'
         }}>
@@ -4416,9 +4416,9 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
               const roles = [
                 { index: 0, label: 'Emisor', color: '#7c3aed', bgColor: '#f5f3ff', borderColor: '#c4b5fd' },
-                { index: 1, label: 'Aprobador 1', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-                { index: 2, label: 'Aprobador 2', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-                { index: 3, label: 'Aprobador 3', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' }
+                { index: 1, label: 'Aprobador 1', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' },
+                { index: 2, label: 'Aprobador 2', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' },
+                { index: 3, label: 'Aprobador 3', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' }
               ];
 
               return (
@@ -4443,7 +4443,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
           {/* Countermeasure Section (D4-D5-D6) */}
           <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', marginBottom: '12px' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', color: themeColors.warningFg, marginBottom: '12px' }}>
               Countermeasure (D4-D5-D6)
             </h4>
             {(() => {
@@ -4466,9 +4466,9 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
               const roles = [
                 { index: 0, label: 'Responsable', color: '#7c3aed', bgColor: '#fef3c7', borderColor: '#fcd34d' },
-                { index: 1, label: 'Aprobador 1', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-                { index: 2, label: 'Aprobador 2', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-                { index: 3, label: 'Aprobador 3', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' }
+                { index: 1, label: 'Aprobador 1', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' },
+                { index: 2, label: 'Aprobador 2', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' },
+                { index: 3, label: 'Aprobador 3', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' }
               ];
 
               return (
@@ -4516,9 +4516,9 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
               const roles = [
                 { index: 0, label: 'Responsable', color: '#7c3aed', bgColor: '#ecfdf5', borderColor: '#6ee7b7' },
-                { index: 1, label: 'Aprobador 1', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-                { index: 2, label: 'Aprobador 2', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-                { index: 3, label: 'Aprobador 3', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' }
+                { index: 1, label: 'Aprobador 1', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' },
+                { index: 2, label: 'Aprobador 2', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' },
+                { index: 3, label: 'Aprobador 3', color: themeColors.successFg, bgColor: '#f0fdf4', borderColor: '#86efac' }
               ];
 
               return (
