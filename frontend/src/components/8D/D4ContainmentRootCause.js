@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { getCurrentUser, isUserAdmin } from '../../utils/permissions';
+import { StatusChip } from './D6Components';
 
 const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked = false, isReadOnly = false }) => {
   const { theme: themeColors } = useTheme();
@@ -1602,40 +1603,54 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                       />
                     </td>
                     <td style={styles.tableCell}>
-                      <select
-                        style={{
-                          ...styles.select,
-                          padding: '6px',
-                          fontSize: '12px',
-                          backgroundColor: item.standardJudgment === 'NG' ? '#fee2e2' : '#f0fdf4',
-                          color: item.standardJudgment === 'NG' ? '#B00020' : '#16a34a',
-                          fontWeight: '600'
-                        }}
-                        value={item.standardJudgment}
-                        onChange={(e) => update4MEvaluation(item.id, 'standardJudgment', e.target.value)}
-                        disabled={isFormBlocked}
-                      >
-                        <option value="OK"> OK</option>
-                        <option value="NG"> NG</option>
-                      </select>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <select
+                          style={{
+                            ...styles.select,
+                            padding: '6px',
+                            fontSize: '12px',
+                            backgroundColor: themeColors.bgCard,
+                            color: themeColors.text,
+                            fontWeight: '500',
+                            border: `1px solid ${themeColors.border}`
+                          }}
+                          value={item.standardJudgment}
+                          onChange={(e) => update4MEvaluation(item.id, 'standardJudgment', e.target.value)}
+                          disabled={isFormBlocked}
+                        >
+                          <option value="OK">OK</option>
+                          <option value="NG">NG</option>
+                        </select>
+                        <StatusChip
+                          status={item.standardJudgment === 'NG' ? 'NOK' : 'Completed'}
+                          themeColors={themeColors}
+                        />
+                      </div>
                     </td>
                     <td style={styles.tableCell}>
-                      <select
-                        style={{
-                          ...styles.select,
-                          padding: '6px',
-                          fontSize: '12px',
-                          backgroundColor: item.qualityJudgment === 'NG' ? '#fee2e2' : '#f0fdf4',
-                          color: item.qualityJudgment === 'NG' ? '#B00020' : '#16a34a',
-                          fontWeight: '600'
-                        }}
-                        value={item.qualityJudgment}
-                        onChange={(e) => update4MEvaluation(item.id, 'qualityJudgment', e.target.value)}
-                        disabled={isFormBlocked}
-                      >
-                        <option value="OK"> OK</option>
-                        <option value="NG"> NG</option>
-                      </select>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <select
+                          style={{
+                            ...styles.select,
+                            padding: '6px',
+                            fontSize: '12px',
+                            backgroundColor: themeColors.bgCard,
+                            color: themeColors.text,
+                            fontWeight: '500',
+                            border: `1px solid ${themeColors.border}`
+                          }}
+                          value={item.qualityJudgment}
+                          onChange={(e) => update4MEvaluation(item.id, 'qualityJudgment', e.target.value)}
+                          disabled={isFormBlocked}
+                        >
+                          <option value="OK">OK</option>
+                          <option value="NG">NG</option>
+                        </select>
+                        <StatusChip
+                          status={item.qualityJudgment === 'NG' ? 'NOK' : 'Completed'}
+                          themeColors={themeColors}
+                        />
+                      </div>
                     </td>
                     <td style={styles.tableCell}>
                       <input
@@ -1768,11 +1783,11 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
         {/* 5 WHYS ANALYSIS TABLE (Only NG items) */}
         {/* ============================================================ */}
         {formData.d4_5whysAnalysis.length > 0 && (
-          <div id="d4-5whys" style={{...styles.section, marginTop: '32px', backgroundColor: '#fef2f2', border: '2px solid #fca5a5', scrollMarginTop: '20px'}}>
-            <h3 style={{fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#B00020'}}>
+          <div id="d4-5whys" style={{...styles.section, marginTop: '32px', backgroundColor: themeColors.bgCard, border: `1px solid ${themeColors.border}`, scrollMarginTop: '20px'}}>
+            <h3 style={{fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: themeColors.text}}>
                Análisis 5 Whys - No Conformidades
             </h3>
-            <p style={{fontSize: '13px', color: '#991b1b', marginBottom: '20px'}}>
+            <p style={{fontSize: '13px', color: themeColors.textMuted, marginBottom: '20px'}}>
               Análisis de causa raíz para los factores marcados como NG
             </p>
 
@@ -1780,7 +1795,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
             <div style={{overflowX: 'auto', marginBottom: '16px'}}>
               <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px', backgroundColor: themeColors.bgCard}}>
                 <thead>
-                  <tr style={{backgroundColor: '#fee2e2'}}>
+                  <tr style={{backgroundColor: themeColors.bgPanel}}>
                     <th style={{...styles.tableHeader, minWidth: '150px'}}>Factor NG</th>
                     <th style={{...styles.tableHeader, minWidth: '140px'}}>1. ¿Por qué?</th>
                     <th style={{...styles.tableHeader, minWidth: '140px'}}>2. ¿Por qué?</th>
@@ -1793,7 +1808,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 <tbody>
                   {formData.d4_5whysAnalysis.map((item, index) => (
                     <tr key={item.evaluationId} style={{borderBottom: '1px solid #E6EAEE'}}>
-                      <td style={{...styles.tableCell, fontWeight: '600', color: '#B00020'}}>
+                      <td style={{...styles.tableCell, fontWeight: '600', color: themeColors.errorFg}}>
                          {item.factorNG}
                       </td>
                       <td style={styles.tableCell}>
@@ -1843,7 +1858,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                       </td>
                       <td style={styles.tableCell}>
                         <textarea
-                          style={{...styles.textarea, padding: '6px', fontSize: '12px', minHeight: '60px', backgroundColor: '#fef3c7', fontWeight: '600'}}
+                          style={{...styles.textarea, padding: '6px', fontSize: '12px', minHeight: '60px', backgroundColor: themeColors.warningBg, fontWeight: '600'}}
                           value={item.rootCause}
                           onChange={(e) => update5Whys(item.evaluationId, 'rootCause', e.target.value)}
                           placeholder="Causa raíz identificada"
@@ -1876,11 +1891,11 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
         {/* ============================================================ */}
         {/* ROOT CAUSE SUMMARY - FINAL CONCLUSION */}
         {/* ============================================================ */}
-        <div id="d4-resumen" style={{...styles.section, marginTop: '32px', backgroundColor: '#f0fdf4', border: '2px solid #86efac', scrollMarginTop: '20px'}}>
-          <h3 style={{fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#166534'}}>
+        <div id="d4-resumen" style={{...styles.section, marginTop: '32px', backgroundColor: themeColors.bgCard, border: `1px solid ${themeColors.border}`, scrollMarginTop: '20px'}}>
+          <h3 style={{fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: themeColors.text}}>
              Resumen de Análisis de Causa Raíz
           </h3>
-          <p style={{fontSize: '13px', color: '#15803d', marginBottom: '20px'}}>
+          <p style={{fontSize: '13px', color: themeColors.textMuted, marginBottom: '20px'}}>
             Conclusión final del análisis. Resume la causa raíz principal identificada.
           </p>
 
@@ -2074,10 +2089,10 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         flex: 1,
                         padding: '12px',
                         borderRadius: '6px',
-                        border: isCurrent ? '3px solid #0072CE' : `1px solid ${themeColors.border}`,
+                        border: isCurrent ? `3px solid ${themeColors.primary}` : `1px solid ${themeColors.border}`,
                         backgroundColor: isPast
-                          ? approvalData?.status === 'approved' ? '#dcfce7' : '#fee2e2'
-                          : isCurrent ? '#dbeafe' : '#FAFBFC',
+                          ? approvalData?.status === 'approved' ? themeColors.successBg : themeColors.errorBg
+                          : isCurrent ? themeColors.accentBg : themeColors.bgPanel,
                         textAlign: 'center'
                       }}
                     >
@@ -2088,7 +2103,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         {approverName}
                       </div>
                       {approverEmail && (
-                        <div style={{ fontSize: '11px', color: '#0072CE', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '11px', color: themeColors.primary, marginBottom: '4px' }}>
                           {approverEmail}
                         </div>
                       )}
@@ -2131,13 +2146,13 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     <div key={entry.id || index} style={{
                       marginBottom: '10px',
                       padding: '10px',
-                      backgroundColor: isApproved ? '#dcfce7' : isRejected ? '#fef2f2' : '#f0f9ff',
-                      borderLeft: `4px solid ${isApproved ? '#22c55e' : isRejected ? '#ef4444' : '#3b82f6'}`,
+                      backgroundColor: isApproved ? themeColors.successBg : isRejected ? themeColors.errorBg : themeColors.infoBg,
+                      borderLeft: `4px solid ${isApproved ? themeColors.successFg : isRejected ? themeColors.errorFg : themeColors.primary}`,
                       borderRadius: '4px',
                       fontSize: '13px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ color: isApproved ? '#166534' : isRejected ? '#991b1b' : '#1e40af' }}>
+                        <strong style={{ color: isApproved ? themeColors.successFg : isRejected ? themeColors.errorFg : themeColors.primary }}>
                           {entry.userName || 'Usuario'}
                         </strong>
                         <span style={{ fontSize: '11px', color: themeColors.textMuted }}>
@@ -2145,9 +2160,9 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         </span>
                       </div>
                       <div style={{ marginTop: '4px' }}>
-                        {isApproved && <span style={{ color: '#166534' }}>Aprobado</span>}
-                        {isRejected && <span style={{ color: '#991b1b' }}>Rechazado</span>}
-                        {isSubmitted && <span style={{ color: '#1e40af' }}>Enviado a Aprobacion</span>}
+                        {isApproved && <span style={{ color: themeColors.successFg }}>Aprobado</span>}
+                        {isRejected && <span style={{ color: themeColors.errorFg }}>Rechazado</span>}
+                        {isSubmitted && <span style={{ color: themeColors.primary }}>Enviado a Aprobacion</span>}
                         {entry.description && (
                           <span style={{ marginLeft: '8px', color: themeColors.textMuted }}>
                             - {entry.description}
@@ -2158,8 +2173,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         <div style={{
                           marginTop: '6px',
                           padding: '6px',
-                          backgroundColor: '#fef3c7',
-                          borderLeft: '3px solid #C77700',
+                          backgroundColor: themeColors.warningBg,
+                          borderLeft: `3px solid ${themeColors.warningFg}`,
                           fontSize: '12px',
                           fontStyle: 'italic'
                         }}>
@@ -2184,21 +2199,17 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 onClick={handleApprove}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#22c55e',
-                  color: 'white',
+                  backgroundColor: themeColors.successFg,
+                  color: themeColors.bgCard,
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '15px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'background-color 0.2s'
+                  transition: 'opacity 0.2s'
                 }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#16a34a';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = '#22c55e';
-                }}
+                onMouseEnter={(e) => { e.target.style.opacity = '0.85'; }}
+                onMouseLeave={(e) => { e.target.style.opacity = '1'; }}
               >
                  Aprobar
               </button>
@@ -2206,21 +2217,17 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 onClick={handleReject}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
+                  backgroundColor: themeColors.errorFg,
+                  color: themeColors.bgCard,
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '15px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'background-color 0.2s'
+                  transition: 'opacity 0.2s'
                 }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#B00020';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = '#ef4444';
-                }}
+                onMouseEnter={(e) => { e.target.style.opacity = '0.85'; }}
+                onMouseLeave={(e) => { e.target.style.opacity = '1'; }}
               >
                  Rechazar
               </button>
@@ -2233,15 +2240,15 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       {data && (
         <div style={{
           marginTop: '30px',
-          backgroundColor: '#f0f9ff',
-          border: '2px solid #0072CE',
+          backgroundColor: themeColors.infoBg,
+          border: `2px solid ${themeColors.primary}`,
           borderRadius: '8px',
           padding: '20px'
         }}>
           <h3 style={{
             fontSize: '16px',
             fontWeight: 'bold',
-            color: '#0F3B5F',
+            color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',
             display: 'flex',
@@ -2255,7 +2262,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
 
             if (countermeasureUsers.length === 0) {
               return (
-                <div style={{ color: '#ef4444', fontSize: '13px', padding: '12px', backgroundColor: '#fef2f2', borderRadius: '6px' }}>
+                <div style={{ color: themeColors.errorFg, fontSize: '13px', padding: '12px', backgroundColor: themeColors.errorBg, borderRadius: '6px' }}>
                   No hay usuarios asignados. Configure el Escalation Path en la sección "Countermeasure (D4-D5-D6)" del tab D1-D2-D3.
                 </div>
               );
@@ -2287,11 +2294,12 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
               return { name, email, position };
             };
 
+            // Semantic role colors using theme tokens
             const roles = [
-              { index: 0, label: 'Responsable', color: '#7c3aed', bgColor: '#f5f3ff', borderColor: '#c4b5fd' },
-              { index: 1, label: 'Aprobador 1', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 2, label: 'Aprobador 2', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 3, label: 'Aprobador 3', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' }
+              { index: 0, label: 'Responsable', color: themeColors.accentFg, bgColor: themeColors.accentBg, borderColor: themeColors.accentBorder },
+              { index: 1, label: 'Aprobador 1', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 2, label: 'Aprobador 2', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 3, label: 'Aprobador 3', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder }
             ];
 
             return (
@@ -2318,7 +2326,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         {info.name}
                       </div>
                       {info.email && (
-                        <div style={{ fontSize: '12px', color: '#0072CE', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', color: themeColors.primary, marginTop: '2px' }}>
                           {info.email}
                         </div>
                       )}
@@ -2344,7 +2352,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2368,13 +2376,13 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
             </h3>
 
             <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
+              backgroundColor: themeColors.errorBg,
+              border: `1px solid ${themeColors.errorBorder}`,
               borderRadius: '8px',
               padding: '12px',
               marginBottom: '16px'
             }}>
-              <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+              <p style={{ margin: 0, color: themeColors.errorFg, fontSize: '14px' }}>
                 {language === 'es'
                   ? 'Esta acción revertirá la sección a estado de borrador, permitiendo editar nuevamente. Se eliminará el estado de aprobación actual.'
                   : 'This action will revert the section to draft status, allowing edits. Current approval status will be cleared.'}
@@ -2433,8 +2441,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: isReverting || !revertComments.trim() ? '#9ca3af' : '#dc2626',
-                  color: 'white',
+                  backgroundColor: isReverting || !revertComments.trim() ? themeColors.textMuted : themeColors.errorFg,
+                  color: themeColors.bgCard,
                   cursor: isReverting || !revertComments.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: '500'
                 }}

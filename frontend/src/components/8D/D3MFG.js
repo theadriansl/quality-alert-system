@@ -2791,7 +2791,7 @@ Por favor no responda a este correo.`;
       {data && data.d3MfgStatus && data.d3MfgStatus !== 'draft' && (
         <div style={{
           backgroundColor: themeColors.bgPanel,
-          border: '2px solid #C77700',
+          border: `2px solid ${themeColors.warningFg}`,
           borderRadius: '8px',
           padding: '16px',
           marginTop: '24px',
@@ -2800,7 +2800,7 @@ Por favor no responda a este correo.`;
           <h3 style={{
             fontSize: '17px',
             fontWeight: 'bold',
-            color: '#92400e',
+            color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',
             display: 'flex',
@@ -2856,8 +2856,8 @@ Por favor no responda a este correo.`;
                         borderRadius: '6px',
                         border: isCurrent ? `3px solid ${themeColors.accent}` : `1px solid ${themeColors.border}`,
                         backgroundColor: isPast
-                          ? approvalData?.status === 'approved' ? '#dcfce7' : '#fee2e2'
-                          : isCurrent ? '#dbeafe' : themeColors.bgPanel,
+                          ? approvalData?.status === 'approved' ? themeColors.successBg : themeColors.errorBg
+                          : isCurrent ? themeColors.accentBg : themeColors.bgPanel,
                         textAlign: 'center'
                       }}
                     >
@@ -2909,13 +2909,13 @@ Por favor no responda a este correo.`;
                     <div key={entry.id || index} style={{
                       marginBottom: '10px',
                       padding: '10px',
-                      backgroundColor: isApproved ? '#dcfce7' : isRejected ? '#fef2f2' : '#f0f9ff',
-                      borderLeft: `4px solid ${isApproved ? '#22c55e' : isRejected ? '#ef4444' : '#3b82f6'}`,
+                      backgroundColor: isApproved ? themeColors.successBg : isRejected ? themeColors.errorBg : themeColors.infoBg,
+                      borderLeft: `4px solid ${isApproved ? themeColors.successFg : isRejected ? themeColors.errorFg : themeColors.primary}`,
                       borderRadius: '4px',
                       fontSize: '13px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ color: isApproved ? '#166534' : isRejected ? '#991b1b' : '#1e40af' }}>
+                        <strong style={{ color: isApproved ? themeColors.successFg : isRejected ? themeColors.errorFg : themeColors.primary }}>
                           {entry.userName || 'Usuario'}
                         </strong>
                         <span style={{ fontSize: '11px', color: themeColors.textMuted }}>
@@ -2923,9 +2923,9 @@ Por favor no responda a este correo.`;
                         </span>
                       </div>
                       <div style={{ marginTop: '4px' }}>
-                        {isApproved && <span style={{ color: '#166534' }}>Aprobado</span>}
-                        {isRejected && <span style={{ color: '#991b1b' }}>Rechazado</span>}
-                        {isSubmitted && <span style={{ color: '#1e40af' }}>Enviado a Aprobacion</span>}
+                        {isApproved && <span style={{ color: themeColors.successFg }}>Aprobado</span>}
+                        {isRejected && <span style={{ color: themeColors.errorFg }}>Rechazado</span>}
+                        {isSubmitted && <span style={{ color: themeColors.primary }}>Enviado a Aprobacion</span>}
                         {entry.description && (
                           <span style={{ marginLeft: '8px', color: themeColors.textSecondary }}>
                             - {entry.description}
@@ -2936,8 +2936,8 @@ Por favor no responda a este correo.`;
                         <div style={{
                           marginTop: '6px',
                           padding: '6px',
-                          backgroundColor: themeColors.bgPanel,
-                          borderLeft: '3px solid #C77700',
+                          backgroundColor: themeColors.warningBg,
+                          borderLeft: `3px solid ${themeColors.warningFg}`,
                           fontSize: '12px',
                           fontStyle: 'italic'
                         }}>
@@ -3083,8 +3083,8 @@ Por favor no responda a este correo.`;
       {data && (
         <div style={{
           marginTop: '30px',
-          backgroundColor: '#f0f9ff',
-          border: `2px solid ${themeColors.accent}`,
+          backgroundColor: themeColors.infoBg,
+          border: `2px solid ${themeColors.primary}`,
           borderRadius: '8px',
           padding: '20px'
         }}>
@@ -3105,7 +3105,7 @@ Por favor no responda a este correo.`;
 
             if (countermeasureUsers.length === 0) {
               return (
-                <div style={{ color: '#ef4444', fontSize: '13px', padding: '12px', backgroundColor: '#fef2f2', borderRadius: '6px' }}>
+                <div style={{ color: themeColors.errorFg, fontSize: '13px', padding: '12px', backgroundColor: themeColors.errorBg, borderRadius: '6px' }}>
                   No hay usuarios asignados. Configure el Escalation Path en la sección "Countermeasure (D4-D5-D6)" del tab D1-D2-D3.
                 </div>
               );
@@ -3122,11 +3122,12 @@ Por favor no responda a este correo.`;
               return { name, email, position, role };
             };
 
+            // Semantic role colors using theme tokens
             const roles = [
-              { index: 0, label: 'Responsable', color: '#7c3aed', bgColor: '#f5f3ff', borderColor: '#c4b5fd' },
-              { index: 1, label: 'Aprobador 1', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 2, label: 'Aprobador 2', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 3, label: 'Aprobador 3', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' }
+              { index: 0, label: 'Responsable', color: themeColors.accentFg, bgColor: themeColors.accentBg, borderColor: themeColors.accentBorder },
+              { index: 1, label: 'Aprobador 1', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 2, label: 'Aprobador 2', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 3, label: 'Aprobador 3', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder }
             ];
 
             return (
@@ -3179,7 +3180,7 @@ Por favor no responda a este correo.`;
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3203,13 +3204,13 @@ Por favor no responda a este correo.`;
             </h3>
 
             <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
+              backgroundColor: themeColors.errorBg,
+              border: `1px solid ${themeColors.errorBorder}`,
               borderRadius: '8px',
               padding: '12px',
               marginBottom: '16px'
             }}>
-              <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+              <p style={{ margin: 0, color: themeColors.errorFg, fontSize: '14px' }}>
                 {language === 'es'
                   ? 'Esta acción revertirá la sección a estado de borrador, permitiendo editar nuevamente. Se eliminará el estado de aprobación actual.'
                   : 'This action will revert the section to draft status, allowing edits. Current approval status will be cleared.'}
@@ -3268,8 +3269,8 @@ Por favor no responda a este correo.`;
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: isReverting || !revertComments.trim() ? themeColors.textDim : '#dc2626',
-                  color: 'white',
+                  backgroundColor: isReverting || !revertComments.trim() ? themeColors.textMuted : themeColors.errorFg,
+                  color: themeColors.bgCard,
                   cursor: isReverting || !revertComments.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: '500'
                 }}

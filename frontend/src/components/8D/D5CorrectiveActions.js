@@ -2147,10 +2147,10 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                         flex: 1,
                         padding: '12px',
                         borderRadius: '6px',
-                        border: isCurrent ? '3px solid #0072CE' : '1px solid #d1d5db',
+                        border: isCurrent ? `3px solid ${themeColors.primary}` : `1px solid ${themeColors.border}`,
                         backgroundColor: isPast
-                          ? approvalData?.status === 'approved' ? '#dcfce7' : '#fee2e2'
-                          : isCurrent ? '#dbeafe' : '#FAFBFC',
+                          ? approvalData?.status === 'approved' ? themeColors.successBg : themeColors.errorBg
+                          : isCurrent ? themeColors.accentBg : themeColors.bgPanel,
                         textAlign: 'center'
                       }}
                     >
@@ -2161,7 +2161,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                         {approverName}
                       </div>
                       {approverEmail && (
-                        <div style={{ fontSize: '11px', color: '#0072CE', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '11px', color: themeColors.primary, marginBottom: '4px' }}>
                           {approverEmail}
                         </div>
                       )}
@@ -2213,8 +2213,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                       <div style={{
                         marginTop: '4px',
                         padding: '6px',
-                        backgroundColor: '#fef3c7',
-                        borderLeft: '3px solid #C77700',
+                        backgroundColor: themeColors.warningBg,
+                        borderLeft: `3px solid ${themeColors.warningFg}`,
                         fontSize: '12px',
                         fontStyle: 'italic'
                       }}>
@@ -2233,15 +2233,15 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       {data && (
         <div style={{
           marginTop: '30px',
-          backgroundColor: '#f0f9ff',
-          border: '2px solid #0072CE',
+          backgroundColor: themeColors.infoBg,
+          border: `2px solid ${themeColors.primary}`,
           borderRadius: '8px',
           padding: '20px'
         }}>
           <h3 style={{
             fontSize: '16px',
             fontWeight: 'bold',
-            color: '#0F3B5F',
+            color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',
             display: 'flex',
@@ -2255,7 +2255,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
 
             if (countermeasureUsers.length === 0) {
               return (
-                <div style={{ color: '#ef4444', fontSize: '13px', padding: '12px', backgroundColor: '#fef2f2', borderRadius: '6px' }}>
+                <div style={{ color: themeColors.errorFg, fontSize: '13px', padding: '12px', backgroundColor: themeColors.errorBg, borderRadius: '6px' }}>
                   No hay usuarios asignados. Configure el Escalation Path en la sección "Countermeasure (D4-D5-D6)" del tab D1-D2-D3.
                 </div>
               );
@@ -2272,11 +2272,12 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               return { name, email, position };
             };
 
+            // Semantic role colors using theme tokens
             const roles = [
-              { index: 0, label: 'Responsable', color: '#7c3aed', bgColor: '#f5f3ff', borderColor: '#c4b5fd' },
-              { index: 1, label: 'Aprobador 1', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 2, label: 'Aprobador 2', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' },
-              { index: 3, label: 'Aprobador 3', color: '#166534', bgColor: '#f0fdf4', borderColor: '#86efac' }
+              { index: 0, label: 'Responsable', color: themeColors.accentFg, bgColor: themeColors.accentBg, borderColor: themeColors.accentBorder },
+              { index: 1, label: 'Aprobador 1', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 2, label: 'Aprobador 2', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder },
+              { index: 3, label: 'Aprobador 3', color: themeColors.successFg, bgColor: themeColors.successBg, borderColor: themeColors.successBorder }
             ];
 
             return (
@@ -2303,7 +2304,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                         {info.name}
                       </div>
                       {info.email && (
-                        <div style={{ fontSize: '12px', color: '#0072CE', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', color: themeColors.primary, marginTop: '2px' }}>
                           {info.email}
                         </div>
                       )}
@@ -2329,7 +2330,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2353,13 +2354,13 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
             </h3>
 
             <div style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
+              backgroundColor: themeColors.errorBg,
+              border: `1px solid ${themeColors.errorBorder}`,
               borderRadius: '8px',
               padding: '12px',
               marginBottom: '16px'
             }}>
-              <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+              <p style={{ margin: 0, color: themeColors.errorFg, fontSize: '14px' }}>
                 {language === 'es'
                   ? 'Esta acción revertirá la sección a estado de borrador, permitiendo editar nuevamente. Se eliminará el estado de aprobación actual.'
                   : 'This action will revert the section to draft status, allowing edits. Current approval status will be cleared.'}
@@ -2418,8 +2419,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: isReverting || !revertComments.trim() ? '#9ca3af' : '#dc2626',
-                  color: 'white',
+                  backgroundColor: isReverting || !revertComments.trim() ? themeColors.textMuted : themeColors.errorFg,
+                  color: themeColors.bgCard,
                   cursor: isReverting || !revertComments.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: '500'
                 }}

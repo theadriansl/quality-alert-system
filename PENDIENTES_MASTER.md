@@ -65,7 +65,8 @@
 | 4 | ~~Historial desviaciones (migración)~~ | Arrastrado | ✅ 17-Ago |
 | 5 | ~~Refactor temas (WorkloadManager)~~ | Arrastrado | ✅ 27-Ago |
 | 6 | ~~Refactor temas D7/D8 (8D Validation + FollowUp)~~ | Arrastrado | ✅ 28-Ago |
-| 7 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
+| 7 | ~~Refactor temas D3/D4/D5 (Approval sections)~~ | Arrastrado | ✅ 28-Ago |
+| 8 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
 | 9 | ~~Review permisos Hospital~~ | 05-Ago | ✅ 17-Ago |
@@ -80,6 +81,10 @@
 |-------|-------|
 | ✅ Refactor D7Validation.js: 40+ literales de color → tokens semánticos tema | 28-Ago |
 | ✅ Refactor D8FollowUpEvidence.js: 35+ literales de color → tokens semánticos tema | 28-Ago |
+| ✅ ApprovalComponents.js: Componentes compartidos aprobación (Steps, History, Escalation, Revert) | 28-Ago |
+| ✅ Refactor D4: NG/OK→StatusChip, 5Whys/Summary→tarjeta neutra, approvals→tokens | 28-Ago |
+| ✅ Refactor D5: Approval steps/history/escalation/revert → tokens tema | 28-Ago |
+| ✅ Refactor D3MFG: Approval steps/history/escalation/revert → tokens tema | 28-Ago |
 | ✅ Marcadores diarios Gantt: Restaurados (5px, t.accent, hoy t.primary, tooltip detalle) | 27-Ago |
 | ✅ Fix línea HOY Gantt: z-index 1, 1px, t.textMuted, etiqueta solo en header | 27-Ago |
 | ✅ Fix porcentaje barra Gantt: Fuera de barra (6px derecha), mono 10.5px | 27-Ago |
@@ -306,10 +311,16 @@
 3. **Verificación elementos interactivos**: Todos los campos, botones, inputs, selects, modales preservados según contrato.
 4. **Compatibilidad 5 temas**: Industrial, Oscuro, Blanco, Crema, Océano - todos funcionan correctamente.
 5. **Commit b6349cd**: Pushed a master.
+6. **Creado ApprovalComponents.js**: Componentes compartidos para aprobación (ApprovalSteps, ApprovalHistory, EscalationPathDisplay, RevertToDraftModal, ApproveRejectButtons) con tokens de tema.
+7. **Refactor D4ContainmentRootCause.js**:
+   - NG/OK judgments ahora usan StatusChip (import de D6Components) en lugar de fondos de celda saturados
+   - Sección 5 Whys cambiada de fondo rojo a tarjeta neutra (themeColors.bgCard)
+   - Sección Summary cambiada de fondo verde a tarjeta neutra
+   - Approval steps, history, escalation path y revert modal: colores hardcodeados → tokens de tema
+8. **Refactor D5CorrectiveActions.js**: Approval steps, history, comments, escalation path, roles y revert modal con tokens de tema.
+9. **Refactor D3MFG.js**: Approval steps, history, comments, escalation path, roles y revert modal con tokens de tema.
 
 ### Pendiente según documento Design Labs:
-- D4 y D5 (D4ContainmentRootCause.js, D5CorrectiveActions.js)
-- D3 y D3-MFG (D3MFG.js, PartsInventoryTable.js)
 - D1 y D2 (TeamAssignmentTab.js)
 - Historial (HistoryTab.js)
 - Header y tabs (Shared8DHeader.js, 8DWorkflow.js) - AL FINAL
