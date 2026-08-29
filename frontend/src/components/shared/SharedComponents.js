@@ -38,7 +38,7 @@ export const SectionTitle = ({ children, label, sub, t }) => (
 );
 
 // ─────────────────────────────────────────────────────────────
-// Card - Simple wrapper with border and padding
+// Card - Simple wrapper with border, padding and subtle shadow
 // ─────────────────────────────────────────────────────────────
 export const Card = ({ children, t, style = {} }) => (
   <div style={{
@@ -46,6 +46,7 @@ export const Card = ({ children, t, style = {} }) => (
     border: `1px solid ${t.border}`,
     borderRadius: 8,
     padding: 16,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
     ...style
   }}>
     {children}
@@ -66,7 +67,6 @@ export const KpiTile = ({
   sub,
   alertType,      // 'warning' | 'error' | null
   valueColor,     // Only use when number IS the state (SLA below target, etc)
-  accentBorder,   // Optional top border accent color
   t
 }) => {
   const alertDotColor = alertType === 'error' ? t.errorFg
@@ -79,7 +79,7 @@ export const KpiTile = ({
       border: `1px solid ${t.border}`,
       borderRadius: 8,
       padding: '12px 14px',
-      borderTop: accentBorder ? `3px solid ${accentBorder}` : undefined
+      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
     }}>
       {/* Label row with optional alert dot */}
       <div style={{
@@ -146,15 +146,16 @@ export const KpiTile = ({
 
 // ─────────────────────────────────────────────────────────────
 // RiskScoreCard - Risk index with breakdown
-// Score in mono 40px/500, chip status, bar 6px, factor list
+// Score in mono 40px/500 (t.text), pill chip status, 6px bar, factor list
 // ─────────────────────────────────────────────────────────────
 export const RiskScoreCard = ({
   score,
-  factors,  // Array of { label, value, color? }
+  title = 'Índice de Riesgo',
+  factors,  // Array of { label, value }
   t
 }) => {
   const riskLevel = score >= 60 ? 'high' : score >= 35 ? 'medium' : 'low';
-  const riskLabel = score >= 60 ? 'ALTO' : score >= 35 ? 'MEDIO' : 'BAJO';
+  const riskLabel = score >= 60 ? 'Alto' : score >= 35 ? 'Moderado' : 'Bajo';
 
   const colors = {
     high: { fg: t.errorFg, bg: t.errorBg, border: t.errorBorder },
@@ -168,7 +169,8 @@ export const RiskScoreCard = ({
       backgroundColor: t.bgCard,
       border: `1px solid ${t.border}`,
       borderRadius: 8,
-      padding: 16
+      padding: 16,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
     }}>
       {/* Header */}
       <div style={{
@@ -179,7 +181,7 @@ export const RiskScoreCard = ({
         color: t.textDim,
         marginBottom: 12
       }}>
-        INDICE DE RIESGO
+        {title}
       </div>
 
       {/* Score + Chip row */}
@@ -193,14 +195,14 @@ export const RiskScoreCard = ({
           fontSize: 40,
           fontWeight: 500,
           fontFamily: "'IBM Plex Mono', monospace",
-          color: c.fg,
+          color: t.text,
           lineHeight: 1
         }}>
           {score}
         </span>
         <span style={{
           padding: '3px 10px',
-          borderRadius: 4,
+          borderRadius: 12,
           fontSize: 11,
           fontWeight: 600,
           backgroundColor: c.bg,
@@ -227,23 +229,18 @@ export const RiskScoreCard = ({
         }} />
       </div>
 
-      {/* Factors breakdown */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: 8
-      }}>
+      {/* Factors breakdown - flat list with 1px separator */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         {factors.map((f, i) => (
           <div key={i} style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '6px 10px',
-            backgroundColor: t.bgPanel,
-            borderRadius: 4
+            padding: '8px 0',
+            borderTop: i > 0 ? `1px solid ${t.line || t.border}` : undefined
           }}>
             <span style={{
-              fontSize: 11,
+              fontSize: 12,
               color: t.textMuted
             }}>
               {f.label}
@@ -252,7 +249,7 @@ export const RiskScoreCard = ({
               fontSize: 13,
               fontWeight: 600,
               fontFamily: "'IBM Plex Mono', monospace",
-              color: f.color || t.text
+              color: t.text
             }}>
               {f.value}
             </span>
@@ -283,6 +280,7 @@ export const AlertCountChip = ({ count, t }) => {
       fontWeight: 600,
       fontFamily: "'IBM Plex Mono', monospace",
       backgroundColor: t.errorBg,
+      border: `1px solid ${t.errorBorder}`,
       color: t.errorFg,
       marginLeft: 6
     }}>

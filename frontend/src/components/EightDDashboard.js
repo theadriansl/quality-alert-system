@@ -84,10 +84,10 @@ const TabResumen = ({ data, derived }) => {
 
   const total = data.totalEstimatedCost || 0;
   const riskFactors = [
-    { label: 'Vencidos', value: derived.overdueCount, color: derived.overdueCount > 0 ? t.errorFg : t.text },
-    { label: 'Alta Sev. sin D4', value: derived.highSevWithoutD4, color: derived.highSevWithoutD4 > 0 ? t.errorFg : t.text },
-    { label: 'Estancados', value: derived.stagnantCount, color: derived.stagnantCount > 0 ? t.warningFg : t.text },
-    { label: 'En Draft', value: data.totalRevisions || 0, color: (data.totalRevisions || 0) > 0 ? t.warningFg : t.text }
+    { label: 'Vencidos', value: derived.overdueCount },
+    { label: 'Alta Sev. sin D4', value: derived.highSevWithoutD4 },
+    { label: 'Estancados', value: derived.stagnantCount },
+    { label: 'En Draft', value: data.totalRevisions || 0 }
   ];
 
   return (
@@ -722,10 +722,10 @@ const TabRiesgo = ({ data, derived }) => {
   ));
 
   const riskFactors = [
-    { label: 'Vencidos', value: derived.overdueCount, color: derived.overdueCount > 0 ? t.errorFg : t.text },
-    { label: 'Alta Sev. sin D4', value: derived.highSevWithoutD4, color: derived.highSevWithoutD4 > 0 ? t.errorFg : t.text },
-    { label: 'Estancados', value: derived.stagnantCount, color: derived.stagnantCount > 0 ? t.warningFg : t.text },
-    { label: 'En Draft', value: data.totalRevisions || 0, color: (data.totalRevisions || 0) > 0 ? t.warningFg : t.text }
+    { label: 'Vencidos', value: derived.overdueCount },
+    { label: 'Alta Sev. sin D4', value: derived.highSevWithoutD4 },
+    { label: 'Estancados', value: derived.stagnantCount },
+    { label: 'En Draft', value: data.totalRevisions || 0 }
   ];
 
   return (
