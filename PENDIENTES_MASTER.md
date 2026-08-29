@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-27
+> Última actualización: 2026-08-28
 
 ---
 
@@ -64,7 +64,8 @@
 | 3 | ~~UX modal desviación~~ | Arrastrado | ✅ 17-Ago |
 | 4 | ~~Historial desviaciones (migración)~~ | Arrastrado | ✅ 17-Ago |
 | 5 | ~~Refactor temas (WorkloadManager)~~ | Arrastrado | ✅ 27-Ago |
-| 6 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
+| 6 | ~~Refactor temas D7/D8 (8D Validation + FollowUp)~~ | Arrastrado | ✅ 28-Ago |
+| 7 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
 | 9 | ~~Review permisos Hospital~~ | 05-Ago | ✅ 17-Ago |
@@ -77,6 +78,8 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Refactor D7Validation.js: 40+ literales de color → tokens semánticos tema | 28-Ago |
+| ✅ Refactor D8FollowUpEvidence.js: 35+ literales de color → tokens semánticos tema | 28-Ago |
 | ✅ Marcadores diarios Gantt: Restaurados (5px, t.accent, hoy t.primary, tooltip detalle) | 27-Ago |
 | ✅ Fix línea HOY Gantt: z-index 1, 1px, t.textMuted, etiqueta solo en header | 27-Ago |
 | ✅ Fix porcentaje barra Gantt: Fuera de barra (6px derecha), mono 10.5px | 27-Ago |
@@ -292,6 +295,24 @@
 14. **Fix porcentaje barra Gantt**: Movido fuera de la barra (6px a la derecha), mono 10.5px, t.textMuted.
 15. **Fix botones toolbar Gantt**: "Hoy" primario (t.primary), resto secundarios (borde neutro).
 16. **Marcadores diarios Gantt**: Restaurados debajo de barra real (5px alto), color t.accent (hoy t.primary), tooltip con detalle.
+
+---
+
+## Notas Sesión 28-Ago-2026
+
+### Completado hoy:
+1. **Refactor D7Validation.js**: Eliminados 40+ literales de color (#xxx, rgba, 'white'). Todos reemplazados con tokens semánticos del tema (t.successBg/Fg, t.errorBg/Fg, t.warningBg/Fg, t.accentBg/Fg, t.primary, t.bgCard).
+2. **Refactor D8FollowUpEvidence.js**: Eliminados 35+ literales de color. Mismos tokens aplicados (themeColors.*).
+3. **Verificación elementos interactivos**: Todos los campos, botones, inputs, selects, modales preservados según contrato.
+4. **Compatibilidad 5 temas**: Industrial, Oscuro, Blanco, Crema, Océano - todos funcionan correctamente.
+5. **Commit b6349cd**: Pushed a master.
+
+### Pendiente según documento Design Labs:
+- D4 y D5 (D4ContainmentRootCause.js, D5CorrectiveActions.js)
+- D3 y D3-MFG (D3MFG.js, PartsInventoryTable.js)
+- D1 y D2 (TeamAssignmentTab.js)
+- Historial (HistoryTab.js)
+- Header y tabs (Shared8DHeader.js, 8DWorkflow.js) - AL FINAL
 
 ---
 
