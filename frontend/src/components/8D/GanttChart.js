@@ -682,7 +682,7 @@ const EditDayPopup = memo(({ date, existingEntry, onSave, onCancel, formatDate, 
         <label style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px', display: 'block' }}>
           Progreso (%)
           {dailyLimit && (
-            <span style={{ color: '#C77700', marginLeft: '4px' }}>
+            <span style={{ color: t.warningFg, marginLeft: '4px' }}>
               (máx. sugerido: {dailyLimit}%)
             </span>
           )}
@@ -702,11 +702,11 @@ const EditDayPopup = memo(({ date, existingEntry, onSave, onCancel, formatDate, 
           style={{
             width: '100%',
             padding: '6px 8px',
-            border: `1px solid ${dailyLimit && parseFloat(progressInput) > dailyLimit ? '#C77700' : t.border}`,
+            border: `1px solid ${dailyLimit && parseFloat(progressInput) > dailyLimit ? t.warningFg : t.border}`,
             borderRadius: '4px',
             fontSize: '12px',
             boxSizing: 'border-box',
-            backgroundColor: dailyLimit && parseFloat(progressInput) > dailyLimit ? '#fffbeb' : t.bgCard,
+            backgroundColor: dailyLimit && parseFloat(progressInput) > dailyLimit ? t.warningBg : t.bgCard,
             color: t.text
           }}
         />
@@ -779,7 +779,7 @@ const EditDayPopup = memo(({ date, existingEntry, onSave, onCancel, formatDate, 
           style={{
             flex: 1,
             padding: '4px 8px',
-            background: '#6b7280',
+            background: t.textMuted,
             color: 'white',
             border: 'none',
             borderRadius: '4px',
@@ -1389,13 +1389,13 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
     });
   };
 
-  // Obtener color según prioridad
+  // Obtener color según prioridad (coincide con PriorityBar)
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'alta': return '#ef4444'; // Rojo
-      case 'media': return '#C77700'; // Amarillo
-      case 'baja': return '#0072CE'; // Azul
-      default: return '#6b7280'; // Gris
+      case 'alta': return t.error;
+      case 'media': return t.warning;
+      case 'baja': return t.border;
+      default: return t.border;
     }
   };
 

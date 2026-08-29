@@ -50,23 +50,23 @@ const HistoryTab = ({ data }) => {
 
   const getEventColor = (actionType) => {
     const colors = {
-      created: '#0072CE',
-      section_updated: '#8b5cf6',
-      draft_saved: '#6366f1',
-      approved: '#2E7D32',
-      rejected: '#ef4444',
-      status_changed: '#C77700',
-      delay_added: '#C77700',
-      sent_to_approval: '#C77700',
-      submitted_for_approval: '#C77700',
-      pending: '#6366f1',
-      completed: '#2E7D32',
-      file_uploaded: '#0891b2',
-      file_deleted: '#dc2626',
-      archived: '#7c3aed',
-      revision_created: '#059669'
+      created: t.primary,
+      section_updated: t.info,
+      draft_saved: t.info,
+      approved: t.success,
+      rejected: t.error,
+      status_changed: t.warningFg,
+      delay_added: t.warningFg,
+      sent_to_approval: t.warningFg,
+      submitted_for_approval: t.warningFg,
+      pending: t.info,
+      completed: t.success,
+      file_uploaded: t.info,
+      file_deleted: t.error,
+      archived: t.primary,
+      revision_created: t.successFg
     };
-    return colors[actionType] || '#6b7280';
+    return colors[actionType] || t.textMuted;
   };
 
   // Load users for filter
@@ -241,25 +241,25 @@ const HistoryTab = ({ data }) => {
 
     // No status and no user assigned
     if (!status && !userName) {
-      return { icon: '', text: 'Pendiente', color: '#C77700' };
+      return { icon: '', text: 'Pendiente', color: t.warningFg };
     }
 
     // Pending with user assigned
     if (!status && userName) {
-      return { icon: '', text: userName, color: '#C77700' };
+      return { icon: '', text: userName, color: t.warningFg };
     }
 
     // Approved
     if (status === 'approved') {
-      return { icon: '', text: `${userName} (${formattedDate})`, color: '#2E7D32' };
+      return { icon: '', text: `${userName} (${formattedDate})`, color: t.success };
     }
 
     // Rejected
     if (status === 'rejected') {
-      return { icon: '', text: `${userName} (${formattedDate})`, color: '#ef4444' };
+      return { icon: '', text: `${userName} (${formattedDate})`, color: t.error };
     }
 
-    return { icon: '', text: userName || 'Pendiente', color: '#C77700' };
+    return { icon: '', text: userName || 'Pendiente', color: t.warningFg };
   };
 
   // Get submitter info - shows who is assigned to submit/submitted
@@ -311,15 +311,15 @@ const HistoryTab = ({ data }) => {
     );
 
     if (submissionEvent && submissionEvent.userName) {
-      return { icon: '', text: submissionEvent.userName, color: '#0072CE' };
+      return { icon: '', text: submissionEvent.userName, color: t.primary };
     }
 
     // Fallback: show assigned user if submitted but no event found
     if (assignedUserName) {
-      return { icon: '', text: assignedUserName, color: '#0072CE' };
+      return { icon: '', text: assignedUserName, color: t.primary };
     }
 
-    return { icon: '', text: 'Enviado', color: '#0072CE' };
+    return { icon: '', text: 'Enviado', color: t.primary };
   };
 
   // Build approval sections data with assigned users from escalationPath
@@ -390,7 +390,7 @@ const HistoryTab = ({ data }) => {
       {revisions.length > 1 && (
         <div style={{
           backgroundColor: t.bgPanel || t.bg,
-          border: `1px solid ${t.border || '#e5e7eb'}`,
+          border: `1px solid ${t.border}`,
           borderRadius: '8px',
           padding: '16px',
           marginBottom: '20px'
@@ -411,13 +411,13 @@ const HistoryTab = ({ data }) => {
                   padding: '10px 12px',
                   borderRadius: '6px',
                   backgroundColor: isCurrent ? (t.accent + '15') : 'transparent',
-                  border: `1px solid ${isCurrent ? t.accent : (t.border || '#e5e7eb')}`
+                  border: `1px solid ${isCurrent ? t.accent : (t.border)}`
                 }}>
                   <div style={{ minWidth: '80px' }}>
                     <span style={{
                       fontSize: '12px', fontWeight: '700',
                       color: isCurrent ? t.accent : t.textMuted,
-                      backgroundColor: isCurrent ? (t.accent + '20') : (t.border || '#e5e7eb'),
+                      backgroundColor: isCurrent ? (t.accent + '20') : (t.border),
                       padding: '2px 8px', borderRadius: '4px'
                     }}>
                       {revLabel}
@@ -437,12 +437,12 @@ const HistoryTab = ({ data }) => {
                       )}
                       <span style={{ fontSize: '11px', color: t.textMuted }}>{date}</span>
                       {rev.isArchived && (
-                        <span style={{ fontSize: '11px', color: '#7c3aed', backgroundColor: '#f3e8ff', padding: '1px 6px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '11px', color: t.primary, backgroundColor: t.infoBg, padding: '1px 6px', borderRadius: '4px' }}>
                           Archivado
                         </span>
                       )}
                       {isCurrent && (
-                        <span style={{ fontSize: '11px', color: '#059669', backgroundColor: '#d1fae5', padding: '1px 6px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '11px', color: t.successFg, backgroundColor: t.successBg, padding: '1px 6px', borderRadius: '4px' }}>
                           Actual
                         </span>
                       )}
@@ -573,8 +573,8 @@ const getStyles = (t) => ({
     fontSize: '13px'
   },
   approvalSummary: {
-    backgroundColor: '#fef3c7',
-    border: '2px solid #C77700',
+    backgroundColor: t.warningBg,
+    border: `2px solid ${t.warningFg}`,
     borderRadius: '8px',
     padding: '16px',
     marginBottom: '24px'
@@ -582,7 +582,7 @@ const getStyles = (t) => ({
   approvalTitle: {
     fontSize: '16px',
     fontWeight: '600',
-    color: '#92400e',
+    color: t.warningFg,
     margin: '0 0 12px 0'
   },
   table: {
@@ -593,13 +593,13 @@ const getStyles = (t) => ({
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   },
   th: {
-    backgroundColor: '#C77700',
-    color: '#fff',
+    backgroundColor: t.warningFg,
+    color: t.bgCard,
     padding: '8px 10px',
     textAlign: 'left',
     fontWeight: '600',
     fontSize: '11px',
-    border: '1px solid #C77700',
+    border: `1px solid ${t.warningFg}`,
     whiteSpace: 'nowrap'
   },
   tr: {

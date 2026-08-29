@@ -2038,76 +2038,128 @@ const EightDWorkflow = () => {
       transition: 'all 0.2s ease'
     },
     primaryButton: {
-      backgroundColor: t.accent,
-      color: 'white'
+      backgroundColor: t.primary,
+      color: t.bgCard
     },
     secondaryButton: {
-      backgroundColor: t.textMuted,
-      color: 'white'
+      backgroundColor: t.bgCard,
+      border: `1px solid ${t.border}`,
+      color: t.text
     },
     successButton: {
       backgroundColor: t.success,
-      color: 'white'
+      color: t.bgCard
     },
     headerNavigation: {
       display: 'flex',
-      gap: '12px',
-      alignItems: 'center'
+      gap: '8px',
+      alignItems: 'center',
+      width: '100%'
     },
     headerButton: {
-      padding: '8px 16px',
+      height: '32px',
+      padding: '0 12px',
       borderRadius: '6px',
       border: 'none',
-      fontSize: '14px',
-      fontWeight: 'bold',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease'
-    },
-    backButton: {
-      backgroundColor: t.textMuted,
-      color: 'white'
-    },
-    // Nuevos estilos para tabs horizontales
-    tabsContainer: {
-      backgroundColor: t.bgCard,
-      borderBottom: `2px solid ${t.border}`,
-      padding: '0 24px',
-      position: 'sticky',
-      top: '0',
-      zIndex: 99
-    },
-    tabsRow: {
-      display: 'flex',
-      gap: '4px',
-      overflowX: 'auto',
-      paddingBottom: '0'
-    },
-    tab: {
-      padding: '12px 16px',
       fontSize: '13px',
       fontWeight: '500',
-      border: 'none',
-      borderBottom: '3px solid transparent',
-      backgroundColor: 'transparent',
-      color: t.textMuted,
       cursor: 'pointer',
-      transition: 'all 0.2s',
+      transition: 'opacity 0.2s ease',
+      flex: '0 0 auto',
       whiteSpace: 'nowrap',
       display: 'flex',
       alignItems: 'center',
       gap: '6px'
     },
+    headerButtonSecondary: {
+      backgroundColor: t.bgCard,
+      border: `1px solid ${t.border}`,
+      color: t.text
+    },
+    headerButtonPrimary: {
+      backgroundColor: t.primary,
+      color: t.bgCard
+    },
+    // Navegación de tabs horizontal
+    tabsContainer: {
+      backgroundColor: t.bgCard,
+      borderBottom: `1px solid ${t.border}`,
+      padding: '0 24px',
+      position: 'sticky',
+      top: '0',
+      zIndex: 99,
+      overflowX: 'auto'
+    },
+    tabsRow: {
+      display: 'flex',
+      gap: '0',
+      minWidth: 'max-content'
+    },
+    tab: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      padding: '12px 16px',
+      border: 'none',
+      backgroundColor: 'transparent',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      flex: '0 0 auto'
+    },
+    tabContent: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start'
+    },
+    tabLabel: {
+      fontSize: '13px',
+      fontWeight: '400',
+      color: t.textMuted,
+      lineHeight: '1.2'
+    },
+    tabSubtitle: {
+      fontSize: '11px',
+      color: t.textDim,
+      lineHeight: '1.2',
+      marginTop: '2px'
+    },
     tabActive: {
-      color: t.primary,
-      borderBottomColor: t.accent,
-      fontWeight: '600'
+      boxShadow: `inset 0 -2px 0 ${t.primary}`
+    },
+    tabActiveLabel: {
+      fontWeight: '600',
+      color: t.text
     },
     tabDisabled: {
-      color: t.textDim,
-      cursor: 'not-allowed',
-      opacity: 0.5
+      opacity: 0.45,
+      cursor: 'not-allowed'
     },
     tabIndicator: {
+      width: '15px',
+      height: '15px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '10px',
+      flexShrink: 0
+    },
+    tabIndicatorCompleted: {
+      backgroundColor: t.success,
+      color: t.bgCard
+    },
+    tabIndicatorActive: {
+      backgroundColor: t.primary
+    },
+    tabIndicatorPending: {
+      backgroundColor: 'transparent',
+      border: `1px solid ${t.border}`
+    },
+    tabIndicatorBlocked: {
+      backgroundColor: 'transparent',
+      border: `1px solid ${t.border}`
+    },
+    oldTabIndicator: {
       width: '8px',
       height: '8px',
       borderRadius: '50%',
@@ -2181,34 +2233,43 @@ const EightDWorkflow = () => {
 
           {/* Navigation Buttons */}
           <div style={styles.headerNavigation}>
-            {/* Export Button */}
+            {/* Left group: Exit actions */}
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{...styles.headerButton, ...styles.headerButtonSecondary}}
+              onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+              onMouseLeave={(e) => e.target.style.opacity = '1'}
+            >
+              ← {tr('backToDashboard')}
+            </button>
+
             {workflowData?.id && (
               <button
                 onClick={handleExportPDFCapture}
                 disabled={isCapturingPDF}
                 style={{
                   ...styles.headerButton,
-                  backgroundColor: t.error,
-                  color: '#fff',
-                  opacity: isCapturingPDF ? 0.7 : 1
+                  ...styles.headerButtonSecondary,
+                  opacity: isCapturingPDF ? 0.6 : 1
                 }}
+                onMouseEnter={(e) => !isCapturingPDF && (e.target.style.opacity = '0.8')}
+                onMouseLeave={(e) => !isCapturingPDF && (e.target.style.opacity = '1')}
                 title="Exportar PDF completo (captura todas las pestañas)"
               >
                 {isCapturingPDF ? `⏳ ${captureProgress}` : '📄 Exportar PDF'}
               </button>
             )}
 
-            <button
-              onClick={() => navigate('/dashboard')}
-              style={{...styles.headerButton, ...styles.backButton}}
-            >
-              ← {tr('backToDashboard')}
-            </button>
-            
+            {/* Spacer */}
+            <div style={{ flex: 1 }} />
+
+            {/* Right group: Navigation */}
             {currentTab > 0 && (
               <button
                 onClick={() => handleTabChange(currentTab - 1)}
-                style={{...styles.headerButton, ...styles.secondaryButton}}
+                style={{...styles.headerButton, ...styles.headerButtonSecondary}}
+                onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
               >
                 ← {tr('previous')}
               </button>
@@ -2217,8 +2278,15 @@ const EightDWorkflow = () => {
             {currentTab < tabs.length - 1 ? (
               <button
                 onClick={() => handleTabChange(currentTab + 1)}
-                style={{...styles.headerButton, ...styles.primaryButton}}
+                style={{
+                  ...styles.headerButton,
+                  ...styles.headerButtonPrimary,
+                  opacity: !tabs[currentTab + 1]?.enabled ? 0.5 : 1,
+                  cursor: !tabs[currentTab + 1]?.enabled ? 'not-allowed' : 'pointer'
+                }}
                 disabled={!tabs[currentTab + 1]?.enabled}
+                onMouseEnter={(e) => tabs[currentTab + 1]?.enabled && (e.target.style.opacity = '0.85')}
+                onMouseLeave={(e) => tabs[currentTab + 1]?.enabled && (e.target.style.opacity = '1')}
               >
                 {tr('next')} →
               </button>
@@ -2228,10 +2296,17 @@ const EightDWorkflow = () => {
                   showSuccess('Proceso 8D completado ');
                   navigate('/dashboard');
                 }}
-                style={{...styles.headerButton, ...styles.successButton}}
+                style={{
+                  ...styles.headerButton,
+                  ...styles.successButton,
+                  opacity: !tabCompletionStatus.d8 ? 0.5 : 1,
+                  cursor: !tabCompletionStatus.d8 ? 'not-allowed' : 'pointer'
+                }}
                 disabled={!tabCompletionStatus.d8}
+                onMouseEnter={(e) => tabCompletionStatus.d8 && (e.target.style.opacity = '0.85')}
+                onMouseLeave={(e) => tabCompletionStatus.d8 && (e.target.style.opacity = '1')}
               >
-                {tr('complete')} 
+                {tr('complete')}
               </button>
             )}
           </div>
@@ -2288,35 +2363,35 @@ const EightDWorkflow = () => {
                 onClick={() => handleTabChange(index)}
                 disabled={!isEnabled}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  fontSize: '13px',
-                  fontWeight: index === currentTab ? '600' : '500',
-                  border: 'none',
-                  borderBottom: `3px solid ${index === currentTab ? t.accent : 'transparent'}`,
-                  backgroundColor: index === currentTab ? t.bgPanel : 'transparent',
-                  color: !isEnabled ? t.textMuted : index === currentTab ? t.primary : t.text,
-                  cursor: isEnabled ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s',
-                  opacity: isEnabled ? 1 : 0.5,
-                  whiteSpace: 'nowrap'
+                  ...styles.tab,
+                  ...(index === currentTab ? styles.tabActive : {}),
+                  ...(tabStatus === 'blocked' ? styles.tabDisabled : {}),
+                  cursor: isEnabled ? 'pointer' : 'not-allowed'
                 }}
                 title={!isEnabled ? getBlockedReason(tab.id) : tab.subtitle}
               >
-                {/* Status Indicator */}
+                {/* Status Indicator Circle */}
                 <span style={{
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  backgroundColor: tabStatus === 'completed' ? t.success :
-                                   tabStatus === 'active' ? t.accent :
-                                   tabStatus === 'blocked' ? t.textMuted :
-                                   t.border,
-                  flexShrink: 0
-                }} />
-                <span>{tab.label}</span>
+                  ...styles.tabIndicator,
+                  ...(tabStatus === 'completed' ? styles.tabIndicatorCompleted :
+                     tabStatus === 'active' ? styles.tabIndicatorActive :
+                     tabStatus === 'blocked' ? styles.tabIndicatorBlocked :
+                     styles.tabIndicatorPending)
+                }}>
+                  {tabStatus === 'completed' && '✓'}
+                </span>
+                {/* Tab Content: Label + Subtitle */}
+                <div style={styles.tabContent}>
+                  <span style={{
+                    ...styles.tabLabel,
+                    ...(index === currentTab ? styles.tabActiveLabel : {})
+                  }}>
+                    {tab.label}
+                  </span>
+                  <span style={styles.tabSubtitle}>
+                    {tab.subtitle}
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -2326,8 +2401,8 @@ const EightDWorkflow = () => {
       {/* Archived Document Warning Banner */}
       {workflowData?.isArchived && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          borderBottom: '2px solid #f59e0b',
+          backgroundColor: t.warningBg,
+          borderBottom: `2px solid ${t.warningBorder}`,
           padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
@@ -2335,8 +2410,8 @@ const EightDWorkflow = () => {
         }}>
           <span style={{ fontSize: '20px' }}>📁</span>
           <div>
-            <strong style={{ color: '#92400e' }}>DOCUMENTO ARCHIVADO (Solo Lectura)</strong>
-            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#78350f' }}>
+            <strong style={{ color: t.warningFg }}>DOCUMENTO ARCHIVADO (Solo Lectura)</strong>
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: t.warningFg }}>
               Este documento ha sido archivado y no puede ser modificado.
               {workflowData.archivedReason && ` Motivo: ${workflowData.archivedReason}`}
             </p>
@@ -2388,8 +2463,8 @@ const EightDWorkflow = () => {
               </span>
               {workflowData.isArchived && (
                 <span style={{
-                  backgroundColor: '#f59e0b',
-                  color: 'white',
+                  backgroundColor: t.warning,
+                  color: t.bgCard,
                   padding: '2px 8px',
                   borderRadius: '4px',
                   fontSize: '11px',
