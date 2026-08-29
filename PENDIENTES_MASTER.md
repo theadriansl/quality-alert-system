@@ -306,21 +306,52 @@
 ## Notas Sesión 28-Ago-2026
 
 ### Completado hoy:
-1. **Refactor D7Validation.js**: Eliminados 40+ literales de color (#xxx, rgba, 'white'). Todos reemplazados con tokens semánticos del tema (t.successBg/Fg, t.errorBg/Fg, t.warningBg/Fg, t.accentBg/Fg, t.primary, t.bgCard).
-2. **Refactor D8FollowUpEvidence.js**: Eliminados 35+ literales de color. Mismos tokens aplicados (themeColors.*).
-3. **Verificación elementos interactivos**: Todos los campos, botones, inputs, selects, modales preservados según contrato.
-4. **Compatibilidad 5 temas**: Industrial, Oscuro, Blanco, Crema, Océano - todos funcionan correctamente.
-5. **Commit b6349cd**: Pushed a master.
-6. **Creado ApprovalComponents.js**: Componentes compartidos para aprobación (ApprovalSteps, ApprovalHistory, EscalationPathDisplay, RevertToDraftModal, ApproveRejectButtons) con tokens de tema.
-7. **Refactor D4ContainmentRootCause.js**:
-   - NG/OK judgments ahora usan StatusChip (import de D6Components) en lugar de fondos de celda saturados
-   - Sección 5 Whys cambiada de fondo rojo a tarjeta neutra (themeColors.bgCard)
-   - Sección Summary cambiada de fondo verde a tarjeta neutra
-   - Approval steps, history, escalation path y revert modal: colores hardcodeados → tokens de tema
-8. **Refactor D5CorrectiveActions.js**: Approval steps, history, comments, escalation path, roles y revert modal con tokens de tema.
-9. **Refactor D3MFG.js**: Approval steps, history, comments, escalation path, roles y revert modal con tokens de tema.
+1. **Refactor D7Validation.js**: 40+ literales → tokens tema ✅
+2. **Refactor D8FollowUpEvidence.js**: 35+ literales → tokens tema ✅
+3. **Commit b6349cd**: D7/D8 pushed
+4. **ApprovalComponents.js creado**: Componentes compartidos (ApprovalSteps, ApprovalHistory, EscalationPathDisplay, RevertToDraftModal, ApproveRejectButtons)
+5. **Commit a79a553**: Cambios parciales D3/D4/D5 (incompletos, ver corrección abajo)
 
-### Pendiente según documento Design Labs:
+### CORRECCIÓN - Revisión commit a79a553:
+El commit a79a553 fue **incompleto**. La mayoría de literales siguen presentes:
+- D4ContainmentRootCause.js: 68 literales restantes
+- D5CorrectiveActions.js: 89 literales restantes
+- D3MFG.js: 32 literales restantes
+- ApprovalComponents.js creado pero NO consumido
+
+### Avance real sesión nocturna:
+6. **D5D6D7Countermeasures.js**: 50 → 0 literales ✅ COMPLETO
+   - Import ApprovalComponents agregado
+   - Approval steps, history, escalation path, revert modal → tokens
+   - Read-only banner, blocked message → tokens
+   - D7 validation section → tokens
+   - Todas las tablas borderBottom → tokens
+
+### PENDIENTE para continuar mañana:
+
+**Archivos con literales restantes (verificar con grep):**
+```
+D4ContainmentRootCause.js: 68 literales
+  - Líneas 878, 1018-1054: Status banner y helper getStatusConfig
+  - Líneas 1065-1162: wasOnTime indicators
+  - Líneas 1293-1429: Sección atraso (delay) completa
+  - Líneas 1477-1502: Botones y mensajes
+  - Líneas 1549, 1676-1755: Tabla 4M, links, botones
+  - Líneas 1810, 1938-2037: Tabla 5Whys, mensaje aprobado, botones
+
+D5CorrectiveActions.js: 89 literales
+  - Secciones similares a D4
+
+D3MFG.js: 32 literales
+  - Incluye #ff6b35 (color no estándar)
+```
+
+**Método de trabajo:**
+1. Un archivo a la vez
+2. Al terminar cada archivo: `grep -cE "#[0-9a-fA-F]{6}" archivo.js`
+3. Verificar resultado = 0 antes de pasar al siguiente
+
+**Tabs pendientes según Design Labs:**
 - D1 y D2 (TeamAssignmentTab.js)
 - Historial (HistoryTab.js)
 - Header y tabs (Shared8DHeader.js, 8DWorkflow.js) - AL FINAL
