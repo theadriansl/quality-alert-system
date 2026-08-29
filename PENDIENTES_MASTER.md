@@ -346,15 +346,17 @@ D3MFG.js: 32 literales
   - Incluye #ff6b35 (color no estándar)
 ```
 
-**Método de trabajo:**
-1. Un archivo a la vez
-2. Al terminar cada archivo: `grep -cE "#[0-9a-fA-F]{6}" archivo.js`
-3. Verificar resultado = 0 antes de pasar al siguiente
+**Orden de trabajo (29-Ago):**
+1. **CONSUMIR ApprovalComponents.js** en los 4 archivos (uno a la vez):
+   - D3MFG.js → grep → verificar 0
+   - D4ContainmentRootCause.js → grep → verificar 0
+   - D5CorrectiveActions.js → grep → verificar 0
+   - D5D6D7Countermeasures.js (ya tiene import, verificar si consume los componentes)
+2. **Bloques SLA/atraso en D4** (líneas 1046-1162, 1293-1429)
+3. **Cuerpo de D5** (líneas 1240-1741, 1942-2058)
+4. **Tabs restantes**: D1/D2, History, Header (AL FINAL)
 
-**Tabs pendientes según Design Labs:**
-- D1 y D2 (TeamAssignmentTab.js)
-- Historial (HistoryTab.js)
-- Header y tabs (Shared8DHeader.js, 8DWorkflow.js) - AL FINAL
+**Documento referencia:** `Resumen 8D` tiene contexto completo si se pierde el hilo
 
 ---
 
