@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-28
+> Última actualización: 2026-08-29
 
 ---
 
@@ -66,7 +66,9 @@
 | 5 | ~~Refactor temas (WorkloadManager)~~ | Arrastrado | ✅ 27-Ago |
 | 6 | ~~Refactor temas D7/D8 (8D Validation + FollowUp)~~ | Arrastrado | ✅ 28-Ago |
 | 7 | ~~Refactor temas D3/D4/D5 (Approval sections)~~ | Arrastrado | ✅ 28-Ago |
-| 8 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
+| 8 | ~~**MÓDULO 8D COMPLETO**: 10 tabs + header/navigation → tokens tema~~ | 29-Ago | ✅ 29-Ago |
+| 9 | Refactor temas Dashboard (EightDDashboard, QARDashboard, etc.) | 29-Ago | ⏳ |
+| 10 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
 | 9 | ~~Review permisos Hospital~~ | 05-Ago | ✅ 17-Ago |
@@ -79,6 +81,7 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ **MÓDULO 8D CERRADO**: TeamAssignmentTab (167→0), HistoryTab (35→0), GanttChart (priority map), 8DWorkflow (header/tabs redesign), ProcessFlowBuilder (t.error) | 29-Ago |
 | ✅ Refactor D7Validation.js: 40+ literales de color → tokens semánticos tema | 28-Ago |
 | ✅ Refactor D8FollowUpEvidence.js: 35+ literales de color → tokens semánticos tema | 28-Ago |
 | ✅ ApprovalComponents.js: Componentes compartidos aprobación (Steps, History, Escalation, Revert) | 28-Ago |
@@ -300,6 +303,36 @@
 14. **Fix porcentaje barra Gantt**: Movido fuera de la barra (6px a la derecha), mono 10.5px, t.textMuted.
 15. **Fix botones toolbar Gantt**: "Hoy" primario (t.primary), resto secundarios (borde neutro).
 16. **Marcadores diarios Gantt**: Restaurados debajo de barra real (5px alto), color t.accent (hoy t.primary), tooltip con detalle.
+
+---
+
+## Notas Sesión 29-Ago-2026
+
+### Completado hoy:
+1. **D3MFG.js**: 32 → 0 literales ✅ (commit 72d5c71)
+2. **D4ContainmentRootCause.js**: 68 → 0 literales ✅ (commit 72d5c71)
+3. **D5D6D7Countermeasures.js**: 2 → 0 literales ✅ (commit 72d5c71)
+4. **D5CorrectiveActions.js**: 89 → 0 literales ✅ (commit dd973b8)
+   - Todos los hover effects convertidos a opacity transitions
+5. **TeamAssignmentTab.js**: 257 → 167 literales (parcial, commit dd973b8)
+
+### PENDIENTE para continuar:
+
+**1. TeamAssignmentTab.js** (167 literales restantes):
+   - Archivo grande, continuar de corrido hasta 0
+   - Bordes, colores de texto, backgrounds ya iniciados
+
+**2. HistoryTab.js** (35 literales):
+   - Mapa de colores por tipo de acción
+   - Chips #7c3aed/#f3e8ff y #059669/#d1fae5
+   - **IMPORTANTE**: Patrón `t.border || '#e5e7eb'` que anula el token cuando tema no lo define
+
+**3. GanttChart.js** (líneas 1395-1398 solamente):
+   - Mapa de prioridad para coincidir con PriorityBar
+
+**Archivos excluidos:**
+- EightDPDF.js - PDF impreso, colores fijos correctos
+- GanttChart.js (excepto mapa prioridad 1395-1398)
 
 ---
 
