@@ -545,12 +545,9 @@ app.get('/8d/dashboard-data', async (req, res) => {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const andClause = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '';
+    const hasDateFilter = start_date || end_date;
 
-    // For simple queries without alias, replace r. with empty
-    const simpleWhere = whereClause.replace(/r\./g, '');
-    const simpleAnd = andClause.replace(/r\./g, '');
-
-    // Basic counts (use simple conditions for non-joined queries)
+    // Basic counts
     const totalResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause}`, params);
     const activeResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(status) != 'closed'`, params);
     const closedResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(status) = 'closed'`, params);
@@ -621,14 +618,14 @@ app.get('/8d/dashboard-data', async (req, res) => {
       ORDER BY avg_days DESC NULLS LAST
     `, params);
 
-    // Monthly trend (last 12 months, or filtered range)
+    // Monthly trend (use date filter if provided, otherwise last 12 months)
     const monthlyTrendResult = await query(`
       SELECT
         TO_CHAR(r.created_at, 'YYYY-MM') as month,
         COUNT(*) as count,
         SUM(r.estimated_cost) as total_cost
       FROM eightd_reports r
-      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} r.created_at >= NOW() - INTERVAL '12 months'
+      ${hasDateFilter ? whereClause : `${whereClause} ${conditions.length ? 'AND' : 'WHERE'} r.created_at >= NOW() - INTERVAL '12 months'`}
       GROUP BY TO_CHAR(r.created_at, 'YYYY-MM')
       ORDER BY month
     `, params);

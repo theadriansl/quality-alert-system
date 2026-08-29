@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
@@ -34,6 +34,8 @@ const Dashboard = () => {
   const [allReports, setAllReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const hasDataRef = useRef(false);
 
   // Filter state
   const [preset, setPreset]         = useState(language === 'es' ? 'Mes actual' : 'This Month');
@@ -72,8 +74,9 @@ const Dashboard = () => {
 
   const loadData = useCallback(async () => {
     try {
+      setError(null);
       // Use isRefreshing for subsequent loads to keep old data visible
-      if (dashboardData) {
+      if (hasDataRef.current) {
         setIsRefreshing(true);
       } else {
         setIsLoading(true);
@@ -91,17 +94,20 @@ const Dashboard = () => {
       if (result.success && result.data) {
         setDashboardData(result.data);
         setAllReports(result.data.recent8Ds || []);
+        hasDataRef.current = true;
+      } else {
+        setError(result.message || 'Error al cargar datos');
       }
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
+    } catch (err) {
+      console.error('Error loading dashboard:', err);
+      setError(err.message || 'Error de conexión');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [dateFrom, dateTo, deptId, clientId, severityId, dashboardData]);
+  }, [dateFrom, dateTo, deptId, clientId, severityId]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadData(); }, [dateFrom, dateTo, deptId, clientId, severityId]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   // Load catalogs once
   useEffect(() => {
@@ -286,6 +292,35 @@ const Dashboard = () => {
     </div>
   );
 
+  const renderError = () => (
+    <div style={{
+      backgroundColor: t.bgCard,
+      border: `1px solid ${t.errorBorder || t.border}`,
+      borderRadius: 8,
+      padding: '40px 24px',
+      textAlign: 'center'
+    }}>
+      <div style={{ fontSize: 14, color: t.error || '#ef4444', marginBottom: 8 }}>
+        {language === 'es' ? 'Error al cargar el dashboard' : 'Error loading dashboard'}
+      </div>
+      <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12 }}>{error}</div>
+      <button
+        onClick={loadData}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: t.accent,
+          fontSize: 13,
+          fontWeight: 500,
+          cursor: 'pointer',
+          padding: 0
+        }}
+      >
+        {language === 'es' ? 'Reintentar' : 'Retry'}
+      </button>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg }}>
@@ -353,7 +388,9 @@ const Dashboard = () => {
       {/* Main */}
       <main style={{ maxWidth: '1800px', margin: '0 auto', padding: '20px 24px 40px' }}>
         {renderFilters()}
-        {noResults ? (
+        {error && !dashboardData ? (
+          renderError()
+        ) : noResults ? (
           renderNoResults()
         ) : dashboardData ? (
           <div style={{
