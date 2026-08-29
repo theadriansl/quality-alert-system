@@ -1157,17 +1157,17 @@ Por favor no responda a este correo.`;
       backgroundColor: themeColors.bg,
       borderRadius: '8px',
       marginBottom: '24px',
-      border: '2px solid #ff6b35'
+      border: `2px solid ${themeColors.accent}`
     },
     header: {
       marginBottom: '24px',
       paddingBottom: '16px',
-      borderBottom: '2px solid #ff6b35'
+      borderBottom: `2px solid ${themeColors.accent}`
     },
     title: {
       fontSize: '24px',
       fontWeight: 'bold',
-      color: '#ff6b35',
+      color: themeColors.accent,
       marginBottom: '8px',
       display: 'flex',
       alignItems: 'center',
@@ -1282,17 +1282,17 @@ Por favor no responda a este correo.`;
       marginRight: '8px'
     },
     blockedOverlay: {
-      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+      backgroundColor: themeColors.isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)',
       padding: '20px',
       borderRadius: '8px',
-      border: '2px solid #ef4444',
+      border: `2px solid ${themeColors.errorFg}`,
       textAlign: 'center',
       marginBottom: '24px'
     },
     blockedTitle: {
       fontSize: '18px',
       fontWeight: 'bold',
-      color: '#ef4444',
+      color: themeColors.errorFg,
       marginBottom: '8px'
     },
     blockedMessage: {
@@ -1310,8 +1310,8 @@ Por favor no responda a este correo.`;
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: themeColors.warningBg,
+          border: `1px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -1320,7 +1320,7 @@ Por favor no responda a este correo.`;
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: themeColors.warningFg, fontWeight: '500' }}>
             Este 8D está cerrado y es de solo lectura
           </span>
         </div>
@@ -1359,7 +1359,7 @@ Por favor no responda a este correo.`;
                 <span style={{
                   fontSize: '13px',
                   fontWeight: '600',
-                  color: data.d3MfgStatus === 'approved' ? '#16a34a' : data.d3MfgStatus === 'under_review' ? '#C77700' : themeColors.textDim
+                  color: data.d3MfgStatus === 'approved' ? themeColors.successFg : data.d3MfgStatus === 'under_review' ? themeColors.warningFg : themeColors.textDim
                 }}>
                   {data.d3MfgStatus === 'approved' ? ' Aprobado' :
                    data.d3MfgStatus === 'under_review' ? ' En Revisión' :
@@ -1384,7 +1384,7 @@ Por favor no responda a este correo.`;
               {currentUserInProcess && (
                 <div>
                   <span style={{ fontSize: '13px', color: themeColors.textDim, fontWeight: '500' }}>Usuario Actual: </span>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#7c3aed' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: themeColors.primary }}>
                      {currentUserInProcess}
                   </span>
                 </div>
@@ -1408,18 +1408,13 @@ Por favor no responda a este correo.`;
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#2E7D32';
                 e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#2E7D32';
                 e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
               }}
               title="Notificar a la lista de distribución"
             >
@@ -1492,7 +1487,7 @@ Por favor no responda a este correo.`;
 
           {/* Implementation Date */}
           <div>
-            <label style={styles.label}>{t('implementationDate')} <span style={{ color: '#ef4444' }}>*</span></label>
+            <label style={styles.label}>{t('implementationDate')} <span style={{ color: themeColors.errorFg }}>*</span></label>
             <input
               type="date"
               style={styles.input}
@@ -1649,7 +1644,7 @@ Por favor no responda a este correo.`;
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#ef4444',
+                              color: themeColors.errorFg,
                               cursor: 'pointer',
                               padding: '0 4px',
                               fontSize: '14px'
@@ -1793,7 +1788,7 @@ Por favor no responda a este correo.`;
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#ef4444',
+                              color: themeColors.errorFg,
                               cursor: 'pointer',
                               padding: '0 4px',
                               fontSize: '14px'
@@ -1926,7 +1921,7 @@ Por favor no responda a este correo.`;
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#ef4444',
+                              color: themeColors.errorFg,
                               cursor: 'pointer',
                               padding: '0 4px',
                               fontSize: '14px'
@@ -2059,7 +2054,7 @@ Por favor no responda a este correo.`;
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#ef4444',
+                              color: themeColors.errorFg,
                               cursor: 'pointer',
                               padding: '0 4px',
                               fontSize: '14px'
@@ -2239,7 +2234,7 @@ Por favor no responda a este correo.`;
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#ef4444',
+                          color: themeColors.errorFg,
                           cursor: 'pointer',
                           padding: '0 4px',
                           fontSize: '14px'
@@ -2355,7 +2350,7 @@ Por favor no responda a este correo.`;
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#ef4444',
+                          color: themeColors.errorFg,
                           cursor: 'pointer',
                           padding: '0 4px',
                           fontSize: '14px'
@@ -2471,7 +2466,7 @@ Por favor no responda a este correo.`;
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#ef4444',
+                          color: themeColors.errorFg,
                           cursor: 'pointer',
                           padding: '0 4px',
                           fontSize: '14px'
@@ -2587,7 +2582,7 @@ Por favor no responda a este correo.`;
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#ef4444',
+                          color: themeColors.errorFg,
                           cursor: 'pointer',
                           padding: '0 4px',
                           fontSize: '14px'
@@ -2671,10 +2666,10 @@ Por favor no responda a este correo.`;
             <div style={{
               padding: '12px 24px',
               backgroundColor: themeColors.bgPanel,
-              border: '2px solid #22c55e',
+              border: `2px solid ${themeColors.successBorder}`,
               borderRadius: '6px',
               fontSize: '14px',
-              color: '#166534',
+              color: themeColors.successFg,
               textAlign: 'center',
               fontWeight: 'bold',
               flex: 1
@@ -2686,14 +2681,12 @@ Por favor no responda a este correo.`;
                 onClick={() => setShowRevertModal(true)}
                 style={{
                   ...styles.button,
-                  backgroundColor: '#dc2626',
+                  backgroundColor: themeColors.errorFg,
                   padding: '12px 24px',
                   fontSize: '14px',
                   fontWeight: 'bold',
                   whiteSpace: 'nowrap'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
               >
                 {language === 'es' ? 'Regresar a Borrador' : 'Revert to Draft'}
               </button>
@@ -2711,8 +2704,6 @@ Por favor no responda a este correo.`;
                 fontSize: '16px',
                 fontWeight: 'bold'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#B00020'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
             >
                {language === 'es' ? 'Rechazar' : 'Reject'}
             </button>
@@ -2727,8 +2718,6 @@ Por favor no responda a este correo.`;
                 fontSize: '16px',
                 fontWeight: 'bold'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#2E7D32'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2E7D32'}
             >
                {language === 'es' ? 'Aprobar' : 'Approve'}
             </button>
@@ -2769,16 +2758,6 @@ Por favor no responda a este correo.`;
                 backgroundColor: themeColors.success,
                 opacity: isSaving || isSending ? 0.5 : 1,
                 cursor: isSaving || isSending ? 'not-allowed' : 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                if (!isSaving && !isSending) {
-                  e.target.style.backgroundColor = '#2E7D32';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSaving && !isSending) {
-                  e.target.style.backgroundColor = '#2E7D32';
-                }
               }}
             >
               {isSending ? t('sending') : t('sendToApproval')}
@@ -2961,7 +2940,7 @@ Por favor no responda a este correo.`;
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: themeColors.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -2972,8 +2951,7 @@ Por favor no responda a este correo.`;
             borderRadius: '12px',
             padding: '24px',
             width: '90%',
-            maxWidth: '500px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+            maxWidth: '500px'
           }}>
             <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 'bold' }}>
                {t('saveList')}

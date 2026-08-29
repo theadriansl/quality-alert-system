@@ -875,8 +875,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       marginBottom: '8px'
     },
     disciplineHeader: {
-      backgroundColor: '#0F3B5F',
-      color: 'white',
+      backgroundColor: themeColors.primary,
+      color: themeColors.bgCard,
       padding: '12px 20px',
       borderRadius: '8px',
       marginBottom: '20px',
@@ -1015,12 +1015,12 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       pointerEvents: 'none'
     },
     blockedMessage: {
-      backgroundColor: '#fef2f2',
-      border: '1px solid #fecaca',
+      backgroundColor: themeColors.errorBg,
+      border: `1px solid ${themeColors.errorBorder}`,
       borderRadius: '8px',
       padding: '16px',
       marginBottom: '24px',
-      color: '#B00020',
+      color: themeColors.errorFg,
       fontSize: '14px',
       fontWeight: '500'
     },
@@ -1043,15 +1043,15 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
   const getTimerColors = () => {
     switch (timeStatus) {
       case 'ok':
-        return { bg: '#d1fae5', border: '#2E7D32', text: '#065f46', icon: '' };
+        return { bg: themeColors.successBg, border: themeColors.successBorder, text: themeColors.successFg, icon: '' };
       case 'warning':
-        return { bg: '#fef3c7', border: '#C77700', text: '#92400e', icon: '' };
+        return { bg: themeColors.warningBg, border: themeColors.warningBorder, text: themeColors.warningFg, icon: '' };
       case 'critical':
-        return { bg: '#fee2e2', border: '#ef4444', text: '#991b1b', icon: '' };
+        return { bg: themeColors.errorBg, border: themeColors.errorBorder, text: themeColors.errorFg, icon: '' };
       case 'overdue':
-        return { bg: '#1f2937', border: '#B00020', text: '#ffffff', icon: '' };
+        return { bg: themeColors.isDark ? themeColors.bgPanel : themeColors.textDim, border: themeColors.errorFg, text: themeColors.bgCard, icon: '' };
       default:
-        return { bg: '#F4F6F8', border: '#9ca3af', text: '#374151', icon: '' };
+        return { bg: themeColors.bgPanel, border: themeColors.border, text: themeColors.textMuted, icon: '' };
     }
   };
 
@@ -1062,8 +1062,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: themeColors.warningBg,
+          border: `1px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -1072,7 +1072,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: themeColors.warningFg, fontWeight: '500' }}>
             Este 8D está cerrado y es de solo lectura
           </span>
         </div>
@@ -1114,8 +1114,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
 
           return (
             <div style={{
-              backgroundColor: wasOnTime ? '#d1fae5' : '#fef3c7',
-              border: `3px solid ${wasOnTime ? '#2E7D32' : '#C77700'}`,
+              backgroundColor: wasOnTime ? themeColors.successBg : themeColors.warningBg,
+              border: `3px solid ${wasOnTime ? themeColors.successBorder : themeColors.warningBorder}`,
               borderRadius: '12px',
               padding: '20px 24px',
               marginBottom: '24px',
@@ -1127,7 +1127,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 <div style={{
                   fontSize: '14px',
                   fontWeight: '600',
-                  color: wasOnTime ? '#065f46' : '#92400e',
+                  color: wasOnTime ? themeColors.successFg : themeColors.warningFg,
                   marginBottom: '8px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
@@ -1136,7 +1136,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 </div>
                 <div style={{
                   fontSize: '12px',
-                  color: wasOnTime ? '#065f46' : '#92400e',
+                  color: wasOnTime ? themeColors.successFg : themeColors.warningFg,
                   opacity: 0.8
                 }}>
                   {t.slaTarget}: {slaHours} {t.hours}
@@ -1151,7 +1151,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 <div style={{
                   fontSize: '24px',
                   fontWeight: 'bold',
-                  color: wasOnTime ? '#065f46' : '#92400e',
+                  color: wasOnTime ? themeColors.successFg : themeColors.warningFg,
                   marginBottom: '4px'
                 }}>
                   {wasOnTime ? ' CERRADO A TIEMPO' : ' CERRADO FUERA DE TIEMPO'}
@@ -1159,7 +1159,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 <div style={{
                   fontSize: '16px',
                   fontWeight: '600',
-                  color: wasOnTime ? '#2E7D32' : '#C77700',
+                  color: wasOnTime ? themeColors.successBorder : themeColors.warningBorder,
                   fontFamily: 'monospace'
                 }}>
                   {wasOnTime
@@ -1290,14 +1290,14 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
         <div style={{
           marginTop: '16px',
           padding: '20px',
-          backgroundColor: '#fef2f2',
-          border: '2px solid #ef4444',
+          backgroundColor: themeColors.errorBg,
+          border: `2px solid ${themeColors.errorBorder}`,
           borderRadius: '8px'
         }}>
           <h4 style={{
             fontSize: '16px',
             fontWeight: 'bold',
-            color: '#B00020',
+            color: themeColors.errorFg,
             marginBottom: '16px',
             marginTop: 0
           }}>
@@ -1307,7 +1307,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
           {/* Historial de atrasos anteriores */}
           {delayHistory.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
-              <h5 style={{ fontSize: '13px', fontWeight: 'bold', color: '#7f1d1d', marginBottom: '10px' }}>
+              <h5 style={{ fontSize: '13px', fontWeight: 'bold', color: themeColors.errorFg, marginBottom: '10px' }}>
                  Historial de Atrasos:
               </h5>
               {delayHistory.map((entry, index) => {
@@ -1320,16 +1320,16 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     style={{
                       padding: '12px',
                       marginBottom: '8px',
-                      backgroundColor: isLastEntry && isExpired ? '#fff7ed' : '#fff',
-                      border: `1px solid ${isLastEntry && isExpired ? '#fb923c' : '#fca5a5'}`,
+                      backgroundColor: isLastEntry && isExpired ? themeColors.warningBg : themeColors.bgCard,
+                      border: `1px solid ${isLastEntry && isExpired ? themeColors.warningBorder : themeColors.errorBorder}`,
                       borderRadius: '6px'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#7f1d1d' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: themeColors.errorFg }}>
                         Atraso #{index + 1}
                       </span>
-                      <span style={{ fontSize: '11px', color: '#666' }}>
+                      <span style={{ fontSize: '11px', color: themeColors.textMuted }}>
                         {new Date(entry.createdAt).toLocaleDateString('es-MX', {
                           year: 'numeric',
                           month: 'short',
@@ -1340,16 +1340,16 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                       </span>
                     </div>
                     {entry.userName && (
-                      <div style={{ fontSize: '11px', color: '#666', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '11px', color: themeColors.textMuted, marginBottom: '6px' }}>
                          <span style={{ fontWeight: '600' }}>{entry.userName}</span>
-                        {entry.userEmail && <span style={{ color: '#999' }}> ({entry.userEmail})</span>}
+                        {entry.userEmail && <span style={{ color: themeColors.textDim }}> ({entry.userEmail})</span>}
                       </div>
                     )}
-                    <p style={{ fontSize: '13px', color: '#333', margin: '0 0 8px 0' }}>
+                    <p style={{ fontSize: '13px', color: themeColors.text, margin: '0 0 8px 0' }}>
                       {entry.reason}
                     </p>
                     <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
-                      <span style={{ color: isExpired ? '#ea580c' : '#2E7D32' }}>
+                      <span style={{ color: isExpired ? themeColors.warningFg : themeColors.successFg }}>
                          Fecha compromiso: {new Date(entry.commitmentDate).toLocaleDateString('es-MX')}
                         {isExpired && isLastEntry && '  VENCIDA'}
                       </span>
@@ -1368,11 +1368,11 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
             return canAddNew ? (
               <div style={{
                 padding: '16px',
-                backgroundColor: '#fff',
-                border: '2px dashed #fca5a5',
+                backgroundColor: themeColors.bgCard,
+                border: `2px dashed ${themeColors.errorBorder}`,
                 borderRadius: '6px'
               }}>
-                <h5 style={{ fontSize: '13px', fontWeight: 'bold', color: '#B00020', marginTop: 0, marginBottom: '12px' }}>
+                <h5 style={{ fontSize: '13px', fontWeight: 'bold', color: themeColors.errorFg, marginTop: 0, marginBottom: '12px' }}>
                   {delayHistory.length === 0 ? ' Nueva Razón de Atraso' : ' Actualizar Razón de Atraso (Fecha compromiso vencida)'}
                 </h5>
 
@@ -1381,10 +1381,10 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     display: 'block',
                     fontSize: '12px',
                     fontWeight: 'bold',
-                    color: '#7f1d1d',
+                    color: themeColors.errorFg,
                     marginBottom: '6px'
                   }}>
-                    Razón del Atraso <span style={{ color: '#ef4444' }}>*</span>
+                    Razón del Atraso <span style={{ color: themeColors.errorFg }}>*</span>
                   </label>
                   <textarea
                     value={currentDelayReason}
@@ -1395,7 +1395,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                       minHeight: '70px',
                       padding: '10px',
                       fontSize: '13px',
-                      border: '1px solid #fca5a5',
+                      border: `1px solid ${themeColors.errorBorder}`,
                       borderRadius: '6px',
                       resize: 'vertical',
                       fontFamily: 'inherit'
@@ -1408,10 +1408,10 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     display: 'block',
                     fontSize: '12px',
                     fontWeight: 'bold',
-                    color: '#7f1d1d',
+                    color: themeColors.errorFg,
                     marginBottom: '6px'
                   }}>
-                     Fecha Compromiso <span style={{ color: '#ef4444' }}>*</span>
+                     Fecha Compromiso <span style={{ color: themeColors.errorFg }}>*</span>
                   </label>
                   <input
                     type="date"
@@ -1421,12 +1421,12 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     style={{
                       padding: '8px 12px',
                       fontSize: '13px',
-                      border: '1px solid #fca5a5',
+                      border: `1px solid ${themeColors.errorBorder}`,
                       borderRadius: '6px',
                       fontFamily: 'inherit'
                     }}
                   />
-                  <p style={{ fontSize: '11px', color: '#7f1d1d', marginTop: '4px', marginBottom: 0 }}>
+                  <p style={{ fontSize: '11px', color: themeColors.errorFg, marginTop: '4px', marginBottom: 0 }}>
                     * Fecha en la que se compromete a resolver el atraso
                   </p>
                 </div>
@@ -1474,8 +1474,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                   disabled={isSaving}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: '#B00020',
-                    color: 'white',
+                    backgroundColor: themeColors.errorFg,
+                    color: themeColors.bgCard,
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '14px',
@@ -1485,8 +1485,6 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     transition: 'all 0.2s',
                     width: '100%'
                   }}
-                  onMouseEnter={(e) => !isSaving && (e.target.style.backgroundColor = '#B00020')}
-                  onMouseLeave={(e) => !isSaving && (e.target.style.backgroundColor = '#B00020')}
                 >
                   {isSaving ? ' Guardando...' : ' Guardar Razón de Atraso'}
                 </button>
@@ -1494,12 +1492,12 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
             ) : (
               <div style={{
                 padding: '12px',
-                backgroundColor: '#d1fae5',
-                border: '1px solid #34d399',
+                backgroundColor: themeColors.successBg,
+                border: `1px solid ${themeColors.successBorder}`,
                 borderRadius: '6px',
                 textAlign: 'center'
               }}>
-                <p style={{ fontSize: '13px', color: '#065f46', margin: 0 }}>
+                <p style={{ fontSize: '13px', color: themeColors.successFg, margin: 0 }}>
                    Esperando fecha compromiso ({new Date(delayHistory[delayHistory.length - 1].commitmentDate).toLocaleDateString('es-MX')})
                 </p>
               </div>
@@ -1546,7 +1544,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
               </thead>
               <tbody>
                 {formData.d4_4mEvaluation.map((item, index) => (
-                  <tr key={item.id} style={{borderBottom: '1px solid #E6EAEE'}}>
+                  <tr key={item.id} style={{borderBottom: `1px solid ${themeColors.border}`}}>
                     <td style={styles.tableCell}>
                       <select
                         style={{...styles.select, padding: '6px', fontSize: '12px'}}
@@ -1673,7 +1671,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                                   href={file.fileUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  style={{ color: '#0072CE', textDecoration: 'underline', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                  style={{ color: themeColors.primary, textDecoration: 'underline', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                                   title={file.fileName}
                                 >
                                   {file.fileName}
@@ -1681,7 +1679,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                                 {!isFormBlocked && (
                                   <button
                                     onClick={() => remove4MEvidence(item.id, fileIndex)}
-                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px', padding: '0' }}
+                                    style={{ background: 'none', border: 'none', color: themeColors.errorFg, cursor: 'pointer', fontSize: '12px', padding: '0' }}
                                     title={language === 'es' ? 'Eliminar' : 'Delete'}
                                   >
                                     ×
@@ -1711,7 +1709,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
-                              backgroundColor: '#0072CE',
+                              backgroundColor: themeColors.primary,
                               color: 'white',
                               border: 'none',
                               borderRadius: '4px',
@@ -1730,7 +1728,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         style={{
                           padding: '4px 8px',
                           fontSize: '18px',
-                          backgroundColor: '#ef4444',
+                          backgroundColor: themeColors.error,
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -1752,7 +1750,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
               onClick={add4MEvaluation}
               style={{
                 padding: '10px 20px',
-                backgroundColor: '#2E7D32',
+                backgroundColor: themeColors.success,
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -1807,7 +1805,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 </thead>
                 <tbody>
                   {formData.d4_5whysAnalysis.map((item, index) => (
-                    <tr key={item.evaluationId} style={{borderBottom: '1px solid #E6EAEE'}}>
+                    <tr key={item.evaluationId} style={{borderBottom: `1px solid ${themeColors.border}`}}>
                       <td style={{...styles.tableCell, fontWeight: '600', color: themeColors.errorFg}}>
                          {item.factorNG}
                       </td>
@@ -1935,11 +1933,11 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
               <div style={{
                 padding: '12px 24px',
-                backgroundColor: '#dcfce7',
-                border: '2px solid #22c55e',
+                backgroundColor: themeColors.successBg,
+                border: `2px solid ${themeColors.successBorder}`,
                 borderRadius: '6px',
                 fontSize: '14px',
-                color: '#166534',
+                color: themeColors.successFg,
                 textAlign: 'center',
                 fontWeight: 'bold',
                 flex: 1
@@ -1951,14 +1949,12 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                   onClick={() => setShowRevertModal(true)}
                   style={{
                     ...styles.saveButton,
-                    backgroundColor: '#dc2626',
+                    backgroundColor: themeColors.errorFg,
                     padding: '12px 24px',
                     fontSize: '14px',
                     fontWeight: 'bold',
                     whiteSpace: 'nowrap'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
                 >
                   {language === 'es' ? 'Regresar a Borrador' : 'Revert to Draft'}
                 </button>
@@ -1975,19 +1971,9 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 disabled={isFormBlocked || isSaving || isSending}
                 style={{
                   ...styles.saveButton,
-                  backgroundColor: '#6b7280',
+                  backgroundColor: themeColors.textMuted,
                   opacity: isFormBlocked || isSaving || isSending ? 0.5 : 1,
                   cursor: isFormBlocked || isSaving || isSending ? 'not-allowed' : 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isFormBlocked && !isSaving && !isSending) {
-                    e.target.style.backgroundColor = '#4b5563';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isFormBlocked && !isSaving && !isSending) {
-                    e.target.style.backgroundColor = '#6b7280';
-                  }
                 }}
               >
                 {isSaving ? t.saving : t.saveDraft}
@@ -1999,19 +1985,9 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 disabled={isFormBlocked || isSaving || isSending}
                 style={{
                   ...styles.saveButton,
-                  backgroundColor: '#2E7D32',
+                  backgroundColor: themeColors.success,
                   opacity: isFormBlocked || isSaving || isSending ? 0.5 : 1,
                   cursor: isFormBlocked || isSaving || isSending ? 'not-allowed' : 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isFormBlocked && !isSaving && !isSending) {
-                    e.target.style.backgroundColor = '#2E7D32';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isFormBlocked && !isSaving && !isSending) {
-                    e.target.style.backgroundColor = '#2E7D32';
-                  }
                 }}
               >
                 {isSending ? t.sending : t.sendToApproval}
@@ -2024,8 +2000,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       {/* Approval Status Section - D4 (Based on D1-D2-D3 Component) */}
       {data && data.escalationPath && (
         <div id="d4-aprobacion" style={{
-          backgroundColor: '#fffbeb',
-          border: '2px solid #C77700',
+          backgroundColor: themeColors.warningBg,
+          border: `2px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '20px',
           marginBottom: '24px',
@@ -2034,7 +2010,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
           <h3 style={{
             fontSize: '17px',
             fontWeight: 'bold',
-            color: '#92400e',
+            color: themeColors.warningFg,
             marginTop: 0,
             marginBottom: '16px',
             display: 'flex',

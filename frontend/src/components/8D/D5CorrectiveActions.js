@@ -1150,7 +1150,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
     },
     header: {
       marginBottom: '24px',
-      borderBottom: '2px solid #0072CE',
+      borderBottom: `2px solid ${themeColors.primary}`,
       paddingBottom: '16px'
     },
     title: {
@@ -1168,7 +1168,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       padding: '24px',
       borderRadius: '8px',
       marginBottom: '24px',
-      border: '1px solid #E6EAEE'
+      border: `1px solid ${themeColors.border}`
     },
     tableHeader: {
       padding: '12px 8px',
@@ -1176,13 +1176,13 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       fontWeight: '600',
       fontSize: '13px',
       color: themeColors.text,
-      borderBottom: '2px solid #d1d5db',
+      borderBottom: `2px solid ${themeColors.border}`,
       backgroundColor: themeColors.bg
     },
     tableCell: {
       padding: '12px 8px',
       verticalAlign: 'top',
-      borderBottom: '1px solid #E6EAEE'
+      borderBottom: `1px solid ${themeColors.border}`
     },
     input: {
       width: '100%',
@@ -1237,8 +1237,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: themeColors.warningBg,
+          border: `1px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -1247,7 +1247,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: themeColors.warningFg, fontWeight: '500' }}>
             Este 8D está cerrado y es de solo lectura
           </span>
         </div>
@@ -1262,8 +1262,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       {/* Notify Responsibles Button - Prominent like D3-MFG */}
       {getResponsiblesFromPlans().length > 0 && (
         <div style={{
-          backgroundColor: '#dbeafe',
-          border: '2px solid #0072CE',
+          backgroundColor: themeColors.infoBg,
+          border: `2px solid ${themeColors.primary}`,
           borderRadius: '8px',
           padding: '16px',
           marginBottom: '24px',
@@ -1273,10 +1273,10 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           gap: '16px'
         }}>
           <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0F3B5F', marginBottom: '4px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: themeColors.text, marginBottom: '4px' }}>
                Notificar a Responsables de Actividades
             </h3>
-            <div style={{ fontSize: '13px', color: '#0F3B5F' }}>
+            <div style={{ fontSize: '13px', color: themeColors.text }}>
               {getResponsiblesFromPlans().length} responsable(s) asignado(s): {getResponsiblesFromPlans().map(r => r.name).join(', ')}
             </div>
           </div>
@@ -1289,7 +1289,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               borderRadius: '8px',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: '#2563eb',
+              backgroundColor: themeColors.primary,
               color: 'white',
               display: 'flex',
               alignItems: 'center',
@@ -1308,8 +1308,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       {/* Approval Status Bar */}
       {data && data.escalationPath && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '2px solid #C77700',
+          backgroundColor: themeColors.warningBg,
+          border: `2px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '16px',
           marginBottom: '24px',
@@ -1319,16 +1319,16 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           gap: '16px'
         }}>
           <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: themeColors.warningFg, marginBottom: '4px' }}>
                {t.approvalStatus}
             </h3>
             <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
               <div>
-                <span style={{ fontSize: '13px', color: '#78350f', fontWeight: '500' }}>{t.statusLabel} </span>
+                <span style={{ fontSize: '13px', color: themeColors.warningFg, fontWeight: '500' }}>{t.statusLabel} </span>
                 <span style={{
                   fontSize: '13px',
                   fontWeight: '600',
-                  color: data.d5Status === 'approved' ? '#16a34a' : data.d5Status === 'under_review' ? '#C77700' : '#6b7280'
+                  color: data.d5Status === 'approved' ? themeColors.successFg : data.d5Status === 'under_review' ? themeColors.warningFg : themeColors.textMuted
                 }}>
                   {data.d5Status === 'approved' ? t.statusApproved :
                    data.d5Status === 'under_review' ? t.statusUnderReview :
@@ -1336,8 +1336,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                 </span>
               </div>
               <div>
-                <span style={{ fontSize: '13px', color: '#78350f', fontWeight: '500' }}>{t.stepLabel} </span>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: '#92400e' }}>
+                <span style={{ fontSize: '13px', color: themeColors.warningFg, fontWeight: '500' }}>{t.stepLabel} </span>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: themeColors.warningFg }}>
                   {(() => {
                     const effectiveStep = (data.d5Status === 'under_review' && data.d5CurrentApprovalStep === 0)
                       ? 1
@@ -1351,8 +1351,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               </div>
               {currentUserInProcess && (
                 <div>
-                  <span style={{ fontSize: '13px', color: '#78350f', fontWeight: '500' }}>{t.currentUserLabel} </span>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#7c3aed' }}>
+                  <span style={{ fontSize: '13px', color: themeColors.warningFg, fontWeight: '500' }}>{t.currentUserLabel} </span>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: themeColors.primary }}>
                      {currentUserInProcess}
                   </span>
                 </div>
@@ -1372,8 +1372,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
 
             {/* Summary Section */}
           <div style={{
-            backgroundColor: '#eff6ff',
-            border: '2px solid #0072CE',
+            backgroundColor: themeColors.infoBg,
+            border: `2px solid ${themeColors.primary}`,
             borderRadius: '8px',
             padding: '16px',
             marginBottom: '24px',
@@ -1385,23 +1385,23 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           }}>
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
               <div>
-                <div style={{ fontSize: '13px', color: '#0F3B5F', fontWeight: '500', marginBottom: '4px' }}>
+                <div style={{ fontSize: '13px', color: themeColors.text, fontWeight: '500', marginBottom: '4px' }}>
                   {t.totalRootCauses}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#0F3B5F' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: themeColors.text }}>
                   {summaryStats.totalRootCauses}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '13px', color: '#0F3B5F', fontWeight: '500', marginBottom: '4px' }}>
+                <div style={{ fontSize: '13px', color: themeColors.text, fontWeight: '500', marginBottom: '4px' }}>
                   {t.totalPlans}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#0F3B5F' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: themeColors.text }}>
                   {summaryStats.totalPlans}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '13px', color: '#0F3B5F', fontWeight: '500', marginBottom: '4px' }}>
+                <div style={{ fontSize: '13px', color: themeColors.text, fontWeight: '500', marginBottom: '4px' }}>
                   {t.completedPlans}
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: summaryStats.completedPlans === summaryStats.totalPlans ? '#16a34a' : '#C77700' }}>
@@ -1416,7 +1416,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   padding: '8px 16px',
                   fontSize: '13px',
                   fontWeight: '500',
-                  backgroundColor: '#0072CE',
+                  backgroundColor: themeColors.primary,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1434,7 +1434,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   padding: '8px 16px',
                   fontSize: '13px',
                   fontWeight: '500',
-                  backgroundColor: '#6b7280',
+                  backgroundColor: themeColors.textMuted,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1466,7 +1466,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   {action.id.startsWith('auto-') && <span style={{ fontSize: '20px' }}></span>}
-                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#B00020', margin: 0 }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: themeColors.errorFg, margin: 0 }}>
                     {action.linkedFactorNG}
                   </h4>
                   {!action.id.startsWith('auto-') && (
@@ -1476,7 +1476,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                         marginLeft: 'auto',
                         padding: '4px 12px',
                         fontSize: '14px',
-                        backgroundColor: '#ef4444',
+                        backgroundColor: themeColors.error,
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -1558,8 +1558,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                           padding: '4px 8px',
                           fontSize: '12px',
                           fontWeight: '500',
-                          backgroundColor: '#dcfce7',
-                          color: '#16a34a',
+                          backgroundColor: themeColors.successBg,
+                          color: themeColors.successFg,
                           borderRadius: '4px'
                         }}>
                            Completo
@@ -1569,8 +1569,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                           padding: '4px 8px',
                           fontSize: '12px',
                           fontWeight: '500',
-                          backgroundColor: '#fef3c7',
-                          color: '#C77700',
+                          backgroundColor: themeColors.warningBg,
+                          color: themeColors.warningFg,
                           borderRadius: '4px'
                         }}>
                            Incompleto
@@ -1583,8 +1583,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                           padding: '4px 8px',
                           fontSize: '12px',
                           fontWeight: '500',
-                          backgroundColor: '#dbeafe',
-                          color: '#0F3B5F',
+                          backgroundColor: themeColors.infoBg,
+                          color: themeColors.text,
                           borderRadius: '4px'
                         }}>
                            {plan.evidenceFiles.length}
@@ -1624,7 +1624,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                               style={{
                                 padding: '6px 12px',
                                 fontSize: '13px',
-                                backgroundColor: '#ef4444',
+                                backgroundColor: themeColors.error,
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
@@ -1652,7 +1652,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                       </thead>
                       <tbody>
                         {plan.activities && plan.activities.map((row, rowIndex) => (
-                          <tr key={rowIndex} style={{ borderBottom: '1px solid #E6EAEE' }}>
+                          <tr key={rowIndex} style={{ borderBottom: `1px solid ${themeColors.border}` }}>
                             {/* Task/Activity */}
                             <td style={{ ...styles.tableCell, fontWeight: '600', color: themeColors.text, backgroundColor: themeColors.bg }}>
                               {row.activity}
@@ -1720,7 +1720,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                                 if (isSent) {
                                   return (
                                     <span style={{
-                                      color: '#16a34a',
+                                      color: themeColors.successFg,
                                       fontSize: '12px',
                                       fontWeight: '600'
                                     }}>
@@ -1765,7 +1765,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                     padding: '12px',
                     backgroundColor: themeColors.bg,
                     borderRadius: '4px',
-                    border: '1px solid #E6EAEE'
+                    border: `1px solid ${themeColors.border}`
                   }}>
                     <h5 style={{
                       fontSize: '14px',
@@ -1790,7 +1790,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                               backgroundColor: themeColors.bgCard,
                               borderRadius: '4px',
                               marginBottom: '6px',
-                              border: '1px solid #E6EAEE'
+                              border: `1px solid ${themeColors.border}`
                             }}
                           >
                             <a
@@ -1799,7 +1799,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                               rel="noopener noreferrer"
                               style={{
                                 flex: 1,
-                                color: '#0072CE',
+                                color: themeColors.primary,
                                 textDecoration: 'none',
                                 fontSize: '13px',
                                 fontWeight: '500'
@@ -1819,7 +1819,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                                 onClick={() => removeEvidenceFile(action.id, plan.planId, fileIndex)}
                                 style={{
                                   padding: '4px 8px',
-                                  backgroundColor: '#ef4444',
+                                  backgroundColor: themeColors.error,
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '4px',
@@ -1863,7 +1863,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                           style={{
                             display: 'inline-block',
                             padding: '8px 16px',
-                            backgroundColor: '#2E7D32',
+                            backgroundColor: themeColors.success,
                             color: 'white',
                             borderRadius: '6px',
                             cursor: 'pointer',
@@ -1894,7 +1894,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   padding: '8px 16px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  backgroundColor: '#0072CE',
+                  backgroundColor: themeColors.primary,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1914,7 +1914,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               onClick={addManualAction}
               style={{
                 ...styles.button,
-                backgroundColor: '#2E7D32',
+                backgroundColor: themeColors.success,
                 color: 'white'
               }}
               disabled={isFormBlocked}
@@ -1926,7 +1926,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               onClick={handleSaveDraft}
               style={{
                 ...styles.button,
-                backgroundColor: '#6b7280',
+                backgroundColor: themeColors.textMuted,
                 color: 'white',
                 opacity: isSaving || isFormBlocked ? 0.5 : 1
               }}
@@ -1939,8 +1939,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           {/* Notify Responsibles Button - Bottom of section */}
           {getResponsiblesFromPlans().length > 0 && (
             <div style={{
-              backgroundColor: '#dbeafe',
-              border: '2px solid #0072CE',
+              backgroundColor: themeColors.infoBg,
+              border: `2px solid ${themeColors.primary}`,
               borderRadius: '8px',
               padding: '16px',
               marginTop: '24px',
@@ -1950,10 +1950,10 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               gap: '16px'
             }}>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0F3B5F', marginBottom: '4px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', color: themeColors.text, marginBottom: '4px' }}>
                    Notificar a Responsables de Actividades
                 </h3>
-                <div style={{ fontSize: '13px', color: '#0F3B5F' }}>
+                <div style={{ fontSize: '13px', color: themeColors.text }}>
                   {getResponsiblesFromPlans().length} responsable(s) asignado(s): {getResponsiblesFromPlans().map(r => r.name).join(', ')}
                 </div>
               </div>
@@ -1966,7 +1966,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   borderRadius: '8px',
                   border: 'none',
                   cursor: 'pointer',
-                  backgroundColor: '#2563eb',
+                  backgroundColor: themeColors.primary,
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',
@@ -1983,7 +1983,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           )}
 
           {/* Mark as Complete */}
-          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E6EAEE' }}>
+          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: `1px solid ${themeColors.border}` }}>
             <label style={{ display: 'flex', alignItems: 'center', fontSize: '14px', cursor: 'pointer' }}>
               <input
                 type="checkbox"
@@ -2004,11 +2004,11 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
             <div style={{
               padding: '12px 24px',
-              backgroundColor: '#dcfce7',
-              border: '2px solid #22c55e',
+              backgroundColor: themeColors.successBg,
+              border: `2px solid ${themeColors.successBorder}`,
               borderRadius: '6px',
               fontSize: '14px',
-              color: '#166534',
+              color: themeColors.successFg,
               textAlign: 'center',
               fontWeight: 'bold',
               flex: 1
@@ -2020,7 +2020,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                 onClick={() => setShowRevertModal(true)}
                 style={{
                   ...styles.button,
-                  backgroundColor: '#dc2626',
+                  backgroundColor: themeColors.errorFg,
                   padding: '12px 24px',
                   fontSize: '14px',
                   fontWeight: 'bold',
@@ -2042,7 +2042,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               onClick={handleApprove}
               style={{
                 ...styles.button,
-                backgroundColor: '#2E7D32',
+                backgroundColor: themeColors.success,
                 color: 'white',
                 fontSize: '16px',
                 fontWeight: '600'
@@ -2055,7 +2055,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               onClick={handleReject}
               style={{
                 ...styles.button,
-                backgroundColor: '#ef4444',
+                backgroundColor: themeColors.error,
                 color: 'white',
                 fontSize: '16px',
                 fontWeight: '600'
@@ -2072,7 +2072,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
             onClick={handleSendToApproval}
             style={{
               ...styles.button,
-              backgroundColor: '#2E7D32',
+              backgroundColor: themeColors.success,
               color: 'white',
               opacity: isSending || isFormBlocked ? 0.5 : 1
             }}
@@ -2086,8 +2086,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       {/* Approval Status Section - D5 (Based on D4 Component) */}
       {data && data.escalationPath && (
         <div id="d5-aprobacion" style={{
-          backgroundColor: '#fffbeb',
-          border: '2px solid #C77700',
+          backgroundColor: themeColors.warningBg,
+          border: `2px solid ${themeColors.warningBorder}`,
           borderRadius: '8px',
           padding: '20px',
           marginTop: '32px',
@@ -2097,7 +2097,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
           <h3 style={{
             fontSize: '17px',
             fontWeight: 'bold',
-            color: '#92400e',
+            color: themeColors.warningFg,
             marginTop: 0,
             marginBottom: '16px',
             display: 'flex',
