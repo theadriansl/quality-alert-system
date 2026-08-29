@@ -504,25 +504,67 @@ app.delete('/lessons-learned/:id',
 // ============================================================================
 
 // GET /8d/dashboard-data - Get 8D dashboard statistics (Executive Dashboard)
+// Optional filters: start_date, end_date, deptId, clientId, severityId
 app.get('/8d/dashboard-data', async (req, res) => {
   try {
     const { transformToCamelCase } = require('./utils/caseTransform');
+    const { start_date, end_date, deptId, clientId, severityId } = req.query;
 
-    // Basic counts
-    const totalResult = await query('SELECT COUNT(*) FROM eightd_reports');
-    const activeResult = await query('SELECT COUNT(*) FROM eightd_reports WHERE LOWER(status) != \'closed\'');
-    const closedResult = await query('SELECT COUNT(*) FROM eightd_reports WHERE LOWER(status) = \'closed\'');
-    const highSevResult = await query('SELECT COUNT(*) FROM eightd_reports WHERE severity = \'High\'');
-    const mediumSevResult = await query('SELECT COUNT(*) FROM eightd_reports WHERE severity = \'Medium\'');
-    const lowSevResult = await query('SELECT COUNT(*) FROM eightd_reports WHERE severity = \'Low\'');
-    const costResult = await query('SELECT SUM(estimated_cost) as total FROM eightd_reports');
+    // Build dynamic WHERE clauses
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (start_date) {
+      conditions.push(`r.created_at >= $${paramIndex}::date`);
+      params.push(start_date);
+      paramIndex++;
+    }
+    if (end_date) {
+      conditions.push(`r.created_at <= ($${paramIndex}::date + INTERVAL '1 day')`);
+      params.push(end_date);
+      paramIndex++;
+    }
+    if (deptId) {
+      conditions.push(`r.department_id = $${paramIndex}`);
+      params.push(deptId);
+      paramIndex++;
+    }
+    if (clientId) {
+      // Filter by client via eightd_parts join
+      conditions.push(`EXISTS (SELECT 1 FROM eightd_parts ep WHERE ep.report_id = r.id AND ep.client_id = $${paramIndex})`);
+      params.push(clientId);
+      paramIndex++;
+    }
+    if (severityId) {
+      // severityId is the severity name (High, Medium, Low)
+      conditions.push(`r.severity = $${paramIndex}`);
+      params.push(severityId);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const andClause = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '';
+
+    // For simple queries without alias, replace r. with empty
+    const simpleWhere = whereClause.replace(/r\./g, '');
+    const simpleAnd = andClause.replace(/r\./g, '');
+
+    // Basic counts (use simple conditions for non-joined queries)
+    const totalResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause}`, params);
+    const activeResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(status) != 'closed'`, params);
+    const closedResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(status) = 'closed'`, params);
+    const highSevResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} severity = 'High'`, params);
+    const mediumSevResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} severity = 'Medium'`, params);
+    const lowSevResult = await query(`SELECT COUNT(*) FROM eightd_reports r ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} severity = 'Low'`, params);
+    const costResult = await query(`SELECT SUM(estimated_cost) as total FROM eightd_reports r ${whereClause}`, params);
 
     // Average days to close (for closed reports)
     const avgCloseResult = await query(`
-      SELECT AVG(EXTRACT(DAY FROM d8_closed_at - created_at)) as avg_days
-      FROM eightd_reports
-      WHERE LOWER(status) = 'closed' AND d8_closed_at IS NOT NULL
-    `);
+      SELECT AVG(EXTRACT(DAY FROM d8_closed_at - r.created_at)) as avg_days
+      FROM eightd_reports r
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(status) = 'closed' AND d8_closed_at IS NOT NULL
+    `, params);
 
     // SLA Compliance - Get reports with client SLA data
     // Uses d4_approval_X_at timestamps (same logic as D4 frontend timer)
@@ -537,7 +579,7 @@ app.get('/8d/dashboard-data', async (req, res) => {
         FROM eightd_reports r
         JOIN eightd_parts ep ON ep.report_id = r.id
         JOIN clients c ON ep.client_id = c.id
-        WHERE c.d4_response_time_hours IS NOT NULL
+        WHERE c.d4_response_time_hours IS NOT NULL ${andClause}
         ORDER BY r.id
       )
       SELECT
@@ -549,7 +591,7 @@ app.get('/8d/dashboard-data', async (req, res) => {
           THEN 1
         END) as within_sla
       FROM report_sla
-    `);
+    `, params);
 
     // Cost by Department (prefer department_id FK, fallback to created_by user)
     const costByDeptResult = await query(`
@@ -560,9 +602,10 @@ app.get('/8d/dashboard-data', async (req, res) => {
       FROM eightd_reports r
       LEFT JOIN departments d ON r.department_id = d.id
       LEFT JOIN users u ON r.created_by = u.id
+      ${whereClause}
       GROUP BY COALESCE(d.name, u.department, 'Sin Asignar')
       ORDER BY total_cost DESC NULLS LAST
-    `);
+    `, params);
 
     // Average days open by Department
     const avgDaysByDeptResult = await query(`
@@ -573,47 +616,47 @@ app.get('/8d/dashboard-data', async (req, res) => {
       FROM eightd_reports r
       LEFT JOIN departments d ON r.department_id = d.id
       LEFT JOIN users u ON r.created_by = u.id
-      WHERE LOWER(r.status) != 'closed'
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(r.status) != 'closed'
       GROUP BY COALESCE(d.name, u.department, 'Sin Asignar')
       ORDER BY avg_days DESC NULLS LAST
-    `);
+    `, params);
 
-    // Monthly trend (last 12 months)
+    // Monthly trend (last 12 months, or filtered range)
     const monthlyTrendResult = await query(`
       SELECT
-        TO_CHAR(created_at, 'YYYY-MM') as month,
+        TO_CHAR(r.created_at, 'YYYY-MM') as month,
         COUNT(*) as count,
-        SUM(estimated_cost) as total_cost
-      FROM eightd_reports
-      WHERE created_at >= NOW() - INTERVAL '12 months'
-      GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+        SUM(r.estimated_cost) as total_cost
+      FROM eightd_reports r
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} r.created_at >= NOW() - INTERVAL '12 months'
+      GROUP BY TO_CHAR(r.created_at, 'YYYY-MM')
       ORDER BY month
-    `);
+    `, params);
 
     // Top Root Causes
     const rootCausesResult = await query(`
       SELECT
-        d4_root_cause as root_cause,
+        r.d4_root_cause as root_cause,
         COUNT(*) as count
-      FROM eightd_reports
-      WHERE d4_root_cause IS NOT NULL AND d4_root_cause != ''
-      GROUP BY d4_root_cause
+      FROM eightd_reports r
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} r.d4_root_cause IS NOT NULL AND r.d4_root_cause != ''
+      GROUP BY r.d4_root_cause
       ORDER BY count DESC
       LIMIT 10
-    `);
+    `, params);
 
     // Top Suppliers
     const topSuppliersResult = await query(`
       SELECT
-        supplier_name,
+        r.supplier_name,
         COUNT(*) as count,
-        SUM(estimated_cost) as total_cost
-      FROM eightd_reports
-      WHERE supplier_name IS NOT NULL
-      GROUP BY supplier_name
+        SUM(r.estimated_cost) as total_cost
+      FROM eightd_reports r
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} r.supplier_name IS NOT NULL
+      GROUP BY r.supplier_name
       ORDER BY count DESC
       LIMIT 10
-    `);
+    `, params);
 
     // All reports with days open and department
     const reportsResult = await query(`
@@ -627,32 +670,34 @@ app.get('/8d/dashboard-data', async (req, res) => {
       FROM eightd_reports r
       LEFT JOIN departments d ON r.department_id = d.id
       LEFT JOIN users u ON r.created_by = u.id
+      ${whereClause}
       ORDER BY r.created_at DESC
-    `);
+    `, params);
 
     // INSIGHTS DATA - Cost by severity
     const costBySeverityResult = await query(`
-      SELECT severity, SUM(estimated_cost) as cost, COUNT(*) as count
-      FROM eightd_reports
-      GROUP BY severity
-    `);
+      SELECT r.severity, SUM(r.estimated_cost) as cost, COUNT(*) as count
+      FROM eightd_reports r
+      ${whereClause}
+      GROUP BY r.severity
+    `, params);
 
     // Throughput: closed reports per month (last 12 months)
     const throughputResult = await query(`
-      SELECT TO_CHAR(d8_closed_at, 'YYYY-MM') as month, COUNT(*) as count
-      FROM eightd_reports
-      WHERE d8_closed_at IS NOT NULL AND d8_closed_at >= NOW() - INTERVAL '12 months'
+      SELECT TO_CHAR(r.d8_closed_at, 'YYYY-MM') as month, COUNT(*) as count
+      FROM eightd_reports r
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} r.d8_closed_at IS NOT NULL AND r.d8_closed_at >= NOW() - INTERVAL '12 months'
       GROUP BY month ORDER BY month
-    `);
+    `, params);
 
     // Reverted: unique base reports that have been sent back to draft (have -R1, -R2, etc.)
     const revertedResult = await query(`
       SELECT
-        COUNT(DISTINCT SPLIT_PART(report_id, '-R', 1)) as families_reverted,
+        COUNT(DISTINCT SPLIT_PART(r.report_id, '-R', 1)) as families_reverted,
         COUNT(*) as total_revisions
-      FROM eightd_reports
-      WHERE report_id ~ '-R[0-9]+$'
-    `);
+      FROM eightd_reports r
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} r.report_id ~ '-R[0-9]+$'
+    `, params);
 
     // Avg progress by department (active reports)
     const avgProgressByDeptResult = await query(`
@@ -663,10 +708,10 @@ app.get('/8d/dashboard-data', async (req, res) => {
       FROM eightd_reports r
       LEFT JOIN departments d ON r.department_id = d.id
       LEFT JOIN users u ON r.created_by = u.id
-      WHERE LOWER(r.status) != 'closed'
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(r.status) != 'closed'
       GROUP BY COALESCE(d.name, u.department, 'Sin Asignar')
       ORDER BY avg_progress DESC NULLS LAST
-    `);
+    `, params);
 
     // Incidents by department (for Pareto)
     const incidentsByDeptResult = await query(`
@@ -676,9 +721,10 @@ app.get('/8d/dashboard-data', async (req, res) => {
       FROM eightd_reports r
       LEFT JOIN departments d ON r.department_id = d.id
       LEFT JOIN users u ON r.created_by = u.id
+      ${whereClause}
       GROUP BY COALESCE(d.name, u.department, 'Sin Asignar')
       ORDER BY count DESC
-    `);
+    `, params);
 
     // Step distribution by department (for stacked bar)
     const stepsByDeptResult = await query(`
@@ -689,10 +735,10 @@ app.get('/8d/dashboard-data', async (req, res) => {
       FROM eightd_reports r
       LEFT JOIN departments d ON r.department_id = d.id
       LEFT JOIN users u ON r.created_by = u.id
-      WHERE LOWER(r.status) != 'closed'
+      ${whereClause} ${conditions.length ? 'AND' : 'WHERE'} LOWER(r.status) != 'closed'
       GROUP BY COALESCE(d.name, u.department, 'Sin Asignar'), r.current_step
       ORDER BY COALESCE(d.name, u.department, 'Sin Asignar'), r.current_step
-    `);
+    `, params);
 
     // Calculate SLA percentage
     const slaData = slaResult.rows[0];
