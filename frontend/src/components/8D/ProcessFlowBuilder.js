@@ -288,7 +288,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
             const isProblem = cell.isProblemPoint ||
               (grid[conn.targetRow][conn.targetCol] && grid[conn.targetRow][conn.targetCol].isProblemPoint);
 
-            const color = isProblem ? '#d32f2f' : t.accent;
+            const color = isProblem ? t.error : t.accent;
 
             connections.push(
               <g key={`${rowIdx}-${colIdx}-${connIdx}`}>
