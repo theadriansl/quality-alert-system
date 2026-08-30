@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { canUserEdit, isReadOnly } from '../utils/permissions';
-import { useTheme, ThemeSelector, THEMES } from '../context/ThemeContext';
+import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { AlertTriangle, Send, Users, FileText, Camera, X, Check, Clock, User, MapPin, Search, Plus, List, LayoutDashboard, ClipboardCheck, ArrowLeft } from 'lucide-react';
+import { Send, Users, FileText, Camera, X, Check, Clock, User, MapPin, Search, Plus, List, LayoutDashboard, ClipboardCheck, ArrowLeft } from 'lucide-react';
 
 const QARCreate = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
   const API_URL = 'http://localhost:5000';
 
   // Permission check
   const canEdit = canUserEdit('quality_alert');
-  const readOnly = isReadOnly('quality_alert');
 
   // Redirect if no edit permissions
   useEffect(() => {
@@ -37,7 +36,7 @@ const QARCreate = () => {
   const [photoOkPreview, setPhotoOkPreview] = useState(null);
   const [photoNokFile, setPhotoNokFile] = useState(null);
   const [photoOkFile, setPhotoOkFile] = useState(null);
-  const [photoNokFromDefect, setPhotoNokFromDefect] = useState(null); // URL de foto de defecto
+  const [photoNokFromDefect, setPhotoNokFromDefect] = useState(null);
 
   // Precargar foto NOK desde defecto si existe
   useEffect(() => {
@@ -66,7 +65,7 @@ const QARCreate = () => {
     thresholdCount: prefillData.thresholdCount,
     thresholdHours: prefillData.thresholdHours,
     severityName: prefillData.severityName || '',
-    severityColor: prefillData.severityColor || '#B00020',
+    severityColor: prefillData.severityColor || t.error,
     departmentName: prefillData.departmentName || '',
     partName: prefillData.partName || '',
     clientName: prefillData.clientName || '',
@@ -185,7 +184,6 @@ const QARCreate = () => {
         const departmentsData = await responses[4].json();
 
         setClients(clientsData.clients || []);
-        // inspection-catalogs returns 'items' not specific names
         setSeverities(severitiesData.items || []);
         setDepartments(departmentsData.items || []);
       } else {
@@ -207,7 +205,7 @@ const QARCreate = () => {
     }
   };
 
-  // Load projects when client changes (manual mode) - returns loaded projects
+  // Load projects when client changes (manual mode)
   const loadProjects = async (clientIdValue) => {
     if (!clientIdValue) {
       setProjects([]);
@@ -228,7 +226,7 @@ const QARCreate = () => {
     }
   };
 
-  // Load parts when project changes (manual mode) - returns loaded parts
+  // Load parts when project changes (manual mode)
   const loadParts = async (projectIdValue) => {
     if (!projectIdValue) {
       setParts([]);
@@ -261,7 +259,7 @@ const QARCreate = () => {
       if (searchFilters.partId) params.set('partId', searchFilters.partId);
       if (searchFilters.startDate) params.set('startDate', searchFilters.startDate);
       if (searchFilters.endDate) params.set('endDate', searchFilters.endDate);
-      params.set('status', 'open'); // Only open defects
+      params.set('status', 'open');
       params.set('limit', '100');
 
       const res = await fetch(`${API_URL}/defects-v2/entries?${params.toString()}`, {
@@ -303,30 +301,25 @@ const QARCreate = () => {
     setSelectedDefects(allDefects);
     setDefectIds(allDefects.map(d => d.id));
 
-    // Auto-fill form fields from first defect (or most common values)
+    // Auto-fill form fields from first defect
     const firstDefect = selected[0];
-    console.log('First defect data:', firstDefect);
 
-    // Set client and wait for projects to load before setting project
+    // Set client and wait for projects to load
     if (firstDefect.clientId) {
       setClientId(String(firstDefect.clientId));
       const loadedProjects = await loadProjects(firstDefect.clientId);
-      console.log('Loaded projects:', loadedProjects);
 
-      // Now set project and wait for parts to load
       if (firstDefect.projectId) {
         setProjectId(String(firstDefect.projectId));
         const loadedParts = await loadParts(firstDefect.projectId);
-        console.log('Loaded parts:', loadedParts);
 
-        // Now set part
         if (firstDefect.partId) {
           setPartId(String(firstDefect.partId));
         }
       }
     }
 
-    // Find the most severe severity among selected (prioritize by order: Crítico/ALTA > Mayor > Menor)
+    // Find the most severe severity among selected
     const severityPriority = { 'Crítico': 4, 'ALTA': 4, 'Mayor': 3, 'Menor': 2, 'Crítica': 4 };
     const mostSevere = selected.reduce((max, d) => {
       const currentPriority = severityPriority[d.severityName] || 0;
@@ -339,13 +332,13 @@ const QARCreate = () => {
     // Get department from first defect
     if (firstDefect.departmentId) setDepartmentId(String(firstDefect.departmentId));
 
-    // Update trigger info with all relevant data
+    // Update trigger info
     setTriggerInfo({
       defectCount: allDefects.length,
       thresholdCount: null,
       thresholdHours: null,
       severityName: mostSevere?.severityName || '',
-      severityColor: mostSevere?.severityColor || '#B00020',
+      severityColor: mostSevere?.severityColor || t.error,
       departmentName: getDepartmentName(firstDefect.departmentId),
       partName: firstDefect.partNumber || '',
       clientName: firstDefect.clientName || '',
@@ -383,13 +376,11 @@ const QARCreate = () => {
   const handlePhotoUpload = (type, e) => {
     const file = e.target.files[0];
     if (file) {
-      // Guardar el archivo para upload posterior
       if (type === 'nok') {
         setPhotoNokFile(file);
       } else {
         setPhotoOkFile(file);
       }
-      // Crear preview
       const reader = new FileReader();
       reader.onloadend = () => {
         if (type === 'nok') {
@@ -402,7 +393,6 @@ const QARCreate = () => {
     }
   };
 
-  // Función para subir foto al servidor
   const uploadPhoto = async (file, token) => {
     const formData = new FormData();
     formData.append('photo', file);
@@ -451,7 +441,7 @@ const QARCreate = () => {
 
       const token = localStorage.getItem('token');
 
-      // Subir fotos primero (si existen)
+      // Upload photos first (if exist)
       let photoOkUrl = null;
       let photoNokUrl = null;
 
@@ -461,7 +451,6 @@ const QARCreate = () => {
       if (photoNokFile) {
         photoNokUrl = await uploadPhoto(photoNokFile, token);
       } else if (photoNokFromDefect && photoNokPreview) {
-        // Usar foto de defecto precargada (solo si no fue quitada)
         photoNokUrl = `/uploads/${prefillData.firstDefectImagePath}`;
       }
 
@@ -524,7 +513,7 @@ const QARCreate = () => {
         `Este correo fue generado automáticamente por el Sistema de Alertas de Calidad.`
       );
 
-      // Only open mailto if there are recipients
+      // Open mailto
       if (responseEmails.length > 0 || validationEmails.length > 0) {
         const toEmails = responseEmails.length > 0 ? responseEmails.join('; ') : validationEmails.join('; ');
         const ccEmails = responseEmails.length > 0 && validationEmails.length > 0 ? validationEmails.join('; ') : '';
@@ -534,16 +523,14 @@ const QARCreate = () => {
           mailtoLink = `mailto:${toEmails}?cc=${ccEmails}&subject=${mailtoSubject}&body=${mailtoBody}`;
         }
 
-        console.log('Opening mailto:', mailtoLink);
         window.open(mailtoLink, '_blank');
-      } else {
-        console.warn('No recipient emails found for QAR notification');
       }
 
       // Show success modal
       setSuccessData({
         alertNumber: result.qar.alertNumber,
-        qarId: result.qar.id
+        qarId: result.qar.id,
+        recipientCount: responseRecipients.length + validationRecipients.length
       });
       setSuccessModalOpen(true);
 
@@ -564,337 +551,101 @@ const QARCreate = () => {
     });
   };
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      backgroundColor: t.bg,
-      padding: '24px'
-    },
-    // Header corporativo
-    header: {
-      backgroundColor: '#475569',
-      color: 'white',
-      padding: '24px',
-      borderRadius: '12px',
-      marginBottom: '24px'
-    },
-    qarNumber: {
-      fontSize: '14px',
-      opacity: 0.9,
-      marginBottom: '8px',
-      fontFamily: 'monospace',
-      letterSpacing: '2px'
-    },
-    headerTitle: {
-      fontSize: '24px',
-      fontWeight: '700',
-      margin: '0 0 12px 0',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px'
-    },
-    headerMeta: {
-      fontSize: '14px',
-      opacity: 0.9,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    },
-    card: {
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '12px',
-      padding: '24px',
-      marginBottom: '20px'
-    },
-    cardTitle: {
-      fontSize: '16px',
-      fontWeight: '600',
-      color: t.text,
-      marginBottom: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    },
-    input: {
-      width: '100%',
-      padding: '12px 16px',
-      backgroundColor: t.bgPanel,
-      border: `1px solid ${t.border}`,
-      borderRadius: '8px',
-      fontSize: '14px',
-      color: t.text,
-      marginBottom: '12px'
-    },
-    textarea: {
-      width: '100%',
-      padding: '12px 16px',
-      backgroundColor: t.bgPanel,
-      border: `1px solid ${t.border}`,
-      borderRadius: '8px',
-      fontSize: '14px',
-      color: t.text,
-      minHeight: '120px',
-      resize: 'vertical'
-    },
-    // Defects table
-    defectsTable: {
-      width: '100%',
-      borderCollapse: 'collapse',
-      fontSize: '13px'
-    },
-    th: {
-      textAlign: 'left',
-      padding: '10px 12px',
-      backgroundColor: t.bgPanel,
-      color: t.textMuted,
-      fontWeight: '600',
-      borderBottom: `1px solid ${t.border}`
-    },
-    td: {
-      padding: '10px 12px',
-      color: t.text,
-      borderBottom: `1px solid ${t.border}`
-    },
-    // Photos
-    photoGrid: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '20px'
-    },
-    photoBox: {
-      border: `2px dashed ${t.border}`,
-      borderRadius: '12px',
-      padding: '20px',
-      textAlign: 'center',
-      cursor: 'pointer',
-      minHeight: '200px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      overflow: 'hidden'
-    },
-    photoBoxNok: {
-      borderColor: t.error,
-      backgroundColor: `${t.error}15`
-    },
-    photoBoxOk: {
-      borderColor: t.success,
-      backgroundColor: `${t.success}15`
-    },
-    photoPreview: {
-      maxWidth: '100%',
-      maxHeight: '180px',
-      borderRadius: '8px'
-    },
-    // Recipients
-    recipientSection: {
-      marginBottom: '20px'
-    },
-    recipientLabel: {
-      color: t.textMuted,
-      fontSize: '13px',
-      marginBottom: '8px',
-      fontWeight: '600'
-    },
-    userGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-      gap: '10px'
-    },
-    userCard: {
-      padding: '10px 14px',
-      backgroundColor: t.bgPanel,
-      border: `2px solid ${t.border}`,
-      borderRadius: '8px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      transition: 'all 0.15s'
-    },
-    userCardSelected: {
-      borderColor: t.accent,
-      backgroundColor: `${t.accent}20`
-    },
-    // Buttons
-    submitButton: {
-      width: '100%',
-      padding: '16px 24px',
-      backgroundColor: '#1e40af',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '16px',
-      fontWeight: '700',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px'
-    },
-    cancelButton: {
-      width: '100%',
-      padding: '16px 24px',
-      backgroundColor: t.bgPanel,
-      color: t.text,
-      border: `1px solid ${t.border}`,
-      borderRadius: '8px',
-      fontSize: '16px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      marginTop: '12px'
-    },
-    error: {
-      backgroundColor: `${t.error}15`,
-      color: t.error,
-      padding: '12px 16px',
-      borderRadius: '8px',
-      marginBottom: '16px'
-    },
-    // Manual mode styles
-    label: {
-      display: 'block',
-      fontSize: '12px',
-      color: t.textMuted,
-      marginBottom: '6px',
-      fontWeight: '500'
-    },
-    select: {
-      width: '100%',
-      padding: '10px 12px',
-      backgroundColor: t.bgPanel,
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      color: t.text,
-      fontSize: '14px'
-    },
-    selectSmall: {
-      padding: '8px 12px',
-      backgroundColor: t.bgPanel,
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      color: t.text,
-      fontSize: '13px',
-      minWidth: '150px'
-    },
-    // Modal styles
-    modalOverlay: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.4)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    },
-    modal: {
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '12px',
-      width: '95%',
-      maxWidth: '1400px',
-      maxHeight: '85vh',
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    modalHeader: {
-      padding: '16px 20px',
-      borderBottom: `1px solid ${t.border}`,
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    },
-    modalFilters: {
-      padding: '16px 20px',
-      borderBottom: `1px solid ${t.border}`,
-      display: 'flex',
-      gap: '16px',
-      flexWrap: 'wrap',
-      alignItems: 'flex-end'
-    },
-    modalBody: {
-      flex: 1,
-      overflow: 'auto',
-      padding: '0'
-    },
-    modalFooter: {
-      padding: '16px 20px',
-      borderTop: `1px solid ${t.border}`,
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    },
-    thModal: {
-      textAlign: 'left',
-      padding: '10px 12px',
-      backgroundColor: t.bgPanel,
-      color: t.textMuted,
-      fontWeight: '600',
-      fontSize: '12px',
-      position: 'sticky',
-      top: 0
-    },
-    tdModal: {
-      padding: '10px 12px',
-      color: t.text,
-      fontSize: '13px',
-      borderBottom: `1px solid ${t.border}`
-    },
-    columnFilterInput: {
-      width: '100%',
-      padding: '6px 8px',
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '4px',
-      color: t.text,
-      fontSize: '12px'
-    }
+  // Checklist items for verification panel
+  const checklistItems = [
+    { key: 'title', label: 'Título', met: !!title.trim() },
+    { key: 'defects', label: 'Al menos 1 defecto', met: selectedDefects.length > 0 },
+    { key: 'severity', label: 'Severidad', met: !!severityId },
+    { key: 'response', label: 'Destinatario de respuesta', met: responseRecipients.length > 0 },
+    { key: 'validation', label: 'Destinatario de validación', met: validationRecipients.length > 0 }
+  ];
+  const allChecksPassed = checklistItems.every(i => i.met);
+
+  // ─── Modal styles ──────────────────────────────────────────────────────────
+  const modalOverlay = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  };
+
+  const modalCard = {
+    backgroundColor: t.bgCard,
+    border: `1px solid ${t.border}`,
+    borderRadius: 8,
+    boxShadow: '0 12px 32px rgba(0,0,0,0.22)',
+    maxWidth: 1040,
+    width: '95%',
+    maxHeight: '85vh',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
+  };
+
+  const modalHeader = {
+    height: 48,
+    padding: '0 16px',
+    borderBottom: `1px solid ${t.border}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexShrink: 0
+  };
+
+  const modalFooter = {
+    height: 56,
+    padding: '0 16px',
+    backgroundColor: t.field,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexShrink: 0
   };
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={{ textAlign: 'center', padding: '40px', color: t.text }}>Cargando...</div>
+      <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: 24 }}>
+        <div style={{ textAlign: 'center', padding: 60, color: t.text }}>Cargando...</div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: 24 }}>
       {/* ====== NAVIGATION BAR ====== */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <button
           onClick={() => navigate('/qar-list')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', color: t.textMuted, background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.textMuted, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}
         >
           <ArrowLeft size={18} />
           Volver a Lista
         </button>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <ThemeSelector />
           <button
             onClick={() => navigate('/qar-list')}
-            style={{ padding: '8px 14px', backgroundColor: t.bgCard, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{ padding: '8px 14px', backgroundColor: t.bgCard, color: t.text, border: `1px solid ${t.border}`, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
           >
             <List size={16} />
             Lista QAR
           </button>
           <button
             onClick={() => navigate('/defect-capture')}
-            style={{ padding: '8px 14px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{ padding: '8px 14px', backgroundColor: t.bgCard, color: t.text, border: `1px solid ${t.border}`, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
           >
             <ClipboardCheck size={16} />
             Inspección
           </button>
           <button
             onClick={() => navigate('/defect-dashboard')}
-            style={{ padding: '8px 14px', backgroundColor: t.primary, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{ padding: '8px 14px', backgroundColor: t.bgCard, color: t.text, border: `1px solid ${t.border}`, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
           >
             <LayoutDashboard size={16} />
             Dashboard
@@ -902,481 +653,704 @@ const QARCreate = () => {
         </div>
       </div>
 
-      {/* ====== HEADER IMPACTANTE ====== */}
-      <div style={styles.header}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-          <div style={styles.qarNumber}>{qarNumber}</div>
-          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+      {/* ====== HEADER ====== */}
+      <div style={{
+        backgroundColor: t.bgCard,
+        border: `1px solid ${t.border}`,
+        borderRadius: 12,
+        padding: 24,
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <div>
+            <div style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 13,
+              color: t.textMuted,
+              marginBottom: 6,
+              letterSpacing: 1
+            }}>
+              {qarNumber}
+            </div>
+            <h1 style={{ fontSize: 19, fontWeight: 600, color: t.text, margin: 0 }}>
+              Nueva Quality Alert Report
+            </h1>
+          </div>
+          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: 6, cursor: 'pointer' }}>
             {language === 'es' ? 'EN' : 'ES'}
           </button>
         </div>
-        <h1 style={styles.headerTitle}>
-          <AlertTriangle size={28} />
-          {triggerInfo.departmentName} | Quality Alert Report | {triggerInfo.partName}
-        </h1>
-        <div style={styles.headerMeta}>
-          <User size={16} />
-          Emitido por: {triggerInfo.emittedBy} | {new Date().toLocaleString('es-MX')}
+        <div style={{ display: 'flex', gap: 16, fontSize: 12, color: t.textMuted }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <User size={14} />
+            Emitido por: {triggerInfo.emittedBy}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={14} />
+            {new Date().toLocaleString('es-MX')}
+          </span>
         </div>
       </div>
 
-      {error && <div style={styles.error}>{error}</div>}
-
-      {/* ====== SELECCIÓN MANUAL (solo en modo manual) ====== */}
-      {isManualMode && (
-        <div style={styles.card}>
-          <div style={styles.cardTitle}>
-            <FileText size={20} color={t.accent} />
-            Información del QAR
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div>
-              <label style={styles.label}>Cliente *</label>
-              <select
-                style={styles.select}
-                value={clientId}
-                onChange={(e) => {
-                  setClientId(e.target.value);
-                  setProjectId('');
-                  setPartId('');
-                  loadProjects(e.target.value);
-                  const client = clients.find(c => c.id === parseInt(e.target.value));
-                  setTriggerInfo(prev => ({ ...prev, clientName: client?.name || '' }));
-                }}
-              >
-                <option value="">Seleccionar cliente...</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={styles.label}>Proyecto</label>
-              <select
-                style={styles.select}
-                value={projectId}
-                onChange={(e) => {
-                  setProjectId(e.target.value);
-                  setPartId('');
-                  loadParts(e.target.value);
-                }}
-                disabled={!clientId}
-              >
-                <option value="">Seleccionar proyecto...</option>
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.projectNumber} - {p.projectName}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={styles.label}>Parte</label>
-              <select
-                style={styles.select}
-                value={partId}
-                onChange={(e) => {
-                  setPartId(e.target.value);
-                  const part = parts.find(p => p.id === parseInt(e.target.value));
-                  setTriggerInfo(prev => ({ ...prev, partName: part?.partNumber || '' }));
-                }}
-                disabled={!projectId}
-              >
-                <option value="">Seleccionar parte...</option>
-                {parts.map(p => (
-                  <option key={p.id} value={p.id}>{p.partNumber} - {p.partName}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={styles.label}>Severidad *</label>
-              <select
-                style={styles.select}
-                value={severityId}
-                onChange={(e) => {
-                  setSeverityId(e.target.value);
-                  const sev = severities.find(s => s.id === parseInt(e.target.value));
-                  setTriggerInfo(prev => ({
-                    ...prev,
-                    severityName: sev?.name || '',
-                    severityColor: sev?.color || '#B00020'
-                  }));
-                }}
-              >
-                <option value="">Seleccionar severidad...</option>
-                {severities.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={styles.label}>Departamento Responsable</label>
-              <select
-                style={styles.select}
-                value={departmentId}
-                onChange={(e) => {
-                  setDepartmentId(e.target.value);
-                  const dept = departments.find(d => d.id === parseInt(e.target.value));
-                  setTriggerInfo(prev => ({ ...prev, departmentName: dept?.name || '' }));
-                }}
-              >
-                <option value="">Seleccionar departamento...</option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+      {error && (
+        <div style={{
+          backgroundColor: t.errorBg,
+          color: t.error,
+          padding: '12px 16px',
+          borderRadius: 8,
+          marginBottom: 16,
+          border: `1px solid ${t.errorBorder}`,
+          fontSize: 13
+        }}>
+          {error}
         </div>
       )}
 
-      {/* ====== DEFECTOS ASOCIADOS ====== */}
-      <div style={styles.card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div style={styles.cardTitle}>
-            <AlertTriangle size={20} color="#C77700" />
-            {isManualMode
-              ? `Defectos Asociados al QAR (${selectedDefects.length})`
-              : `Defectos que Activaron la Alerta (${triggerInfo.defectCount} en ${triggerInfo.thresholdHours}h)`
-            }
-          </div>
-          <button
-            style={{
-              padding: '8px 16px',
-              backgroundColor: t.accent,
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
+        {/* ====== LEFT COLUMN ====== */}
+        <div>
+          {/* General Info Form */}
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              fontWeight: '500'
-            }}
-            onClick={() => {
-              setTempSelectedIds(defectIds);
-              setColumnFilters({ entryNumber: '', partNumber: '', defectName: '', severityName: '', stationName: '', shiftName: '', departmentId: '', dispositionName: '', inspectorName: '', hasQar: '' });
-              setShowDefectModal(true);
-              searchDefectsAPI();
-            }}
-          >
-            <Search size={16} />
-            Buscar Defectos
-          </button>
-        </div>
+              gap: 8
+            }}>
+              <FileText size={18} />
+              Información General
+            </div>
 
-        {selectedDefects.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: t.textDim }}>
-            <AlertTriangle size={40} style={{ marginBottom: '12px', opacity: 0.5 }} />
-            <p>No hay defectos asociados</p>
-            <p style={{ fontSize: '13px' }}>Haz clic en "Buscar Defectos" para agregar</p>
-          </div>
-        ) : (
-          <table style={styles.defectsTable}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Folio</th>
-                <th style={styles.th}>Defecto</th>
-                <th style={styles.th}>Estación</th>
-                <th style={styles.th}>Inspector</th>
-                <th style={styles.th}>Fecha/Hora</th>
-                <th style={styles.th}>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedDefects.map((defect, idx) => (
-                <tr key={idx}>
-                  <td style={styles.td}>{defect.entryNumber}</td>
-                  <td style={styles.td}>{defect.defectName}</td>
-                  <td style={styles.td}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={14} color={t.textDim} />
-                      {defect.stationCode || defect.stationName || '-'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <User size={14} color={t.textDim} />
-                      {defect.inspectorFirstName ? `${defect.inspectorFirstName} ${defect.inspectorLastName || ''}`.trim() : '-'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={14} color={t.textDim} />
-                      {formatDate(defect.createdAt)}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <button
-                      onClick={() => removeDefect(defect.id)}
-                      style={{
-                        padding: '4px 8px',
-                        backgroundColor: '#B00020',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+            {/* Grid layout for form */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: t.textMuted, marginBottom: 6, fontWeight: 500, textTransform: 'uppercase' }}>Cliente *</label>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: t.field,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    color: t.text,
+                    fontSize: 13
+                  }}
+                  value={clientId}
+                  onChange={(e) => {
+                    setClientId(e.target.value);
+                    setProjectId('');
+                    setPartId('');
+                    loadProjects(e.target.value);
+                    const client = clients.find(c => c.id === parseInt(e.target.value));
+                    setTriggerInfo(prev => ({ ...prev, clientName: client?.name || '' }));
+                  }}
+                >
+                  <option value="">Seleccionar...</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: t.textMuted, marginBottom: 6, fontWeight: 500, textTransform: 'uppercase' }}>Proyecto</label>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: t.field,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    color: t.text,
+                    fontSize: 13
+                  }}
+                  value={projectId}
+                  onChange={(e) => {
+                    setProjectId(e.target.value);
+                    setPartId('');
+                    loadParts(e.target.value);
+                  }}
+                  disabled={!clientId}
+                >
+                  <option value="">Seleccionar...</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.projectNumber} - {p.projectName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: t.textMuted, marginBottom: 6, fontWeight: 500, textTransform: 'uppercase' }}>Parte</label>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: t.field,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    color: t.text,
+                    fontSize: 13
+                  }}
+                  value={partId}
+                  onChange={(e) => {
+                    setPartId(e.target.value);
+                    const part = parts.find(p => p.id === parseInt(e.target.value));
+                    setTriggerInfo(prev => ({ ...prev, partName: part?.partNumber || '' }));
+                  }}
+                  disabled={!projectId}
+                >
+                  <option value="">Seleccionar...</option>
+                  {parts.map(p => (
+                    <option key={p.id} value={p.id}>{p.partNumber} - {p.partName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: t.textMuted, marginBottom: 6, fontWeight: 500, textTransform: 'uppercase' }}>Severidad *</label>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: t.field,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    color: t.text,
+                    fontSize: 13
+                  }}
+                  value={severityId}
+                  onChange={(e) => {
+                    setSeverityId(e.target.value);
+                    const sev = severities.find(s => s.id === parseInt(e.target.value));
+                    setTriggerInfo(prev => ({
+                      ...prev,
+                      severityName: sev?.name || '',
+                      severityColor: sev?.color || t.error
+                    }));
+                  }}
+                >
+                  <option value="">Seleccionar...</option>
+                  {severities.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: t.textMuted, marginBottom: 6, fontWeight: 500, textTransform: 'uppercase' }}>Departamento</label>
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: t.field,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    color: t.text,
+                    fontSize: 13
+                  }}
+                  value={departmentId}
+                  onChange={(e) => {
+                    setDepartmentId(e.target.value);
+                    const dept = departments.find(d => d.id === parseInt(e.target.value));
+                    setTriggerInfo(prev => ({ ...prev, departmentName: dept?.name || '' }));
+                  }}
+                >
+                  <option value="">Seleccionar...</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-      {/* ====== DETALLES ====== */}
-      <div style={styles.card}>
-        <div style={styles.cardTitle}>
-          <FileText size={20} />
-          Detalles de la Alerta
-        </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={styles.label}>Título *</label>
-          <input
-            type="text"
-            style={styles.input}
-            placeholder="Título de la alerta..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-        <div>
-          <label style={styles.label}>Descripción / Comentarios del Inspector</label>
-          <textarea
-            style={styles.textarea}
-            placeholder="Descripción detallada del problema, observaciones, comentarios del inspector..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* ====== FOTOS (NOK izquierda, OK derecha) ====== */}
-      <div style={styles.card}>
-        <div style={styles.cardTitle}>
-          <Camera size={20} />
-          Evidencia Fotográfica
-        </div>
-        <div style={styles.photoGrid}>
-          {/* Photo NOK - IZQUIERDA */}
-          <div style={{ position: 'relative' }}>
-            <label style={{ ...styles.photoBox, ...styles.photoBoxNok }}>
+            {/* Title */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11, color: t.textMuted, marginBottom: 6, fontWeight: 500, textTransform: 'uppercase' }}>Título *</label>
               <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handlePhotoUpload('nok', e)}
-                style={{ display: 'none' }}
-              />
-              {photoNokPreview ? (
-                <>
-                  <img src={photoNokPreview} alt="NOK" style={styles.photoPreview} />
-                  {photoNokFromDefect && !photoNokFile && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      left: '8px',
-                      backgroundColor: 'rgba(0,0,0,0.7)',
-                      color: 'white',
-                      fontSize: '10px',
-                      padding: '2px 6px',
-                      borderRadius: '4px'
-                    }}>
-                      📷 Foto del defecto
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <X size={40} color="#B00020" />
-                  <p style={{ margin: '8px 0 0', color: '#B00020', fontWeight: '600' }}>
-                    Foto NOK (Defecto)
-                  </p>
-                  <p style={{ margin: '4px 0 0', color: t.textDim, fontSize: '12px' }}>
-                    Clic para subir
-                  </p>
-                </>
-              )}
-            </label>
-            {photoNokPreview && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPhotoNokPreview(null);
-                  setPhotoNokFile(null);
-                  setPhotoNokFromDefect(null);
-                }}
+                type="text"
                 style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  width: '100%',
+                  padding: '10px 12px',
+                  backgroundColor: t.field,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  fontSize: 14,
+                  color: t.text
+                }}
+                placeholder="Título de la alerta..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            {/* Description with character counter */}
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: t.textMuted, marginBottom: 6, fontWeight: 500, textTransform: 'uppercase' }}>
+                Descripción
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 400 }}>
+                  {description.length}/1000
+                </span>
+              </label>
+              <textarea
+                style={{
+                  width: '100%',
+                  padding: 12,
+                  backgroundColor: t.field,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  fontSize: 14,
+                  color: t.text,
+                  minHeight: 100,
+                  resize: 'vertical'
+                }}
+                placeholder="Descripción detallada..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value.slice(0, 1000))}
+              />
+            </div>
+          </div>
+
+          {/* ====== DEFECTS TABLE ====== */}
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: t.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: t.warning }} />
+                Defectos Asociados ({selectedDefects.length})
+                {triggerInfo.thresholdCount && (
+                  <span style={{ fontSize: 11, color: t.textMuted, fontWeight: 400 }}>
+                    — umbral: {triggerInfo.thresholdCount} en {triggerInfo.thresholdHours}h
+                  </span>
+                )}
+              </div>
+              <button
+                style={{
+                  padding: '8px 14px',
+                  backgroundColor: t.accent,
                   color: 'white',
                   border: 'none',
-                  borderRadius: '50%',
-                  width: '24px',
-                  height: '24px',
+                  borderRadius: 6,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px'
+                  gap: 6,
+                  fontSize: 13,
+                  fontWeight: 500
                 }}
-                title="Quitar foto"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Photo OK - DERECHA */}
-          <label style={{ ...styles.photoBox, ...styles.photoBoxOk }}>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handlePhotoUpload('ok', e)}
-              style={{ display: 'none' }}
-            />
-            {photoOkPreview ? (
-              <img src={photoOkPreview} alt="OK" style={styles.photoPreview} />
-            ) : (
-              <>
-                <Check size={40} color="#047857" />
-                <p style={{ margin: '8px 0 0', color: '#047857', fontWeight: '600' }}>
-                  Foto OK (Referencia)
-                </p>
-                <p style={{ margin: '4px 0 0', color: t.textDim, fontSize: '12px' }}>
-                  Clic para subir
-                </p>
-              </>
-            )}
-          </label>
-        </div>
-      </div>
-
-      {/* ====== DESTINATARIOS ====== */}
-      <div style={styles.card}>
-        <div style={styles.cardTitle}>
-          <Users size={20} />
-          Destinatarios
-        </div>
-
-        {/* Destinatarios de Respuesta */}
-        <div style={styles.recipientSection}>
-          <div style={styles.recipientLabel}>
-            DESTINATARIOS DE RESPUESTA ({responseRecipients.length})
-            <span style={{ fontWeight: '400', marginLeft: '8px' }}>- Quienes deben resolver el problema</span>
-          </div>
-          <div style={styles.userGrid}>
-            {users.map(user => (
-              <div
-                key={`resp-${user.id}`}
-                style={{
-                  ...styles.userCard,
-                  ...(responseRecipients.includes(user.id) ? styles.userCardSelected : {})
+                onClick={() => {
+                  setTempSelectedIds(defectIds);
+                  setColumnFilters({ entryNumber: '', partNumber: '', defectName: '', severityName: '', stationName: '', shiftName: '', departmentId: '', dispositionName: '', inspectorName: '', hasQar: '' });
+                  setShowDefectModal(true);
+                  searchDefectsAPI();
                 }}
-                onClick={() => toggleRecipient('response', user.id)}
               >
-                <input
-                  type="checkbox"
-                  checked={responseRecipients.includes(user.id)}
-                  onChange={() => {}}
-                  style={{ width: '16px', height: '16px' }}
-                />
-                <div>
-                  <div style={{ fontWeight: '500', color: t.text, fontSize: '13px' }}>
-                    {user.firstName} {user.lastName}
-                  </div>
-                  <div style={{ fontSize: '11px', color: t.textDim }}>{user.role}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Destinatarios de Validación - Solo usuarios autorizados */}
-        <div style={styles.recipientSection}>
-          <div style={styles.recipientLabel}>
-            DESTINATARIOS DE VALIDACIÓN ({validationRecipients.length})
-            <span style={{ fontWeight: '400', marginLeft: '8px' }}>- Quienes aprueban el cierre</span>
-          </div>
-          <div style={styles.userGrid}>
-            {users.filter(u => u.canValidateQar).map(user => (
-              <div
-                key={`val-${user.id}`}
-                style={{
-                  ...styles.userCard,
-                  ...(validationRecipients.includes(user.id) ? styles.userCardSelected : {})
-                }}
-                onClick={() => toggleRecipient('validation', user.id)}
-              >
-                <input
-                  type="checkbox"
-                  checked={validationRecipients.includes(user.id)}
-                  onChange={() => {}}
-                  style={{ width: '16px', height: '16px' }}
-                />
-                <div>
-                  <div style={{ fontWeight: '500', color: t.text, fontSize: '13px' }}>
-                    {user.firstName} {user.lastName}
-                  </div>
-                  <div style={{ fontSize: '11px', color: t.textDim }}>{user.role}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ====== BOTONES ====== */}
-      <div style={styles.card}>
-        <button
-          style={{
-            ...styles.submitButton,
-            opacity: submitting ? 0.7 : 1
-          }}
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
-          <Send size={20} />
-          {submitting ? 'Emitiendo QAR...' : 'Emitir QAR'}
-        </button>
-        <button
-          style={styles.cancelButton}
-          onClick={() => navigate(-1)}
-        >
-          Cancelar
-        </button>
-      </div>
-
-      {/* ====== MODAL BUSCAR DEFECTOS ====== */}
-      {showDefectModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0, color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Search size={20} />
-                Buscar y Seleccionar Defectos
-              </h3>
-              <button
-                onClick={() => setShowDefectModal(false)}
-                style={{ background: 'none', border: 'none', color: t.textDim, cursor: 'pointer' }}
-              >
-                <X size={24} />
+                <Search size={16} />
+                Buscar Defectos
               </button>
             </div>
 
-            {/* Filtros */}
-            <div style={styles.modalFilters}>
+            {selectedDefects.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: t.textMuted }}>
+                <p style={{ fontSize: 13 }}>No hay defectos asociados</p>
+                <p style={{ fontSize: 12 }}>Haz clic en "Buscar Defectos" para agregar</p>
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Folio</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Estación</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Fecha</th>
+                    <th style={{ textAlign: 'right', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedDefects.map((defect, idx) => (
+                    <tr key={idx} style={{ height: 44 }}>
+                      <td style={{ padding: '0 12px', fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: t.accent, fontWeight: 600, borderBottom: `1px solid ${t.line}` }}>{defect.entryNumber}</td>
+                      <td style={{ padding: '0 12px', color: t.text, borderBottom: `1px solid ${t.line}` }}>{defect.stationCode || defect.stationName || '-'}</td>
+                      <td style={{ padding: '0 12px', color: t.textMuted, borderBottom: `1px solid ${t.line}`, fontSize: 12 }}>{formatDate(defect.createdAt)}</td>
+                      <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}`, textAlign: 'right' }}>
+                        <button
+                          onClick={() => removeDefect(defect.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.accent, fontSize: 12, fontWeight: 500 }}
+                        >
+                          Quitar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* ====== PHOTOS ====== */}
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <Camera size={18} />
+              Evidencia Fotográfica
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              {/* Photo NOK */}
+              <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.error }} />
+                  NOK (Defecto)
+                </div>
+                <label style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: `1px dashed ${t.border}`,
+                  borderRadius: 4,
+                  minHeight: 180,
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  backgroundColor: t.bgPanel
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handlePhotoUpload('nok', e)}
+                    style={{ display: 'none' }}
+                  />
+                  {photoNokPreview ? (
+                    <>
+                      <img src={photoNokPreview} alt="NOK" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 4, border: `1px solid ${t.border}` }} />
+                      {photoNokFromDefect && !photoNokFile && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 8,
+                          left: 8,
+                          padding: '4px 8px',
+                          fontSize: 10,
+                          backgroundColor: t.field,
+                          border: `1px solid ${t.border}`,
+                          borderRadius: 4,
+                          color: t.textMuted
+                        }}>
+                          Desde defecto
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: 20 }}>
+                      <X size={28} color={t.textMuted} style={{ marginBottom: 6 }} />
+                      <div style={{ fontSize: 12, color: t.textMuted }}>Clic para subir</div>
+                    </div>
+                  )}
+                </label>
+                {photoNokPreview && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPhotoNokPreview(null);
+                      setPhotoNokFile(null);
+                      setPhotoNokFromDefect(null);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: 30,
+                      right: 8,
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      backgroundColor: t.error,
+                      color: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 12
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Photo OK */}
               <div>
-                <label style={styles.label}>Cliente</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.success }} />
+                  OK (Referencia)
+                </div>
+                <label style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: `1px dashed ${t.border}`,
+                  borderRadius: 4,
+                  minHeight: 180,
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  backgroundColor: t.bgPanel
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handlePhotoUpload('ok', e)}
+                    style={{ display: 'none' }}
+                  />
+                  {photoOkPreview ? (
+                    <img src={photoOkPreview} alt="OK" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 4, border: `1px solid ${t.border}` }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: 20 }}>
+                      <Check size={28} color={t.textMuted} style={{ marginBottom: 6 }} />
+                      <div style={{ fontSize: 12, color: t.textMuted }}>Clic para subir</div>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* ====== RECIPIENTS ====== */}
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <Users size={18} />
+              Destinatarios
+            </div>
+
+            {/* Response Recipients */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+                Respuesta ({responseRecipients.length}) — Quienes deben resolver
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                {users.map(user => (
+                  <div
+                    key={`resp-${user.id}`}
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: responseRecipients.includes(user.id) ? t.accentBg : t.bgPanel,
+                      border: `1px solid ${responseRecipients.includes(user.id) ? t.accentBorder : t.border}`,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10
+                    }}
+                    onClick={() => toggleRecipient('response', user.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={responseRecipients.includes(user.id)}
+                      onChange={() => {}}
+                      style={{ width: 14, height: 14, accentColor: t.primary }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 500, color: t.text, fontSize: 13 }}>
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div style={{ fontSize: 10, color: t.textDim }}>{user.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Validation Recipients */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+                Validación ({validationRecipients.length}) — Quienes aprueban el cierre
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                {users.filter(u => u.canValidateQar).map(user => (
+                  <div
+                    key={`val-${user.id}`}
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: validationRecipients.includes(user.id) ? t.accentBg : t.bgPanel,
+                      border: `1px solid ${validationRecipients.includes(user.id) ? t.accentBorder : t.border}`,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10
+                    }}
+                    onClick={() => toggleRecipient('validation', user.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={validationRecipients.includes(user.id)}
+                      onChange={() => {}}
+                      style={{ width: 14, height: 14, accentColor: t.primary }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 500, color: t.text, fontSize: 13 }}>
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div style={{ fontSize: 10, color: t.textDim }}>{user.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ====== RIGHT COLUMN - VERIFICATION PANEL ====== */}
+        <div>
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            position: 'sticky',
+            top: 24
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16
+            }}>
+              Lista de Verificación
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+              {checklistItems.map(item => (
+                <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    backgroundColor: item.met ? t.successFg : 'transparent',
+                    border: `2px solid ${item.met ? t.successFg : t.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {item.met && <Check size={10} color="white" strokeWidth={3} />}
+                  </div>
+                  <span style={{ fontSize: 13, color: item.met ? t.text : t.textMuted }}>
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              style={{
+                width: '100%',
+                padding: 14,
+                backgroundColor: allChecksPassed ? t.primary : t.bgPanel,
+                color: allChecksPassed ? 'white' : t.textMuted,
+                border: allChecksPassed ? 'none' : `1px solid ${t.border}`,
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: allChecksPassed && !submitting ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginBottom: 10,
+                opacity: submitting ? 0.7 : 1
+              }}
+              onClick={handleSubmit}
+              disabled={!allChecksPassed || submitting}
+            >
+              <Send size={18} />
+              {submitting ? 'Emitiendo...' : 'Emitir QAR'}
+            </button>
+
+            <button
+              style={{
+                width: '100%',
+                padding: 12,
+                backgroundColor: t.bgPanel,
+                color: t.text,
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+              onClick={() => navigate(-1)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ====== MODAL: Defect Search ====== */}
+      {showDefectModal && (
+        <div style={modalOverlay}>
+          <div style={modalCard}>
+            <div style={modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.accent }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Buscar y Seleccionar Defectos</span>
+              </div>
+              <button
+                onClick={() => setShowDefectModal(false)}
+                style={{ background: 'none', border: 'none', color: t.textDim, cursor: 'pointer', fontSize: 18 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div style={{
+              padding: '12px 16px',
+              borderBottom: `1px solid ${t.border}`,
+              display: 'flex',
+              gap: 12,
+              flexWrap: 'wrap',
+              alignItems: 'flex-end'
+            }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, color: t.textMuted, marginBottom: 4, fontWeight: 500 }}>Cliente</label>
                 <select
-                  style={styles.selectSmall}
+                  style={{ padding: '6px 10px', fontSize: 12, border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: t.bgCard, color: t.text, minWidth: 130 }}
                   value={searchFilters.clientId}
                   onChange={(e) => {
                     setSearchFilters(prev => ({ ...prev, clientId: e.target.value, projectId: '', partId: '' }));
@@ -1390,19 +1364,19 @@ const QARCreate = () => {
                 </select>
               </div>
               <div>
-                <label style={styles.label}>Desde</label>
+                <label style={{ display: 'block', fontSize: 10, color: t.textMuted, marginBottom: 4, fontWeight: 500 }}>Desde</label>
                 <input
                   type="date"
-                  style={styles.selectSmall}
+                  style={{ padding: '6px 10px', fontSize: 12, border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: t.bgCard, color: t.text, fontFamily: "'IBM Plex Mono', monospace" }}
                   value={searchFilters.startDate}
                   onChange={(e) => setSearchFilters(prev => ({ ...prev, startDate: e.target.value }))}
                 />
               </div>
               <div>
-                <label style={styles.label}>Hasta</label>
+                <label style={{ display: 'block', fontSize: 10, color: t.textMuted, marginBottom: 4, fontWeight: 500 }}>Hasta</label>
                 <input
                   type="date"
-                  style={styles.selectSmall}
+                  style={{ padding: '6px 10px', fontSize: 12, border: `1px solid ${t.border}`, borderRadius: 6, backgroundColor: t.bgCard, color: t.text, fontFamily: "'IBM Plex Mono', monospace" }}
                   value={searchFilters.endDate}
                   onChange={(e) => setSearchFilters(prev => ({ ...prev, endDate: e.target.value }))}
                 />
@@ -1410,39 +1384,40 @@ const QARCreate = () => {
               <button
                 onClick={searchDefectsAPI}
                 style={{
-                  padding: '8px 16px',
+                  padding: '6px 14px',
                   backgroundColor: t.accent,
                   color: 'white',
                   border: 'none',
-                  borderRadius: '6px',
+                  borderRadius: 6,
                   cursor: 'pointer',
-                  alignSelf: 'flex-end',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 500
                 }}
               >
-                <Search size={16} />
+                <Search size={14} />
                 Buscar
               </button>
             </div>
 
-            {/* Lista de defectos */}
-            <div style={styles.modalBody}>
+            {/* Table body with scroll */}
+            <div style={{ flex: 1, overflow: 'auto', padding: 0 }}>
               {searchLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: t.textDim }}>
+                <div style={{ textAlign: 'center', padding: 60, color: t.textMuted }}>
                   Buscando defectos...
                 </div>
               ) : searchDefects.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: t.textDim }}>
+                <div style={{ textAlign: 'center', padding: 60, color: t.textMuted, fontSize: 13 }}>
                   No se encontraron defectos con los filtros seleccionados
                 </div>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                  <thead>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead style={{ position: 'sticky', top: 0 }}>
                     {/* Header row */}
                     <tr>
-                      <th style={styles.thModal}>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, fontSize: 11, height: 34 }}>
                         <input
                           type="checkbox"
                           checked={filteredSearchDefects.length > 0 && tempSelectedIds.length === filteredSearchDefects.length}
@@ -1453,85 +1428,44 @@ const QARCreate = () => {
                               setTempSelectedIds([]);
                             }
                           }}
+                          style={{ accentColor: t.primary }}
                         />
                       </th>
-                      <th style={styles.thModal}>Folio</th>
-                      <th style={styles.thModal}>Fecha</th>
-                      <th style={styles.thModal}>Parte</th>
-                      <th style={styles.thModal}>Defecto</th>
-                      <th style={styles.thModal}>Sev</th>
-                      <th style={styles.thModal}>Estación</th>
-                      <th style={styles.thModal}>Turno</th>
-                      <th style={styles.thModal}>Depto</th>
-                      <th style={styles.thModal}>Disp</th>
-                      <th style={styles.thModal}>Inspector</th>
-                      <th style={styles.thModal}>QAR</th>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, fontSize: 11, height: 34 }}>Folio</th>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, fontSize: 11, height: 34 }}>Fecha</th>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, fontSize: 11, height: 34 }}>Parte</th>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, fontSize: 11, height: 34 }}>Defecto</th>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, fontSize: 11, height: 34 }}>Sev</th>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, fontSize: 11, height: 34 }}>Estación</th>
                     </tr>
                     {/* Filter row */}
                     <tr style={{ backgroundColor: t.bg }}>
-                      <th style={{ padding: '4px' }}></th>
-                      <th style={{ padding: '4px' }}>
+                      <th style={{ padding: 4 }}></th>
+                      <th style={{ padding: 4 }}>
                         <input type="text" placeholder="..." value={columnFilters.entryNumber}
                           onChange={(e) => setColumnFilters(prev => ({ ...prev, entryNumber: e.target.value }))}
-                          style={styles.columnFilterInput} />
+                          style={{ width: '100%', padding: '4px 6px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 4, color: t.text, fontSize: 11 }} />
                       </th>
-                      <th style={{ padding: '4px' }}></th>
-                      <th style={{ padding: '4px' }}>
+                      <th style={{ padding: 4 }}></th>
+                      <th style={{ padding: 4 }}>
                         <input type="text" placeholder="..." value={columnFilters.partNumber}
                           onChange={(e) => setColumnFilters(prev => ({ ...prev, partNumber: e.target.value }))}
-                          style={styles.columnFilterInput} />
+                          style={{ width: '100%', padding: '4px 6px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 4, color: t.text, fontSize: 11 }} />
                       </th>
-                      <th style={{ padding: '4px' }}>
+                      <th style={{ padding: 4 }}>
                         <input type="text" placeholder="..." value={columnFilters.defectName}
                           onChange={(e) => setColumnFilters(prev => ({ ...prev, defectName: e.target.value }))}
-                          style={styles.columnFilterInput} />
+                          style={{ width: '100%', padding: '4px 6px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 4, color: t.text, fontSize: 11 }} />
                       </th>
-                      <th style={{ padding: '4px' }}>
+                      <th style={{ padding: 4 }}>
                         <input type="text" placeholder="..." value={columnFilters.severityName}
                           onChange={(e) => setColumnFilters(prev => ({ ...prev, severityName: e.target.value }))}
-                          style={styles.columnFilterInput} />
+                          style={{ width: '100%', padding: '4px 6px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 4, color: t.text, fontSize: 11 }} />
                       </th>
-                      <th style={{ padding: '4px' }}>
+                      <th style={{ padding: 4 }}>
                         <input type="text" placeholder="..." value={columnFilters.stationName}
                           onChange={(e) => setColumnFilters(prev => ({ ...prev, stationName: e.target.value }))}
-                          style={styles.columnFilterInput} />
-                      </th>
-                      <th style={{ padding: '4px' }}>
-                        <input type="text" placeholder="..." value={columnFilters.shiftName}
-                          onChange={(e) => setColumnFilters(prev => ({ ...prev, shiftName: e.target.value }))}
-                          style={styles.columnFilterInput} />
-                      </th>
-                      <th style={{ padding: '4px' }}>
-                        <select value={columnFilters.departmentId}
-                          onChange={(e) => setColumnFilters(prev => ({ ...prev, departmentId: e.target.value }))}
-                          style={styles.columnFilterInput}>
-                          <option value="">-</option>
-                          <option value="1">Prod</option>
-                          <option value="2">Cal</option>
-                          <option value="3">Ing</option>
-                          <option value="4">Mant</option>
-                          <option value="5">Log</option>
-                          <option value="6">Prov</option>
-                        </select>
-                      </th>
-                      <th style={{ padding: '4px' }}>
-                        <input type="text" placeholder="..." value={columnFilters.dispositionName}
-                          onChange={(e) => setColumnFilters(prev => ({ ...prev, dispositionName: e.target.value }))}
-                          style={styles.columnFilterInput} />
-                      </th>
-                      <th style={{ padding: '4px' }}>
-                        <input type="text" placeholder="..." value={columnFilters.inspectorName}
-                          onChange={(e) => setColumnFilters(prev => ({ ...prev, inspectorName: e.target.value }))}
-                          style={styles.columnFilterInput} />
-                      </th>
-                      <th style={{ padding: '4px' }}>
-                        <select value={columnFilters.hasQar}
-                          onChange={(e) => setColumnFilters(prev => ({ ...prev, hasQar: e.target.value }))}
-                          style={styles.columnFilterInput}>
-                          <option value="">-</option>
-                          <option value="no">No</option>
-                          <option value="yes">Sí</option>
-                        </select>
+                          style={{ width: '100%', padding: '4px 6px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 4, color: t.text, fontSize: 11 }} />
                       </th>
                     </tr>
                   </thead>
@@ -1542,50 +1476,39 @@ const QARCreate = () => {
                         onClick={() => toggleDefectSelection(defect)}
                         style={{
                           cursor: 'pointer',
-                          backgroundColor: tempSelectedIds.includes(defect.id) ? 'rgba(59, 130, 246, 0.2)' : 'transparent'
+                          backgroundColor: tempSelectedIds.includes(defect.id) ? t.accentBg : 'transparent',
+                          height: 44
                         }}
                       >
-                        <td style={styles.tdModal}>
+                        <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}` }}>
                           <input
                             type="checkbox"
                             checked={tempSelectedIds.includes(defect.id)}
                             onChange={() => {}}
+                            style={{ accentColor: t.primary }}
                           />
                         </td>
-                        <td style={{ ...styles.tdModal, fontWeight: '600', color: '#60a5fa' }}>{defect.entryNumber}</td>
-                        <td style={styles.tdModal}>{formatDate(defect.capturedAt || defect.createdAt)}</td>
-                        <td style={styles.tdModal}>{defect.partNumber || '-'}</td>
-                        <td style={styles.tdModal}>{defect.defectName || '-'}</td>
-                        <td style={styles.tdModal}>
+                        <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}`, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, color: t.accent, fontSize: 11 }}>{defect.entryNumber}</td>
+                        <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}`, color: t.textMuted, fontSize: 11 }}>{formatDate(defect.capturedAt || defect.createdAt)}</td>
+                        <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}`, color: t.text }}>{defect.partNumber || '-'}</td>
+                        <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}`, color: t.text }}>{defect.defectName || '-'}</td>
+                        <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}` }}>
                           <span style={{
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontSize: '10px',
-                            fontWeight: '600',
-                            backgroundColor: defect.severityColor || '#6b7280',
-                            color: 'white'
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: 10
                           }}>
-                            {defect.severityCode || defect.severityName || '-'}
+                            <span style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: 1,
+                              backgroundColor: defect.severityColor || t.textMuted
+                            }} />
+                            <span style={{ color: t.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>{defect.severityCode || defect.severityName || '-'}</span>
                           </span>
                         </td>
-                        <td style={styles.tdModal}>{defect.stationName || '-'}</td>
-                        <td style={styles.tdModal}>{defect.shiftCode || defect.shiftName || '-'}</td>
-                        <td style={styles.tdModal}>{defect.departmentId ? getDepartmentName(defect.departmentId) : '-'}</td>
-                        <td style={styles.tdModal}>{defect.dispositionCode || defect.dispositionName || '-'}</td>
-                        <td style={styles.tdModal}>
-                          {defect.inspectorFirstName ? `${defect.inspectorFirstName} ${defect.inspectorLastName || ''}`.trim() : '-'}
-                        </td>
-                        <td style={styles.tdModal}>
-                          {defect.hasQar ? (
-                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '600', backgroundColor: '#047857', color: 'white' }}>
-                              {defect.qarNumber || 'Sí'}
-                            </span>
-                          ) : (
-                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '600', backgroundColor: '#64748b', color: 'white' }}>
-                              No
-                            </span>
-                          )}
-                        </td>
+                        <td style={{ padding: '0 12px', borderBottom: `1px solid ${t.line}`, color: t.text }}>{defect.stationName || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1594,20 +1517,21 @@ const QARCreate = () => {
             </div>
 
             {/* Footer */}
-            <div style={styles.modalFooter}>
-              <span style={{ color: t.textDim }}>
-                {tempSelectedIds.length} seleccionado(s) de {filteredSearchDefects.length} mostrados ({searchDefects.length} total)
+            <div style={modalFooter}>
+              <span style={{ color: t.textMuted, fontSize: 12 }}>
+                {tempSelectedIds.length} seleccionado(s)
               </span>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setShowDefectModal(false)}
                   style={{
-                    padding: '10px 20px',
-                    backgroundColor: t.textMuted,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
+                    padding: '10px 18px',
+                    backgroundColor: t.bgPanel,
+                    color: t.text,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: 13
                   }}
                 >
                   Cancelar
@@ -1615,19 +1539,21 @@ const QARCreate = () => {
                 <button
                   onClick={confirmDefectSelection}
                   style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#2E7D32',
+                    padding: '10px 18px',
+                    backgroundColor: t.primary,
                     color: 'white',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: 6,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: 6,
+                    fontSize: 13,
+                    fontWeight: 600
                   }}
                 >
-                  <Plus size={16} />
-                  Agregar Seleccionados
+                  <Plus size={14} />
+                  Agregar a la QAR
                 </button>
               </div>
             </div>
@@ -1635,161 +1561,135 @@ const QARCreate = () => {
         </div>
       )}
 
-      {/* Modal - Éxito QAR */}
+      {/* ====== MODAL: Success ====== */}
       {successModalOpen && successData && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10001
-        }}>
+        <div style={modalOverlay}>
           <div style={{
             backgroundColor: t.bgCard,
-            borderRadius: '16px',
-            padding: '32px',
-            maxWidth: '420px',
+            border: `1px solid ${t.border}`,
+            borderRadius: 8,
+            boxShadow: '0 12px 32px rgba(0,0,0,0.22)',
+            maxWidth: 420,
             width: '90%',
-            textAlign: 'center',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+            overflow: 'hidden'
           }}>
             <div style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '50%',
-              backgroundColor: '#dbeafe',
+              height: 48,
+              padding: '0 16px',
+              borderBottom: `1px solid ${t.border}`,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 20px',
-              border: '3px solid #1e40af'
+              gap: 8
             }}>
-              <Check size={36} style={{ color: '#1e40af' }} />
+              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.success }} />
+              <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>QAR Emitido Exitosamente</span>
             </div>
-            <h3 style={{
-              color: '#1e40af',
-              fontSize: '22px',
-              fontWeight: '700',
-              marginBottom: '12px'
+            <div style={{ padding: 24 }}>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>Número de Alerta</div>
+                <div style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: t.text,
+                  padding: '12px 20px',
+                  backgroundColor: t.bgPanel,
+                  borderRadius: 8,
+                  display: 'inline-block'
+                }}>
+                  {successData.alertNumber}
+                </div>
+              </div>
+              <div style={{ fontSize: 13, color: t.textMuted, textAlign: 'center' }}>
+                Notificación enviada a {successData.recipientCount} destinatario(s)
+              </div>
+            </div>
+            <div style={{
+              height: 56,
+              padding: '0 16px',
+              backgroundColor: t.field,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end'
             }}>
-              QAR Emitido Exitosamente
-            </h3>
-            <p style={{
-              color: t.text,
-              fontSize: '16px',
-              marginBottom: '8px'
-            }}>
-              Número de Alerta:
-            </p>
-            <p style={{
-              color: '#1e40af',
-              fontSize: '24px',
-              fontWeight: '700',
-              marginBottom: '24px',
-              padding: '12px',
-              backgroundColor: '#f1f5f9',
-              borderRadius: '8px'
-            }}>
-              {successData.alertNumber}
-            </p>
-            <button
-              onClick={() => {
-                setSuccessModalOpen(false);
-                navigate(`/qar-detail/${successData.qarId}`);
-              }}
-              style={{
-                padding: '14px 32px',
-                backgroundColor: '#1e40af',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                fontSize: '15px'
-              }}
-            >
-              Ver Detalles del QAR
-            </button>
+              <button
+                onClick={() => {
+                  setSuccessModalOpen(false);
+                  navigate(`/qar-detail/${successData.qarId}`);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: t.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 13
+                }}
+              >
+                Ver Detalles del QAR
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal - Sin Permisos */}
+      {/* ====== MODAL: Permission Denied ====== */}
       {permissionModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10001
-        }}>
+        <div style={modalOverlay}>
           <div style={{
             backgroundColor: t.bgCard,
-            borderRadius: '16px',
-            padding: '32px',
-            maxWidth: '400px',
+            border: `1px solid ${t.border}`,
+            borderRadius: 8,
+            boxShadow: '0 12px 32px rgba(0,0,0,0.22)',
+            maxWidth: 400,
             width: '90%',
-            textAlign: 'center',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+            overflow: 'hidden'
           }}>
             <div style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '50%',
-              backgroundColor: '#fef2f2',
+              height: 48,
+              padding: '0 16px',
+              borderBottom: `1px solid ${t.border}`,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 20px',
-              border: '3px solid #991b1b'
+              gap: 8
             }}>
-              <X size={36} style={{ color: '#991b1b' }} />
+              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.error }} />
+              <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Acceso Denegado</span>
             </div>
-            <h3 style={{
-              color: '#991b1b',
-              fontSize: '20px',
-              fontWeight: '700',
-              marginBottom: '12px'
+            <div style={{ padding: 24 }}>
+              <p style={{ color: t.textMuted, fontSize: 14, margin: 0, lineHeight: 1.5 }}>
+                No tienes permisos para crear QARs. Contacta al administrador si necesitas acceso.
+              </p>
+            </div>
+            <div style={{
+              height: 56,
+              padding: '0 16px',
+              backgroundColor: t.field,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end'
             }}>
-              Acceso Denegado
-            </h3>
-            <p style={{
-              color: t.textMuted,
-              fontSize: '15px',
-              marginBottom: '24px',
-              lineHeight: '1.5'
-            }}>
-              No tienes permisos para crear QARs.<br/>
-              Contacta al administrador si necesitas acceso.
-            </p>
-            <button
-              onClick={() => {
-                setPermissionModalOpen(false);
-                navigate('/qar-list');
-              }}
-              style={{
-                padding: '14px 32px',
-                backgroundColor: t.accent,
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                fontSize: '15px'
-              }}
-            >
-              Volver a la Lista
-            </button>
+              <button
+                onClick={() => {
+                  setPermissionModalOpen(false);
+                  navigate('/qar-list');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: t.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 13
+                }}
+              >
+                Volver a la Lista
+              </button>
+            </div>
           </div>
         </div>
       )}

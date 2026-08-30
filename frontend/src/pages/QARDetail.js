@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowLeft, Send, Check, Clock, User, MapPin,
+  ArrowLeft, Send, Check, Clock, User, MapPin,
   FileText, Camera, MessageSquare, CheckCircle, XCircle, Users,
   List, PlusCircle, LayoutDashboard, ClipboardCheck,
-  Paperclip, Trash2, Download, File, Image
+  Paperclip, Download, File, Image, X
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const QARDetail = () => {
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
   const { id } = useParams();
   const API_URL = 'http://localhost:5000';
@@ -29,7 +29,7 @@ const QARDetail = () => {
   const [resolutionNotes, setResolutionNotes] = useState('');
 
   // Response file attachments
-  const [responseFiles, setResponseFiles] = useState([]);   // already uploaded
+  const [responseFiles, setResponseFiles] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
 
   // Validation form
@@ -252,7 +252,6 @@ Por favor revisa y valida la respuesta en el sistema.`;
         const responseEmails = responseRecipients.map(r => r.email);
 
         if (approved) {
-          // Aprobado: notificar a todos
           const subject = `QAR ${qar?.alertNumber} - APROBADO Y CERRADO`;
           const body = `El QAR ${qar?.alertNumber} ha sido aprobado y cerrado.
 
@@ -262,7 +261,6 @@ Parte: ${qar?.partNumber || 'N/A'} - ${qar?.partName || ''}
 El QAR ha sido cerrado exitosamente. Gracias por su colaboración.`;
           openMailto(allEmails, subject, body);
         } else {
-          // Rechazado: notificar a responsables de respuesta
           const subject = `QAR ${qar?.alertNumber} - RECHAZADO - Requiere Corrección`;
           const body = `El QAR ${qar?.alertNumber} ha sido rechazado y requiere corrección.
 
@@ -327,16 +325,22 @@ Por favor revisa y corrige la respuesta en el sistema.`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const getFileExtension = (filename) => {
+    if (!filename) return '';
+    const parts = filename.split('.');
+    return parts.length > 1 ? parts.pop().toUpperCase() : '';
+  };
+
   const isImage = (mimetype) => mimetype?.startsWith('image/');
 
   const getStatusConfig = (status) => {
     const configs = {
-      'EMITIDO': { color: t.warning, label: 'Pendiente de Respuesta', icon: AlertTriangle },
-      'RESPONDIDO': { color: t.accent, label: 'Pendiente de Validación', icon: Clock },
-      'CERRADO': { color: t.success, label: 'Cerrado', icon: CheckCircle },
-      'RECHAZADO': { color: t.error, label: 'Rechazado - Requiere Corrección', icon: XCircle }
+      'EMITIDO': { color: t.warning, label: 'Pendiente de Respuesta' },
+      'RESPONDIDO': { color: t.accent, label: 'Pendiente de Validación' },
+      'CERRADO': { color: t.success, label: 'Cerrado' },
+      'RECHAZADO': { color: t.error, label: 'Rechazado' }
     };
-    return configs[status] || { color: t.textMuted, label: status, icon: AlertTriangle };
+    return configs[status] || { color: t.textMuted, label: status };
   };
 
   const responseRecipients = recipients.filter(r => r.recipientType === 'response');
@@ -345,384 +349,182 @@ Por favor revisa y corrige la respuesta en el sistema.`;
   const canRespond = qar?.status === 'EMITIDO' || qar?.status === 'RECHAZADO';
   const canValidate = qar?.status === 'RESPONDIDO';
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      backgroundColor: t.bg,
-      padding: '24px'
-    },
-    backButton: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      color: t.textMuted,
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      marginBottom: '16px',
-      fontSize: '14px'
-    },
-    header: {
-      backgroundColor: '#475569',
-      color: 'white',
-      padding: '24px',
-      borderRadius: '12px',
-      marginBottom: '24px'
-    },
-    headerTop: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: '12px'
-    },
-    qarNumber: {
-      fontSize: '14px',
-      opacity: 0.9,
-      marginBottom: '8px',
-      fontFamily: 'monospace',
-      letterSpacing: '1px'
-    },
-    headerTitle: {
-      fontSize: '20px',
-      fontWeight: '700',
-      margin: '0 0 12px 0',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
-    },
-    statusBadge: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '8px 16px',
-      borderRadius: '20px',
-      fontSize: '13px',
-      fontWeight: '600'
-    },
-    headerMeta: {
-      display: 'flex',
-      gap: '20px',
-      fontSize: '13px',
-      opacity: 0.9,
-      flexWrap: 'wrap'
-    },
-    metaItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px'
-    },
-    grid: {
-      display: 'grid',
-      gridTemplateColumns: '2fr 1fr',
-      gap: '24px'
-    },
-    card: {
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '12px',
-      padding: '20px',
-      marginBottom: '20px'
-    },
-    cardTitle: {
-      fontSize: '15px',
-      fontWeight: '600',
-      color: t.text,
-      marginBottom: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    },
-    infoGrid: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '16px'
-    },
-    infoItem: {
-      marginBottom: '8px'
-    },
-    infoLabel: {
-      color: t.textMuted,
-      fontSize: '11px',
-      marginBottom: '4px',
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px'
-    },
-    infoValue: {
-      color: t.text,
-      fontSize: '14px',
-      fontWeight: '500'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse',
-      fontSize: '13px'
-    },
-    th: {
-      textAlign: 'left',
-      padding: '10px 12px',
-      backgroundColor: t.bgPanel,
-      color: t.textMuted,
-      fontWeight: '600',
-      borderBottom: `1px solid ${t.border}`
-    },
-    td: {
-      padding: '10px 12px',
-      color: t.text,
-      borderBottom: `1px solid ${t.border}`
-    },
-    textarea: {
-      width: '100%',
-      padding: '12px',
-      backgroundColor: t.bgPanel,
-      border: `1px solid ${t.border}`,
-      borderRadius: '8px',
-      color: t.text,
-      fontSize: '14px',
-      minHeight: '100px',
-      resize: 'vertical',
-      marginBottom: '12px'
-    },
-    textareaSmall: {
-      width: '100%',
-      padding: '10px',
-      backgroundColor: t.bgPanel,
-      border: `1px solid ${t.border}`,
-      borderRadius: '8px',
-      color: t.text,
-      fontSize: '13px',
-      minHeight: '60px',
-      resize: 'vertical'
-    },
-    responseDisplay: {
-      backgroundColor: t.bgPanel,
-      padding: '14px',
-      borderRadius: '8px',
-      marginBottom: '12px'
-    },
-    label: {
-      display: 'block',
-      color: t.textMuted,
-      fontSize: '12px',
-      marginBottom: '6px',
-      fontWeight: '600',
-      textTransform: 'uppercase'
-    },
-    buttonRow: {
-      display: 'flex',
-      gap: '12px',
-      marginTop: '16px'
-    },
-    buttonPrimary: {
-      flex: 1,
-      padding: '14px',
-      backgroundColor: t.accent,
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px'
-    },
-    buttonSuccess: {
-      flex: 1,
-      padding: '14px',
-      backgroundColor: t.success,
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px'
-    },
-    buttonDanger: {
-      flex: 1,
-      padding: '14px',
-      backgroundColor: t.error,
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px'
-    },
-    buttonSecondary: {
-      padding: '10px 16px',
-      backgroundColor: t.bgPanel,
-      color: t.text,
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      fontSize: '13px',
-      fontWeight: '500',
-      cursor: 'pointer'
-    },
-    recipientChip: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '6px 12px',
-      borderRadius: '20px',
-      fontSize: '12px',
-      fontWeight: '500',
-      margin: '4px'
-    },
-    photoGrid: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '16px'
-    },
-    photoBox: {
-      backgroundColor: t.bgPanel,
-      borderRadius: '8px',
-      padding: '12px',
-      textAlign: 'center'
-    },
-    photo: {
-      maxWidth: '100%',
-      maxHeight: '180px',
-      borderRadius: '8px'
-    },
-    timeline: {
-      position: 'relative'
-    },
-    timelineItem: {
-      position: 'relative',
-      paddingLeft: '28px',
-      paddingBottom: '16px',
-      borderLeft: `2px solid ${t.border}`,
-      marginLeft: '8px'
-    },
-    timelineDot: {
-      position: 'absolute',
-      left: '-9px',
-      top: '0',
-      width: '16px',
-      height: '16px',
-      borderRadius: '50%',
-      border: `2px solid ${t.bgCard}`
-    },
-    closedBanner: {
-      backgroundColor: `${t.success}20`,
-      border: `1px solid ${t.success}`,
-      borderRadius: '8px',
-      padding: '20px',
-      textAlign: 'center'
-    },
-    rejectedBanner: {
-      backgroundColor: `${t.error}20`,
-      border: `1px solid ${t.error}`,
-      borderRadius: '8px',
-      padding: '16px'
-    },
-    fileZone: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: `2px dashed ${t.textMuted}`,
-      borderRadius: '8px',
-      padding: '20px 16px',
-      textAlign: 'center',
-      cursor: 'pointer',
-      backgroundColor: t.bgCard,
-      transition: 'border-color 0.2s, background-color 0.2s'
-    },
-    fileChip: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '8px 12px',
-      backgroundColor: t.bgPanel,
-      borderRadius: '8px',
-      border: `1px solid ${t.border}`,
-      fontSize: '13px',
-      color: t.text
-    }
+  // ─── MODAL COMMON STYLES ──────────────────────────────────────────────────────
+  const modalOverlay = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10001
+  };
+
+  const modalCard = {
+    backgroundColor: t.bgCard,
+    border: `1px solid ${t.border}`,
+    borderRadius: 8,
+    boxShadow: '0 12px 32px rgba(0,0,0,0.22)',
+    maxWidth: 420,
+    width: '90%',
+    overflow: 'hidden'
+  };
+
+  const modalHeader = {
+    height: 48,
+    padding: '0 16px',
+    borderBottom: `1px solid ${t.border}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  };
+
+  const modalFooter = {
+    height: 56,
+    padding: '0 16px',
+    backgroundColor: t.field,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 10
+  };
+
+  const getModalDotColor = (type) => {
+    if (type === 'success') return t.success;
+    if (type === 'error') return t.error;
+    if (type === 'warning') return t.warning;
+    return t.accent;
   };
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={{ color: t.text, textAlign: 'center', padding: '60px' }}>Cargando...</div>
+      <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: 24 }}>
+        <div style={{ color: t.text, textAlign: 'center', padding: 60 }}>Cargando...</div>
       </div>
     );
   }
 
   if (!qar) {
     return (
-      <div style={styles.container}>
-        <div style={{ color: t.text, textAlign: 'center', padding: '60px' }}>QAR no encontrado</div>
+      <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: 24 }}>
+        <div style={{ color: t.text, textAlign: 'center', padding: 60 }}>QAR no encontrado</div>
       </div>
     );
   }
 
   const statusConfig = getStatusConfig(qar.status);
-  const StatusIcon = statusConfig.icon;
   const isReadOnly = qar.status === 'CERRADO';
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: 24 }}>
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#dbeafe',
-          border: '1px solid #1e40af',
-          borderRadius: '8px',
+          backgroundColor: t.accentBg,
+          border: `1px solid ${t.accentBorder}`,
+          borderRadius: 8,
           padding: '12px 16px',
-          marginBottom: '16px',
+          marginBottom: 16,
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: 8
         }}>
-          <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#1e3a8a', fontWeight: '500' }}>
+          <span style={{ color: t.text, fontWeight: 500, fontSize: 13 }}>
             Este QAR está cerrado y es de solo lectura
           </span>
         </div>
       )}
 
       {/* Navigation Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <button style={styles.backButton} onClick={() => navigate('/qar-list')}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <button
+          onClick={() => navigate('/qar-list')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            color: t.textMuted,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 14
+          }}
+        >
           <ArrowLeft size={18} />
           Volver a Lista
         </button>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={() => navigate('/qar-list')}
-            style={{ padding: '8px 14px', backgroundColor: t.bgCard, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: t.bgCard,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 13
+            }}
           >
             <List size={16} />
             Lista QAR
           </button>
           <button
             onClick={() => navigate('/qar-create')}
-            style={{ padding: '8px 14px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: t.primary,
+              color: 'white',
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 13
+            }}
           >
             <PlusCircle size={16} />
             Nuevo QAR
           </button>
           <button
             onClick={() => navigate('/defect-capture')}
-            style={{ padding: '8px 14px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: t.bgCard,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 13
+            }}
           >
             <ClipboardCheck size={16} />
             Inspección
           </button>
           <button
             onClick={() => navigate('/defect-dashboard')}
-            style={{ padding: '8px 14px', backgroundColor: t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: t.bgCard,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 13
+            }}
           >
             <LayoutDashboard size={16} />
             Dashboard
@@ -730,92 +532,144 @@ Por favor revisa y corrige la respuesta en el sistema.`;
         </div>
       </div>
 
-      {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerTop}>
+      {/* Header - Now normal page header, not slate */}
+      <div style={{
+        backgroundColor: t.bgCard,
+        border: `1px solid ${t.border}`,
+        borderRadius: 12,
+        padding: 24,
+        marginBottom: 24
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={styles.qarNumber}>{qar.alertNumber}</div>
-              <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <span style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 14,
+                color: t.textMuted,
+                letterSpacing: 1
+              }}>
+                {qar.alertNumber}
+              </span>
+              <button
+                onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 4,
+                  cursor: 'pointer'
+                }}
+              >
                 {language === 'es' ? 'EN' : 'ES'}
               </button>
             </div>
-            <h1 style={styles.headerTitle}>
-              <AlertTriangle size={24} />
+            <h1 style={{
+              fontSize: 19,
+              fontWeight: 600,
+              color: t.text,
+              margin: 0
+            }}>
               {qar.title}
             </h1>
           </div>
-          <div style={{ ...styles.statusBadge, backgroundColor: statusConfig.color }}>
-            <StatusIcon size={16} />
+          {/* Status chip */}
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            borderRadius: 12,
+            fontSize: 12,
+            fontWeight: 600,
+            backgroundColor: `${statusConfig.color}15`,
+            color: statusConfig.color,
+            border: `1px solid ${statusConfig.color}30`
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: statusConfig.color }} />
             {statusConfig.label}
-          </div>
+          </span>
         </div>
-        <div style={styles.headerMeta}>
-          <span style={styles.metaItem}>
+        <div style={{ display: 'flex', gap: 20, fontSize: 12, color: t.textMuted, flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <User size={14} />
             Emitido por: {qar.reportedByName || '-'}
           </span>
-          <span style={styles.metaItem}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Clock size={14} />
             {formatDate(qar.createdAt)}
           </span>
-          <span style={styles.metaItem}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <MapPin size={14} />
             {qar.departmentName || 'N/A'}
           </span>
         </div>
       </div>
 
-      <div style={styles.grid}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
         {/* ====== LEFT COLUMN ====== */}
         <div>
           {/* Info Card */}
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
               <FileText size={18} />
               Información General
             </div>
-            <div style={styles.infoGrid}>
-              <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Cliente</div>
-                <div style={styles.infoValue}>{qar.clientName || '-'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Cliente</div>
+                <div style={{ color: t.text, fontSize: 14, fontWeight: 500 }}>{qar.clientName || '-'}</div>
               </div>
-              <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Proyecto</div>
-                <div style={styles.infoValue}>{qar.projectName || '-'}</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Proyecto</div>
+                <div style={{ color: t.text, fontSize: 14, fontWeight: 500 }}>{qar.projectName || '-'}</div>
               </div>
-              <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Parte</div>
-                <div style={styles.infoValue}>{qar.partNumber || '-'}</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Parte</div>
+                <div style={{ color: t.text, fontSize: 14, fontWeight: 500 }}>{qar.partNumber || '-'}</div>
               </div>
-              <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Severidad</div>
-                <div style={styles.infoValue}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Severidad</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{
-                    backgroundColor: qar.severityColor || t.textMuted,
-                    color: 'white',
-                    padding: '4px 10px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: '600'
-                  }}>
-                    {qar.severityName}
-                  </span>
+                    width: 8,
+                    height: 8,
+                    borderRadius: 2,
+                    backgroundColor: qar.severityColor || t.textMuted
+                  }} />
+                  <span style={{ color: t.text, fontSize: 14, fontWeight: 500 }}>{qar.severityName}</span>
                 </div>
               </div>
-              <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Departamento Responsable</div>
-                <div style={styles.infoValue}>{qar.departmentName || '-'}</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Departamento Responsable</div>
+                <div style={{ color: t.text, fontSize: 14, fontWeight: 500 }}>{qar.departmentName || '-'}</div>
               </div>
-              <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Defectos Relacionados</div>
-                <div style={styles.infoValue}>{defects.length}</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Defectos Relacionados</div>
+                <div style={{ color: t.text, fontSize: 14, fontWeight: 500 }}>{defects.length}</div>
               </div>
             </div>
             {qar.description && (
-              <div style={{ marginTop: '16px' }}>
-                <div style={styles.infoLabel}>Descripción</div>
-                <div style={{ color: t.textMuted, fontSize: '14px', whiteSpace: 'pre-wrap' }}>
+              <div style={{ marginTop: 16 }}>
+                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Descripción</div>
+                <div style={{ color: t.textMuted, fontSize: 14, whiteSpace: 'pre-wrap' }}>
                   {qar.description}
                 </div>
               </div>
@@ -824,204 +678,161 @@ Por favor revisa y corrige la respuesta en el sistema.`;
 
           {/* Defects Table */}
           {defects.length > 0 && (
-            <div style={styles.card}>
-              <div style={styles.cardTitle}>
-                <AlertTriangle size={18} color={t.warning} />
+            <div style={{
+              backgroundColor: t.bgCard,
+              border: `1px solid ${t.border}`,
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 20
+            }}>
+              <div style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: t.text,
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: t.warning }} />
                 Defectos Asociados ({defects.length})
               </div>
-              <table style={styles.table}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Folio</th>
-                    <th style={styles.th}>Defecto</th>
-                    <th style={styles.th}>Comentario</th>
-                    <th style={styles.th}>Estación</th>
-                    <th style={styles.th}>Inspector</th>
-                    <th style={styles.th}>Fecha</th>
-                    <th style={styles.th}>Adjuntos</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Folio</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Defecto</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Estación</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Inspector</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', backgroundColor: t.field, color: t.textMuted, fontWeight: 600, borderBottom: `1px solid ${t.line}`, height: 34 }}>Fecha</th>
                   </tr>
                 </thead>
                 <tbody>
                   {defects.map((d, idx) => (
-                    <tr key={idx}>
-                      <td style={{ ...styles.td, fontWeight: '600', color: t.accent }}>{d.entryNumber}</td>
-                      <td style={{ ...styles.td, maxWidth: '150px', wordWrap: 'break-word' }}>{d.defectName}</td>
-                      <td style={{ ...styles.td, maxWidth: '200px', wordWrap: 'break-word', fontSize: '12px', color: t.textMuted }}>
-                        {d.notes || '-'}
-                      </td>
-                      <td style={styles.td}>{d.stationName || '-'}</td>
-                      <td style={styles.td}>{d.inspectorName || '-'}</td>
-                      <td style={styles.td}>{formatDate(d.createdAt)}</td>
-                      <td style={styles.td}>
-                        {d.attachments && d.attachments.length > 0 ? (
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {d.attachments.map((att, i) => (
-                              <a
-                                key={i}
-                                href={`${API_URL}/uploads/${att.filePath}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                title={att.originalName}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '2px 6px',
-                                  backgroundColor: `${t.accent}22`,
-                                  color: t.accent,
-                                  borderRadius: '4px',
-                                  fontSize: '11px',
-                                  textDecoration: 'none'
-                                }}
-                              >
-                                {att.mimetype?.startsWith('image/') ? <Image size={12} /> : <File size={12} />}
-                                {i + 1}
-                              </a>
-                            ))}
-                          </div>
-                        ) : (
-                          <span style={{ color: t.textMuted, fontSize: '12px' }}>-</span>
-                        )}
-                      </td>
+                    <tr key={idx} style={{ height: 44 }}>
+                      <td style={{ padding: '0 12px', fontWeight: 600, color: t.accent, borderBottom: `1px solid ${t.line}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>{d.entryNumber}</td>
+                      <td style={{ padding: '0 12px', color: t.text, borderBottom: `1px solid ${t.line}`, maxWidth: 150 }}>{d.defectName}</td>
+                      <td style={{ padding: '0 12px', color: t.text, borderBottom: `1px solid ${t.line}` }}>{d.stationName || '-'}</td>
+                      <td style={{ padding: '0 12px', color: t.text, borderBottom: `1px solid ${t.line}` }}>{d.inspectorName || '-'}</td>
+                      <td style={{ padding: '0 12px', color: t.textMuted, borderBottom: `1px solid ${t.line}`, fontSize: 12 }}>{formatDate(d.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-
-              {/* Galería de fotos de defectos */}
-              {defects.some(d => d.attachments && d.attachments.length > 0) && (
-                <div style={{ marginTop: '16px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: t.textMuted, marginBottom: '10px' }}>
-                    <Image size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    Evidencia Fotográfica de Defectos
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                    {defects.flatMap((d, dIdx) =>
-                      (d.attachments || [])
-                        .filter(att => att.mimetype?.startsWith('image/'))
-                        .map((att, aIdx) => (
-                          <a
-                            key={`${dIdx}-${aIdx}`}
-                            href={`${API_URL}/uploads/${att.filePath}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ display: 'block', textDecoration: 'none' }}
-                          >
-                            <div style={{
-                              width: '120px',
-                              height: '90px',
-                              borderRadius: '8px',
-                              overflow: 'hidden',
-                              border: `2px solid ${t.border}`,
-                              position: 'relative'
-                            }}>
-                              <img
-                                src={`${API_URL}/uploads/${att.filePath}`}
-                                alt={att.originalName}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              />
-                              <div style={{
-                                position: 'absolute',
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                backgroundColor: 'rgba(0,0,0,0.6)',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '2px 6px',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}>
-                                {d.entryNumber}
-                              </div>
-                            </div>
-                          </a>
-                        ))
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
           {/* ====== RESPONSE SECTION ====== */}
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
               <Send size={18} color={t.accent} />
               Respuesta al QAR
               {qar.status === 'EMITIDO' && (
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: t.warning, fontWeight: '500' }}>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: t.warning, fontWeight: 500 }}>
                   PENDIENTE
                 </span>
               )}
               {(qar.status === 'RESPONDIDO' || qar.status === 'CERRADO') && (
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: t.success, fontWeight: '500' }}>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: t.success, fontWeight: 500 }}>
                   COMPLETADO
                 </span>
               )}
               {qar.status === 'RECHAZADO' && (
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: t.error, fontWeight: '500' }}>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: t.error, fontWeight: 500 }}>
                   REQUIERE CORRECCIÓN
                 </span>
               )}
             </div>
 
+            {/* Rejection banner - simple warningBg row */}
             {qar.status === 'RECHAZADO' && (
-              <div style={styles.rejectedBanner}>
-                <div style={{ color: t.error, fontWeight: '600', marginBottom: '8px' }}>
-                  <XCircle size={16} style={{ display: 'inline', marginRight: '6px' }} />
-                  Respuesta Rechazada
-                </div>
-                <div style={{ color: t.text, fontSize: '13px' }}>
-                  El validador rechazó la respuesta. Por favor revisa y corrige.
-                </div>
+              <div style={{
+                backgroundColor: t.warningBg,
+                border: `1px solid ${t.warningBorder}`,
+                borderRadius: 6,
+                padding: '10px 14px',
+                marginBottom: 16,
+                fontSize: 13,
+                color: t.text
+              }}>
+                <span style={{ fontWeight: 600 }}>Respuesta rechazada</span> — El validador requiere correcciones.
               </div>
             )}
 
             {/* Show existing response or form */}
             {(qar.rootCause || qar.correctiveAction) && !canRespond ? (
               <>
-                <div style={styles.responseDisplay}>
-                  <div style={styles.label}>Causa Raíz</div>
-                  <div style={{ color: t.text, fontSize: '14px' }}>{qar.rootCause || '-'}</div>
+                {/* Response sections - micro title + paragraph, no boxes */}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', marginBottom: 6 }}>Causa Raíz</div>
+                  <div style={{ color: t.text, fontSize: 14, lineHeight: 1.5 }}>{qar.rootCause || '-'}</div>
                 </div>
-                <div style={styles.responseDisplay}>
-                  <div style={styles.label}>Acción Correctiva</div>
-                  <div style={{ color: t.text, fontSize: '14px' }}>{qar.correctiveAction || '-'}</div>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', marginBottom: 6 }}>Acción Correctiva</div>
+                  <div style={{ color: t.text, fontSize: 14, lineHeight: 1.5 }}>{qar.correctiveAction || '-'}</div>
                 </div>
                 {qar.resolutionNotes && (
-                  <div style={styles.responseDisplay}>
-                    <div style={styles.label}>Notas Adicionales</div>
-                    <div style={{ color: t.text, fontSize: '14px' }}>{qar.resolutionNotes}</div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', marginBottom: 6 }}>Notas Adicionales</div>
+                    <div style={{ color: t.text, fontSize: 14, lineHeight: 1.5 }}>{qar.resolutionNotes}</div>
                   </div>
                 )}
-                {/* Adjuntos de respuesta (solo lectura) */}
+
+                {/* Response files - chip with extension, name, weight · date, × delete */}
                 {responseFiles.length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ ...styles.label, marginBottom: '8px' }}>
-                      <Paperclip size={13} style={{ display: 'inline', marginRight: '4px' }} />
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Paperclip size={13} />
                       Archivos Adjuntos ({responseFiles.length})
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {responseFiles.map(f => (
-                        <div key={f.id} style={styles.fileChip}>
-                          {isImage(f.mimetype)
-                            ? <Image size={16} color={t.accent} />
-                            : <File size={16} color={t.textMuted} />
-                          }
-                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div key={f.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 12px',
+                          backgroundColor: t.bgPanel,
+                          borderRadius: 6,
+                          border: `1px solid ${t.border}`,
+                          fontSize: 13
+                        }}>
+                          <span style={{
+                            padding: '2px 6px',
+                            backgroundColor: t.field,
+                            borderRadius: 3,
+                            fontSize: 10,
+                            fontFamily: "'IBM Plex Mono', monospace",
+                            fontWeight: 600,
+                            color: t.textMuted
+                          }}>
+                            {getFileExtension(f.originalName)}
+                          </span>
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: t.text }}>
                             {f.originalName}
                           </span>
-                          <span style={{ fontSize: '11px', color: t.textMuted }}>
-                            {formatFileSize(f.fileSize)}
+                          <span style={{ fontSize: 11, color: t.textMuted, whiteSpace: 'nowrap' }}>
+                            {formatFileSize(f.fileSize)} · {formatDate(f.uploadedAt || f.createdAt)}
                           </span>
                           <a
                             href={`${API_URL}${f.url}`}
                             target="_blank"
                             rel="noreferrer"
-                            title="Ver / Descargar"
-                            style={{ color: t.accent, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', textDecoration: 'none' }}
+                            style={{ color: t.accent, display: 'flex' }}
                           >
                             <Download size={14} />
                           </a>
@@ -1032,90 +843,143 @@ Por favor revisa y corrige la respuesta en el sistema.`;
                 )}
 
                 {qar.respondedByName && (
-                  <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '8px' }}>
+                  <div style={{ fontSize: 12, color: t.textMuted, marginTop: 8 }}>
                     Respondido por: {qar.respondedByName} el {formatDate(qar.responseDate)}
                   </div>
                 )}
               </>
             ) : canRespond ? (
               <>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={styles.label}>Causa Raíz *</label>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', color: t.textMuted, fontSize: 11, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase' }}>Causa Raíz *</label>
                   <textarea
-                    style={styles.textarea}
+                    style={{
+                      width: '100%',
+                      padding: 12,
+                      backgroundColor: t.field,
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 8,
+                      color: t.text,
+                      fontSize: 14,
+                      minHeight: 100,
+                      resize: 'vertical'
+                    }}
                     placeholder="Describe la causa raíz del problema..."
                     value={rootCause}
                     onChange={(e) => setRootCause(e.target.value)}
                   />
                 </div>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={styles.label}>Acción Correctiva *</label>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', color: t.textMuted, fontSize: 11, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase' }}>Acción Correctiva *</label>
                   <textarea
-                    style={styles.textarea}
+                    style={{
+                      width: '100%',
+                      padding: 12,
+                      backgroundColor: t.field,
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 8,
+                      color: t.text,
+                      fontSize: 14,
+                      minHeight: 100,
+                      resize: 'vertical'
+                    }}
                     placeholder="Describe la acción correctiva implementada..."
                     value={correctiveAction}
                     onChange={(e) => setCorrectiveAction(e.target.value)}
                   />
                 </div>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={styles.label}>Notas Adicionales</label>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', color: t.textMuted, fontSize: 11, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase' }}>Notas Adicionales</label>
                   <textarea
-                    style={styles.textarea}
+                    style={{
+                      width: '100%',
+                      padding: 12,
+                      backgroundColor: t.field,
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 8,
+                      color: t.text,
+                      fontSize: 14,
+                      minHeight: 80,
+                      resize: 'vertical'
+                    }}
                     placeholder="Notas o comentarios adicionales (opcional)..."
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
                   />
                 </div>
-                {/* ── Adjuntos de respuesta ── */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={styles.label}>
-                    <Paperclip size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                    Archivos Adjuntos (evidencias, fotos, documentos)
+
+                {/* File attachments */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', color: t.textMuted, fontSize: 11, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Paperclip size={13} />
+                    Archivos Adjuntos
                   </label>
 
-                  {/* Archivos ya subidos */}
+                  {/* Already uploaded files */}
                   {responseFiles.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
                       {responseFiles.map(f => (
-                        <div key={f.id} style={styles.fileChip}>
-                          {isImage(f.mimetype)
-                            ? <Image size={16} color={t.accent} />
-                            : <File size={16} color={t.textMuted} />
-                          }
-                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div key={f.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 12px',
+                          backgroundColor: t.bgPanel,
+                          borderRadius: 6,
+                          border: `1px solid ${t.border}`,
+                          fontSize: 13
+                        }}>
+                          <span style={{
+                            padding: '2px 6px',
+                            backgroundColor: t.field,
+                            borderRadius: 3,
+                            fontSize: 10,
+                            fontFamily: "'IBM Plex Mono', monospace",
+                            fontWeight: 600,
+                            color: t.textMuted
+                          }}>
+                            {getFileExtension(f.originalName)}
+                          </span>
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: t.text }}>
                             {f.originalName}
                           </span>
-                          <span style={{ fontSize: '11px', color: t.textMuted, flexShrink: 0 }}>
+                          <span style={{ fontSize: 11, color: t.textMuted, flexShrink: 0 }}>
                             {formatFileSize(f.fileSize)}
                           </span>
                           <a
                             href={`${API_URL}${f.url}`}
                             target="_blank"
                             rel="noreferrer"
-                            title="Descargar"
                             style={{ color: t.accent, display: 'flex' }}
                           >
                             <Download size={14} />
                           </a>
                           <button
                             onClick={() => handleDeleteResponseFile(f.id)}
-                            title="Eliminar"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.error, padding: 0, display: 'flex' }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.error, padding: 0, display: 'flex', fontSize: 14 }}
                           >
-                            <Trash2 size={14} />
+                            ✕
                           </button>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Zona de carga */}
+                  {/* Upload zone - 1px dashed border */}
                   <label
                     htmlFor="response-file-input"
                     style={{
-                      ...styles.fileZone,
-                      borderColor: uploadingFile ? t.accent : t.border,
-                      cursor: uploadingFile ? 'wait' : 'pointer'
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `1px dashed ${uploadingFile ? t.accent : t.border}`,
+                      borderRadius: 8,
+                      padding: '16px',
+                      textAlign: 'center',
+                      cursor: uploadingFile ? 'wait' : 'pointer',
+                      backgroundColor: t.bgCard,
+                      transition: 'border-color 0.2s'
                     }}
                     onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = t.accent; }}
                     onDragLeave={e => { e.currentTarget.style.borderColor = t.border; }}
@@ -1128,11 +992,11 @@ Por favor revisa y corrige la respuesta en el sistema.`;
                       await handleUploadResponseFile(fakeEvent);
                     }}
                   >
-                    <Paperclip size={20} color={t.textMuted} style={{ marginBottom: '6px' }} />
-                    <div style={{ fontSize: '13px', color: t.textMuted }}>
-                      {uploadingFile ? 'Subiendo...' : 'Haz clic o arrastra un archivo aquí'}
+                    <Paperclip size={18} color={t.textMuted} style={{ marginBottom: 6 }} />
+                    <div style={{ fontSize: 12, color: t.textMuted }}>
+                      {uploadingFile ? 'Subiendo...' : 'Arrastra o haz clic'}
                     </div>
-                    <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
+                    <div style={{ fontSize: 10, color: t.textMuted, marginTop: 2 }}>
                       Imágenes, PDF, Word, Excel · Máx. 10 MB
                     </div>
                     <input
@@ -1147,7 +1011,22 @@ Por favor revisa y corrige la respuesta en el sistema.`;
                 </div>
 
                 <button
-                  style={{ ...styles.buttonPrimary, opacity: submitting ? 0.7 : 1 }}
+                  style={{
+                    width: '100%',
+                    padding: 14,
+                    backgroundColor: t.accent,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    opacity: submitting ? 0.7 : 1
+                  }}
                   onClick={handleSubmitResponse}
                   disabled={submitting}
                 >
@@ -1156,54 +1035,129 @@ Por favor revisa y corrige la respuesta en el sistema.`;
                 </button>
               </>
             ) : (
-              <p style={{ color: t.textMuted, fontSize: '13px' }}>Sin respuesta aún</p>
+              <p style={{ color: t.textMuted, fontSize: 13 }}>Sin respuesta aún</p>
             )}
           </div>
 
           {/* ====== VALIDATION SECTION ====== */}
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
               <CheckCircle size={18} color={t.success} />
               Validación
             </div>
 
             {qar.status === 'CERRADO' ? (
-              <div style={styles.closedBanner}>
-                <CheckCircle size={40} color={t.success} style={{ marginBottom: '12px' }} />
-                <div style={{ color: t.success, fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
-                  QAR Cerrado y Validado
-                </div>
+              /* Closed banner - simple row with chip, not color block */
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                backgroundColor: t.bgPanel,
+                borderRadius: 8
+              }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 10,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  backgroundColor: t.successBg,
+                  color: t.successFg,
+                  border: `1px solid ${t.successBorder}`
+                }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: t.successFg }} />
+                  Cerrado y validado
+                </span>
                 {qar.validatedByName && (
-                  <div style={{ color: t.textMuted, fontSize: '13px' }}>
-                    Validado por: {qar.validatedByName} el {formatDate(qar.validationDate)}
-                  </div>
+                  <span style={{ color: t.textMuted, fontSize: 12 }}>
+                    por {qar.validatedByName} el {formatDate(qar.validationDate)}
+                  </span>
                 )}
               </div>
             ) : canValidate ? (
               <>
-                <p style={{ color: t.textMuted, fontSize: '13px', marginBottom: '16px' }}>
-                  Revisa la respuesta proporcionada y decide si aprobar el cierre o rechazar para corrección.
+                <p style={{ color: t.textMuted, fontSize: 13, marginBottom: 16 }}>
+                  Revisa la respuesta y decide si aprobar o rechazar.
                 </p>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={styles.label}>Motivo de Rechazo (si aplica)</label>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', color: t.textMuted, fontSize: 11, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase' }}>Motivo de Rechazo (si aplica)</label>
                   <textarea
-                    style={styles.textareaSmall}
+                    style={{
+                      width: '100%',
+                      padding: 10,
+                      backgroundColor: t.field,
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 8,
+                      color: t.text,
+                      fontSize: 13,
+                      minHeight: 60,
+                      resize: 'vertical'
+                    }}
                     placeholder="Indica el motivo si vas a rechazar..."
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                   />
                 </div>
-                <div style={styles.buttonRow}>
+                <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                  {/* Approve - primary (not success) */}
                   <button
-                    style={{ ...styles.buttonSuccess, opacity: submitting ? 0.7 : 1 }}
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      backgroundColor: t.primary,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      opacity: submitting ? 0.7 : 1
+                    }}
                     onClick={() => handleValidation(true)}
                     disabled={submitting}
                   >
                     <CheckCircle size={18} />
                     Aprobar y Cerrar
                   </button>
+                  {/* Reject - secondary with errorBorder and error text */}
                   <button
-                    style={{ ...styles.buttonDanger, opacity: submitting ? 0.7 : 1 }}
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      backgroundColor: 'transparent',
+                      color: t.error,
+                      border: `1px solid ${t.errorBorder}`,
+                      borderRadius: 8,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      opacity: submitting ? 0.7 : 1
+                    }}
                     onClick={() => handleValidation(false)}
                     disabled={submitting}
                   >
@@ -1213,7 +1167,7 @@ Por favor revisa y corrige la respuesta en el sistema.`;
                 </div>
               </>
             ) : (
-              <p style={{ color: t.textMuted, fontSize: '13px' }}>
+              <p style={{ color: t.textMuted, fontSize: 13 }}>
                 {qar.status === 'EMITIDO' && 'Esperando respuesta antes de poder validar.'}
                 {qar.status === 'RECHAZADO' && 'Esperando corrección de la respuesta.'}
               </p>
@@ -1223,77 +1177,143 @@ Por favor revisa y corrige la respuesta en el sistema.`;
 
         {/* ====== RIGHT COLUMN ====== */}
         <div>
-          {/* Recipients */}
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>
+          {/* Recipients - list with avatar, name, status text */}
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
               <Users size={18} />
               Destinatarios
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <div style={styles.label}>Respuesta ({responseRecipients.length})</div>
-              <div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
+                Respuesta ({responseRecipients.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {responseRecipients.map((r, idx) => (
-                  <span key={idx} style={{
-                    ...styles.recipientChip,
-                    backgroundColor: r.acknowledgedAt ? `${t.success}33` : `${t.warning}33`,
-                    color: r.acknowledgedAt ? t.success : t.warning
-                  }}>
-                    {r.firstName} {r.lastName}
-                    {r.acknowledgedAt && <Check size={12} />}
-                  </span>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                      backgroundColor: t.bgPanel,
+                      border: `1px solid ${t.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: t.textMuted
+                    }}>
+                      {(r.firstName?.[0] || '')}{(r.lastName?.[0] || '')}
+                    </div>
+                    <span style={{ flex: 1, fontSize: 13, color: t.text }}>{r.firstName} {r.lastName}</span>
+                    <span style={{ fontSize: 11, color: r.acknowledgedAt ? t.successFg : t.textDim }}>
+                      {r.acknowledgedAt ? 'confirmado' : 'pendiente'}
+                    </span>
+                  </div>
                 ))}
                 {responseRecipients.length === 0 && (
-                  <span style={{ color: t.textMuted, fontSize: '13px' }}>Ninguno</span>
+                  <span style={{ color: t.textMuted, fontSize: 13 }}>Ninguno</span>
                 )}
               </div>
             </div>
 
             <div>
-              <div style={styles.label}>Validación ({validationRecipients.length})</div>
-              <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
+                Validación ({validationRecipients.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {validationRecipients.map((r, idx) => (
-                  <span key={idx} style={{
-                    ...styles.recipientChip,
-                    backgroundColor: `${t.accent}33`,
-                    color: t.accent
-                  }}>
-                    {r.firstName} {r.lastName}
-                  </span>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                      backgroundColor: t.bgPanel,
+                      border: `1px solid ${t.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: t.textMuted
+                    }}>
+                      {(r.firstName?.[0] || '')}{(r.lastName?.[0] || '')}
+                    </div>
+                    <span style={{ flex: 1, fontSize: 13, color: t.text }}>{r.firstName} {r.lastName}</span>
+                  </div>
                 ))}
                 {validationRecipients.length === 0 && (
-                  <span style={{ color: t.textMuted, fontSize: '13px' }}>Ninguno</span>
+                  <span style={{ color: t.textMuted, fontSize: 13 }}>Ninguno</span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Photos */}
+          {/* Photos - normalized frames */}
           {(qar.photoNokPath || qar.photoOkPath) && (
-            <div style={styles.card}>
-              <div style={styles.cardTitle}>
+            <div style={{
+              backgroundColor: t.bgCard,
+              border: `1px solid ${t.border}`,
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 20
+            }}>
+              <div style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: t.text,
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}>
                 <Camera size={18} />
                 Evidencia Fotográfica
               </div>
-              <div style={styles.photoGrid}>
-                <div style={styles.photoBox}>
-                  <div style={{ fontSize: '11px', color: t.error, marginBottom: '8px', fontWeight: '600' }}>
-                    NOK (Defecto)
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.error }} />
+                    NOK
                   </div>
                   {qar.photoNokPath ? (
-                    <img src={`${API_URL}${qar.photoNokPath}`} alt="NOK" style={styles.photo} />
+                    <img
+                      src={`${API_URL}${qar.photoNokPath}`}
+                      alt="NOK"
+                      style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 4, border: `1px solid ${t.border}` }}
+                    />
                   ) : (
-                    <span style={{ color: t.textMuted, fontSize: '12px' }}>Sin foto</span>
+                    <span style={{ color: t.textMuted, fontSize: 12 }}>Sin foto</span>
                   )}
                 </div>
-                <div style={styles.photoBox}>
-                  <div style={{ fontSize: '11px', color: t.success, marginBottom: '8px', fontWeight: '600' }}>
-                    OK (Referencia)
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.success }} />
+                    OK
                   </div>
                   {qar.photoOkPath ? (
-                    <img src={`${API_URL}${qar.photoOkPath}`} alt="OK" style={styles.photo} />
+                    <img
+                      src={`${API_URL}${qar.photoOkPath}`}
+                      alt="OK"
+                      style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 4, border: `1px solid ${t.border}` }}
+                    />
                   ) : (
-                    <span style={{ color: t.textMuted, fontSize: '12px' }}>Sin foto</span>
+                    <span style={{ color: t.textMuted, fontSize: 12 }}>Sin foto</span>
                   )}
                 </div>
               </div>
@@ -1301,13 +1321,27 @@ Por favor revisa y corrige la respuesta en el sistema.`;
           )}
 
           {/* Comments Timeline */}
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>
+          <div style={{
+            backgroundColor: t.bgCard,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 20
+          }}>
+            <div style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: t.text,
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
               <MessageSquare size={18} />
               Historial ({comments.length})
             </div>
 
-            <div style={styles.timeline}>
+            <div style={{ position: 'relative' }}>
               {comments.map((c, idx) => {
                 const dotColor =
                   c.commentType === 'status_change' ? t.accent :
@@ -1316,32 +1350,67 @@ Por favor revisa y corrige la respuesta en el sistema.`;
                   c.commentType === 'rejection' ? t.error : t.textMuted;
 
                 return (
-                  <div key={idx} style={styles.timelineItem}>
-                    <div style={{ ...styles.timelineDot, backgroundColor: dotColor }} />
-                    <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px' }}>
+                  <div key={idx} style={{
+                    position: 'relative',
+                    paddingLeft: 28,
+                    paddingBottom: 16,
+                    borderLeft: `2px solid ${t.border}`,
+                    marginLeft: 8
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      left: -9,
+                      top: 0,
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      backgroundColor: dotColor,
+                      border: `2px solid ${t.bgCard}`
+                    }} />
+                    <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 4 }}>
                       {c.userName} - {formatDate(c.createdAt)}
                     </div>
-                    <div style={{ fontSize: '13px', color: t.text }}>
+                    <div style={{ fontSize: 13, color: t.text }}>
                       {c.comment}
                     </div>
                   </div>
                 );
               })}
               {comments.length === 0 && (
-                <p style={{ color: t.textMuted, fontSize: '13px' }}>Sin comentarios aún</p>
+                <p style={{ color: t.textMuted, fontSize: 13 }}>Sin comentarios aún</p>
               )}
             </div>
 
             {/* Add comment */}
-            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${t.border}` }}>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${t.border}` }}>
               <textarea
-                style={{ ...styles.textareaSmall, marginBottom: '8px' }}
+                style={{
+                  width: '100%',
+                  padding: 10,
+                  backgroundColor: t.field,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 8,
+                  color: t.text,
+                  fontSize: 13,
+                  minHeight: 60,
+                  resize: 'vertical',
+                  marginBottom: 8
+                }}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Agregar comentario..."
               />
               <button
-                style={styles.buttonSecondary}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
                 onClick={handleAddComment}
                 disabled={!newComment.trim()}
               >
@@ -1352,147 +1421,75 @@ Por favor revisa y corrige la respuesta en el sistema.`;
         </div>
       </div>
 
-      {/* Modal de Alerta */}
+      {/* ====== MODAL: Alert ====== */}
       {alertModal.open && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10001
-        }}>
-          <div style={{
-            backgroundColor: t.bgCard,
-            borderRadius: '16px',
-            padding: '32px',
-            maxWidth: '420px',
-            width: '90%',
-            textAlign: 'center',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '50%',
-              backgroundColor: alertModal.type === 'success' ? '#dbeafe' : alertModal.type === 'error' ? '#fef2f2' : '#dbeafe',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 20px',
-              border: `3px solid ${alertModal.type === 'success' ? '#1e40af' : alertModal.type === 'error' ? '#991b1b' : '#1e40af'}`
-            }}>
-              {alertModal.type === 'success' ? (
-                <CheckCircle size={36} style={{ color: '#1e40af' }} />
-              ) : alertModal.type === 'error' ? (
-                <XCircle size={36} style={{ color: '#991b1b' }} />
-              ) : (
-                <AlertTriangle size={36} style={{ color: '#1e40af' }} />
-              )}
+        <div style={modalOverlay}>
+          <div style={modalCard}>
+            <div style={modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: getModalDotColor(alertModal.type) }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{alertModal.title}</span>
+              </div>
+              <button onClick={closeAlert} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textDim, fontSize: 18 }}>
+                ✕
+              </button>
             </div>
-            <h3 style={{
-              color: alertModal.type === 'success' ? '#1e40af' : alertModal.type === 'error' ? '#991b1b' : '#1e40af',
-              fontSize: '20px',
-              fontWeight: '700',
-              marginBottom: '12px'
-            }}>
-              {alertModal.title}
-            </h3>
-            <p style={{
-              color: t.textMuted,
-              fontSize: '15px',
-              marginBottom: '24px',
-              lineHeight: '1.5'
-            }}>
-              {alertModal.message}
-            </p>
-            <button
-              onClick={closeAlert}
-              style={{
-                padding: '14px 32px',
-                backgroundColor: alertModal.type === 'success' ? '#1e40af' : alertModal.type === 'error' ? '#991b1b' : '#1e40af',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                fontSize: '15px'
-              }}
-            >
-              Aceptar
-            </button>
+            <div style={{ padding: 20 }}>
+              <p style={{ color: t.textMuted, fontSize: 14, margin: 0, lineHeight: 1.5 }}>
+                {alertModal.message}
+              </p>
+            </div>
+            <div style={modalFooter}>
+              <button
+                onClick={closeAlert}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: t.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 13
+                }}
+              >
+                Aceptar
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal de Confirmación */}
+      {/* ====== MODAL: Confirm ====== */}
       {confirmModal.open && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10001
-        }}>
-          <div style={{
-            backgroundColor: t.bgCard,
-            borderRadius: '16px',
-            padding: '32px',
-            maxWidth: '420px',
-            width: '90%',
-            textAlign: 'center',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '50%',
-              backgroundColor: '#dbeafe',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 20px',
-              border: '3px solid #1e40af'
-            }}>
-              <AlertTriangle size={36} style={{ color: '#1e40af' }} />
+        <div style={modalOverlay}>
+          <div style={modalCard}>
+            <div style={modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: t.warning }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{confirmModal.title}</span>
+              </div>
+              <button onClick={closeConfirm} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textDim, fontSize: 18 }}>
+                ✕
+              </button>
             </div>
-            <h3 style={{
-              color: t.text,
-              fontSize: '20px',
-              fontWeight: '700',
-              marginBottom: '12px'
-            }}>
-              {confirmModal.title}
-            </h3>
-            <p style={{
-              color: t.textMuted,
-              fontSize: '15px',
-              marginBottom: '24px',
-              lineHeight: '1.5'
-            }}>
-              {confirmModal.message}
-            </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div style={{ padding: 20 }}>
+              <p style={{ color: t.textMuted, fontSize: 14, margin: 0, lineHeight: 1.5 }}>
+                {confirmModal.message}
+              </p>
+            </div>
+            <div style={modalFooter}>
               <button
                 onClick={closeConfirm}
                 style={{
-                  padding: '14px 24px',
+                  padding: '10px 20px',
                   backgroundColor: t.bgPanel,
                   color: t.text,
                   border: `1px solid ${t.border}`,
-                  borderRadius: '8px',
-                  fontWeight: '600',
+                  borderRadius: 6,
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  fontSize: '15px'
+                  fontSize: 13
                 }}
               >
                 Cancelar
@@ -1500,14 +1497,14 @@ Por favor revisa y corrige la respuesta en el sistema.`;
               <button
                 onClick={confirmModal.onConfirm}
                 style={{
-                  padding: '14px 24px',
-                  backgroundColor: '#1e40af',
+                  padding: '10px 20px',
+                  backgroundColor: t.primary,
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: '600',
+                  borderRadius: 6,
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  fontSize: '15px'
+                  fontSize: 13
                 }}
               >
                 Confirmar

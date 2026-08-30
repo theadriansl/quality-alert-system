@@ -14,18 +14,33 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
-// ─── Color palette ────────────────────────────────────────────────────────────
+// ─── Color palette (using theme-aware getter) ───────────────────────────────
+// NOTE: These are used for charts where we need consistent colors across themes
+const getColors = (t) => ({
+  blue:    t.primary || t.accent,
+  green:   t.success,
+  red:     t.error,
+  orange:  t.warning,
+  purple:  '#8b5cf6', // Chart accent - no theme equivalent
+  cyan:    t.accent,
+  gray:    t.textMuted,
+  teal:    t.success,
+  pink:    t.error,
+  indigo:  t.primary,
+});
+
+// Static fallback for non-component usage
 const C = {
-  blue:    '#0072CE',
-  green:   '#16a34a',
-  red:     '#ef4444',
-  orange:  '#f59e0b',
+  blue:    'var(--primary, #0072CE)',
+  green:   'var(--success, #16a34a)',
+  red:     'var(--error, #ef4444)',
+  orange:  'var(--warning, #f59e0b)',
   purple:  '#8b5cf6',
-  cyan:    '#06b6d4',
-  gray:    '#6b7280',
-  teal:    '#14b8a6',
-  pink:    '#ec4899',
-  indigo:  '#6366f1',
+  cyan:    'var(--accent, #06b6d4)',
+  gray:    'var(--text-muted, #6b7280)',
+  teal:    'var(--success, #14b8a6)',
+  pink:    'var(--error, #ec4899)',
+  indigo:  'var(--primary, #6366f1)',
 };
 
 const SEV_COLORS = {
@@ -44,25 +59,26 @@ const STATUS_COLORS = {
 
 // ─── Helper sub-components ────────────────────────────────────────────────────
 
-const KpiTile = ({ label, value, sub, color, icon, small }) => {
+const KpiTile = ({ label, value, sub, color, alertDot, small }) => {
   const { theme: t } = useTheme();
   return (
     <div style={{
       backgroundColor: t.bgCard,
       border: `1px solid ${t.border}`,
-      borderTop: `3px solid ${color || C.blue}`,
-      borderRadius: '8px',
+      borderTop: `3px solid ${color || t.primary}`,
+      borderRadius: 8,
       padding: small ? '10px 14px' : '14px 18px',
       flex: 1,
       minWidth: 0,
     }}>
-      <div style={{ fontSize: '10px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-        {icon && <span style={{ marginRight: '4px' }}>{icon}</span>}{label}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+        {alertDot && <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: alertDot }} />}
+        {label}
       </div>
-      <div style={{ fontSize: small ? '22px' : '28px', fontWeight: '800', color: t.text, lineHeight: 1 }}>
+      <div style={{ fontSize: small ? 22 : 28, fontWeight: 800, color: t.text, lineHeight: 1, fontFamily: "'IBM Plex Mono', monospace" }}>
         {value ?? '—'}
       </div>
-      {sub && <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '3px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: t.textMuted, marginTop: 3 }}>{sub}</div>}
     </div>
   );
 };
@@ -70,24 +86,24 @@ const KpiTile = ({ label, value, sub, color, icon, small }) => {
 const TabBar = ({ tabs, active, onSelect }) => {
   const { theme: t } = useTheme();
   return (
-    <div style={{ display: 'flex', gap: '2px', borderBottom: `2px solid ${t.border}`, marginBottom: '20px' }}>
+    <div style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${t.border}`, marginBottom: 20 }}>
       {tabs.map(tab => (
         <button
           key={tab.id}
           onClick={() => onSelect(tab.id)}
           style={{
             padding: '9px 16px',
-            fontSize: '12px',
-            fontWeight: active === tab.id ? '700' : '500',
-            color: active === tab.id ? C.blue : t.textMuted,
+            fontSize: 12,
+            fontWeight: active === tab.id ? 700 : 500,
+            color: active === tab.id ? t.text : t.textMuted,
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: active === tab.id ? `2px solid ${C.blue}` : '2px solid transparent',
+            borderBottom: active === tab.id ? `2px solid ${t.primary}` : '2px solid transparent',
             cursor: 'pointer',
-            marginBottom: '-2px',
+            marginBottom: -2,
             whiteSpace: 'nowrap',
           }}
-        >{tab.icon} {tab.label}</button>
+        >{tab.label}</button>
       ))}
     </div>
   );
@@ -276,7 +292,7 @@ const TabVolumen = ({ data }) => {
               <div key={i} style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: t.text, marginBottom: '4px' }}>
                   <span style={{ fontWeight: '600' }}>
-                    {r.trigger === 'threshold' ? '⚡ Umbral automático' : '✋ Manual'}
+                    {r.trigger === 'threshold' ? 'Umbral automático' : 'Manual'}
                   </span>
                   <span style={{ color }}>{r.count} ({pct}%)</span>
                 </div>
@@ -360,7 +376,7 @@ const SlaConfigModal = ({ slaConfig, onClose, onSaved }) => {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>⚙️ Configuración SLA</div>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>Configuración SLA</div>
             <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>Tiempos máximos por severidad (horas)</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: t.textMuted, lineHeight: 1 }}>✕</button>
@@ -402,8 +418,8 @@ const SlaConfigModal = ({ slaConfig, onClose, onSaved }) => {
 
         {/* Error */}
         {error && (
-          <div style={{ marginTop: '12px', padding: '8px 12px', backgroundColor: '#fee2e2', borderRadius: '6px', fontSize: '12px', color: '#B00020' }}>
-            ⚠️ {error}
+          <div style={{ marginTop: 12, padding: '8px 12px', backgroundColor: t.errorBg, borderRadius: 6, fontSize: 12, color: t.error, border: `1px solid ${t.errorBorder}` }}>
+            {error}
           </div>
         )}
 
@@ -413,7 +429,7 @@ const SlaConfigModal = ({ slaConfig, onClose, onSaved }) => {
             Cancelar
           </button>
           <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', borderRadius: '6px', border: 'none', backgroundColor: C.blue, color: 'white', fontSize: '13px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-            {saving ? 'Guardando…' : '💾 Guardar'}
+            {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </div>
@@ -474,7 +490,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
           {/* Respuesta */}
           <div>
             <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-              ⚡ Respuesta
+              Respuesta
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {slaBarData.map((r, i) => {
@@ -505,7 +521,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
           {/* Cierre */}
           <div>
             <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-              🔒 Cierre
+              Cierre
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {slaBarData.map((r, i) => {
@@ -541,7 +557,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
           <SectionTitle title="Configuración SLA Vigente" sub="Tiempos máximos por severidad" />
           <button onClick={onEditSLA} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', color: 'white', backgroundColor: C.blue, border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            ✏️ Editar
+            Editar
           </button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
@@ -616,9 +632,9 @@ const TabCalidad = ({ data }) => {
         <Card>
           <SectionTitle title="Validación de Cierres" sub="Estado de validación de QARs cerradas" />
           {[
-            { label: '✅ Aprobadas', value: q.validatedApproved, color: C.green },
-            { label: '❌ Rechazadas', value: q.validatedRejected, color: C.red },
-            { label: '⚠️ Sin validación', value: q.closedNoVal, color: C.orange },
+            { label: 'Aprobadas', value: q.validatedApproved, color: C.green },
+            { label: 'Rechazadas', value: q.validatedRejected, color: C.red },
+            { label: 'Sin validación', value: q.closedNoVal, color: C.orange },
           ].map((r, i) => (
             <div key={i} style={{
               display: 'flex',
@@ -637,7 +653,7 @@ const TabCalidad = ({ data }) => {
           {q.closedNoVal > 0 && (
             <div style={{ marginTop: '8px', padding: '10px', backgroundColor: C.orange + '18', borderRadius: '6px', border: `1px solid ${C.orange}44` }}>
               <div style={{ fontSize: '11px', color: C.orange, fontWeight: '600' }}>
-                ⚠️ {q.closedNoVal} cierre{q.closedNoVal > 1 ? 's' : ''} sin proceso de validación formal
+                {q.closedNoVal} cierre{q.closedNoVal > 1 ? 's' : ''} sin proceso de validación formal
               </div>
             </div>
           )}
@@ -917,7 +933,7 @@ const TabRiesgo = ({ data }) => {
         <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: color + '22', border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800', color }}>{items.length}</div>
       </div>
       {items.length === 0 ? (
-        <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '10px' }}>✓ {emptyMsg}</div>
+        <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '10px' }}>{emptyMsg}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
           {items.map(renderItem)}
@@ -948,8 +964,8 @@ const TabRiesgo = ({ data }) => {
         <SevBadge sev={item.severity} />
       </div>
       <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '10px', color: t.textMuted }}>
-        <span>👤 {item.responsable}</span>
-        <span>🏢 {item.department}</span>
+        <span>{item.responsable}</span>
+        <span>{item.department}</span>
         {extra}
       </div>
     </div>
@@ -974,10 +990,10 @@ const TabRiesgo = ({ data }) => {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
               {[
-                { label: 'Vencidas sin respuesta', value: overdueCount, color: C.red, icon: '🔴' },
-                { label: 'Alta sev activas', value: highSevActive, color: C.orange, icon: '🟠' },
-                { label: 'Sin validación', value: noValClosed, color: C.orange, icon: '⚠️' },
-                { label: 'Total en riesgo', value: riskItems.length, color: C.blue, icon: '📋' },
+                { label: 'Vencidas sin respuesta', value: overdueCount, color: C.red, hasDot: true },
+                { label: 'Alta sev activas', value: highSevActive, color: C.orange, hasDot: true },
+                { label: 'Sin validación', value: noValClosed, color: C.orange, hasDot: true },
+                { label: 'Total en riesgo', value: riskItems.length, color: C.blue, hasDot: true },
               ].map((k, i) => (
                 <div key={i} style={{ textAlign: 'center', padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', borderTop: `2px solid ${k.color}` }}>
                   <div style={{ fontSize: '16px', marginBottom: '2px' }}>{k.icon}</div>
@@ -992,7 +1008,7 @@ const TabRiesgo = ({ data }) => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <AlertCard
-          title="🔴 Vencidas sin Respuesta"
+          title="Vencidas sin Respuesta"
           color={C.red}
           emptyMsg="Sin alertas vencidas"
           items={riskItems.filter(r => r.overdueResponse)}
@@ -1003,7 +1019,7 @@ const TabRiesgo = ({ data }) => {
           )}
         />
         <AlertCard
-          title="🟠 Alta Severidad Activas"
+          title="Alta Severidad Activas"
           color={C.orange}
           emptyMsg="Sin alertas críticas activas"
           items={riskItems.filter(r => ['Crítico', 'ALTA'].includes(r.severity) && ['EMITIDO', 'RESPONDIDO'].includes(r.status))}
@@ -1017,7 +1033,7 @@ const TabRiesgo = ({ data }) => {
 
       {noValClosed > 0 && (
         <AlertCard
-          title="⚠️ Cerradas Sin Validación Formal"
+          title="Cerradas Sin Validación"
           color={C.orange}
           emptyMsg="Sin cierres pendientes de validación"
           items={riskItems.filter(r => r.closedNoVal)}
@@ -1069,7 +1085,7 @@ const QARTable = ({ data }) => {
   return (
     <div style={{ marginTop: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <div style={{ fontSize: '14px', fontWeight: '700', color: t.text }}>📋 Listado de QARs ({filtered.length})</div>
+        <div style={{ fontSize: '14px', fontWeight: '700', color: t.text }}>Listado de QARs ({filtered.length})</div>
       </div>
 
       {/* Filters */}
@@ -1134,7 +1150,7 @@ const QARTable = ({ data }) => {
                     {overdue ? (
                       <span style={{ color: C.red, fontWeight: '700', fontSize: '10px' }}>⏰ VENCIDA</span>
                     ) : r.status === 'CERRADO' ? (
-                      <span style={{ color: C.green, fontSize: '10px' }}>✓ OK</span>
+                      <span style={{ color: C.green, fontSize: '10px' }}>OK</span>
                     ) : r.slaResponse ? (
                       <span style={{ color: t.textMuted, fontSize: '10px' }}>
                         {formatHours(r.ageHours)} / {r.slaResponse}h
@@ -1173,17 +1189,17 @@ const STORAGE_KEY = 'qar-custom-dashboard-v1';
 // Catálogo de widgets disponibles
 const WIDGET_CATALOG = [
   // ── KPIs numéricos ─────────────────────────────────────────────────────────
-  { id: 'kpi-total',     cat: 'KPIs',   label: 'Total QARs',            size: 'sm', icon: '📋' },
+  { id: 'kpi-total',     cat: 'KPIs',   label: 'Total QARs',            size: 'sm', hasDot: true },
   { id: 'kpi-activos',   cat: 'KPIs',   label: 'QARs Activas',          size: 'sm', icon: '🔄' },
-  { id: 'kpi-cerrados',  cat: 'KPIs',   label: 'QARs Cerradas',         size: 'sm', icon: '✅' },
+  { id: 'kpi-cerrados',  cat: 'KPIs',   label: 'QARs Cerradas',         size: 'sm', hasDot: true },
   { id: 'kpi-rechazados',cat: 'KPIs',   label: 'Rechazadas',            size: 'sm', icon: '🚫' },
-  { id: 'kpi-alta-sev',  cat: 'KPIs',   label: 'Alta Severidad',        size: 'sm', icon: '🔴' },
+  { id: 'kpi-alta-sev',  cat: 'KPIs',   label: 'Alta Severidad',        size: 'sm', hasDot: true },
   { id: 'kpi-vencidas',  cat: 'KPIs',   label: 'Vencidas sin respuesta',size: 'sm', icon: '⏰' },
-  { id: 'kpi-sla-resp',  cat: 'KPIs',   label: 'SLA Respuesta %',       size: 'sm', icon: '⚡' },
-  { id: 'kpi-sla-cierre',cat: 'KPIs',   label: 'SLA Cierre %',          size: 'sm', icon: '🔒' },
+  { id: 'kpi-sla-resp',  cat: 'KPIs',   label: 'SLA Respuesta %',       size: 'sm', hasDot: true },
+  { id: 'kpi-sla-cierre',cat: 'KPIs',   label: 'SLA Cierre %',          size: 'sm', hasDot: true },
   { id: 'kpi-avg-resp',  cat: 'KPIs',   label: 'T. Promedio Respuesta', size: 'sm', icon: '📨' },
   { id: 'kpi-avg-cierre',cat: 'KPIs',   label: 'T. Promedio Cierre',    size: 'sm', icon: '📦' },
-  { id: 'kpi-no-val',    cat: 'KPIs',   label: 'Sin validación',        size: 'sm', icon: '⚠️' },
+  { id: 'kpi-no-val',    cat: 'KPIs',   label: 'Sin validación',        size: 'sm', hasDot: true },
   { id: 'kpi-root-cause',cat: 'KPIs',   label: '% Con Causa Raíz',      size: 'sm', icon: '🔍' },
   // ── Gráficas ───────────────────────────────────────────────────────────────
   { id: 'chart-vol-mes', cat: 'Gráficas', label: 'Tendencia mensual',     size: 'lg', icon: '📈' },
@@ -1196,9 +1212,9 @@ const WIDGET_CATALOG = [
   { id: 'chart-sla-sev', cat: 'Gráficas', label: 'SLA Compliance barras', size: 'lg', icon: '🎯' },
   // ── Operación & Riesgo ─────────────────────────────────────────────────────
   { id: 'risk-score',    cat: 'Riesgo',   label: 'Índice de Riesgo',      size: 'md', icon: '🚨' },
-  { id: 'risk-vencidas', cat: 'Riesgo',   label: 'Lista Vencidas',        size: 'lg', icon: '🔴' },
-  { id: 'risk-alta-sev', cat: 'Riesgo',   label: 'Alta Sev. Activas',     size: 'lg', icon: '🟠' },
-  { id: 'quality-val',   cat: 'Calidad',  label: 'Estado de Validación',  size: 'md', icon: '✅' },
+  { id: 'risk-vencidas', cat: 'Riesgo',   label: 'Lista Vencidas',        size: 'lg', hasDot: true },
+  { id: 'risk-alta-sev', cat: 'Riesgo',   label: 'Alta Sev. Activas',     size: 'lg', hasDot: true },
+  { id: 'quality-val',   cat: 'Calidad',  label: 'Estado de Validación',  size: 'md', hasDot: true },
   { id: 'quality-docs',  cat: 'Calidad',  label: 'Completitud docs.',     size: 'md', icon: '📄' },
   { id: 'sla-config',    cat: 'Config',   label: 'Config. SLA vigente',   size: 'md', icon: '⚙️' },
 ];
@@ -1313,7 +1329,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
           return (
             <div key={i} style={{ marginBottom: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: t.text, marginBottom: '3px' }}>
-                <span>{r.trigger === 'threshold' ? '⚡ Umbral automático' : '✋ Manual'}</span>
+                <span>{r.trigger === 'threshold' ? 'Umbral automático' : 'Manual'}</span>
                 <span style={{ color, fontWeight: '600' }}>{r.count} ({pct}%)</span>
               </div>
               <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
@@ -1512,8 +1528,8 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
       <div>
         <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>✅ Estado de Validación</div>
         {[
-          { label: '✅ Aprobadas',    value: q.validatedApproved, color: C.green },
-          { label: '❌ Rechazadas',   value: q.validatedRejected, color: C.red },
+          { label: 'Aprobadas',    value: q.validatedApproved, color: C.green },
+          { label: 'Rechazadas',   value: q.validatedRejected, color: C.red },
           { label: '⚠️ Sin validar',  value: q.closedNoVal,       color: C.orange },
         ].map((r, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', marginBottom: '6px', backgroundColor: t.bgPanel, borderRadius: '6px', borderLeft: `3px solid ${r.color}` }}>
@@ -1559,7 +1575,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
           <div style={{ fontSize: '12px', fontWeight: '700', color: t.text }}>⚙️ Config. SLA Vigente</div>
           {onEditSLA && (
             <button onClick={onEditSLA} style={{ padding: '4px 10px', fontSize: '11px', fontWeight: '600', color: 'white', backgroundColor: C.blue, border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-              ✏️ Editar
+              Editar
             </button>
           )}
         </div>
@@ -1950,10 +1966,10 @@ const QARDashboardComponent = ({ data, onRefresh }) => {
   const tb = data.topBar || {};
 
   const TABS = [
-    { id: 'resumen',       label: 'Resumen',                icon: '📋' },
+    { id: 'resumen',       label: 'Resumen',                hasDot: true },
     { id: 'volumen',       label: 'Volumen & Flujo',        icon: '📊' },
     { id: 'tiempo',        label: 'Tiempo & Respuesta',     icon: '⏱️' },
-    { id: 'calidad',       label: 'Calidad de Respuesta',   icon: '✅' },
+    { id: 'calidad',       label: 'Calidad de Respuesta',   hasDot: true },
     { id: 'operacion',     label: 'Operación Interna',      icon: '🏭' },
     { id: 'cliente',       label: 'Cliente / Proyecto',     icon: '🤝' },
     { id: 'riesgo',        label: 'Riesgo & Alertas',       icon: '🚨' },
