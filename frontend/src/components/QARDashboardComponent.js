@@ -13,7 +13,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { KpiTile } from './shared/SharedComponents';
+import { KpiTile, RiskScoreCard } from './shared/SharedComponents';
 
 // ─── Color palette (theme-aware) ─────────────────────────────────────────────
 // For charts: derive distinct colors by adjusting luminosity
@@ -281,7 +281,7 @@ const TabVolumen = ({ data }) => {
           })}
           <div style={{ marginTop: '16px', padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
             <div style={{ fontSize: '11px', color: t.textMuted }}>Total acumulado periodo</div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: t.text }}>
+            <div style={{ fontSize: '24px', fontWeight: 500, color: t.text }}>
               {(data.byTrigger || []).reduce((s, r) => s + r.count, 0)}
             </div>
             <div style={{ fontSize: '10px', color: t.textMuted }}>QARs emitidas</div>
@@ -442,11 +442,12 @@ const TabTiempo = ({ data, onEditSLA }) => {
           {distRows.map((r, i) => (
             <SlaBar key={i} label={r.severity} value={r.avgResponseH} sla={r.slaResponse} />
           ))}
-          <div style={{ marginTop: '12px', padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: t.textMuted }}>Promedio General</div>
-            <div style={{ fontSize: '22px', fontWeight: '800', color: tb.slaResponsePct >= 80 ? C.green : C.red }}>
+          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: t.textDim, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Promedio General</span>
+            {tb.slaResponsePct < 80 && <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: tb.slaResponsePct < 60 ? t.errorFg : t.warningFg }} />}
+            <span style={{ fontSize: 22, fontWeight: 500, fontFamily: "'IBM Plex Mono', monospace", color: t.text }}>
               {formatHours(tb.avgResponseHours)}
-            </div>
+            </span>
           </div>
         </Card>
 
@@ -455,11 +456,12 @@ const TabTiempo = ({ data, onEditSLA }) => {
           {distRows.map((r, i) => (
             <SlaBar key={i} label={r.severity} value={r.avgClosureH} sla={r.slaClosure} />
           ))}
-          <div style={{ marginTop: '12px', padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: t.textMuted }}>Promedio General</div>
-            <div style={{ fontSize: '22px', fontWeight: '800', color: tb.slaClosurePct >= 80 ? C.green : C.red }}>
+          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: t.textDim, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Promedio General</span>
+            {tb.slaClosurePct < 80 && <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: tb.slaClosurePct < 60 ? t.errorFg : t.warningFg }} />}
+            <span style={{ fontSize: 22, fontWeight: 500, fontFamily: "'IBM Plex Mono', monospace", color: t.text }}>
               {formatHours(tb.avgClosureHours)}
-            </div>
+            </span>
           </div>
         </Card>
       </div>
@@ -488,7 +490,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
                           {' / '}
                           <span style={{ color: C.red, fontWeight: '600' }}>{r.respLate || 0}</span>
                         </span>
-                        <span style={{ fontSize: '14px', fontWeight: '800', color, minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
+                        <span style={{ fontSize: '14px', fontWeight: 500, color, minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
                       </div>
                     </div>
                     <div style={{ height: '10px', backgroundColor: t.bgPanel, borderRadius: '5px', overflow: 'hidden', border: `1px solid ${t.border}` }}>
@@ -519,7 +521,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
                           {' / '}
                           <span style={{ color: C.red, fontWeight: '600' }}>{r.closeLate || 0}</span>
                         </span>
-                        <span style={{ fontSize: '14px', fontWeight: '800', color, minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
+                        <span style={{ fontSize: '14px', fontWeight: 500, color, minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
                       </div>
                     </div>
                     <div style={{ height: '10px', backgroundColor: t.bgPanel, borderRadius: '5px', overflow: 'hidden', border: `1px solid ${t.border}` }}>
@@ -605,7 +607,7 @@ const TabCalidad = ({ data }) => {
             ].map((k, i) => (
               <div key={i} style={{ textAlign: 'center', padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
                 <div style={{ fontSize: '10px', color: t.textMuted }}>{k.label}</div>
-                <div style={{ fontSize: '20px', fontWeight: '800', color: k.color }}>{k.value}</div>
+                <div style={{ fontSize: '20px', fontWeight: 500, color: k.color }}>{k.value}</div>
               </div>
             ))}
           </div>
@@ -629,7 +631,7 @@ const TabCalidad = ({ data }) => {
               borderLeft: `3px solid ${r.color}`,
             }}>
               <span style={{ fontSize: '12px', color: t.text }}>{r.label}</span>
-              <span style={{ fontSize: '20px', fontWeight: '800', color: r.color }}>{r.value ?? 0}</span>
+              <span style={{ fontSize: '20px', fontWeight: 500, color: r.color }}>{r.value ?? 0}</span>
             </div>
           ))}
           {q.closedNoVal > 0 && (
@@ -675,7 +677,7 @@ const TabCalidad = ({ data }) => {
               ].map((k, i) => (
                 <div key={i} style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
                   <div style={{ fontSize: '10px', color: t.textMuted }}>{k.label}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: k.color }}>{k.value ?? 0}</div>
+                  <div style={{ fontSize: '20px', fontWeight: 500, color: k.color }}>{k.value ?? 0}</div>
                 </div>
               ))}
             </div>
@@ -906,19 +908,23 @@ const TabRiesgo = ({ data }) => {
   const navigate = useNavigate();
   const riskItems = data.riskItems || [];
 
-  // Risk score
+  // Risk score - usando umbrales compartidos (60/35)
   const overdueCount = riskItems.filter(r => r.overdueResponse).length;
-  const highSevActive = riskItems.filter(r => ['Crítico', 'ALTA'].includes(r.severity) && ['EMITIDO', 'RESPONDIDO'].includes(r.status)).length;
+  const highSevActive = riskItems.filter(r => ['Crítico', 'Alta'].includes(r.severity) && ['EMITIDO', 'RESPONDIDO'].includes(r.status)).length;
   const noValClosed = riskItems.filter(r => r.closedNoVal).length;
   const riskScore = Math.min(100, overdueCount * 8 + highSevActive * 6 + noValClosed * 4);
-  const riskLabel = riskScore >= 70 ? 'ALTO' : riskScore >= 40 ? 'MEDIO' : 'BAJO';
-  const riskColor = riskScore >= 70 ? C.red : riskScore >= 40 ? C.orange : C.green;
+  const riskFactors = [
+    { label: 'Vencidas sin respuesta', value: overdueCount },
+    { label: 'Alta sev. activas', value: highSevActive },
+    { label: 'Sin validación', value: noValClosed },
+    { label: 'Total en riesgo', value: riskItems.length },
+  ];
 
   const AlertCard = ({ title, items, emptyMsg, color, renderItem }) => (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <div style={{ fontSize: '12px', fontWeight: '700', color: t.text }}>{title}</div>
-        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: color + '22', border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800', color }}>{items.length}</div>
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: color + '22', border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, color }}>{items.length}</div>
       </div>
       {items.length === 0 ? (
         <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '10px' }}>{emptyMsg}</div>
@@ -962,37 +968,12 @@ const TabRiesgo = ({ data }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Risk score */}
-      <Card>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{ textAlign: 'center', minWidth: '120px' }}>
-            <div style={{ fontSize: '56px', fontWeight: '900', color: riskColor, lineHeight: 1 }}>{riskScore}</div>
-            <div style={{ marginTop: '4px' }}>
-              <span style={{
-                display: 'inline-block', padding: '3px 12px', borderRadius: '12px',
-                backgroundColor: riskColor + '22', border: `1px solid ${riskColor}`,
-                fontSize: '12px', fontWeight: '700', color: riskColor
-              }}>{riskLabel}</span>
-            </div>
-            <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '4px' }}>Índice de Riesgo QAR</div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-              {[
-                { label: 'Vencidas sin respuesta', value: overdueCount, color: C.red, hasDot: true },
-                { label: 'Alta sev activas', value: highSevActive, color: C.orange, hasDot: true },
-                { label: 'Sin validación', value: noValClosed, color: C.orange, hasDot: true },
-                { label: 'Total en riesgo', value: riskItems.length, color: C.blue, hasDot: true },
-              ].map((k, i) => (
-                <div key={i} style={{ textAlign: 'center', padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', borderTop: `2px solid ${k.color}` }}>
-                  <div style={{ fontSize: '16px', marginBottom: '2px' }}>{k.icon}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: k.color }}>{k.value}</div>
-                  <div style={{ fontSize: '10px', color: t.textMuted }}>{k.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Card>
+      <RiskScoreCard
+        score={riskScore}
+        title="Índice de Riesgo QAR"
+        factors={riskFactors}
+        t={t}
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <AlertCard
@@ -1435,31 +1416,20 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
   if (id === 'risk-score') {
     const riskItems    = data.riskItems || [];
     const overdueCount = riskItems.filter(r => r.overdueResponse).length;
-    const highSevAct   = riskItems.filter(r => ['Crítico','ALTA'].includes(r.severity) && ['EMITIDO','RESPONDIDO'].includes(r.status)).length;
+    const highSevAct   = riskItems.filter(r => ['Crítico','Alta'].includes(r.severity) && ['EMITIDO','RESPONDIDO'].includes(r.status)).length;
     const noVal        = riskItems.filter(r => r.closedNoVal).length;
     const score        = Math.min(100, overdueCount * 8 + highSevAct * 6 + noVal * 4);
-    const label        = score >= 70 ? 'ALTO' : score >= 40 ? 'MEDIO' : 'BAJO';
-    const color        = score >= 70 ? C.red  : score >= 40 ? C.orange : C.green;
     return (
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>Índice de Riesgo QAR</div>
-        <div style={{ fontSize: '52px', fontWeight: '900', color, lineHeight: 1 }}>{score}</div>
-        <div style={{ marginTop: '6px', marginBottom: '10px' }}>
-          <span style={{ display: 'inline-block', padding: '3px 14px', borderRadius: '12px', backgroundColor: color + '22', border: `1px solid ${color}`, fontSize: '12px', fontWeight: '700', color }}>{label}</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-          {[
-            { l: 'Vencidas', v: overdueCount, c: C.red },
-            { l: 'Alta Sev', v: highSevAct,   c: C.orange },
-            { l: 'Sin Val.',  v: noVal,        c: C.orange },
-          ].map((k, i) => (
-            <div key={i} style={{ padding: '6px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
-              <div style={{ fontSize: '16px', fontWeight: '800', color: k.c }}>{k.v}</div>
-              <div style={{ fontSize: '9px', color: t.textMuted }}>{k.l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <RiskScoreCard
+        score={score}
+        title="Índice de Riesgo QAR"
+        factors={[
+          { label: 'Vencidas', value: overdueCount },
+          { label: 'Alta Sev.', value: highSevAct },
+          { label: 'Sin Val.', value: noVal },
+        ]}
+        t={t}
+      />
     );
   }
 
@@ -1531,7 +1501,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
         ].map((r, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', marginBottom: '6px', backgroundColor: t.bgPanel, borderRadius: '6px', borderLeft: `3px solid ${r.color}` }}>
             <span style={{ fontSize: '11px', color: t.text }}>{r.label}</span>
-            <span style={{ fontSize: '18px', fontWeight: '800', color: r.color }}>{r.value ?? 0}</span>
+            <span style={{ fontSize: '18px', fontWeight: 500, color: r.color }}>{r.value ?? 0}</span>
           </div>
         ))}
       </div>
