@@ -2390,7 +2390,7 @@ const DefectCapture = () => {
           zIndex: 100
         }}>
           <span style={{ fontSize: '20px' }}></span>
-          <span style={{ color: t.warning, fontWeight: '600' }}>
+          <span style={{ color: t.warningFg, fontWeight: '600' }}>
             Modo Solo Lectura - No tienes permisos para capturar defectos
           </span>
         </div>
@@ -3204,10 +3204,10 @@ const DefectCapture = () => {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <XCircle size={28} color={t.error} />
+                <XCircle size={28} color={t.errorFg} />
               </div>
               <div>
-                <h3 style={{ margin: 0, color: t.error, fontSize: '18px', fontWeight: '600' }}>
+                <h3 style={{ margin: 0, color: t.errorFg, fontSize: '18px', fontWeight: '600' }}>
                   Serial en Scrap
                 </h3>
                 <p style={{ margin: '4px 0 0 0', color: currentTheme.textMuted, fontSize: '13px' }}>
@@ -3282,7 +3282,7 @@ const DefectCapture = () => {
               lineHeight: '1.5',
               margin: '0 0 20px 0'
             }}>
-              Este serial ya fue enviado a <strong style={{ color: t.error }}>SCRAP</strong> y no puede recibir nuevos defectos.
+              Este serial ya fue enviado a <strong style={{ color: t.errorFg }}>SCRAP</strong> y no puede recibir nuevos defectos.
             </p>
 
             <button
@@ -3705,7 +3705,7 @@ const DefectCapture = () => {
                                 {spec.isCritical && (
                                   <span style={{
                                     backgroundColor: t.errorBg,
-                                    color: t.error,
+                                    color: t.errorFg,
                                     padding: '2px 6px',
                                     borderRadius: '4px',
                                     fontSize: '10px',
@@ -3872,10 +3872,10 @@ const DefectCapture = () => {
                     Resumen Completo
                   </span>
                   <div style={{ display: 'flex', gap: '8px', fontSize: '11px' }}>
-                    <span style={{ color: t.success, fontWeight: '600' }}>
+                    <span style={{ color: t.successFg, fontWeight: '600' }}>
                       OK: {Object.values(checklistResults).filter(r => r?.result === 'OK').length}
                     </span>
-                    <span style={{ color: t.error, fontWeight: '600' }}>
+                    <span style={{ color: t.errorFg, fontWeight: '600' }}>
                       NOK: {Object.values(checklistResults).filter(r => r?.result === 'NOK').length}
                     </span>
                     <span style={{ color: t.textMuted }}>
@@ -3916,7 +3916,7 @@ const DefectCapture = () => {
                               {spec.specNumber}
                             </span>
                             {spec.isCritical && (
-                              <span style={{ fontSize: '9px', color: t.error, fontWeight: '600' }}>●</span>
+                              <span style={{ fontSize: '9px', color: t.errorFg, fontWeight: '600' }}>●</span>
                             )}
                           </div>
                           <p style={{
@@ -3988,15 +3988,15 @@ const DefectCapture = () => {
             }}>
               <div style={{ color: t.textMuted, fontSize: '13px' }}>
                 <strong>Esta estación:</strong>{' '}
-                <span style={{ color: t.success }}>
+                <span style={{ color: t.successFg }}>
                   {partSpecs.filter(s => checklistResults[s.id]?.result === 'OK').length} OK
                 </span>
                 {' | '}
-                <span style={{ color: t.error }}>
+                <span style={{ color: t.errorFg }}>
                   {partSpecs.filter(s => checklistResults[s.id]?.result === 'NOK').length} NOK
                 </span>
                 {' | '}
-                <span style={{ color: t.warning }}>
+                <span style={{ color: t.warningFg }}>
                   {partSpecs.filter(s => checklistResults[s.id]?.result === 'SKIPPED').length} N/A
                 </span>
                 {' | '}
@@ -4158,10 +4158,10 @@ const DefectCapture = () => {
               margin: '0 auto 16px',
               border: `3px solid ${t.error}`
             }}>
-              <AlertTriangle size={36} style={{ color: t.error }} />
+              <AlertTriangle size={36} style={{ color: t.errorFg }} />
             </div>
             <h3 style={{
-              color: t.error,
+              color: t.errorFg,
               fontSize: '20px',
               fontWeight: '600',
               marginBottom: '8px',
@@ -4194,7 +4194,7 @@ const DefectCapture = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: t.textMuted, fontSize: '13px' }}>Severidad:</span>
                 <span style={{
-                  color: t.error,
+                  color: t.errorFg,
                   fontSize: '13px',
                   fontWeight: '600'
                 }}>
@@ -4209,7 +4209,7 @@ const DefectCapture = () => {
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: t.textMuted, fontSize: '13px' }}>Specs Críticos NOK:</span>
-                    <span style={{ color: t.error, fontSize: '13px', fontWeight: '600' }}>
+                    <span style={{ color: t.errorFg, fontSize: '13px', fontWeight: '600' }}>
                       {qarAlertData.defectCount}
                     </span>
                   </div>
@@ -4219,7 +4219,7 @@ const DefectCapture = () => {
                     </span>
                     {qarAlertData.criticalSpecs?.map((specName, idx) => (
                       <div key={idx} style={{
-                        color: t.error,
+                        color: t.errorFg,
                         fontSize: '12px',
                         fontWeight: '600',
                         padding: '4px 8px',
@@ -4238,7 +4238,7 @@ const DefectCapture = () => {
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: t.textMuted, fontSize: '13px' }}>Defectos:</span>
-                  <span style={{ color: t.error, fontSize: '13px', fontWeight: '600' }}>
+                  <span style={{ color: t.errorFg, fontSize: '13px', fontWeight: '600' }}>
                     {qarAlertData.defectCount} / {qarAlertData.thresholdCount} en {qarAlertData.thresholdHours}h
                   </span>
                 </div>
