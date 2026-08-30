@@ -1959,15 +1959,15 @@ const DefectCapture = () => {
       padding: '8px 16px',
       borderRadius: '8px',
       fontSize: '18px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     counterOk: {
       backgroundColor: '#d1fae5',
       color: '#2E7D32'
     },
     counterNg: {
-      backgroundColor: '#fee2e2',
-      color: '#991b1b'
+      backgroundColor: t.errorBg,
+      color: t.error
     },
     piezaOkButton: {
       padding: '12px 24px',
@@ -1976,7 +1976,7 @@ const DefectCapture = () => {
       border: 'none',
       borderRadius: '8px',
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -2176,7 +2176,7 @@ const DefectCapture = () => {
       border: 'none',
       borderRadius: '8px',
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -2203,7 +2203,7 @@ const DefectCapture = () => {
       gap: '8px'
     },
     alertError: {
-      backgroundColor: '#fef2f2',
+      backgroundColor: t.errorBg,
       color: '#B00020',
       border: '1px solid #fecaca'
     },
@@ -2253,7 +2253,7 @@ const DefectCapture = () => {
       gap: '8px'
     },
     specCardCritical: {
-      border: '2px solid #991b1b'
+      border: `2px solid ${t.error}`
     },
     specHeader: {
       display: 'flex',
@@ -2283,7 +2283,7 @@ const DefectCapture = () => {
       backgroundColor: t.bgPanel,
       padding: '4px 8px',
       borderRadius: '4px',
-      fontFamily: 'monospace'
+      fontFamily: "'IBM Plex Mono', monospace"
     },
     specNominal: {
       backgroundColor: t.accent,
@@ -2313,8 +2313,8 @@ const DefectCapture = () => {
       color: '#065f46'
     },
     specButtonNok: {
-      backgroundColor: '#fee2e2',
-      color: '#991b1b'
+      backgroundColor: t.errorBg,
+      color: t.error
     },
     specButtonSelected: {
       transform: 'scale(1.02)',
@@ -2322,11 +2322,11 @@ const DefectCapture = () => {
     },
     criticalBadge: {
       backgroundColor: '#fecaca',
-      color: '#991b1b',
+      color: t.error,
       padding: '2px 6px',
       borderRadius: '4px',
       fontSize: '10px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     // Theme selector
     themeSelector: {
@@ -2379,7 +2379,7 @@ const DefectCapture = () => {
       {/* Read-only Banner */}
       {readOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
+          backgroundColor: t.warningBg,
           borderBottom: '2px solid #C77700',
           padding: '12px 24px',
           display: 'flex',
@@ -2390,7 +2390,7 @@ const DefectCapture = () => {
           zIndex: 100
         }}>
           <span style={{ fontSize: '20px' }}></span>
-          <span style={{ color: '#92400e', fontWeight: '600' }}>
+          <span style={{ color: t.warning, fontWeight: '600' }}>
             Modo Solo Lectura - No tienes permisos para capturar defectos
           </span>
         </div>
@@ -3066,7 +3066,7 @@ const DefectCapture = () => {
                   </span>
                 )}
                 {/* Main button text */}
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '700' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '600' }}>
                   <Plus size={20} />
                   {submitting ? 'GUARDANDO...' : 'AGREGAR DEFECTO'}
                 </span>
@@ -3078,11 +3078,11 @@ const DefectCapture = () => {
               <div style={{
                 marginTop: '8px',
                 padding: '8px 12px',
-                backgroundColor: '#f1f5f9',
-                border: '1px solid #64748b',
+                backgroundColor: t.bgPanel,
+                border: `1px solid ${t.textMuted}`,
                 borderRadius: '6px',
                 fontSize: '13px',
-                color: '#475569'
+                color: t.textDim
               }}>
                 <strong>Falta:</strong> {getMissingFields().join(', ')}
               </div>
@@ -3187,7 +3187,7 @@ const DefectCapture = () => {
             maxWidth: '450px',
             width: '90%',
             boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-            border: `2px solid #991b1b`
+            border: `2px solid ${t.error}`
           }}>
             <div style={{
               display: 'flex',
@@ -3199,15 +3199,15 @@ const DefectCapture = () => {
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                backgroundColor: '#fef2f2',
+                backgroundColor: t.errorBg,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <XCircle size={28} color="#991b1b" />
+                <XCircle size={28} color={t.error} />
               </div>
               <div>
-                <h3 style={{ margin: 0, color: '#991b1b', fontSize: '18px', fontWeight: '700' }}>
+                <h3 style={{ margin: 0, color: t.error, fontSize: '18px', fontWeight: '600' }}>
                   Serial en Scrap
                 </h3>
                 <p style={{ margin: '4px 0 0 0', color: currentTheme.textMuted, fontSize: '13px' }}>
@@ -3282,7 +3282,7 @@ const DefectCapture = () => {
               lineHeight: '1.5',
               margin: '0 0 20px 0'
             }}>
-              Este serial ya fue enviado a <strong style={{ color: '#991b1b' }}>SCRAP</strong> y no puede recibir nuevos defectos.
+              Este serial ya fue enviado a <strong style={{ color: t.error }}>SCRAP</strong> y no puede recibir nuevos defectos.
             </p>
 
             <button
@@ -3290,7 +3290,7 @@ const DefectCapture = () => {
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: '#991b1b',
+                backgroundColor: t.error,
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -3326,7 +3326,7 @@ const DefectCapture = () => {
             maxWidth: '450px',
             width: '90%',
             boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-            border: `2px solid #1e40af`
+            border: `2px solid ${t.accent}`
           }}>
             <div style={{
               display: 'flex',
@@ -3338,15 +3338,15 @@ const DefectCapture = () => {
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                backgroundColor: '#dbeafe',
+                backgroundColor: t.accentBg,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <AlertTriangle size={28} color="#1e40af" />
+                <AlertTriangle size={28} color={t.accent} />
               </div>
               <div>
-                <h3 style={{ margin: 0, color: '#1e40af', fontSize: '18px', fontWeight: '700' }}>
+                <h3 style={{ margin: 0, color: t.accent, fontSize: '18px', fontWeight: '600' }}>
                   Serial Ya Liberado
                 </h3>
                 <p style={{ margin: '4px 0 0 0', color: currentTheme.textMuted, fontSize: '13px' }}>
@@ -3410,7 +3410,7 @@ const DefectCapture = () => {
               lineHeight: '1.5',
               margin: '0 0 20px 0'
             }}>
-              Este serial ya fue <strong style={{ color: '#1e40af' }}>LIBERADO</strong>. Si es un reproceso, los nuevos defectos se marcarán como <strong style={{ color: '#64748b' }}>reproceso</strong>.
+              Este serial ya fue <strong style={{ color: t.accent }}>LIBERADO</strong>. Si es un reproceso, los nuevos defectos se marcarán como <strong style={{ color: t.textMuted }}>reproceso</strong>.
             </p>
 
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -3437,7 +3437,7 @@ const DefectCapture = () => {
                 style={{
                   flex: 1,
                   padding: '12px',
-                  backgroundColor: '#1e40af',
+                  backgroundColor: t.accent,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -3513,7 +3513,7 @@ const DefectCapture = () => {
               gap: '12px',
               marginBottom: '16px'
             }}>
-              <AlertTriangle size={28} style={{ color: '#1e40af' }} />
+              <AlertTriangle size={28} style={{ color: t.accent }} />
               <h3 style={{ margin: 0, color: t.text, fontSize: '18px' }}>
                 Verificación de Especificaciones
               </h3>
@@ -3548,7 +3548,7 @@ const DefectCapture = () => {
                 style={{
                   flex: 1,
                   padding: '12px',
-                  backgroundColor: '#1e40af',
+                  backgroundColor: t.accent,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -3596,7 +3596,7 @@ const DefectCapture = () => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              backgroundColor: '#475569',
+              backgroundColor: t.textDim,
               borderRadius: '12px 12px 0 0'
             }}>
               <div>
@@ -3677,9 +3677,9 @@ const DefectCapture = () => {
                             backgroundColor: isFromOtherStation ? t.bg : t.bgPanel,
                             borderRadius: '8px',
                             border: `2px solid ${
-                              result?.result === 'OK' ? '#047857' :
-                              result?.result === 'NOK' ? '#991b1b' :
-                              result?.result === 'SKIPPED' ? '#d97706' : t.border
+                              result?.result === 'OK' ? t.success :
+                              result?.result === 'NOK' ? t.error :
+                              result?.result === 'SKIPPED' ? t.warning : t.border
                             }`,
                             opacity: isFromOtherStation ? 0.7 : 1
                           }}
@@ -3697,15 +3697,15 @@ const DefectCapture = () => {
                                   padding: '2px 8px',
                                   borderRadius: '4px',
                                   fontSize: '11px',
-                                  fontFamily: 'monospace',
+                                  fontFamily: "'IBM Plex Mono', monospace",
                                   color: t.textMuted
                                 }}>
                                   {spec.specNumber}
                                 </span>
                                 {spec.isCritical && (
                                   <span style={{
-                                    backgroundColor: '#fee2e2',
-                                    color: '#991b1b',
+                                    backgroundColor: t.errorBg,
+                                    color: t.error,
                                     padding: '2px 6px',
                                     borderRadius: '4px',
                                     fontSize: '10px',
@@ -3716,8 +3716,8 @@ const DefectCapture = () => {
                                 )}
                                 {isFromOtherStation && (
                                   <span style={{
-                                    backgroundColor: '#dbeafe',
-                                    color: '#1e40af',
+                                    backgroundColor: t.accentBg,
+                                    color: t.accent,
                                     padding: '2px 6px',
                                     borderRadius: '4px',
                                     fontSize: '10px',
@@ -3748,9 +3748,9 @@ const DefectCapture = () => {
                                 onClick={() => handleChecklistResult(spec.id, 'OK')}
                                 style={{
                                   padding: '6px 12px',
-                                  backgroundColor: result?.result === 'OK' ? '#047857' : t.bgCard,
-                                  color: result?.result === 'OK' ? 'white' : '#047857',
-                                  border: `2px solid #047857`,
+                                  backgroundColor: result?.result === 'OK' ? t.success : t.bgCard,
+                                  color: result?.result === 'OK' ? 'white' : t.success,
+                                  border: `2px solid ${t.success}`,
                                   borderRadius: '6px',
                                   fontWeight: '600',
                                   cursor: 'pointer',
@@ -3767,9 +3767,9 @@ const DefectCapture = () => {
                                 onClick={() => handleChecklistResult(spec.id, 'NOK')}
                                 style={{
                                   padding: '6px 12px',
-                                  backgroundColor: result?.result === 'NOK' ? '#991b1b' : t.bgCard,
-                                  color: result?.result === 'NOK' ? 'white' : '#991b1b',
-                                  border: `2px solid #991b1b`,
+                                  backgroundColor: result?.result === 'NOK' ? t.error : t.bgCard,
+                                  color: result?.result === 'NOK' ? 'white' : t.error,
+                                  border: `2px solid ${t.error}`,
                                   borderRadius: '6px',
                                   fontWeight: '600',
                                   cursor: 'pointer',
@@ -3786,9 +3786,9 @@ const DefectCapture = () => {
                                 onClick={() => handleChecklistResult(spec.id, 'SKIPPED')}
                                 style={{
                                   padding: '6px 10px',
-                                  backgroundColor: result?.result === 'SKIPPED' ? '#92400e' : t.bgCard,
-                                  color: result?.result === 'SKIPPED' ? 'white' : '#92400e',
-                                  border: `2px solid #d97706`,
+                                  backgroundColor: result?.result === 'SKIPPED' ? t.warning : t.bgCard,
+                                  color: result?.result === 'SKIPPED' ? 'white' : t.warning,
+                                  border: `2px solid ${t.warning}`,
                                   borderRadius: '6px',
                                   fontWeight: '600',
                                   cursor: 'pointer',
@@ -3838,7 +3838,7 @@ const DefectCapture = () => {
                                   padding: '8px 12px',
                                   backgroundColor: t.bgCard,
                                   color: t.text,
-                                  border: `1px solid ${result?.result === 'NOK' ? '#991b1b' : '#d97706'}`,
+                                  border: `1px solid ${result?.result === 'NOK' ? t.error : t.warning}`,
                                   borderRadius: '6px',
                                   fontSize: '13px'
                                 }}
@@ -3872,10 +3872,10 @@ const DefectCapture = () => {
                     Resumen Completo
                   </span>
                   <div style={{ display: 'flex', gap: '8px', fontSize: '11px' }}>
-                    <span style={{ color: '#047857', fontWeight: '600' }}>
+                    <span style={{ color: t.success, fontWeight: '600' }}>
                       OK: {Object.values(checklistResults).filter(r => r?.result === 'OK').length}
                     </span>
-                    <span style={{ color: '#991b1b', fontWeight: '600' }}>
+                    <span style={{ color: t.error, fontWeight: '600' }}>
                       NOK: {Object.values(checklistResults).filter(r => r?.result === 'NOK').length}
                     </span>
                     <span style={{ color: t.textMuted }}>
@@ -3901,8 +3901,8 @@ const DefectCapture = () => {
                           backgroundColor: t.bgCard,
                           borderRadius: '6px',
                           borderLeft: `4px solid ${
-                            result?.result === 'OK' ? '#047857' :
-                            result?.result === 'NOK' ? '#991b1b' : '#94a3b8'
+                            result?.result === 'OK' ? t.success :
+                            result?.result === 'NOK' ? t.error : t.textDim
                           }`,
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -3912,11 +3912,11 @@ const DefectCapture = () => {
                       >
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                            <span style={{ fontSize: '10px', color: t.textMuted, fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: '10px', color: t.textMuted, fontFamily: "'IBM Plex Mono', monospace" }}>
                               {spec.specNumber}
                             </span>
                             {spec.isCritical && (
-                              <span style={{ fontSize: '9px', color: '#991b1b', fontWeight: '600' }}>●</span>
+                              <span style={{ fontSize: '9px', color: t.error, fontWeight: '600' }}>●</span>
                             )}
                           </div>
                           <p style={{
@@ -3943,10 +3943,10 @@ const DefectCapture = () => {
                                 borderRadius: '4px',
                                 fontSize: '11px',
                                 fontWeight: '600',
-                                backgroundColor: result.result === 'OK' ? '#dcfce7' :
-                                                 result.result === 'SKIPPED' ? '#fef3c7' : '#fee2e2',
-                                color: result.result === 'OK' ? '#047857' :
-                                       result.result === 'SKIPPED' ? '#92400e' : '#991b1b'
+                                backgroundColor: result.result === 'OK' ? t.successBg :
+                                                 result.result === 'SKIPPED' ? t.warningBg : t.errorBg,
+                                color: result.result === 'OK' ? t.success :
+                                       result.result === 'SKIPPED' ? t.warning : t.error
                               }}>
                                 {result.result === 'SKIPPED' ? 'Omitido' : result.result}
                               </span>
@@ -3988,15 +3988,15 @@ const DefectCapture = () => {
             }}>
               <div style={{ color: t.textMuted, fontSize: '13px' }}>
                 <strong>Esta estación:</strong>{' '}
-                <span style={{ color: '#047857' }}>
+                <span style={{ color: t.success }}>
                   {partSpecs.filter(s => checklistResults[s.id]?.result === 'OK').length} OK
                 </span>
                 {' | '}
-                <span style={{ color: '#991b1b' }}>
+                <span style={{ color: t.error }}>
                   {partSpecs.filter(s => checklistResults[s.id]?.result === 'NOK').length} NOK
                 </span>
                 {' | '}
-                <span style={{ color: '#92400e' }}>
+                <span style={{ color: t.warning }}>
                   {partSpecs.filter(s => checklistResults[s.id]?.result === 'SKIPPED').length} N/A
                 </span>
                 {' | '}
@@ -4022,7 +4022,7 @@ const DefectCapture = () => {
                   disabled={checklistSaving || partSpecs.filter(s => checklistResults[s.id]?.result).length < partSpecs.length}
                   style={{
                     padding: '10px 24px',
-                    backgroundColor: partSpecs.filter(s => checklistResults[s.id]?.result).length < partSpecs.length ? '#94a3b8' : '#1e40af',
+                    backgroundColor: partSpecs.filter(s => checklistResults[s.id]?.result).length < partSpecs.length ? t.textDim : t.accent,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -4065,13 +4065,13 @@ const DefectCapture = () => {
               width: '60px',
               height: '60px',
               borderRadius: '50%',
-              backgroundColor: '#dbeafe',
+              backgroundColor: t.accentBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px'
             }}>
-              <AlertTriangle size={32} style={{ color: '#1e40af' }} />
+              <AlertTriangle size={32} style={{ color: t.accent }} />
             </div>
             <h3 style={{ color: t.text, fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
               Omitir Evaluación
@@ -4085,7 +4085,7 @@ const DefectCapture = () => {
                   : `Hay ${pendingSpecs} de ${partSpecs.length} especificación(es) sin evaluar.`;
               })()}
             </p>
-            <p style={{ color: '#64748b', fontSize: '13px', fontWeight: '500', marginBottom: '20px' }}>
+            <p style={{ color: t.textMuted, fontSize: '13px', fontWeight: '500', marginBottom: '20px' }}>
               Se registrará como "OMITIDO" para este serial.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -4093,7 +4093,7 @@ const DefectCapture = () => {
                 onClick={handleCancelOmit}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#1e40af',
+                  backgroundColor: t.accent,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -4108,7 +4108,7 @@ const DefectCapture = () => {
                 onClick={handleConfirmOmit}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#64748b',
+                  backgroundColor: t.textMuted,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -4151,19 +4151,19 @@ const DefectCapture = () => {
               width: '70px',
               height: '70px',
               borderRadius: '50%',
-              backgroundColor: '#fef2f2',
+              backgroundColor: t.errorBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px',
-              border: '3px solid #991b1b'
+              border: `3px solid ${t.error}`
             }}>
-              <AlertTriangle size={36} style={{ color: '#991b1b' }} />
+              <AlertTriangle size={36} style={{ color: t.error }} />
             </div>
             <h3 style={{
-              color: '#991b1b',
+              color: t.error,
               fontSize: '20px',
-              fontWeight: '700',
+              fontWeight: '600',
               marginBottom: '8px',
               textTransform: 'uppercase',
               letterSpacing: '1px'
@@ -4194,7 +4194,7 @@ const DefectCapture = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: t.textMuted, fontSize: '13px' }}>Severidad:</span>
                 <span style={{
-                  color: '#991b1b',
+                  color: t.error,
                   fontSize: '13px',
                   fontWeight: '600'
                 }}>
@@ -4209,7 +4209,7 @@ const DefectCapture = () => {
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: t.textMuted, fontSize: '13px' }}>Specs Críticos NOK:</span>
-                    <span style={{ color: '#991b1b', fontSize: '13px', fontWeight: '700' }}>
+                    <span style={{ color: t.error, fontSize: '13px', fontWeight: '600' }}>
                       {qarAlertData.defectCount}
                     </span>
                   </div>
@@ -4219,11 +4219,11 @@ const DefectCapture = () => {
                     </span>
                     {qarAlertData.criticalSpecs?.map((specName, idx) => (
                       <div key={idx} style={{
-                        color: '#991b1b',
+                        color: t.error,
                         fontSize: '12px',
                         fontWeight: '600',
                         padding: '4px 8px',
-                        backgroundColor: '#fef2f2',
+                        backgroundColor: t.errorBg,
                         borderRadius: '4px',
                         marginBottom: '4px',
                         display: 'flex',
@@ -4238,7 +4238,7 @@ const DefectCapture = () => {
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: t.textMuted, fontSize: '13px' }}>Defectos:</span>
-                  <span style={{ color: '#991b1b', fontSize: '13px', fontWeight: '700' }}>
+                  <span style={{ color: t.error, fontSize: '13px', fontWeight: '600' }}>
                     {qarAlertData.defectCount} / {qarAlertData.thresholdCount} en {qarAlertData.thresholdHours}h
                   </span>
                 </div>
@@ -4273,7 +4273,7 @@ const DefectCapture = () => {
                 onClick={handleEmitQar}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#991b1b',
+                  backgroundColor: t.error,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
