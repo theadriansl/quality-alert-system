@@ -110,7 +110,7 @@ const DashboardWidget = ({
             )}
             {onRemove && (
               <button
-                style={{ ...styles.actionButton, color: '#ef4444' }}
+                style={{ ...styles.actionButton, color: t.errorFg }}
                 onClick={() => onRemove(id)}
                 title={language === 'es' ? 'Eliminar' : 'Delete'}
               >

@@ -34,13 +34,13 @@ const RiskHeatmapWidget = ({ riskMatrix = {}, riskMatrixMeta = {} }) => {
   const getColor = (riskLevel) => {
     switch (riskLevel) {
       case 'low':
-        return { bg: '#dcfce7', text: '#166534' }; // Green - Bajo
+        return { bg: t.successBg, text: t.successFg }; // Green - Bajo
       case 'medium':
-        return { bg: '#fef9c3', text: '#854d0e' };  // Yellow - Medio
+        return { bg: t.warningBg, text: t.warningFg };  // Yellow - Medio
       case 'high':
-        return { bg: '#fee2e2', text: '#991b1b' }; // Red - Alto
+        return { bg: t.errorBg, text: t.errorFg }; // Red - Alto
       default:
-        return { bg: '#f3f4f6', text: '#6b7280' }; // Gray - Unknown
+        return { bg: t.bgPanel, text: t.textMuted }; // Gray - Unknown
     }
   };
 
@@ -88,7 +88,7 @@ const RiskHeatmapWidget = ({ riskMatrix = {}, riskMatrixMeta = {} }) => {
       justifyContent: 'center',
       borderRadius: '6px',
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       cursor: 'pointer',
       transition: 'transform 0.2s, box-shadow 0.2s',
       minHeight: '32px'
@@ -125,9 +125,9 @@ const RiskHeatmapWidget = ({ riskMatrix = {}, riskMatrixMeta = {} }) => {
   };
 
   const legendItems = [
-    { label: 'Bajo', color: '#dcfce7' },
-    { label: 'Medio', color: '#fef9c3' },
-    { label: 'Alto', color: '#fee2e2' }
+    { label: 'Bajo', color: t.successBg },
+    { label: 'Medio', color: t.warningBg },
+    { label: 'Alto', color: t.errorBg }
   ];
 
   return (

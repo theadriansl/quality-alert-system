@@ -103,7 +103,7 @@ const FinancialWidget = ({ data = {} }) => {
     },
     balanceValue: {
       fontSize: '28px',
-      fontWeight: '700',
+      fontWeight: '600',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -172,7 +172,7 @@ const FinancialWidget = ({ data = {} }) => {
   if (withData === 0) {
     return (
       <div style={styles.emptyState}>
-        <DollarSign size={32} color="#d1d5db" style={{ marginBottom: '8px' }} />
+        <DollarSign size={32} color={t.border} style={{ marginBottom: '8px' }} />
         <div>{tr.noFinancialData}</div>
         <div style={{ fontSize: '11px', marginTop: '4px' }}>
           {tr.addCostsSavings}
@@ -184,7 +184,7 @@ const FinancialWidget = ({ data = {} }) => {
   // Negative netImpact = savings > costs = GOOD (green)
   // Positive netImpact = costs > savings = BAD (red)
   const isPositiveBalance = netImpact <= 0;
-  const balanceColor = isPositiveBalance ? '#2E7D32' : '#ef4444';
+  const balanceColor = isPositiveBalance ? t.successFg : t.errorFg;
 
   return (
     <div style={styles.container}>
@@ -216,7 +216,7 @@ const FinancialWidget = ({ data = {} }) => {
                 </div>
                 <span style={{
                   ...styles.breakdownValue,
-                  color: type.isExpense ? '#ef4444' : '#2E7D32'
+                  color: type.isExpense ? t.errorFg : t.successFg
                 }}>
                   {type.isExpense ? '' : '-'}{formatCurrency(value)}
                 </span>
@@ -233,7 +233,7 @@ const FinancialWidget = ({ data = {} }) => {
                     <span style={styles.breakdownIcon}></span>
                     <span style={styles.breakdownLabel}>{tr.totalCosts}</span>
                   </div>
-                  <span style={{ ...styles.breakdownValue, color: '#ef4444' }}>
+                  <span style={{ ...styles.breakdownValue, color: t.errorFg }}>
                     {formatCurrency(totalCost)}
                   </span>
                 </div>
@@ -244,7 +244,7 @@ const FinancialWidget = ({ data = {} }) => {
                     <span style={styles.breakdownIcon}></span>
                     <span style={styles.breakdownLabel}>{tr.totalSavings}</span>
                   </div>
-                  <span style={{ ...styles.breakdownValue, color: '#2E7D32' }}>
+                  <span style={{ ...styles.breakdownValue, color: t.successFg }}>
                     -{formatCurrency(totalSavings)}
                   </span>
                 </div>

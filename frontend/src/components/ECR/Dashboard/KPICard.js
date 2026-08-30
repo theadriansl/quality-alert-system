@@ -48,7 +48,7 @@ const KPICard = ({
     },
     value: {
       fontSize: '32px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       lineHeight: 1,
       marginBottom: '4px'

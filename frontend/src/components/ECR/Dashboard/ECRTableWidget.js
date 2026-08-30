@@ -70,7 +70,7 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete,
       alignItems: 'center',
       justifyContent: 'center',
       fontSize: '10px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     emptyState: {
       textAlign: 'center',
@@ -108,11 +108,11 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete,
 
   const getStatusStyle = (status) => {
     const statusColors = {
-      draft: { bg: '#f1f5f9', color: '#475569' },
-      submitted: { bg: '#dbeafe', color: '#1d4ed8' },
-      pending_approval: { bg: '#fef3c7', color: '#92400e' },
-      approved: { bg: '#dcfce7', color: '#166534' },
-      rejected: { bg: '#fee2e2', color: '#991b1b' },
+      draft: { bg: t.bgPanel, color: t.textMuted },
+      submitted: { bg: t.accentBg, color: t.accent },
+      pending_approval: { bg: t.warningBg, color: t.warningFg },
+      approved: { bg: t.successBg, color: t.successFg },
+      rejected: { bg: t.errorBg, color: t.errorFg },
       closed: { bg: '#e0e7ff', color: '#4338ca' }
     };
     return statusColors[status] || statusColors.draft;
@@ -297,12 +297,12 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete,
                       }}
                       onMouseEnter={(e) => {
                         if (!isDeleting) {
-                          e.currentTarget.style.backgroundColor = '#fca5a5';
+                          e.currentTarget.style.backgroundColor = t.errorBorder;
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!isDeleting) {
-                          e.currentTarget.style.backgroundColor = '#fee2e2';
+                          e.currentTarget.style.backgroundColor = t.errorBg;
                         }
                       }}
                       title={language === 'es' ? 'Eliminar ECR' : 'Delete ECR'}

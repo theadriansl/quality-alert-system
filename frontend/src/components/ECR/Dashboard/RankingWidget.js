@@ -80,7 +80,7 @@ const RankingWidget = ({
     },
     value: {
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text
     },
     valueLabel: {
@@ -136,7 +136,7 @@ const RankingWidget = ({
             key={`rank-${index}-${name}`}
             style={{
               ...styles.row,
-              backgroundColor: rank <= 3 ? `${color}08` : '#FAFBFC'
+              backgroundColor: rank <= 3 ? `${color}08` : t.bgPanel
             }}
           >
             <div style={styles.rankContainer}>

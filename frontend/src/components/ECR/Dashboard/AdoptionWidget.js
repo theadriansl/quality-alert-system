@@ -83,7 +83,7 @@ const AdoptionWidget = ({ adoption = {} }) => {
       width: '45px',
       textAlign: 'right',
       fontSize: '14px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     count: {
       width: '60px',
