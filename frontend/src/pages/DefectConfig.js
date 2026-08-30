@@ -27,14 +27,11 @@ const DefectConfig = () => {
 
   // Catalog data
   const [severities, setSeverities] = useState([]);
-  const [_stations, setStations] = useState([]); // eslint-disable-line no-unused-vars
-  const [_stages, setStages] = useState([]); // eslint-disable-line no-unused-vars
   const [shifts, setShifts] = useState([]);
   const [dispositions, setDispositions] = useState([]);
   const [qarValidators, setQarValidators] = useState([]);
   const [hospitalUsers, setHospitalUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
-  const [_departments, setDepartments] = useState([]); // eslint-disable-line no-unused-vars
   const [currentUser, setCurrentUser] = useState(null);
   const [userFilter, setUserFilter] = useState('');
 
@@ -56,26 +53,20 @@ const DefectConfig = () => {
   const loadCatalogData = useCallback(async () => {
     try {
       setLoading(true);
-      const [sevRes, staRes, stgRes, shfRes, disRes, userRes, deptRes] = await Promise.all([
+      const [sevRes, shfRes, disRes, userRes] = await Promise.all([
         fetch(`${API_BASE_URL}/inspection-catalogs/severities?includeInactive=true`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/inspection-catalogs/stations?includeInactive=true`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/inspection-catalogs/stages?includeInactive=true`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/inspection-catalogs/shifts?includeInactive=true`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/inspection-catalogs/dispositions?includeInactive=true`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/auth/me`, { headers: getAuthHeaders() }),
-        fetch(`${API_BASE_URL}/departments?flat=true`, { headers: getAuthHeaders() })
+        fetch(`${API_BASE_URL}/auth/me`, { headers: getAuthHeaders() })
       ]);
 
-      const [sevData, staData, stgData, shfData, disData, userData, deptData] = await Promise.all([
-        sevRes.json(), staRes.json(), stgRes.json(), shfRes.json(), disRes.json(), userRes.json(), deptRes.json()
+      const [sevData, shfData, disData, userData] = await Promise.all([
+        sevRes.json(), shfRes.json(), disRes.json(), userRes.json()
       ]);
 
       setSeverities(sevData.items || []);
-      setStations(staData.items || []);
-      setStages(stgData.items || []);
       setShifts(shfData.items || []);
       setDispositions(disData.items || []);
-      setDepartments(deptData.departments || []);
       setCurrentUser(userData.user || null);
 
       // Load QAR validators and Hospital users if admin
@@ -338,14 +329,14 @@ const DefectConfig = () => {
       fontWeight: 600,
       color: t.textMuted,
       textTransform: 'uppercase',
-      backgroundColor: t.field || t.bgPanel,
-      borderBottom: `1px solid ${t.line || t.border}`
+      backgroundColor: t.field,
+      borderBottom: `1px solid ${t.line}`
     };
 
     const tdStyle = {
       padding: '0 16px',
       height: ROW_HEIGHT,
-      borderBottom: `1px solid ${t.line || t.border}`,
+      borderBottom: `1px solid ${t.line}`,
       fontSize: 13,
       color: t.text
     };
@@ -357,9 +348,9 @@ const DefectConfig = () => {
         borderRadius: 12,
         fontSize: 11,
         fontWeight: 500,
-        backgroundColor: active ? (t.successBg || '#dcfce7') : t.bgPanel,
-        color: active ? (t.successFg || '#166534') : t.textMuted,
-        border: `1px solid ${active ? (t.successBorder || '#bbf7d0') : t.border}`
+        backgroundColor: active ? t.successBg : t.bgPanel,
+        color: active ? t.successFg : t.textMuted,
+        border: `1px solid ${active ? t.successBorder : t.border}`
       }}>
         {active ? 'Activo' : 'Inactivo'}
       </span>
@@ -461,7 +452,7 @@ const DefectConfig = () => {
                 ))}
               </tbody>
             </table>
-            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line || t.border}` }}>
+            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line}` }}>
               {items.length} severidades configuradas. El umbral de QAR determina cuándo una inspección genera alerta automática.
             </div>
           </>
@@ -502,7 +493,7 @@ const DefectConfig = () => {
                 ))}
               </tbody>
             </table>
-            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line || t.border}` }}>
+            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line}` }}>
               {items.length} turnos configurados.
             </div>
           </>
@@ -563,7 +554,7 @@ const DefectConfig = () => {
                 ))}
               </tbody>
             </table>
-            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line || t.border}` }}>
+            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line}` }}>
               {items.length} disposiciones configuradas.
             </div>
           </>
@@ -597,7 +588,7 @@ const DefectConfig = () => {
 
         return (
           <div>
-            <div style={{ padding: 16, borderBottom: `1px solid ${t.line || t.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ padding: 16, borderBottom: `1px solid ${t.line}`, display: 'flex', alignItems: 'center', gap: 12 }}>
               <input
                 type="text"
                 style={{
@@ -657,9 +648,9 @@ const DefectConfig = () => {
                         style={{
                           padding: '4px 12px',
                           borderRadius: 4,
-                          border: `1px solid ${item.canValidateQar ? (t.successBorder || '#bbf7d0') : t.border}`,
-                          backgroundColor: item.canValidateQar ? (t.successBg || '#dcfce7') : t.bgPanel,
-                          color: item.canValidateQar ? (t.successFg || '#166534') : t.textMuted,
+                          border: `1px solid ${item.canValidateQar ? t.successBorder : t.border}`,
+                          backgroundColor: item.canValidateQar ? t.successBg : t.bgPanel,
+                          color: item.canValidateQar ? t.successFg : t.textMuted,
                           cursor: 'pointer',
                           fontSize: 12,
                           fontWeight: 500
@@ -710,9 +701,9 @@ const DefectConfig = () => {
             style={{
               padding: '4px 8px',
               borderRadius: 4,
-              border: `1px solid ${value ? (t.successBorder || '#bbf7d0') : t.border}`,
-              backgroundColor: value ? (t.successBg || '#dcfce7') : t.bgPanel,
-              color: value ? (t.successFg || '#166534') : t.textMuted,
+              border: `1px solid ${value ? t.successBorder : t.border}`,
+              backgroundColor: value ? t.successBg : t.bgPanel,
+              color: value ? t.successFg : t.textMuted,
               cursor: disabled ? 'not-allowed' : 'pointer',
               opacity: disabled ? 0.5 : 1,
               fontSize: 12
@@ -726,7 +717,7 @@ const DefectConfig = () => {
 
         return (
           <div>
-            <div style={{ padding: 16, borderBottom: `1px solid ${t.line || t.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ padding: 16, borderBottom: `1px solid ${t.line}`, display: 'flex', alignItems: 'center', gap: 12 }}>
               <input
                 type="text"
                 style={{
@@ -1115,9 +1106,9 @@ const DefectConfig = () => {
           padding: '12px 16px',
           borderRadius: 6,
           marginBottom: 16,
-          backgroundColor: t.errorBg || '#fef2f2',
-          border: `1px solid ${t.errorBorder || '#fecaca'}`,
-          color: t.error || '#B00020',
+          backgroundColor: t.errorBg,
+          border: `1px solid ${t.errorBorder}`,
+          color: t.error,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -1131,9 +1122,9 @@ const DefectConfig = () => {
           padding: '12px 16px',
           borderRadius: 6,
           marginBottom: 16,
-          backgroundColor: t.successBg || '#f0fdf4',
-          border: `1px solid ${t.successBorder || '#bbf7d0'}`,
-          color: t.successFg || '#166534'
+          backgroundColor: t.successBg,
+          border: `1px solid ${t.successBorder}`,
+          color: t.successFg
         }}>
           {success}
         </div>
@@ -1152,7 +1143,7 @@ const DefectConfig = () => {
               fontSize: 13,
               fontWeight: activeTab === tab.id ? 600 : 400,
               color: activeTab === tab.id ? t.text : t.textMuted,
-              borderBottom: activeTab === tab.id ? `2px solid ${t.primary || t.accent}` : '2px solid transparent',
+              borderBottom: activeTab === tab.id ? `2px solid ${t.primary}` : '2px solid transparent',
               marginBottom: -1,
               display: 'flex',
               alignItems: 'center',

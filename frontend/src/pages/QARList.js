@@ -126,6 +126,7 @@ const QARList = () => {
     severityCode: [...new Set(allQars.map(q => q.severityCode || q.severityName).filter(Boolean))].sort(),
     status: Object.keys(STATUS_CONFIG),
     createdAt: [...new Set(allQars.map(q => q.createdAt ? new Date(q.createdAt).toLocaleDateString('es-MX') : null).filter(Boolean))].sort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [allQars]);
 
   // Filtered data
@@ -262,13 +263,13 @@ const QARList = () => {
         textAlign: 'left',
         padding: '0 12px',
         height: 34,
-        backgroundColor: t.field || t.bgPanel,
+        backgroundColor: t.field,
         color: t.textMuted,
         fontWeight: 600,
         fontSize: 11,
         textTransform: 'uppercase',
         letterSpacing: '0.5px',
-        borderBottom: `1px solid ${t.line || t.border}`,
+        borderBottom: `1px solid ${t.line}`,
         position: 'relative',
         userSelect: 'none',
         whiteSpace: 'nowrap'
@@ -328,7 +329,7 @@ const QARList = () => {
                 color: t.textMuted,
                 cursor: 'pointer',
                 borderBottom: `1px solid ${t.border}`,
-                backgroundColor: !hasFilter ? (t.accentBg || `${t.accent}10`) : 'transparent'
+                backgroundColor: !hasFilter ? (t.accentBg) : 'transparent'
               }}
             >
               (Todos)
@@ -347,16 +348,16 @@ const QARList = () => {
                   fontSize: 12,
                   color: t.text,
                   cursor: 'pointer',
-                  backgroundColor: colFilters[field] === val ? (t.accentBg || `${t.accent}15`) : 'transparent',
+                  backgroundColor: colFilters[field] === val ? (t.accentBg) : 'transparent',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
                 }}
                 onMouseEnter={(e) => {
-                  if (colFilters[field] !== val) e.currentTarget.style.backgroundColor = t.bgPanel;
+                  if (colFilters[field] !== val) e.currentTarget.style.backgroundColor = t.hover;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = colFilters[field] === val ? (t.accentBg || `${t.accent}15`) : 'transparent';
+                  e.currentTarget.style.backgroundColor = colFilters[field] === val ? (t.accentBg) : 'transparent';
                 }}
               >
                 {val}
@@ -407,7 +408,7 @@ const QARList = () => {
               padding: '8px 16px',
               fontSize: 12,
               fontWeight: 600,
-              backgroundColor: t.primary || t.accent,
+              backgroundColor: t.primary,
               color: 'white',
               border: 'none',
               borderRadius: 6,
@@ -466,8 +467,8 @@ const QARList = () => {
                 borderRadius: 8,
                 padding: '14px 16px',
                 cursor: 'pointer',
-                border: isFiltering ? `1px solid ${t.accentBorder || t.accent}` : `1px solid ${t.border}`,
-                backgroundColor: isFiltering ? (t.accentBg || `${t.accent}08`) : t.bgCard,
+                border: isFiltering ? `1px solid ${t.accentBorder}` : `1px solid ${t.border}`,
+                backgroundColor: isFiltering ? (t.accentBg) : t.bgCard,
                 transition: 'all 0.15s'
               }}
             >
@@ -672,13 +673,13 @@ const QARList = () => {
                     textAlign: 'left',
                     padding: '0 12px',
                     height: 34,
-                    backgroundColor: t.field || t.bgPanel,
+                    backgroundColor: t.field,
                     color: t.textMuted,
                     fontWeight: 600,
                     fontSize: 11,
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
-                    borderBottom: `1px solid ${t.line || t.border}`,
+                    borderBottom: `1px solid ${t.line}`,
                     width: 80
                   }}>Acción</th>
                 </tr>
@@ -706,11 +707,11 @@ const QARList = () => {
                   <tr
                     key={qar.id}
                     style={{
-                      borderBottom: `1px solid ${t.line || t.border}`,
+                      borderBottom: `1px solid ${t.line}`,
                       cursor: 'pointer',
                       height: 44
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = t.bgPanel}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = t.hover}
                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     onClick={() => navigate(`/qar-detail/${qar.id}`)}
                   >
