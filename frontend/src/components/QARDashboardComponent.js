@@ -15,6 +15,12 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { KpiTile, RiskScoreCard } from './shared/SharedComponents';
 
+// ─── Data value constants (match database values exactly) ────────────────────
+// NEVER change these for visual reasons - they must match stored data
+const HIGH_SEVERITY_VALUES = ['Crítico', 'ALTA'];
+const ACTIVE_STATUS_VALUES = ['EMITIDO', 'RESPONDIDO'];
+const SEVERITY_OPTIONS = ['Crítico', 'ALTA', 'Mayor', 'Menor'];
+
 // ─── Color palette (theme-aware) ─────────────────────────────────────────────
 // For charts: derive distinct colors by adjusting luminosity
 const getColors = (t) => ({
@@ -910,7 +916,7 @@ const TabRiesgo = ({ data }) => {
 
   // Risk score - usando umbrales compartidos (60/35)
   const overdueCount = riskItems.filter(r => r.overdueResponse).length;
-  const highSevActive = riskItems.filter(r => ['Crítico', 'Alta'].includes(r.severity) && ['EMITIDO', 'RESPONDIDO'].includes(r.status)).length;
+  const highSevActive = riskItems.filter(r => HIGH_SEVERITY_VALUES.includes(r.severity) && ACTIVE_STATUS_VALUES.includes(r.status)).length;
   const noValClosed = riskItems.filter(r => r.closedNoVal).length;
   const riskScore = Math.min(100, overdueCount * 8 + highSevActive * 6 + noValClosed * 4);
   const riskFactors = [
@@ -991,7 +997,7 @@ const TabRiesgo = ({ data }) => {
           title="Alta Severidad Activas"
           color={C.orange}
           emptyMsg="Sin alertas críticas activas"
-          items={riskItems.filter(r => ['Crítico', 'ALTA'].includes(r.severity) && ['EMITIDO', 'RESPONDIDO'].includes(r.status))}
+          items={riskItems.filter(r => HIGH_SEVERITY_VALUES.includes(r.severity) && ACTIVE_STATUS_VALUES.includes(r.status))}
           renderItem={(item, i) => (
             <RiskRow key={i} item={item}
               extra={<StatusBadge status={item.status} />}
@@ -1065,7 +1071,7 @@ const QARTable = ({ data }) => {
         <input placeholder="Buscar número / título…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...inp, minWidth: '200px' }} />
         <select value={sevFilter} onChange={e => setSevFilter(e.target.value)} style={inp}>
           <option value="">Todas las severidades</option>
-          {['Crítico', 'ALTA', 'Mayor', 'Menor'].map(s => <option key={s} value={s}>{s}</option>)}
+          {SEVERITY_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={inp}>
           <option value="">Todos los estados</option>
@@ -1416,7 +1422,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
   if (id === 'risk-score') {
     const riskItems    = data.riskItems || [];
     const overdueCount = riskItems.filter(r => r.overdueResponse).length;
-    const highSevAct   = riskItems.filter(r => ['Crítico','Alta'].includes(r.severity) && ['EMITIDO','RESPONDIDO'].includes(r.status)).length;
+    const highSevAct   = riskItems.filter(r => HIGH_SEVERITY_VALUES.includes(r.severity) && ACTIVE_STATUS_VALUES.includes(r.status)).length;
     const noVal        = riskItems.filter(r => r.closedNoVal).length;
     const score        = Math.min(100, overdueCount * 8 + highSevAct * 6 + noVal * 4);
     return (
@@ -1462,7 +1468,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
   }
 
   if (id === 'risk-alta-sev') {
-    const alta = (data.riskItems || []).filter(r => ['Crítico','ALTA'].includes(r.severity) && ['EMITIDO','RESPONDIDO'].includes(r.status));
+    const alta = (data.riskItems || []).filter(r => HIGH_SEVERITY_VALUES.includes(r.severity) && ACTIVE_STATUS_VALUES.includes(r.status));
     return (
       <div>
         <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
