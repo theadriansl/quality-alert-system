@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { AlertTriangle, Eye, Clock, CheckCircle, XCircle, Home, Send, RefreshCw, Download, Calendar, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSocket } from '../context/SocketContext';
@@ -38,10 +38,10 @@ const QARList = () => {
   const [openDropdown, setOpenDropdown] = useState(null);
 
   const STATUS_CONFIG = {
-    EMITIDO: { label: 'Emitido', color: t.warning, icon: AlertTriangle },
-    RESPONDIDO: { label: 'Respondido', color: t.accent, icon: Clock },
-    RECHAZADO: { label: 'Rechazado', color: t.error, icon: XCircle },
-    CERRADO: { label: 'Cerrado', color: t.success, icon: CheckCircle }
+    EMITIDO: { label: 'Emitido', color: t.warning },
+    RESPONDIDO: { label: 'Respondido', color: t.accent },
+    RECHAZADO: { label: 'Rechazado', color: t.error },
+    CERRADO: { label: 'Cerrado', color: t.success }
   };
 
   // Calculate date range based on period
@@ -109,7 +109,7 @@ const QARList = () => {
   // WebSocket: Escuchar eventos de QAR para actualización en tiempo real
   useEffect(() => {
     const unsubscribe = subscribe('qar:created', (data) => {
-      console.log('🔄 WebSocket [qar:created]:', data);
+      console.log('WebSocket [qar:created]:', data);
       loadData();
     });
     return () => unsubscribe();
@@ -174,20 +174,25 @@ const QARList = () => {
 
   const getStatusBadge = (status) => {
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.EMITIDO;
-    const Icon = config.icon;
     return (
       <span style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '6px',
-        padding: '4px 12px',
-        backgroundColor: `${config.color}20`,
+        gap: 4,
+        padding: '4px 10px',
+        backgroundColor: `${config.color}15`,
+        border: `1px solid ${config.color}30`,
         color: config.color,
-        borderRadius: '20px',
-        fontSize: '12px',
-        fontWeight: '600'
+        borderRadius: 12,
+        fontSize: 11,
+        fontWeight: 600
       }}>
-        <Icon size={14} />
+        <span style={{
+          width: 5,
+          height: 5,
+          borderRadius: '50%',
+          backgroundColor: config.color
+        }} />
         {config.label}
       </span>
     );
@@ -247,13 +252,27 @@ const QARList = () => {
 
   const hasActiveFilters = fechaDesde || fechaHasta || Object.values(colFilters).some(v => v);
 
-  // Column filter dropdown component - Excel style
+  // Column filter dropdown component
   const ColumnFilter = ({ field, label }) => {
     const isOpen = openDropdown === field;
     const hasFilter = colFilters[field];
 
     return (
-      <th style={{ ...styles.th, position: 'relative', userSelect: 'none' }}>
+      <th style={{
+        textAlign: 'left',
+        padding: '0 12px',
+        height: 34,
+        backgroundColor: t.field || t.bgPanel,
+        color: t.textMuted,
+        fontWeight: 600,
+        fontSize: 11,
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        borderBottom: `1px solid ${t.line || t.border}`,
+        position: 'relative',
+        userSelect: 'none',
+        whiteSpace: 'nowrap'
+      }}>
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -263,14 +282,13 @@ const QARList = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '4px',
-            cursor: 'pointer',
-            padding: '2px 0'
+            gap: 4,
+            cursor: 'pointer'
           }}
         >
           <span style={{ color: hasFilter ? t.accent : t.textMuted }}>{label}</span>
           <ChevronDown
-            size={14}
+            size={12}
             color={hasFilter ? t.accent : t.textMuted}
             style={{
               transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -286,15 +304,15 @@ const QARList = () => {
               position: 'absolute',
               top: '100%',
               left: 0,
-              minWidth: '150px',
-              maxHeight: '250px',
+              minWidth: 150,
+              maxHeight: 250,
               overflowY: 'auto',
               backgroundColor: t.bgCard,
               border: `1px solid ${t.border}`,
-              borderRadius: '6px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              borderRadius: 6,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
               zIndex: 1000,
-              marginTop: '4px'
+              marginTop: 4
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -306,14 +324,12 @@ const QARList = () => {
               }}
               style={{
                 padding: '8px 12px',
-                fontSize: '12px',
+                fontSize: 12,
                 color: t.textMuted,
                 cursor: 'pointer',
                 borderBottom: `1px solid ${t.border}`,
-                backgroundColor: !hasFilter ? t.bgPanel : 'transparent'
+                backgroundColor: !hasFilter ? (t.accentBg || `${t.accent}10`) : 'transparent'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = t.bgPanel}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = !hasFilter ? t.bgPanel : 'transparent'}
             >
               (Todos)
             </div>
@@ -328,16 +344,20 @@ const QARList = () => {
                 }}
                 style={{
                   padding: '8px 12px',
-                  fontSize: '12px',
+                  fontSize: 12,
                   color: t.text,
                   cursor: 'pointer',
-                  backgroundColor: colFilters[field] === val ? t.accent + '20' : 'transparent',
+                  backgroundColor: colFilters[field] === val ? (t.accentBg || `${t.accent}15`) : 'transparent',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = t.bgPanel}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colFilters[field] === val ? t.accent + '20' : 'transparent'}
+                onMouseEnter={(e) => {
+                  if (colFilters[field] !== val) e.currentTarget.style.backgroundColor = t.bgPanel;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = colFilters[field] === val ? (t.accentBg || `${t.accent}15`) : 'transparent';
+                }}
               >
                 {val}
               </div>
@@ -348,196 +368,157 @@ const QARList = () => {
     );
   };
 
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      backgroundColor: t.bg,
-      padding: '24px'
-    },
-    header: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '24px'
-    },
-    title: {
-      color: t.text,
-      fontSize: '24px',
-      fontWeight: '700',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px'
-    },
-    headerButtons: {
-      display: 'flex',
-      gap: '12px'
-    },
-    homeButton: {
-      padding: '10px 16px',
-      backgroundColor: t.accent,
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      fontWeight: '600'
-    },
-    card: {
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '12px',
-      overflow: 'hidden'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse'
-    },
-    th: {
-      textAlign: 'left',
-      padding: '12px 12px',
-      backgroundColor: t.bgPanel,
-      color: t.textMuted,
-      fontWeight: '600',
-      fontSize: '11px',
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      borderBottom: `2px solid ${t.border}`
-    },
-    tr: {
-      borderBottom: `1px solid ${t.border}`,
-      cursor: 'pointer',
-      transition: 'background-color 0.15s'
-    },
-    td: {
-      padding: '12px 12px',
-      color: t.text,
-      fontSize: '13px'
-    },
-    qarNumber: {
-      fontFamily: 'monospace',
-      fontWeight: '600',
-      color: t.accent
-    },
-    severity: {
-      display: 'inline-block',
-      padding: '2px 8px',
-      borderRadius: '4px',
-      fontSize: '11px',
-      fontWeight: '600'
-    },
-    emptyState: {
-      textAlign: 'center',
-      padding: '60px',
-      color: t.textMuted
-    },
-    viewButton: {
-      padding: '6px 12px',
-      backgroundColor: t.accent,
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      fontSize: '12px'
-    },
-    periodButton: (active) => ({
-      padding: '8px 16px',
-      backgroundColor: active ? t.accent : t.bgCard,
-      color: active ? 'white' : t.text,
-      border: `1px solid ${active ? t.accent : t.border}`,
-      borderRadius: '6px',
-      cursor: 'pointer',
-      fontSize: '13px',
-      fontWeight: '500',
-      transition: 'all 0.15s'
-    }),
-    dateInput: {
-      padding: '8px 12px',
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      backgroundColor: t.bgCard,
-      color: t.text,
-      fontSize: '13px'
+  // Action labels by status
+  const getActionLabel = (status) => {
+    switch (status) {
+      case 'EMITIDO': return 'Responder';
+      case 'RESPONDIDO': return 'Validar';
+      case 'RECHAZADO': return 'Corregir';
+      default: return 'Ver';
     }
   };
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: 24 }}>
       {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>
-          <AlertTriangle size={28} color={t.warning} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ color: t.text, fontSize: 24, fontWeight: 700, margin: 0 }}>
           Quality Alert Reports (QAR)
         </h1>
-        <div style={styles.headerButtons}>
-          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
+            style={{
+              padding: '8px 14px',
+              fontSize: 12,
+              fontWeight: 500,
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer'
+            }}
+          >
             {language === 'es' ? 'EN' : 'ES'}
           </button>
-          <button style={{ ...styles.homeButton, backgroundColor: t.success }} onClick={() => navigate('/qar-create')}>
-            {language === 'es' ? '+ Nuevo QAR' : '+ New QAR'}
+          <button
+            onClick={() => navigate('/qar-create')}
+            style={{
+              padding: '8px 16px',
+              fontSize: 12,
+              fontWeight: 600,
+              backgroundColor: t.primary || t.accent,
+              color: 'white',
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer'
+            }}
+          >
+            + {language === 'es' ? 'Nueva QAR' : 'New QAR'}
           </button>
-          <button style={styles.homeButton} onClick={() => navigate('/defect-capture')}>
-            Inspección
+          <button
+            onClick={() => navigate('/defect-capture')}
+            style={{
+              padding: '8px 14px',
+              fontSize: 12,
+              fontWeight: 500,
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer'
+            }}
+          >
+            {language === 'es' ? 'Inspección' : 'Inspection'}
           </button>
-          <button style={{ ...styles.homeButton, backgroundColor: t.textMuted }} onClick={() => navigate('/defect-dashboard')}>
-            <Home size={18} />
+          <button
+            onClick={() => navigate('/defect-dashboard')}
+            style={{
+              padding: '8px 14px',
+              fontSize: 12,
+              fontWeight: 500,
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer'
+            }}
+          >
             Dashboard
           </button>
         </div>
       </div>
 
-      {/* Status Cards */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+      {/* Status Cards - Compact tiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
         {[
-          { key: 'EMITIDO', label: 'Pendientes', color: t.warning, icon: AlertTriangle },
-          { key: 'RESPONDIDO', label: 'Por Validar', color: t.accent, icon: Clock },
-          { key: 'RECHAZADO', label: 'Rechazados', color: t.error, icon: XCircle },
-          { key: 'CERRADO', label: 'Cerrados', color: t.success, icon: CheckCircle }
-        ].map(({ key, label, color, icon: Icon }) => (
-          <div
-            key={key}
-            onClick={() => setColFilters(prev => ({ ...prev, status: prev.status === key ? '' : key }))}
-            style={{
-              flex: 1,
-              backgroundColor: colFilters.status === key ? color : t.bgCard,
-              borderRadius: '12px',
-              padding: '16px',
-              cursor: 'pointer',
-              border: `2px solid ${colFilters.status === key ? color : t.border}`,
-              transition: 'all 0.15s'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <Icon size={20} color={colFilters.status === key ? 'white' : color} />
-              <span style={{ color: colFilters.status === key ? 'white' : t.textMuted, fontSize: '13px' }}>
-                {label}
-              </span>
+          { key: 'EMITIDO', label: 'Pendientes', color: t.warning },
+          { key: 'RESPONDIDO', label: 'Por Validar', color: t.accent },
+          { key: 'RECHAZADO', label: 'Rechazados', color: t.error },
+          { key: 'CERRADO', label: 'Cerrados', color: t.success }
+        ].map(({ key, label, color }) => {
+          const isFiltering = colFilters.status === key;
+          return (
+            <div
+              key={key}
+              onClick={() => setColFilters(prev => ({ ...prev, status: prev.status === key ? '' : key }))}
+              style={{
+                borderRadius: 8,
+                padding: '14px 16px',
+                cursor: 'pointer',
+                border: isFiltering ? `1px solid ${t.accentBorder || t.accent}` : `1px solid ${t.border}`,
+                backgroundColor: isFiltering ? (t.accentBg || `${t.accent}08`) : t.bgCard,
+                transition: 'all 0.15s'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  backgroundColor: color
+                }} />
+                <span style={{ color: t.textMuted, fontSize: 11.5 }}>
+                  {label}
+                </span>
+                {isFiltering && (
+                  <span style={{ fontSize: 10, color: t.accent, marginLeft: 'auto' }}>
+                    Filtrando
+                  </span>
+                )}
+              </div>
+              <div style={{
+                fontSize: 22,
+                fontWeight: 500,
+                fontFamily: "'IBM Plex Mono', monospace",
+                color: t.text
+              }}>
+                {statusCounts[key]}
+              </div>
             </div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: colFilters.status === key ? 'white' : t.text }}>
-              {statusCounts[key]}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Period Filters + Date Range + Excel Export */}
+      {/* Period Filters + Date Range + Actions */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: t.bgCard,
-        padding: '16px 20px',
-        borderRadius: '12px',
-        marginBottom: '16px',
+        padding: '12px 16px',
+        borderRadius: 8,
+        marginBottom: 16,
         border: `1px solid ${t.border}`
       }}>
-        {/* Period Buttons */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <Calendar size={18} color={t.textMuted} />
+        {/* Period Buttons - Segmented */}
+        <div style={{
+          display: 'flex',
+          backgroundColor: t.bgPanel,
+          borderRadius: 6,
+          padding: 2,
+          gap: 2
+        }}>
           {[
             { key: 'semana', label: 'Semana' },
             { key: 'mes', label: 'Mes' },
@@ -548,7 +529,19 @@ const QARList = () => {
             <button
               key={key}
               onClick={() => handlePeriodChange(key)}
-              style={styles.periodButton(periodo === key)}
+              style={{
+                padding: '6px 14px',
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 4,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: periodo === key ? t.bgCard : 'transparent',
+                color: periodo === key ? t.text : t.textMuted,
+                boxShadow: periodo === key ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                whiteSpace: 'nowrap',
+                height: 30
+              }}
             >
               {label}
             </button>
@@ -556,103 +549,115 @@ const QARList = () => {
         </div>
 
         {/* Date Inputs + Actions */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '13px', color: t.textMuted }}>Desde:</span>
-            <input
-              type="date"
-              value={fechaDesde}
-              onChange={(e) => { setFechaDesde(e.target.value); setPeriodo(''); }}
-              style={styles.dateInput}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '13px', color: t.textMuted }}>Hasta:</span>
-            <input
-              type="date"
-              value={fechaHasta}
-              onChange={(e) => { setFechaHasta(e.target.value); setPeriodo(''); }}
-              style={styles.dateInput}
-            />
-          </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input
+            type="date"
+            value={fechaDesde}
+            onChange={(e) => { setFechaDesde(e.target.value); setPeriodo(''); }}
+            style={{
+              padding: '0 10px',
+              height: 30,
+              fontSize: 12,
+              fontFamily: "'IBM Plex Mono', monospace",
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              backgroundColor: t.bgCard,
+              color: t.text
+            }}
+          />
+          <span style={{ fontSize: 12, color: t.textMuted }}>—</span>
+          <input
+            type="date"
+            value={fechaHasta}
+            onChange={(e) => { setFechaHasta(e.target.value); setPeriodo(''); }}
+            style={{
+              padding: '0 10px',
+              height: 30,
+              fontSize: 12,
+              fontFamily: "'IBM Plex Mono', monospace",
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              backgroundColor: t.bgCard,
+              color: t.text
+            }}
+          />
 
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
               style={{
-                padding: '8px 14px',
-                backgroundColor: 'transparent',
-                color: t.error,
-                border: `1px solid ${t.error}`,
-                borderRadius: '6px',
+                background: 'none',
+                border: 'none',
+                color: t.accent,
+                fontSize: 12,
+                fontWeight: 500,
                 cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '600'
+                padding: '0 8px',
+                height: 30
               }}
             >
-              ✕ Limpiar
+              Restablecer
             </button>
           )}
 
           <button
             onClick={loadData}
             style={{
-              padding: '8px 14px',
+              padding: '0 12px',
+              height: 30,
               backgroundColor: t.bgPanel,
               color: t.text,
               border: `1px solid ${t.border}`,
-              borderRadius: '6px',
+              borderRadius: 6,
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px'
+              fontSize: 12
             }}
           >
-            <RefreshCw size={14} />
+            Actualizar
           </button>
 
           <button
             onClick={exportToExcel}
             disabled={exportingExcel || filteredQars.length === 0}
             style={{
-              padding: '8px 16px',
-              backgroundColor: '#16a34a',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
+              padding: '0 14px',
+              height: 30,
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
               cursor: (exportingExcel || filteredQars.length === 0) ? 'not-allowed' : 'pointer',
-              opacity: (exportingExcel || filteredQars.length === 0) ? 0.6 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: '600'
+              opacity: (exportingExcel || filteredQars.length === 0) ? 0.5 : 1,
+              fontSize: 12,
+              fontWeight: 500
             }}
           >
-            <Download size={14} />
             {exportingExcel ? '...' : 'Excel'}
           </button>
         </div>
       </div>
 
       {/* Results count */}
-      <div style={{ marginBottom: '12px', fontSize: '13px', color: t.textMuted }}>
+      <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
         Mostrando <strong style={{ color: t.text }}>{filteredQars.length}</strong> de <strong style={{ color: t.text }}>{allQars.length}</strong> QARs
       </div>
 
       {/* Table */}
-      <div style={styles.card}>
+      <div style={{
+        backgroundColor: t.bgCard,
+        border: `1px solid ${t.border}`,
+        borderRadius: 8,
+        overflow: 'hidden'
+      }}>
         {loading ? (
-          <div style={styles.emptyState}>Cargando...</div>
+          <div style={{ textAlign: 'center', padding: 60, color: t.textMuted }}>Cargando...</div>
         ) : filteredQars.length === 0 && allQars.length === 0 ? (
-          <div style={styles.emptyState}>
-            <AlertTriangle size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+          <div style={{ textAlign: 'center', padding: 60, color: t.textMuted }}>
             <p>No hay QARs registrados</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={styles.table}>
+          <div style={{ overflowX: 'auto', minWidth: 900 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
                   <ColumnFilter field="alertNumber" label="Número" />
@@ -663,73 +668,115 @@ const QARList = () => {
                   <ColumnFilter field="severityCode" label="Sev" />
                   <ColumnFilter field="status" label="Estado" />
                   <ColumnFilter field="createdAt" label="Fecha" />
-                  <th style={styles.th}>Acción</th>
+                  <th style={{
+                    textAlign: 'left',
+                    padding: '0 12px',
+                    height: 34,
+                    backgroundColor: t.field || t.bgPanel,
+                    color: t.textMuted,
+                    fontWeight: 600,
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    borderBottom: `1px solid ${t.line || t.border}`,
+                    width: 80
+                  }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredQars.length === 0 ? (
                   <tr>
-                    <td colSpan="9" style={{ ...styles.emptyState, padding: '40px' }}>
-                      No se encontraron QARs con los filtros seleccionados
+                    <td colSpan="9" style={{ textAlign: 'center', padding: 40, color: t.textMuted }}>
+                      No se encontraron QARs con los filtros seleccionados.{' '}
+                      <button
+                        onClick={clearFilters}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: t.accent,
+                          cursor: 'pointer',
+                          fontWeight: 500
+                        }}
+                      >
+                        Restablecer filtros
+                      </button>
                     </td>
                   </tr>
-                ) : filteredQars.map(qar => {
-                  const actionConfig = {
-                    'EMITIDO': { label: 'Responder', color: t.warning, icon: Send },
-                    'RESPONDIDO': { label: 'Validar', color: t.accent, icon: CheckCircle },
-                    'RECHAZADO': { label: 'Corregir', color: t.error, icon: RefreshCw },
-                    'CERRADO': { label: 'Ver', color: t.success, icon: Eye }
-                  };
-                  const action = actionConfig[qar.status] || actionConfig['CERRADO'];
-                  const ActionIcon = action.icon;
-
-                  return (
-                    <tr
-                      key={qar.id}
-                      style={styles.tr}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = t.bgPanel}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      onClick={() => navigate(`/qar-detail/${qar.id}`)}
-                    >
-                      <td style={styles.td}>
-                        <span style={styles.qarNumber}>{qar.alertNumber}</span>
-                      </td>
-                      <td style={{ ...styles.td, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {qar.title}
-                      </td>
-                      <td style={styles.td}>{qar.clientName || '-'}</td>
-                      <td style={styles.td}>{qar.partNumber || '-'}</td>
-                      <td style={styles.td}>
-                        <span style={{ fontSize: '12px', color: t.textMuted }}>
-                          {qar.departmentName || '-'}
-                        </span>
-                      </td>
-                      <td style={styles.td}>
+                ) : filteredQars.map(qar => (
+                  <tr
+                    key={qar.id}
+                    style={{
+                      borderBottom: `1px solid ${t.line || t.border}`,
+                      cursor: 'pointer',
+                      height: 44
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = t.bgPanel}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onClick={() => navigate(`/qar-detail/${qar.id}`)}
+                  >
+                    <td style={{ padding: '0 12px', color: t.text, fontSize: 13 }}>
+                      <span style={{
+                        fontFamily: "'IBM Plex Mono', monospace",
+                        fontWeight: 600,
+                        color: t.accent
+                      }}>
+                        {qar.alertNumber}
+                      </span>
+                    </td>
+                    <td style={{
+                      padding: '0 12px',
+                      color: t.text,
+                      fontSize: 13,
+                      maxWidth: 200,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {qar.title}
+                    </td>
+                    <td style={{ padding: '0 12px', color: t.text, fontSize: 13 }}>{qar.clientName || '-'}</td>
+                    <td style={{ padding: '0 12px', color: t.text, fontSize: 13 }}>{qar.partNumber || '-'}</td>
+                    <td style={{ padding: '0 12px', fontSize: 12, color: t.textMuted }}>{qar.departmentName || '-'}</td>
+                    <td style={{ padding: '0 12px' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}>
                         <span style={{
-                          ...styles.severity,
-                          backgroundColor: qar.severityColor || t.textMuted,
-                          color: 'white'
-                        }}>
+                          width: 8,
+                          height: 8,
+                          borderRadius: 2,
+                          backgroundColor: qar.severityColor || t.textMuted
+                        }} />
+                        <span style={{ fontSize: 12, color: t.textMuted }}>
                           {qar.severityCode || qar.severityName || '-'}
                         </span>
-                      </td>
-                      <td style={styles.td}>{getStatusBadge(qar.status)}</td>
-                      <td style={styles.td}>{formatDate(qar.createdAt)}</td>
-                      <td style={styles.td}>
-                        <button
-                          style={{ ...styles.viewButton, backgroundColor: action.color }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/qar-detail/${qar.id}`);
-                          }}
-                        >
-                          <ActionIcon size={14} />
-                          {action.label}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0 12px' }}>{getStatusBadge(qar.status)}</td>
+                    <td style={{ padding: '0 12px', fontSize: 12, color: t.textMuted }}>{formatDate(qar.createdAt)}</td>
+                    <td style={{ padding: '0 12px' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/qar-detail/${qar.id}`);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: t.accent,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          padding: 0
+                        }}
+                      >
+                        {getActionLabel(qar.status)}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

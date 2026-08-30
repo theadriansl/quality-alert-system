@@ -9,7 +9,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const DefectConfig = () => {
   const navigate = useNavigate();
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
 
   // State
   const [loading, setLoading] = useState(true);
@@ -27,16 +27,16 @@ const DefectConfig = () => {
 
   // Catalog data
   const [severities, setSeverities] = useState([]);
-  const [stations, setStations] = useState([]);
-  const [stages, setStages] = useState([]);
+  const [_stations, setStations] = useState([]); // eslint-disable-line no-unused-vars
+  const [_stages, setStages] = useState([]); // eslint-disable-line no-unused-vars
   const [shifts, setShifts] = useState([]);
   const [dispositions, setDispositions] = useState([]);
   const [qarValidators, setQarValidators] = useState([]);
   const [hospitalUsers, setHospitalUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [_departments, setDepartments] = useState([]); // eslint-disable-line no-unused-vars
   const [currentUser, setCurrentUser] = useState(null);
-  const [userFilter, setUserFilter] = useState(''); // Filtro para QAR y Hospital users
+  const [userFilter, setUserFilter] = useState('');
 
   // Edit modal
   const [showModal, setShowModal] = useState(false);
@@ -115,14 +115,14 @@ const DefectConfig = () => {
     }
   };
 
-  // Tab configuration (Estaciones y Etapas movidos a /defect-admin)
+  // Tab configuration
   const tabs = [
-    { id: 'severities', label: 'Severidades', icon: '' },
-    { id: 'shifts', label: 'Turnos', icon: '' },
-    { id: 'dispositions', label: 'Disposiciones', icon: '' },
+    { id: 'severities', label: 'Severidades' },
+    { id: 'shifts', label: 'Turnos' },
+    { id: 'dispositions', label: 'Disposiciones' },
     ...(isUserAdmin(currentUser) ? [
-      { id: 'qarValidators', label: 'Validadores QAR', icon: '' },
-      { id: 'hospitalUsers', label: 'Usuarios Hospital', icon: '' }
+      { id: 'qarValidators', label: 'Validadores QAR', admin: true },
+      { id: 'hospitalUsers', label: 'Usuarios Hospital', admin: true }
     ] : [])
   ];
 
@@ -166,11 +166,7 @@ const DefectConfig = () => {
 
       const method = editingItem ? 'PUT' : 'POST';
 
-      // Para stages, generar código automático basado en el nombre si no existe
-      let dataToSend = { ...formData };
-      if (activeTab === 'stages' && !dataToSend.code) {
-        dataToSend.code = formData.name.toUpperCase().replace(/\s+/g, '_').substring(0, 50);
-      }
+      const dataToSend = { ...formData };
 
       const response = await fetch(url, {
         method,
@@ -239,7 +235,6 @@ const DefectConfig = () => {
       setSuccess(data.message);
       setTimeout(() => setSuccess(null), 3000);
 
-      // Reload validators and allUsers
       const [valRes, usersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/users/qar-validators`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/users/list`, { headers: getAuthHeaders() })
@@ -254,7 +249,7 @@ const DefectConfig = () => {
     }
   };
 
-  // Load hospital users (global, sin cliente)
+  // Load hospital users
   const loadHospitalUsers = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/defects-v2/authorized-users`, { headers: getAuthHeaders() });
@@ -266,7 +261,7 @@ const DefectConfig = () => {
     }
   };
 
-  // Toggle hospital user permission (global, sin cliente)
+  // Toggle hospital user permission
   const handleToggleHospitalPermission = async (userId, permission) => {
     const existingUser = hospitalUsers.find(u => u.userId === userId) || {};
     const currentPerms = {
@@ -275,7 +270,6 @@ const DefectConfig = () => {
       canApproveRepair: existingUser.canApproveRepair || false,
       canApproveRelease: existingUser.canApproveRelease || false
     };
-    // Toggle the specific permission
     currentPerms[permission] = !currentPerms[permission];
 
     try {
@@ -304,454 +298,286 @@ const DefectConfig = () => {
     }
   };
 
-  // Styles
-  const styles = {
-    container: {
-      padding: '20px',
-      maxWidth: '1200px',
-      margin: '0 auto',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      backgroundColor: t.bg,
-      minHeight: '100vh'
-    },
-    header: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '24px',
-      flexWrap: 'wrap',
-      gap: '16px'
-    },
-    title: {
-      fontSize: '24px',
-      fontWeight: '600',
-      color: t.text,
-      margin: 0
-    },
-    subtitle: {
-      fontSize: '14px',
-      color: t.textMuted,
-      marginTop: '4px'
-    },
-    backButton: {
-      padding: '8px 16px',
-      backgroundColor: t.bgPanel,
-      color: t.text,
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      cursor: 'pointer'
-    },
-    alert: {
-      padding: '12px 16px',
-      borderRadius: '6px',
-      marginBottom: '16px'
-    },
-    alertError: {
-      backgroundColor: '#fef2f2',
-      border: '1px solid #fecaca',
-      color: '#B00020'
-    },
-    alertSuccess: {
-      backgroundColor: '#f0fdf4',
-      border: '1px solid #bbf7d0',
-      color: '#16a34a'
-    },
-    tabs: {
-      display: 'flex',
-      gap: '4px',
-      marginBottom: '20px',
-      borderBottom: `2px solid ${t.border}`,
-      paddingBottom: '0',
-      flexWrap: 'wrap'
-    },
-    tab: {
-      padding: '12px 20px',
-      border: 'none',
-      backgroundColor: 'transparent',
-      cursor: 'pointer',
-      fontSize: '14px',
-      fontWeight: '500',
-      color: t.textMuted,
-      borderBottom: '2px solid transparent',
-      marginBottom: '-2px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    },
-    tabActive: {
-      color: t.accent,
-      borderBottom: `2px solid ${t.accent}`
-    },
-    card: {
-      backgroundColor: t.bgCard,
-      borderRadius: '8px',
-      border: `1px solid ${t.border}`,
-      overflow: 'hidden'
-    },
-    cardHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '16px 20px',
-      borderBottom: `1px solid ${t.border}`,
-      backgroundColor: t.bgPanel
-    },
-    addButton: {
-      padding: '8px 16px',
-      backgroundColor: t.accent,
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      fontWeight: '500',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse'
-    },
-    th: {
-      padding: '12px 16px',
-      textAlign: 'left',
-      fontSize: '12px',
-      fontWeight: '600',
-      color: t.textMuted,
-      textTransform: 'uppercase',
-      backgroundColor: t.bgPanel,
-      borderBottom: `1px solid ${t.border}`
-    },
-    td: {
-      padding: '12px 16px',
-      borderBottom: `1px solid ${t.border}`,
-      fontSize: '14px',
-      color: t.text
-    },
-    colorDot: {
-      display: 'inline-block',
-      width: '12px',
-      height: '12px',
-      borderRadius: '50%',
-      marginRight: '8px'
-    },
-    badge: {
-      display: 'inline-block',
-      padding: '2px 8px',
-      borderRadius: '9999px',
-      fontSize: '12px',
-      fontWeight: '500'
-    },
-    badgeActive: {
-      backgroundColor: '#dcfce7',
-      color: '#166534'
-    },
-    badgeInactive: {
-      backgroundColor: t.bgPanel,
-      color: t.textMuted
-    },
-    actionButton: {
-      padding: '6px 12px',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      fontSize: '12px',
-      marginRight: '4px'
-    },
-    editButton: {
-      backgroundColor: '#dbeafe',
-      color: '#1d4ed8'
-    },
-    modal: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    },
-    modalContent: {
-      backgroundColor: t.bgCard,
-      borderRadius: '8px',
-      padding: '24px',
-      maxWidth: '500px',
-      width: '90%',
-      maxHeight: '80vh',
-      overflow: 'auto',
-      border: `1px solid ${t.border}`
-    },
-    modalTitle: {
-      fontSize: '18px',
-      fontWeight: '600',
-      marginBottom: '20px',
-      color: t.text
-    },
-    formGroup: {
-      marginBottom: '16px'
-    },
-    label: {
-      display: 'block',
-      marginBottom: '6px',
-      fontWeight: '500',
-      color: t.text,
-      fontSize: '14px'
-    },
-    input: {
-      width: '100%',
-      padding: '10px 12px',
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      fontSize: '14px',
-      boxSizing: 'border-box',
-      backgroundColor: t.bgPanel,
-      color: t.text
-    },
-    inputRow: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '12px'
-    },
-    colorInput: {
-      width: '60px',
-      height: '38px',
-      padding: '2px',
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      cursor: 'pointer'
-    },
-    checkbox: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    },
-    hint: {
-      fontSize: '12px',
-      color: t.textMuted,
-      marginTop: '4px'
-    },
-    modalButtons: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      gap: '12px',
-      marginTop: '24px'
-    },
-    cancelButton: {
-      padding: '10px 20px',
-      backgroundColor: t.bgPanel,
-      color: t.text,
-      border: `1px solid ${t.border}`,
-      borderRadius: '6px',
-      cursor: 'pointer',
-      fontWeight: '500'
-    },
-    saveButton: {
-      padding: '10px 20px',
-      backgroundColor: t.accent,
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      fontWeight: '500'
-    },
-    emptyState: {
-      padding: '40px',
-      textAlign: 'center',
-      color: t.textMuted
-    },
-    loading: {
-      textAlign: 'center',
-      padding: '60px',
-      color: t.textMuted
-    }
-  };
+  // Table row height
+  const ROW_HEIGHT = 44;
+  const HEADER_HEIGHT = 34;
+  const ACTION_COL_WIDTH = 100;
 
   // Render table based on active tab
   const renderTable = () => {
     const items = getCurrentItems();
 
-    // Los tabs de usuarios tienen su propio manejo de estado vacío
     if (items.length === 0 && activeTab !== 'qarValidators' && activeTab !== 'hospitalUsers') {
       return (
-        <div style={styles.emptyState}>
+        <div style={{ padding: 40, textAlign: 'center', color: t.textMuted }}>
           <p>No hay items configurados.</p>
-          <button style={styles.addButton} onClick={handleAddNew}>
+          <button
+            onClick={handleAddNew}
+            style={{
+              marginTop: 12,
+              padding: '8px 16px',
+              backgroundColor: t.accent,
+              color: 'white',
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontWeight: 500
+            }}
+          >
             + Agregar primer item
           </button>
         </div>
       );
     }
 
+    const thStyle = {
+      padding: '0 16px',
+      height: HEADER_HEIGHT,
+      textAlign: 'left',
+      fontSize: 11,
+      fontWeight: 600,
+      color: t.textMuted,
+      textTransform: 'uppercase',
+      backgroundColor: t.field || t.bgPanel,
+      borderBottom: `1px solid ${t.line || t.border}`
+    };
+
+    const tdStyle = {
+      padding: '0 16px',
+      height: ROW_HEIGHT,
+      borderBottom: `1px solid ${t.line || t.border}`,
+      fontSize: 13,
+      color: t.text
+    };
+
+    const StatusChip = ({ active }) => (
+      <span style={{
+        display: 'inline-block',
+        padding: '3px 10px',
+        borderRadius: 12,
+        fontSize: 11,
+        fontWeight: 500,
+        backgroundColor: active ? (t.successBg || '#dcfce7') : t.bgPanel,
+        color: active ? (t.successFg || '#166534') : t.textMuted,
+        border: `1px solid ${active ? (t.successBorder || '#bbf7d0') : t.border}`
+      }}>
+        {active ? 'Activo' : 'Inactivo'}
+      </span>
+    );
+
+    const ActionCell = ({ onEdit, onToggle, isActive }) => (
+      <td style={{ ...tdStyle, width: ACTION_COL_WIDTH }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: t.accent,
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: 'pointer',
+            padding: 0,
+            marginRight: 12
+          }}
+        >
+          Editar
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: t.error,
+            fontSize: 14,
+            cursor: 'pointer',
+            padding: 0,
+            opacity: 0.7
+          }}
+          title={isActive ? 'Desactivar' : 'Activar'}
+        >
+          {isActive ? '×' : '✓'}
+        </button>
+      </td>
+    );
+
     switch (activeTab) {
       case 'severities':
         return (
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Nombre</th>
-                <th style={styles.th}>Color</th>
-                <th style={styles.th}>Emite QAR</th>
-                <th style={styles.th}>Estado</th>
-                <th style={styles.th}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.colorDot, backgroundColor: item.color }} />
-                    <strong>{item.name}</strong>
-                    <span style={{ color: t.textMuted, marginLeft: '8px' }}>({item.code})</span>
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.colorDot, backgroundColor: item.color }} />
-                    {item.color}
-                  </td>
-                  <td style={styles.td}>
-                    {item.qarThresholdHours === 0 ? (
-                      <span style={{ color: '#B00020', fontWeight: '600' }}>
-                        {item.qarThresholdCount} caso(s) = Inmediato
-                      </span>
-                    ) : (
-                      <span>
-                        {item.qarThresholdCount} casos en {item.qarThresholdHours} hrs
-                      </span>
-                    )}
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.badge, ...(item.isActive ? styles.badgeActive : styles.badgeInactive) }}>
-                      {item.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <button style={{ ...styles.actionButton, ...styles.editButton }} onClick={() => handleEdit(item)}>
-                      Editar
-                    </button>
-                    <button
-                      style={{ ...styles.actionButton, backgroundColor: item.isActive ? '#fee2e2' : '#dcfce7', color: item.isActive ? '#B00020' : '#166534' }}
-                      onClick={() => handleToggleActive(item)}
-                    >
-                      {item.isActive ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
+          <>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Nombre</th>
+                  <th style={thStyle}>Color</th>
+                  <th style={thStyle}>Emite QAR</th>
+                  <th style={thStyle}>Estado</th>
+                  <th style={{ ...thStyle, width: ACTION_COL_WIDTH }}>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map(item => (
+                  <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
+                    <td style={tdStyle}>
+                      <strong>{item.name}</strong>
+                      <span style={{ color: t.textMuted, marginLeft: 8, fontSize: 12 }}>({item.code})</span>
+                    </td>
+                    <td style={tdStyle}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: 2,
+                          backgroundColor: item.color
+                        }} />
+                        <span style={{
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          fontSize: 12,
+                          color: t.textMuted
+                        }}>
+                          {item.color}
+                        </span>
+                      </span>
+                    </td>
+                    <td style={tdStyle}>
+                      {item.qarThresholdHours === 0 ? (
+                        <span style={{ color: t.error, fontWeight: 500, fontSize: 12 }}>
+                          {item.qarThresholdCount} caso(s) = Inmediato
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12 }}>
+                          {item.qarThresholdCount} casos en {item.qarThresholdHours} hrs
+                        </span>
+                      )}
+                    </td>
+                    <td style={tdStyle}>
+                      <StatusChip active={item.isActive} />
+                    </td>
+                    <ActionCell
+                      onEdit={() => handleEdit(item)}
+                      onToggle={() => handleToggleActive(item)}
+                      isActive={item.isActive}
+                    />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line || t.border}` }}>
+              {items.length} severidades configuradas. El umbral de QAR determina cuándo una inspección genera alerta automática.
+            </div>
+          </>
         );
 
       case 'shifts':
         return (
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Nombre</th>
-                <th style={styles.th}>Código</th>
-                <th style={styles.th}>Horario</th>
-                <th style={styles.th}>Estado</th>
-                <th style={styles.th}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
-                  <td style={styles.td}><strong>{item.name}</strong></td>
-                  <td style={styles.td}>{item.code}</td>
-                  <td style={styles.td}>
-                    {item.startTime && item.endTime
-                      ? `${item.startTime.substring(0,5)} - ${item.endTime.substring(0,5)}`
-                      : '-'}
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.badge, ...(item.isActive ? styles.badgeActive : styles.badgeInactive) }}>
-                      {item.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <button style={{ ...styles.actionButton, ...styles.editButton }} onClick={() => handleEdit(item)}>
-                      Editar
-                    </button>
-                    <button
-                      style={{ ...styles.actionButton, backgroundColor: item.isActive ? '#fee2e2' : '#dcfce7', color: item.isActive ? '#B00020' : '#166534' }}
-                      onClick={() => handleToggleActive(item)}
-                    >
-                      {item.isActive ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
+          <>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Nombre</th>
+                  <th style={thStyle}>Código</th>
+                  <th style={thStyle}>Horario</th>
+                  <th style={thStyle}>Estado</th>
+                  <th style={{ ...thStyle, width: ACTION_COL_WIDTH }}>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map(item => (
+                  <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
+                    <td style={tdStyle}><strong>{item.name}</strong></td>
+                    <td style={{ ...tdStyle, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>{item.code}</td>
+                    <td style={tdStyle}>
+                      {item.startTime && item.endTime
+                        ? `${item.startTime.substring(0,5)} - ${item.endTime.substring(0,5)}`
+                        : '-'}
+                    </td>
+                    <td style={tdStyle}>
+                      <StatusChip active={item.isActive} />
+                    </td>
+                    <ActionCell
+                      onEdit={() => handleEdit(item)}
+                      onToggle={() => handleToggleActive(item)}
+                      isActive={item.isActive}
+                    />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line || t.border}` }}>
+              {items.length} turnos configurados.
+            </div>
+          </>
         );
 
       case 'dispositions':
         return (
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Nombre</th>
-                <th style={styles.th}>Código</th>
-                <th style={styles.th}>Color</th>
-                <th style={styles.th}>Genera Paro</th>
-                <th style={styles.th}>Estado</th>
-                <th style={styles.th}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.colorDot, backgroundColor: item.color }} />
-                    <strong>{item.name}</strong>
-                  </td>
-                  <td style={styles.td}>{item.code}</td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.colorDot, backgroundColor: item.color }} />
-                    {item.color}
-                  </td>
-                  <td style={styles.td}>
-                    {item.requiresDowntime ? (
-                      <span style={{ color: '#B00020' }}>Sí</span>
-                    ) : (
-                      <span style={{ color: t.textMuted }}>No</span>
-                    )}
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.badge, ...(item.isActive ? styles.badgeActive : styles.badgeInactive) }}>
-                      {item.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <button style={{ ...styles.actionButton, ...styles.editButton }} onClick={() => handleEdit(item)}>
-                      Editar
-                    </button>
-                    <button
-                      style={{ ...styles.actionButton, backgroundColor: item.isActive ? '#fee2e2' : '#dcfce7', color: item.isActive ? '#B00020' : '#166534' }}
-                      onClick={() => handleToggleActive(item)}
-                    >
-                      {item.isActive ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
+          <>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Nombre</th>
+                  <th style={thStyle}>Código</th>
+                  <th style={thStyle}>Color</th>
+                  <th style={thStyle}>Genera Paro</th>
+                  <th style={thStyle}>Estado</th>
+                  <th style={{ ...thStyle, width: ACTION_COL_WIDTH }}>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map(item => (
+                  <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
+                    <td style={tdStyle}><strong>{item.name}</strong></td>
+                    <td style={{ ...tdStyle, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>{item.code}</td>
+                    <td style={tdStyle}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: 2,
+                          backgroundColor: item.color
+                        }} />
+                        <span style={{
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          fontSize: 12,
+                          color: t.textMuted
+                        }}>
+                          {item.color}
+                        </span>
+                      </span>
+                    </td>
+                    <td style={tdStyle}>
+                      {item.requiresDowntime ? (
+                        <span style={{ color: t.error, fontSize: 12 }}>Sí</span>
+                      ) : (
+                        <span style={{ color: t.textMuted, fontSize: 12 }}>No</span>
+                      )}
+                    </td>
+                    <td style={tdStyle}>
+                      <StatusChip active={item.isActive} />
+                    </td>
+                    <ActionCell
+                      onEdit={() => handleEdit(item)}
+                      onToggle={() => handleToggleActive(item)}
+                      isActive={item.isActive}
+                    />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ padding: '12px 16px', fontSize: 12, color: t.textMuted, borderTop: `1px solid ${t.line || t.border}` }}>
+              {items.length} disposiciones configuradas.
+            </div>
+          </>
         );
 
       case 'qarValidators':
-        // Si no hay usuarios cargados, mostrar mensaje
         if (allUsers.length === 0) {
           return (
-            <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+            <div style={{ textAlign: 'center', padding: 40, color: t.textMuted }}>
               No hay usuarios en el sistema.
             </div>
           );
         }
 
-        // Usar allUsers y merge con qarValidators para mostrar todos los usuarios
         const qarUsersWithStatus = allUsers.map(user => {
           const validator = qarValidators.find(v => v.id === user.id);
           return {
@@ -771,58 +597,76 @@ const DefectConfig = () => {
 
         return (
           <div>
-            {/* Filtro de búsqueda */}
-            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <label style={{ fontWeight: '500' }}>Buscar:</label>
+            <div style={{ padding: 16, borderBottom: `1px solid ${t.line || t.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
               <input
                 type="text"
-                style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, minWidth: '300px', backgroundColor: t.bgPanel, color: t.text }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  border: `1px solid ${t.border}`,
+                  minWidth: 300,
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  fontSize: 13
+                }}
                 placeholder="Filtrar por nombre, email o departamento..."
                 value={userFilter}
                 onChange={(e) => setUserFilter(e.target.value)}
               />
               {userFilter && (
                 <button
-                  style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, cursor: 'pointer', color: t.text }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 6,
+                    border: `1px solid ${t.border}`,
+                    backgroundColor: t.bgPanel,
+                    cursor: 'pointer',
+                    color: t.text,
+                    fontSize: 12
+                  }}
                   onClick={() => setUserFilter('')}
                 >
                   Limpiar
                 </button>
               )}
-              <span style={{ color: t.textMuted, fontSize: '13px' }}>
+              <span style={{ color: t.textMuted, fontSize: 12 }}>
                 {filteredQarUsers.length} de {qarUsersWithStatus.length} usuarios
               </span>
             </div>
 
-            <table style={styles.table}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Usuario</th>
-                  <th style={styles.th}>Departamento</th>
-                  <th style={styles.th}>Rol</th>
-                  <th style={styles.th}>Puede Validar QAR</th>
+                  <th style={thStyle}>Usuario</th>
+                  <th style={thStyle}>Departamento</th>
+                  <th style={thStyle}>Rol</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Puede Validar QAR</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredQarUsers.map(item => (
                   <tr key={item.id}>
-                    <td style={styles.td}>
+                    <td style={tdStyle}>
                       <strong>{item.firstName} {item.lastName}</strong>
-                      <div style={{ fontSize: '11px', color: t.textMuted }}>{item.email}</div>
+                      <div style={{ fontSize: 11, color: t.textMuted }}>{item.email}</div>
                     </td>
-                    <td style={styles.td}>{item.department || '-'}</td>
-                    <td style={styles.td}>{item.role || '-'}</td>
-                    <td style={styles.td}>
+                    <td style={tdStyle}>{item.department || '-'}</td>
+                    <td style={tdStyle}>{item.role || '-'}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <button
                         style={{
-                          ...styles.actionButton,
-                          backgroundColor: item.canValidateQar ? '#dcfce7' : '#fee2e2',
-                          color: item.canValidateQar ? '#166534' : '#B00020',
-                          minWidth: '80px'
+                          padding: '4px 12px',
+                          borderRadius: 4,
+                          border: `1px solid ${item.canValidateQar ? (t.successBorder || '#bbf7d0') : t.border}`,
+                          backgroundColor: item.canValidateQar ? (t.successBg || '#dcfce7') : t.bgPanel,
+                          color: item.canValidateQar ? (t.successFg || '#166534') : t.textMuted,
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          fontWeight: 500
                         }}
                         onClick={() => handleToggleValidator(item)}
                       >
-                        {item.canValidateQar ? ' Sí' : ' No'}
+                        {item.canValidateQar ? 'Sí' : 'No'}
                       </button>
                     </td>
                   </tr>
@@ -833,16 +677,14 @@ const DefectConfig = () => {
         );
 
       case 'hospitalUsers':
-        // Si no hay usuarios cargados, mostrar mensaje
         if (allUsers.length === 0) {
           return (
-            <div style={{ textAlign: 'center', padding: '40px', color: t.textMuted }}>
+            <div style={{ textAlign: 'center', padding: 40, color: t.textMuted }}>
               No hay usuarios en el sistema.
             </div>
           );
         }
 
-        // Merge allUsers with hospitalUsers permissions (global, sin cliente)
         const usersWithPermissions = allUsers.map(user => {
           const perms = hospitalUsers.find(h => h.userId === user.id) || {};
           return {
@@ -854,7 +696,6 @@ const DefectConfig = () => {
           };
         });
 
-        // Aplicar filtro
         const filteredHospitalUsers = usersWithPermissions.filter(user => {
           if (!userFilter) return true;
           const search = userFilter.toLowerCase();
@@ -867,12 +708,14 @@ const DefectConfig = () => {
         const PermButton = ({ value, onClick, disabled }) => (
           <button
             style={{
-              ...styles.actionButton,
-              backgroundColor: value ? '#dcfce7' : '#f3f4f6',
-              color: value ? '#166534' : '#9ca3af',
-              minWidth: '40px',
+              padding: '4px 8px',
+              borderRadius: 4,
+              border: `1px solid ${value ? (t.successBorder || '#bbf7d0') : t.border}`,
+              backgroundColor: value ? (t.successBg || '#dcfce7') : t.bgPanel,
+              color: value ? (t.successFg || '#166534') : t.textMuted,
+              cursor: disabled ? 'not-allowed' : 'pointer',
               opacity: disabled ? 0.5 : 1,
-              cursor: disabled ? 'not-allowed' : 'pointer'
+              fontSize: 12
             }}
             onClick={onClick}
             disabled={disabled}
@@ -883,70 +726,84 @@ const DefectConfig = () => {
 
         return (
           <div>
-            {/* Filtro de búsqueda */}
-            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <label style={{ fontWeight: '500' }}>Buscar:</label>
+            <div style={{ padding: 16, borderBottom: `1px solid ${t.line || t.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
               <input
                 type="text"
-                style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, minWidth: '300px', backgroundColor: t.bgPanel, color: t.text }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  border: `1px solid ${t.border}`,
+                  minWidth: 300,
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  fontSize: 13
+                }}
                 placeholder="Filtrar por nombre, email o departamento..."
                 value={userFilter}
                 onChange={(e) => setUserFilter(e.target.value)}
               />
               {userFilter && (
                 <button
-                  style={{ padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, cursor: 'pointer', color: t.text }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 6,
+                    border: `1px solid ${t.border}`,
+                    backgroundColor: t.bgPanel,
+                    cursor: 'pointer',
+                    color: t.text,
+                    fontSize: 12
+                  }}
                   onClick={() => setUserFilter('')}
                 >
                   Limpiar
                 </button>
               )}
-              <span style={{ color: t.textMuted, fontSize: '13px' }}>
+              <span style={{ color: t.textMuted, fontSize: 12 }}>
                 {filteredHospitalUsers.length} de {usersWithPermissions.length} usuarios
               </span>
             </div>
 
-            <table style={styles.table}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Usuario</th>
-                  <th style={styles.th}>Departamento</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Reparar</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Liberar</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Aprobar Rep.</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Aprobar Lib.</th>
+                  <th style={thStyle}>Usuario</th>
+                  <th style={thStyle}>Departamento</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Reparar</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Liberar</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Aprobar Rep.</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Aprobar Lib.</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredHospitalUsers.map(user => (
                   <tr key={user.id}>
-                    <td style={styles.td}>
+                    <td style={tdStyle}>
                       <strong>{user.firstName} {user.lastName}</strong>
-                      <div style={{ fontSize: '11px', color: t.textMuted }}>{user.email}</div>
+                      <div style={{ fontSize: 11, color: t.textMuted }}>{user.email}</div>
                     </td>
-                    <td style={styles.td}>{user.department || '-'}</td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <td style={tdStyle}>{user.department || '-'}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <PermButton
                         value={user.canRepair}
                         onClick={() => handleToggleHospitalPermission(user.id, 'canRepair')}
                         disabled={saving}
                       />
                     </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <PermButton
                         value={user.canRelease}
                         onClick={() => handleToggleHospitalPermission(user.id, 'canRelease')}
                         disabled={saving}
                       />
                     </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <PermButton
                         value={user.canApproveRepair}
                         onClick={() => handleToggleHospitalPermission(user.id, 'canApproveRepair')}
                         disabled={saving}
                       />
                     </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <PermButton
                         value={user.canApproveRelease}
                         onClick={() => handleToggleHospitalPermission(user.id, 'canApproveRelease')}
@@ -962,38 +819,30 @@ const DefectConfig = () => {
 
       default:
         return (
-          <table style={styles.table}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={styles.th}>Código</th>
-                <th style={styles.th}>Nombre</th>
-                <th style={styles.th}>Descripción</th>
-                <th style={styles.th}>Estado</th>
-                <th style={styles.th}>Acciones</th>
+                <th style={thStyle}>Código</th>
+                <th style={thStyle}>Nombre</th>
+                <th style={thStyle}>Descripción</th>
+                <th style={thStyle}>Estado</th>
+                <th style={{ ...thStyle, width: ACTION_COL_WIDTH }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {items.map(item => (
                 <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
-                  <td style={styles.td}>{item.code}</td>
-                  <td style={styles.td}><strong>{item.name}</strong></td>
-                  <td style={styles.td}>{item.description || '-'}</td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.badge, ...(item.isActive ? styles.badgeActive : styles.badgeInactive) }}>
-                      {item.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
+                  <td style={{ ...tdStyle, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>{item.code}</td>
+                  <td style={tdStyle}><strong>{item.name}</strong></td>
+                  <td style={tdStyle}>{item.description || '-'}</td>
+                  <td style={tdStyle}>
+                    <StatusChip active={item.isActive} />
                   </td>
-                  <td style={styles.td}>
-                    <button style={{ ...styles.actionButton, ...styles.editButton }} onClick={() => handleEdit(item)}>
-                      Editar
-                    </button>
-                    <button
-                      style={{ ...styles.actionButton, backgroundColor: item.isActive ? '#fee2e2' : '#dcfce7', color: item.isActive ? '#B00020' : '#166534' }}
-                      onClick={() => handleToggleActive(item)}
-                    >
-                      {item.isActive ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
+                  <ActionCell
+                    onEdit={() => handleEdit(item)}
+                    onToggle={() => handleToggleActive(item)}
+                    isActive={item.isActive}
+                  />
                 </tr>
               ))}
             </tbody>
@@ -1004,31 +853,40 @@ const DefectConfig = () => {
 
   // Render form fields based on active tab
   const renderFormFields = () => {
+    const inputStyle = {
+      width: '100%',
+      padding: '10px 12px',
+      border: `1px solid ${t.border}`,
+      borderRadius: 6,
+      fontSize: 14,
+      boxSizing: 'border-box',
+      backgroundColor: t.bgPanel,
+      color: t.text
+    };
+
     const commonFields = (
-      <>
-        <div style={styles.inputRow}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Código *</label>
-            <input
-              type="text"
-              style={styles.input}
-              value={formData.code || ''}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              placeholder="ej: CRITICAL"
-            />
-          </div>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Nombre *</label>
-            <input
-              type="text"
-              style={styles.input}
-              value={formData.name || ''}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="ej: Crítico"
-            />
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Código *</label>
+          <input
+            type="text"
+            style={inputStyle}
+            value={formData.code || ''}
+            onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+            placeholder="ej: CRITICAL"
+          />
         </div>
-      </>
+        <div>
+          <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Nombre *</label>
+          <input
+            type="text"
+            style={inputStyle}
+            value={formData.name || ''}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="ej: Crítico"
+          />
+        </div>
+      </div>
     );
 
     switch (activeTab) {
@@ -1036,50 +894,50 @@ const DefectConfig = () => {
         return (
           <>
             {commonFields}
-            <div style={styles.inputRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Color</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Color</label>
                 <input
                   type="color"
-                  style={styles.colorInput}
+                  style={{ width: 60, height: 38, padding: 2, border: `1px solid ${t.border}`, borderRadius: 6, cursor: 'pointer' }}
                   value={formData.color || '#6b7280'}
                   onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                 />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Orden</label>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Orden</label>
                 <input
                   type="number"
-                  style={styles.input}
+                  style={inputStyle}
                   value={formData.displayOrder || 0}
                   onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) })}
                 />
               </div>
             </div>
-            <div style={{ padding: '16px', marginBottom: '16px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px' }}>
-              <h4 style={{ margin: '0 0 12px 0', color: '#0369a1' }}>Regla de Emisión de QAR</h4>
-              <div style={styles.inputRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Emitir QAR a los</label>
+            <div style={{ padding: 16, marginBottom: 16, backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: 8 }}>
+              <h4 style={{ margin: '0 0 12px 0', color: t.text, fontSize: 14 }}>Regla de Emisión de QAR</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 13 }}>Emitir QAR a los</label>
                   <input
                     type="number"
-                    style={styles.input}
+                    style={inputStyle}
                     value={formData.qarThresholdCount || 1}
                     onChange={(e) => setFormData({ ...formData, qarThresholdCount: parseInt(e.target.value) })}
                     min="1"
                   />
-                  <p style={styles.hint}>caso(s) de este nivel</p>
+                  <p style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>caso(s) de este nivel</p>
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>En un período de</label>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 13 }}>En un período de</label>
                   <input
                     type="number"
-                    style={styles.input}
+                    style={inputStyle}
                     value={formData.qarThresholdHours || 0}
                     onChange={(e) => setFormData({ ...formData, qarThresholdHours: parseInt(e.target.value) })}
                     min="0"
                   />
-                  <p style={styles.hint}>horas (0 = inmediato)</p>
+                  <p style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>horas (0 = inmediato)</p>
                 </div>
               </div>
             </div>
@@ -1090,31 +948,31 @@ const DefectConfig = () => {
         return (
           <>
             {commonFields}
-            <div style={styles.inputRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Hora Inicio</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Hora Inicio</label>
                 <input
                   type="time"
-                  style={styles.input}
+                  style={inputStyle}
                   value={formData.startTime || ''}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                 />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Hora Fin</label>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Hora Fin</label>
                 <input
                   type="time"
-                  style={styles.input}
+                  style={inputStyle}
                   value={formData.endTime || ''}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                 />
               </div>
             </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Orden</label>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Orden</label>
               <input
                 type="number"
-                style={styles.input}
+                style={inputStyle}
                 value={formData.displayOrder || 0}
                 onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) })}
               />
@@ -1126,44 +984,44 @@ const DefectConfig = () => {
         return (
           <>
             {commonFields}
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Descripción</label>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Descripción</label>
               <input
                 type="text"
-                style={styles.input}
+                style={inputStyle}
                 value={formData.description || ''}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Descripción opcional"
               />
             </div>
-            <div style={styles.inputRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Color</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Color</label>
                 <input
                   type="color"
-                  style={styles.colorInput}
+                  style={{ width: 60, height: 38, padding: 2, border: `1px solid ${t.border}`, borderRadius: 6, cursor: 'pointer' }}
                   value={formData.color || '#6b7280'}
                   onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                 />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Orden</label>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Orden</label>
                 <input
                   type="number"
-                  style={styles.input}
+                  style={inputStyle}
                   value={formData.displayOrder || 0}
                   onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) })}
                 />
               </div>
             </div>
-            <div style={styles.formGroup}>
-              <label style={styles.checkbox}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={formData.requiresDowntime || false}
                   onChange={(e) => setFormData({ ...formData, requiresDowntime: e.target.checked })}
                 />
-                <span>Esta disposición típicamente genera tiempo de paro</span>
+                <span style={{ color: t.text, fontSize: 14 }}>Esta disposición típicamente genera tiempo de paro</span>
               </label>
             </div>
           </>
@@ -1173,21 +1031,21 @@ const DefectConfig = () => {
         return (
           <>
             {commonFields}
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Descripción</label>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Descripción</label>
               <input
                 type="text"
-                style={styles.input}
+                style={inputStyle}
                 value={formData.description || ''}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Descripción opcional"
               />
             </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Orden</label>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: t.text, fontSize: 14 }}>Orden</label>
               <input
                 type="number"
-                style={styles.input}
+                style={inputStyle}
                 value={formData.displayOrder || 0}
                 onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) })}
               />
@@ -1198,31 +1056,54 @@ const DefectConfig = () => {
   };
 
   const getTabLabel = () => {
-    const tab = tabs.find(t => t.id === activeTab);
+    const tab = tabs.find(tab => tab.id === activeTab);
     return tab ? tab.label : '';
   };
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loading}>Cargando...</div>
+      <div style={{ padding: 20, maxWidth: 1200, margin: '0 auto', backgroundColor: t.bg, minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center', padding: 60, color: t.textMuted }}>Cargando...</div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div style={{ padding: 20, maxWidth: 1200, margin: '0 auto', backgroundColor: t.bg, minHeight: '100vh' }}>
       {/* Header */}
-      <div style={styles.header}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 style={styles.title}>Configuración de Inspección</h1>
-          <p style={styles.subtitle}>Catálogos globales de la compañía</p>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: t.text, margin: 0 }}>Configuración de Inspección</h1>
+          <p style={{ fontSize: 14, color: t.textMuted, marginTop: 4 }}>Catálogos globales de la compañía</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
+            style={{
+              padding: '8px 14px',
+              fontSize: 12,
+              fontWeight: 500,
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer'
+            }}
+          >
             {language === 'es' ? 'EN' : 'ES'}
           </button>
-          <button style={styles.backButton} onClick={() => navigate('/defect-admin')}>
+          <button
+            onClick={() => navigate('/defect-admin')}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              border: `1px solid ${t.border}`,
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontSize: 13
+            }}
+          >
             Volver a Admin
           </button>
         </div>
@@ -1230,39 +1111,104 @@ const DefectConfig = () => {
 
       {/* Alerts */}
       {error && (
-        <div style={{ ...styles.alert, ...styles.alertError }}>
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: 6,
+          marginBottom: 16,
+          backgroundColor: t.errorBg || '#fef2f2',
+          border: `1px solid ${t.errorBorder || '#fecaca'}`,
+          color: t.error || '#B00020',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
           {error}
-          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>x</button>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 16 }}>×</button>
         </div>
       )}
       {success && (
-        <div style={{ ...styles.alert, ...styles.alertSuccess }}>
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: 6,
+          marginBottom: 16,
+          backgroundColor: t.successBg || '#f0fdf4',
+          border: `1px solid ${t.successBorder || '#bbf7d0'}`,
+          color: t.successFg || '#166534'
+        }}>
           {success}
         </div>
       )}
 
       {/* Tabs */}
-      <div style={styles.tabs}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: `1px solid ${t.border}` }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
-            style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : {}) }}
+            style={{
+              padding: '12px 20px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: activeTab === tab.id ? 600 : 400,
+              color: activeTab === tab.id ? t.text : t.textMuted,
+              borderBottom: activeTab === tab.id ? `2px solid ${t.primary || t.accent}` : '2px solid transparent',
+              marginBottom: -1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}
             onClick={() => { setActiveTab(tab.id); setShowModal(false); setUserFilter(''); }}
           >
-            <span>{tab.icon}</span>
             {tab.label}
+            {tab.admin && (
+              <span style={{
+                padding: '2px 6px',
+                fontSize: 10,
+                fontWeight: 500,
+                borderRadius: 4,
+                border: `1px solid ${t.border}`,
+                color: t.textMuted
+              }}>
+                Admin
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Content */}
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <span style={{ fontWeight: '500' }}>
+      <div style={{
+        backgroundColor: t.bgCard,
+        borderRadius: 8,
+        border: `1px solid ${t.border}`,
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 16px',
+          borderBottom: `1px solid ${t.border}`,
+          backgroundColor: t.bgPanel
+        }}>
+          <span style={{ fontWeight: 500, color: t.text, fontSize: 14 }}>
             {getTabLabel()} ({getCurrentItems().length})
           </span>
           {activeTab !== 'qarValidators' && activeTab !== 'hospitalUsers' && (
-            <button style={styles.addButton} onClick={handleAddNew}>
+            <button
+              onClick={handleAddNew}
+              style={{
+                padding: '6px 14px',
+                backgroundColor: t.accent,
+                color: 'white',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontWeight: 500,
+                fontSize: 12
+              }}
+            >
               + Agregar
             </button>
           )}
@@ -1273,35 +1219,81 @@ const DefectConfig = () => {
 
       {/* Modal */}
       {showModal && (
-        <div style={styles.modal} onClick={() => setShowModal(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: t.bgCard,
+              borderRadius: 8,
+              padding: 24,
+              maxWidth: 500,
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: `1px solid ${t.border}`
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, color: t.text }}>
               {editingItem ? `Editar ${getTabLabel().slice(0, -1)}` : `Nueva ${getTabLabel().slice(0, -1)}`}
             </h3>
 
             {renderFormFields()}
 
             {editingItem && (
-              <div style={styles.formGroup}>
-                <label style={styles.checkbox}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={formData.isActive ?? true}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   />
-                  <span>Activo</span>
+                  <span style={{ color: t.text, fontSize: 14 }}>Activo</span>
                 </label>
               </div>
             )}
 
-            <div style={styles.modalButtons}>
-              <button style={styles.cancelButton} onClick={() => setShowModal(false)}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: t.bgPanel,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
                 Cancelar
               </button>
               <button
-                style={{ ...styles.saveButton, opacity: saving ? 0.7 : 1 }}
                 onClick={handleSave}
-                disabled={saving || (activeTab !== 'stages' && !formData.code) || !formData.name}
+                disabled={saving || !formData.code || !formData.name}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: t.accent,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  opacity: saving ? 0.7 : 1
+                }}
               >
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
