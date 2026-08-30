@@ -13,20 +13,28 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { KpiTile } from './shared/SharedComponents';
 
 // ─── Color palette (theme-aware) ─────────────────────────────────────────────
+// For charts: derive distinct colors by adjusting luminosity
 const getColors = (t) => ({
   blue:    t.primary,
   green:   t.success,
   red:     t.error,
   orange:  t.warning,
-  purple:  t.accent,
-  cyan:    t.accent,
   gray:    t.textMuted,
-  teal:    t.success,
-  pink:    t.error,
-  indigo:  t.primary,
 });
+
+// Chart palette: 7 distinct colors derived from theme
+const getChartPalette = (t) => [
+  t.primary,                    // blue
+  t.success,                    // green
+  t.warning,                    // orange
+  t.error,                      // red
+  t.accent,                     // cyan/accent
+  t.textMuted,                  // gray
+  `color-mix(in srgb, ${t.primary} 60%, ${t.accent})`, // blend
+];
 
 const getSevColors = (t) => ({
   'Crítico': t.error,
@@ -43,30 +51,6 @@ const getStatusColors = (t) => ({
 });
 
 // ─── Helper sub-components ────────────────────────────────────────────────────
-
-const KpiTile = ({ label, value, sub, color, alertDot, small }) => {
-  const { theme: t } = useTheme();
-  return (
-    <div style={{
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderTop: `3px solid ${color || t.primary}`,
-      borderRadius: 8,
-      padding: small ? '10px 14px' : '14px 18px',
-      flex: 1,
-      minWidth: 0,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-        {alertDot && <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: alertDot }} />}
-        {label}
-      </div>
-      <div style={{ fontSize: small ? 22 : 28, fontWeight: 800, color: t.text, lineHeight: 1, fontFamily: "'IBM Plex Mono', monospace" }}>
-        {value ?? '—'}
-      </div>
-      {sub && <div style={{ fontSize: 10, color: t.textMuted, marginTop: 3 }}>{sub}</div>}
-    </div>
-  );
-};
 
 const TabBar = ({ tabs, active, onSelect }) => {
   const { theme: t } = useTheme();
@@ -611,7 +595,7 @@ const TabCalidad = ({ data }) => {
           <SectionTitle title="Completitud de Documentación" sub="Qué tan bien documentadas están las respuestas" />
           <QualityBar label="Con Causa Raíz documentada" value={q.withRootCause} total={total} color={C.green} />
           <QualityBar label="Con Acción Correctiva documentada" value={q.withCA} total={total} color={C.blue} />
-          <QualityBar label="Con algún tipo de respuesta" value={q.withRootCause} total={total} color={C.teal} />
+          <QualityBar label="Con algún tipo de respuesta" value={q.withRootCause} total={total} color={t.accent} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '16px' }}>
             {[
@@ -823,6 +807,7 @@ const TabOperacion = ({ data }) => {
 const TabCliente = ({ data }) => {
   const { theme: t } = useTheme();
   const C = getColors(t);
+  const chartPalette = getChartPalette(t);
   const clientData = (data.byClient || []).map(r => ({
     name: r.client.length > 20 ? r.client.slice(0, 18) + '…' : r.client,
     fullName: r.client,
@@ -892,7 +877,7 @@ const TabCliente = ({ data }) => {
               data={(data.byClient || []).map((r, i) => ({
                 name: r.client.length > 20 ? r.client.slice(0, 18) + '…' : r.client,
                 value: r.total,
-                fill: [C.blue, C.orange, C.green, C.red, C.purple, C.cyan, C.teal][i % 7],
+                fill: chartPalette[i % chartPalette.length],
               }))}
               dataKey="value"
               cx="50%"
@@ -901,7 +886,7 @@ const TabCliente = ({ data }) => {
               label={({ name, value }) => `${name}: ${value}`}
             >
               {(data.byClient || []).map((_, i) => (
-                <Cell key={i} fill={[C.blue, C.orange, C.green, C.red, C.purple, C.cyan, C.teal][i % 7]} />
+                <Cell key={i} fill={chartPalette[i % chartPalette.length]} />
               ))}
             </Pie>
             <Tooltip />
@@ -1240,23 +1225,26 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
   const tb = data.topBar || {};
   const q  = data.quality || {};
 
-  const slaRespColor  = tb.slaResponsePct  >= 80 ? C.green : tb.slaResponsePct  >= 60 ? C.orange : C.red;
-  const slaCloseColor = tb.slaClosurePct   >= 80 ? C.green : tb.slaClosurePct   >= 60 ? C.orange : C.red;
-  const pctRootCause  = q.total > 0 ? Math.round((q.withRootCause / q.total) * 100) : 0;
+  const pctRootCause = q.total > 0 ? Math.round((q.withRootCause / q.total) * 100) : 0;
+
+  // Alert type helpers
+  const slaRespAlert = tb.slaResponsePct < 60 ? 'error' : tb.slaResponsePct < 80 ? 'warning' : null;
+  const slaCloseAlert = tb.slaClosurePct < 60 ? 'error' : tb.slaClosurePct < 80 ? 'warning' : null;
 
   // ── KPIs numéricos ─────────────────────────────────────────────────────────
-  if (id === 'kpi-total')      return <KpiTile label="Total QARs"             value={tb.total}               sub="en el período"            color={C.blue}   alertDot={C.blue} />;
-  if (id === 'kpi-activos')    return <KpiTile label="QARs Activas"            value={tb.activos}             sub="Emitidas + Respondidas"   color={C.orange} alertDot={C.orange} />;
-  if (id === 'kpi-cerrados')   return <KpiTile label="QARs Cerradas"           value={tb.cerrados}            sub="en el período"            color={C.green}  alertDot={C.green} />;
-  if (id === 'kpi-rechazados') return <KpiTile label="Rechazadas"              value={tb.rechazados}          sub="no aplica corrección"     color={C.gray}   alertDot={C.gray} />;
-  if (id === 'kpi-alta-sev')   return <KpiTile label="Alta Severidad"          value={tb.altaSeveridad}       sub="Crítico + ALTA"           color={C.red}    alertDot={C.red} />;
-  if (id === 'kpi-vencidas')   return <KpiTile label="Vencidas sin respuesta"  value={tb.vencidasSinRespuesta} sub="fuera de SLA"            color={tb.vencidasSinRespuesta > 0 ? C.red : C.green} alertDot={tb.vencidasSinRespuesta > 0 ? C.red : C.green} />;
-  if (id === 'kpi-sla-resp')   return <KpiTile label="SLA Respuesta"           value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" color={slaRespColor} alertDot={slaRespColor} />;
-  if (id === 'kpi-sla-cierre') return <KpiTile label="SLA Cierre"              value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'}   sub="dentro de tiempo" color={slaCloseColor} alertDot={slaCloseColor} />;
-  if (id === 'kpi-avg-resp')   return <KpiTile label="T. Prom. Respuesta"      value={formatHours(tb.avgResponseHours)} sub="desde emisión a respuesta" color={C.purple} alertDot={C.purple} />;
-  if (id === 'kpi-avg-cierre') return <KpiTile label="T. Prom. Cierre"         value={formatHours(tb.avgClosureHours)}  sub="desde emisión a cierre"    color={C.teal}   alertDot={C.teal} />;
-  if (id === 'kpi-no-val')     return <KpiTile label="Sin Validación"          value={tb.closedNoValidation}  sub="cierres sin validar"      color={tb.closedNoValidation > 0 ? C.orange : C.green} alertDot={tb.closedNoValidation > 0 ? C.orange : C.green} />;
-  if (id === 'kpi-root-cause') return <KpiTile label="% Con Causa Raíz"        value={`${pctRootCause}%`}     sub="documentación completa"   color={pctRootCause >= 80 ? C.green : C.red} alertDot={pctRootCause >= 80 ? C.green : C.red} />;
+  // Sin semáforo: valor siempre en t.text, alertDot solo cuando hay alerta real
+  if (id === 'kpi-total')      return <KpiTile label="Total QARs"             value={tb.total}               sub="en el período"            t={t} />;
+  if (id === 'kpi-activos')    return <KpiTile label="QARs Activas"           value={tb.activos}             sub="Emitidas + Respondidas"   t={t} />;
+  if (id === 'kpi-cerrados')   return <KpiTile label="QARs Cerradas"          value={tb.cerrados}            sub="en el período"            t={t} />;
+  if (id === 'kpi-rechazados') return <KpiTile label="Rechazadas"             value={tb.rechazados}          sub="no aplica corrección"     t={t} />;
+  if (id === 'kpi-alta-sev')   return <KpiTile label="Alta Severidad"         value={tb.altaSeveridad}       sub="Crítico + Alta"           t={t} alertType={tb.altaSeveridad > 0 ? 'error' : null} />;
+  if (id === 'kpi-vencidas')   return <KpiTile label="Vencidas sin respuesta" value={tb.vencidasSinRespuesta} sub="fuera de SLA"            t={t} alertType={tb.vencidasSinRespuesta > 0 ? 'error' : null} />;
+  if (id === 'kpi-sla-resp')   return <KpiTile label="SLA Respuesta"          value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" t={t} alertType={slaRespAlert} />;
+  if (id === 'kpi-sla-cierre') return <KpiTile label="SLA Cierre"             value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'}   sub="dentro de tiempo" t={t} alertType={slaCloseAlert} />;
+  if (id === 'kpi-avg-resp')   return <KpiTile label="T. Prom. Respuesta"     value={formatHours(tb.avgResponseHours)} sub="desde emisión a respuesta" t={t} />;
+  if (id === 'kpi-avg-cierre') return <KpiTile label="T. Prom. Cierre"        value={formatHours(tb.avgClosureHours)}  sub="desde emisión a cierre"    t={t} />;
+  if (id === 'kpi-no-val')     return <KpiTile label="Sin Validación"         value={tb.closedNoValidation}  sub="cierres sin validar"      t={t} alertType={tb.closedNoValidation > 0 ? 'warning' : null} />;
+  if (id === 'kpi-root-cause') return <KpiTile label="% Con Causa Raíz"       value={`${pctRootCause}%`}     sub="documentación completa"   t={t} alertType={pctRootCause < 80 ? 'warning' : null} />;
 
   // ── Gráficas ───────────────────────────────────────────────────────────────
   if (id === 'chart-vol-mes') {
@@ -1995,21 +1983,21 @@ const QARDashboardComponent = ({ data, onRefresh }) => {
     { id: 'personalizado', label: 'Mi Dashboard' },
   ];
 
-  // Top-bar KPIs
-  const slaRespColor = tb.slaResponsePct >= 80 ? C.green : tb.slaResponsePct >= 60 ? C.orange : C.red;
-  const slaCloseColor = tb.slaClosurePct >= 80 ? C.green : tb.slaClosurePct >= 60 ? C.orange : C.red;
+  // Top-bar KPIs - alert type helpers
+  const slaRespAlert = tb.slaResponsePct < 60 ? 'error' : tb.slaResponsePct < 80 ? 'warning' : null;
+  const slaCloseAlert = tb.slaClosurePct < 60 ? 'error' : tb.slaClosurePct < 80 ? 'warning' : null;
 
   return (
     <div>
       {/* Top KPI bar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <KpiTile label="Total QARs" value={tb.total} sub="período seleccionado" color={C.blue} alertDot={C.blue} />
-        <KpiTile label="Activas" value={tb.activos} sub="Emitidas + Respondidas" color={C.orange} alertDot={C.orange} />
-        <KpiTile label="Cerradas" value={tb.cerrados} sub="en período" color={C.green} alertDot={C.green} />
-        <KpiTile label="Alta Severidad" value={tb.altaSeveridad} sub="Crítico + ALTA" color={C.red} alertDot={C.red} />
-        <KpiTile label="SLA Respuesta" value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" color={slaRespColor} alertDot={slaRespColor} />
-        <KpiTile label="SLA Cierre" value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'} sub="dentro de tiempo" color={slaCloseColor} alertDot={slaCloseColor} />
-        <KpiTile label="Vencidas" value={tb.vencidasSinRespuesta} sub="sin respuesta" color={tb.vencidasSinRespuesta > 0 ? C.red : C.green} alertDot={tb.vencidasSinRespuesta > 0 ? C.red : C.green} />
+        <KpiTile label="Total QARs" value={tb.total} sub="período seleccionado" t={t} />
+        <KpiTile label="Activas" value={tb.activos} sub="Emitidas + Respondidas" t={t} />
+        <KpiTile label="Cerradas" value={tb.cerrados} sub="en período" t={t} />
+        <KpiTile label="Alta Severidad" value={tb.altaSeveridad} sub="Crítico + Alta" t={t} alertType={tb.altaSeveridad > 0 ? 'error' : null} />
+        <KpiTile label="SLA Respuesta" value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" t={t} alertType={slaRespAlert} />
+        <KpiTile label="SLA Cierre" value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'} sub="dentro de tiempo" t={t} alertType={slaCloseAlert} />
+        <KpiTile label="Vencidas" value={tb.vencidasSinRespuesta} sub="sin respuesta" t={t} alertType={tb.vencidasSinRespuesta > 0 ? 'error' : null} />
       </div>
 
       {/* Tabs */}
