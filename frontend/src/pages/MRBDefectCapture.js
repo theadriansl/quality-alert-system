@@ -1813,7 +1813,7 @@ const MRBDefectCapture = () => {
             <button
               onClick={() => setShowCloseModal(true)}
               disabled={closingShift || isClosed}
-              style={{ padding: '8px 16px', backgroundColor: isClosed ? '#9ca3af' : '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: isClosed ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ padding: '8px 16px', backgroundColor: isClosed ? t.textDim : t.accent, color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: isClosed ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               title={isClosed ? 'Campaña cerrada' : ''}
             >
               <CheckCircle size={15} /> Registrar Turno
@@ -1823,7 +1823,7 @@ const MRBDefectCapture = () => {
             <button
               onClick={() => setShowCloseModal(true)}
               disabled={closingShift || isClosed}
-              style={{ padding: '8px 16px', backgroundColor: isClosed ? '#9ca3af' : '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: isClosed ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ padding: '8px 16px', backgroundColor: isClosed ? t.textDim : t.accent, color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: isClosed ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               title={isClosed ? 'Campaña cerrada' : ''}
             >
               <CheckCircle size={15} /> Registrar Turno
@@ -1987,7 +1987,7 @@ const MRBDefectCapture = () => {
                   <div style={{ fontSize: '11px', fontWeight: '600', color: t.warningFg, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <XCircle size={14} /> PARTE INCORRECTA
                   </div>
-                  <div style={{ fontSize: '10px', color: '#78350f', marginTop: '2px' }}>
+                  <div style={{ fontSize: '10px', color: t.warningFg, marginTop: '2px' }}>
                     Serial pertenece a <strong>{serialPartMismatch.found}</strong>, no a {serialPartMismatch.expected}
                   </div>
                 </div>
@@ -2034,7 +2034,7 @@ const MRBDefectCapture = () => {
                   <div style={{ fontSize: '11px', fontWeight: '600', color: t.successFg, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     ✅ EN TODAS LAS CAMPAÑAS
                   </div>
-                  <div style={{ fontSize: '10px', color: '#14532d', marginTop: '2px' }}>
+                  <div style={{ fontSize: '10px', color: t.successFg, marginTop: '2px' }}>
                     Serial está en la lista de afectados de todas las campañas seleccionadas.
                   </div>
                 </div>
@@ -2045,15 +2045,15 @@ const MRBDefectCapture = () => {
                 <div style={{
                   marginTop: '8px', padding: '8px 10px', borderRadius: '6px',
                   backgroundColor:
-                    productionInfo.inspectionStatus === 'OK' ? '#dcfce7' :
-                    productionInfo.inspectionStatus === 'DEFECTIVE' ? '#fee2e2' :
-                    productionInfo.inspectionStatus === 'SCRAPPED' ? '#f3f4f6' :
-                    '#fef3c7',
+                    productionInfo.inspectionStatus === 'OK' ? t.successBg :
+                    productionInfo.inspectionStatus === 'DEFECTIVE' ? t.errorBg :
+                    productionInfo.inspectionStatus === 'SCRAPPED' ? t.bgPanel :
+                    t.warningBg,
                   border: `1px solid ${
-                    productionInfo.inspectionStatus === 'OK' ? '#86efac' :
-                    productionInfo.inspectionStatus === 'DEFECTIVE' ? '#fca5a5' :
-                    productionInfo.inspectionStatus === 'SCRAPPED' ? '#d1d5db' :
-                    '#fcd34d'
+                    productionInfo.inspectionStatus === 'OK' ? t.successBorder :
+                    productionInfo.inspectionStatus === 'DEFECTIVE' ? t.errorBorder :
+                    productionInfo.inspectionStatus === 'SCRAPPED' ? t.border :
+                    t.warning
                   }`
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2475,7 +2475,7 @@ const MRBDefectCapture = () => {
                       ))}
                       <th rowSpan={2} style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', color: t.textMuted, fontSize: '11px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, minWidth: '70px', backgroundColor: t.bgCard, boxShadow: `0 2px 0 ${t.border}`, verticalAlign: 'bottom' }}>Total</th>
                       {severities.length > 0 && (
-                        <th colSpan={severities.length} style={{ padding: '8px 4px 4px', textAlign: 'center', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', color: '#7c3aed', borderBottom: `1px solid #7c3aed40`, borderLeft: `2px solid #7c3aed30`, backgroundColor: '#ede9fe', minWidth: `${severities.length * 56}px` }}>
+                        <th colSpan={severities.length} style={{ padding: '8px 4px 4px', textAlign: 'center', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', color: t.accentFg, borderBottom: `1px solid ${t.accentBorder}`, borderLeft: `2px solid ${t.accentBorder}`, backgroundColor: t.accentBg, minWidth: `${severities.length * 56}px` }}>
                           Severidad
                         </th>
                       )}
@@ -2488,7 +2488,7 @@ const MRBDefectCapture = () => {
                         </React.Fragment>
                       ))}
                       {severities.map(sev => (
-                        <th key={sev.id} style={{ padding: '4px 4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '600', color: sev.color || '#7c3aed', borderBottom: `2px solid ${t.border}`, borderLeft: `2px solid #7c3aed30`, backgroundColor: '#f5f3ff', boxShadow: `0 2px 0 ${t.border}`, minWidth: '52px' }}>
+                        <th key={sev.id} style={{ padding: '4px 4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '600', color: sev.color || t.accentFg, borderBottom: `2px solid ${t.border}`, borderLeft: `2px solid ${t.accentBorder}`, backgroundColor: t.accentBg, boxShadow: `0 2px 0 ${t.border}`, minWidth: '52px' }}>
                           {sev.code || sev.name}
                         </th>
                       ))}
@@ -2515,7 +2515,7 @@ const MRBDefectCapture = () => {
                           ))}
                           <th style={{ padding: '4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', borderBottom: `1px solid ${t.border}` }}>Total</th>
                           {severities.map(sev => (
-                            <th key={sev.id} style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '600', color: sev.color || '#7c3aed', borderBottom: `1px solid ${t.border}`, borderLeft: `2px solid #7c3aed30`, backgroundColor: '#f5f3ff' }}>
+                            <th key={sev.id} style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '600', color: sev.color || t.accentFg, borderBottom: `1px solid ${t.border}`, borderLeft: `2px solid ${t.accentBorder}`, backgroundColor: t.accentBg }}>
                               {sev.code || sev.name}
                             </th>
                           ))}
@@ -2552,9 +2552,9 @@ const MRBDefectCapture = () => {
                                 const qty = DISP_COLS.filter(col => DISPOSITION_SEVERITY[col.code] === sev.code)
                                   .reduce((s, col) => s + (parseInt(defectGrid[defect.id]?.[col.code]) || 0), 0);
                                 return (
-                                  <td key={sev.id} style={{ padding: '8px 4px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, borderLeft: `2px solid #7c3aed30`, backgroundColor: qty > 0 ? `${sev.color || '#7c3aed'}18` : 'transparent' }}>
+                                  <td key={sev.id} style={{ padding: '8px 4px', textAlign: 'center', borderBottom: `1px solid ${t.border}`, borderLeft: `2px solid ${t.accentBorder}`, backgroundColor: qty > 0 ? `${sev.color || '#7c3aed'}18` : 'transparent' }}>
                                     {qty > 0
-                                      ? <span style={{ fontWeight: '600', fontSize: '15px', color: sev.color || '#7c3aed' }}>{qty}</span>
+                                      ? <span style={{ fontWeight: '600', fontSize: '15px', color: sev.color || t.accentFg }}>{qty}</span>
                                       : <span style={{ color: t.textDim, fontSize: '13px' }}>—</span>}
                                   </td>
                                 );
@@ -2587,7 +2587,7 @@ const MRBDefectCapture = () => {
                           s + DISP_COLS.filter(col => DISPOSITION_SEVERITY[col.code] === sev.code)
                             .reduce((s2, col) => s2 + (parseInt(defectGrid[d.id]?.[col.code]) || 0), 0), 0);
                         return (
-                          <td key={sev.id} style={{ padding: '12px 4px', textAlign: 'center', fontWeight: '600', fontSize: '16px', color: capTotal > 0 ? (sev.color || '#7c3aed') : t.textDim, backgroundColor: capTotal > 0 ? `${sev.color || '#7c3aed'}18` : t.bgCard, boxShadow: `0 -2px 0 ${t.border}`, borderLeft: `2px solid #7c3aed30` }}>
+                          <td key={sev.id} style={{ padding: '12px 4px', textAlign: 'center', fontWeight: '600', fontSize: '16px', color: capTotal > 0 ? (sev.color || t.accentFg) : t.textDim, backgroundColor: capTotal > 0 ? `${sev.color || '#7c3aed'}18` : t.bgCard, boxShadow: `0 -2px 0 ${t.border}`, borderLeft: `2px solid ${t.accentBorder}` }}>
                             {capTotal > 0 ? capTotal : '—'}
                           </td>
                         );
@@ -2808,7 +2808,7 @@ const MRBDefectCapture = () => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
           <div style={{ backgroundColor: t.bgCard, borderRadius: '12px', padding: '28px', maxWidth: '440px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
             <div style={{ fontSize: '20px', fontWeight: '600', color: t.text, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CheckCircle size={22} color="#7c3aed" /> Registrar Turno
+              <CheckCircle size={22} color={t.accent} /> Registrar Turno
             </div>
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '16px', lineHeight: '1.6' }}>
               Cerrando <strong style={{ color: t.text }}>{selectedShift?.code} — {selectedShift?.name}</strong> de la campaña <strong style={{ color: t.text }}>{c?.folio}</strong>.
@@ -2857,7 +2857,7 @@ const MRBDefectCapture = () => {
                 <button
                   onClick={handleRegistrarTurno}
                   disabled={noWork && !turnNotes.trim()}
-                  style={{ flex: 2, padding: '12px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: (noWork && !turnNotes.trim()) ? 'not-allowed' : 'pointer', opacity: (noWork && !turnNotes.trim()) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  style={{ flex: 2, padding: '12px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: (noWork && !turnNotes.trim()) ? 'not-allowed' : 'pointer', opacity: (noWork && !turnNotes.trim()) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <CheckCircle size={16} /> Confirmar y Cerrar Turno
                 </button>
                 );
@@ -2928,7 +2928,7 @@ const MRBDefectCapture = () => {
                   setPendingShiftNote('');
                   setPendingShiftHours(8);
                 }}
-                style={{ flex: 2, padding: '12px', backgroundColor: !pendingShiftNote.trim() ? '#6b7280' : '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: !pendingShiftNote.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{ flex: 2, padding: '12px', backgroundColor: !pendingShiftNote.trim() ? t.textDim : t.accent, color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: !pendingShiftNote.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
                 <CheckCircle size={16} /> Registrar Retroactivo
               </button>
@@ -2956,7 +2956,7 @@ const MRBDefectCapture = () => {
                 <div style={{ fontSize: '12px', color: t.textMuted }}>Válidos ({tallyPreview.preview.validOk} OK, {tallyPreview.preview.validNok} NOK)</div>
               </div>
               <div style={{ backgroundColor: tallyPreview.preview.duplicatesCount > 0 ? 'rgba(234, 179, 8, 0.1)' : t.bgInput, padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '600', color: tallyPreview.preview.duplicatesCount > 0 ? '#eab308' : t.textMuted }}>{tallyPreview.preview.duplicatesCount}</div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: tallyPreview.preview.duplicatesCount > 0 ? t.warningFg : t.textMuted }}>{tallyPreview.preview.duplicatesCount}</div>
                 <div style={{ fontSize: '12px', color: t.textMuted }}>Duplicados</div>
               </div>
             </div>
@@ -2991,7 +2991,7 @@ const MRBDefectCapture = () => {
             {/* Duplicados */}
             {tallyPreview.preview.duplicatesCount > 0 && (
               <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#eab308', marginBottom: '4px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: t.warningFg, marginBottom: '4px' }}>
                   ⚠ {tallyPreview.preview.duplicatesCount} seriales ya registrados (serán ignorados)
                 </div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>
@@ -3028,7 +3028,7 @@ const MRBDefectCapture = () => {
               <button
                 onClick={handleConfirmTallyImport}
                 disabled={submitting || tallyPreview.preview.validTotal === 0}
-                style={{ flex: 2, padding: '12px', backgroundColor: tallyPreview.preview.validTotal > 0 ? '#7c3aed' : '#6b7280', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: tallyPreview.preview.validTotal > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{ flex: 2, padding: '12px', backgroundColor: tallyPreview.preview.validTotal > 0 ? t.accent : t.textDim, color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: tallyPreview.preview.validTotal > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
                 {submitting ? 'Importando...' : `Importar ${tallyPreview.preview.validTotal} registros`}
               </button>
@@ -3063,7 +3063,7 @@ const MRBDefectCapture = () => {
               <div style={{ fontSize: '11px', color: t.errorFg, marginBottom: '4px', fontWeight: '600' }}>SERIAL</div>
               <div style={{ fontSize: '16px', fontWeight: '600', color: t.errorFg, fontFamily: "'IBM Plex Mono', monospace" }}>{scrapInfo?.serial}</div>
               {scrapInfo?.partNumber && (
-                <div style={{ fontSize: '13px', color: '#7f1d1d', marginTop: '8px' }}>
+                <div style={{ fontSize: '13px', color: t.errorFg, marginTop: '8px' }}>
                   <strong>Parte:</strong> {scrapInfo.partNumber} {scrapInfo.partName ? `— ${scrapInfo.partName}` : ''}
                 </div>
               )}
@@ -3073,7 +3073,7 @@ const MRBDefectCapture = () => {
                 </div>
               )}
               {scrapInfo?.scrapNotes && (
-                <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px', fontStyle: 'italic' }}>
+                <div style={{ fontSize: '12px', color: t.errorFg, marginTop: '4px', fontStyle: 'italic' }}>
                   "{scrapInfo.scrapNotes}"
                 </div>
               )}
@@ -3146,7 +3146,7 @@ const MRBDefectCapture = () => {
                       <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
                         <span>{w.serial}</span>
                         <span style={{ color: t.errorFg }}>{w.partNumberExcel || w.partNumberGiven || '-'}</span>
-                        <span style={{ color: '#059669' }}>{w.partNumberReal || '-'}</span>
+                        <span style={{ color: t.successFg }}>{w.partNumberReal || '-'}</span>
                       </div>
                     ))}
                     {importConflicts.wrongPartCount > (importConflicts.wrongPartSerials?.length || 0) && (
@@ -3162,7 +3162,7 @@ const MRBDefectCapture = () => {
                   <summary style={{ cursor: 'pointer', color: t.textMuted, fontWeight: '600' }}>
                     {importConflicts.skippedCount} omitido(s) - parte no existe en sistema
                   </summary>
-                  <div style={{ fontSize: '11px', fontFamily: "'IBM Plex Mono', monospace", marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: '#f3f4f6', padding: '6px', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '11px', fontFamily: "'IBM Plex Mono', monospace", marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: t.bgPanel, padding: '6px', borderRadius: '4px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #d1d5db', paddingBottom: '2px', marginBottom: '2px' }}>
                       <span>Serial</span><span>Parte</span>
                     </div>
@@ -3182,10 +3182,10 @@ const MRBDefectCapture = () => {
               {/* Adicionales */}
               {(importConflicts.extendedCount || 0) > 0 && (
                 <details style={{ marginBottom: '6px' }}>
-                  <summary style={{ cursor: 'pointer', color: '#7c3aed', fontWeight: '600' }}>
+                  <summary style={{ cursor: 'pointer', color: t.accentFg, fontWeight: '600' }}>
                     {importConflicts.extendedCount} adicional(es) - se agregarán a campaña
                   </summary>
-                  <div style={{ fontSize: '11px', fontFamily: "'IBM Plex Mono', monospace", marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: '#f5f3ff', padding: '6px', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '11px', fontFamily: "'IBM Plex Mono', monospace", marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: t.accentBg, padding: '6px', borderRadius: '4px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #c4b5fd', paddingBottom: '2px', marginBottom: '2px' }}>
                       <span>Serial</span><span>Parte</span>
                     </div>
@@ -3333,7 +3333,7 @@ const MRBDefectCapture = () => {
                 disabled={submitting || ((importConflicts.preview?.toImport || 0) === 0 && (importConflicts.conflicts?.length || 0) === 0)}
                 style={{
                   flex: 1, padding: '12px',
-                  backgroundColor: ((importConflicts.preview?.toImport || 0) === 0 && (importConflicts.conflicts?.length || 0) === 0) ? '#9ca3af' : '#22c55e',
+                  backgroundColor: ((importConflicts.preview?.toImport || 0) === 0 && (importConflicts.conflicts?.length || 0) === 0) ? t.textDim : t.success,
                   color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600',
                   cursor: submitting || ((importConflicts.preview?.toImport || 0) === 0 && (importConflicts.conflicts?.length || 0) === 0) ? 'not-allowed' : 'pointer',
                   opacity: submitting ? 0.7 : 1
@@ -3576,7 +3576,7 @@ const MRBDefectCapture = () => {
                                       onClick={() => setDefectInspectionResults(prev => ({ ...prev, [key]: 'NOK' }))}
                                       style={{
                                         padding: '6px 14px', borderRadius: '5px', cursor: 'pointer',
-                                        border: result === 'NOK' ? '2px solid #b91c1c' : `1px solid ${t.border}`,
+                                        border: result === 'NOK' ? `2px solid ${t.error}` : `1px solid ${t.border}`,
                                         backgroundColor: result === 'NOK' ? '#ef4444' : t.bgInput,
                                         color: result === 'NOK' ? 'white' : t.text,
                                         fontWeight: result === 'NOK' ? '700' : '500', fontSize: '12px'
@@ -3614,7 +3614,7 @@ const MRBDefectCapture = () => {
                     {/* Selector de disposición - solo aparece si hay NOKs */}
                     {nokCount > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: t.errorBg, borderRadius: '6px', border: `1px solid ${t.errorBorder}` }}>
-                        <span style={{ fontSize: '12px', color: '#b91c1c', fontWeight: '600' }}>
+                        <span style={{ fontSize: '12px', color: t.errorFg, fontWeight: '600' }}>
                           Disposición para {nokCount} NOK:
                         </span>
                         <select
