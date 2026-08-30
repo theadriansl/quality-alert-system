@@ -1962,16 +1962,16 @@ const DefectCapture = () => {
       fontWeight: '600'
     },
     counterOk: {
-      backgroundColor: '#d1fae5',
-      color: '#2E7D32'
+      backgroundColor: t.successBg,
+      color: t.successFg
     },
     counterNg: {
       backgroundColor: t.errorBg,
-      color: t.error
+      color: t.errorFg
     },
     piezaOkButton: {
       padding: '12px 24px',
-      backgroundColor: '#2E7D32',
+      backgroundColor: t.success,
       color: 'white',
       border: 'none',
       borderRadius: '8px',
@@ -2030,7 +2030,7 @@ const DefectCapture = () => {
       textTransform: 'uppercase'
     },
     fieldLabelRequired: {
-      color: '#f87171'
+      color: t.errorFg
     },
     fieldSelect: {
       padding: '10px 12px',
@@ -2171,7 +2171,7 @@ const DefectCapture = () => {
     },
     submitButton: {
       padding: '16px 24px',
-      backgroundColor: '#B00020',
+      backgroundColor: t.error,
       color: 'white',
       border: 'none',
       borderRadius: '8px',
@@ -2184,7 +2184,7 @@ const DefectCapture = () => {
       gap: '8px'
     },
     submitButtonDisabled: {
-      backgroundColor: '#9ca3af',
+      backgroundColor: t.textDim,
       cursor: 'not-allowed'
     },
     // Alerts
@@ -2204,13 +2204,13 @@ const DefectCapture = () => {
     },
     alertError: {
       backgroundColor: t.errorBg,
-      color: '#B00020',
-      border: '1px solid #fecaca'
+      color: t.errorFg,
+      border: `1px solid ${t.errorBorder}`
     },
     alertSuccess: {
-      backgroundColor: '#f0fdf4',
-      color: '#16a34a',
-      border: '1px solid #bbf7d0'
+      backgroundColor: t.successBg,
+      color: t.successFg,
+      border: `1px solid ${t.successBorder}`
     },
     settingsButton: {
       padding: '8px',
@@ -2309,20 +2309,20 @@ const DefectCapture = () => {
       gap: '4px'
     },
     specButtonOk: {
-      backgroundColor: '#d1fae5',
-      color: '#065f46'
+      backgroundColor: t.successBg,
+      color: t.successFg
     },
     specButtonNok: {
       backgroundColor: t.errorBg,
-      color: t.error
+      color: t.errorFg
     },
     specButtonSelected: {
       transform: 'scale(1.02)',
       boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
     },
     criticalBadge: {
-      backgroundColor: '#fecaca',
-      color: t.error,
+      backgroundColor: t.errorBg,
+      color: t.errorFg,
       padding: '2px 6px',
       borderRadius: '4px',
       fontSize: '10px',
@@ -2627,7 +2627,7 @@ const DefectCapture = () => {
               autoFocus
               style={{
                 ...styles.fieldInput,
-                border: `1px solid ${!lotNumber.trim() ? '#f87171' : t.border}`,
+                border: `1px solid ${!lotNumber.trim() ? t.error : t.border}`,
                 fontSize: '16px',
                 padding: '12px'
               }}
@@ -2697,7 +2697,7 @@ const DefectCapture = () => {
             <select
               style={{
                 ...styles.fieldSelect,
-                border: `1px solid ${!selectedDepartment ? '#f87171' : t.border}`
+                border: `1px solid ${!selectedDepartment ? t.error : t.border}`
               }}
               value={selectedDepartment?.id || ''}
               onChange={(e) => setSelectedDepartment(departments.find(d => d.id === parseInt(e.target.value)) || null)}
