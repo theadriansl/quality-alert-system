@@ -14,14 +14,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
-// ─── Color palette (using theme-aware getter) ───────────────────────────────
-// NOTE: These are used for charts where we need consistent colors across themes
+// ─── Color palette (theme-aware) ─────────────────────────────────────────────
 const getColors = (t) => ({
-  blue:    t.primary || t.accent,
+  blue:    t.primary,
   green:   t.success,
   red:     t.error,
   orange:  t.warning,
-  purple:  '#8b5cf6', // Chart accent - no theme equivalent
+  purple:  t.accent,
   cyan:    t.accent,
   gray:    t.textMuted,
   teal:    t.success,
@@ -29,33 +28,19 @@ const getColors = (t) => ({
   indigo:  t.primary,
 });
 
-// Static fallback for non-component usage
-const C = {
-  blue:    'var(--primary, #0072CE)',
-  green:   'var(--success, #16a34a)',
-  red:     'var(--error, #ef4444)',
-  orange:  'var(--warning, #f59e0b)',
-  purple:  '#8b5cf6',
-  cyan:    'var(--accent, #06b6d4)',
-  gray:    'var(--text-muted, #6b7280)',
-  teal:    'var(--success, #14b8a6)',
-  pink:    'var(--error, #ec4899)',
-  indigo:  'var(--primary, #6366f1)',
-};
+const getSevColors = (t) => ({
+  'Crítico': t.error,
+  'ALTA':    t.warning,
+  'Mayor':   t.primary,
+  'Menor':   t.success,
+});
 
-const SEV_COLORS = {
-  'Crítico': C.red,
-  'ALTA':    C.orange,
-  'Mayor':   C.blue,
-  'Menor':   C.green,
-};
-
-const STATUS_COLORS = {
-  'EMITIDO':    C.blue,
-  'RESPONDIDO': C.orange,
-  'CERRADO':    C.green,
-  'RECHAZADO':  C.gray,
-};
+const getStatusColors = (t) => ({
+  'EMITIDO':    t.primary,
+  'RESPONDIDO': t.warning,
+  'CERRADO':    t.success,
+  'RECHAZADO':  t.textMuted,
+});
 
 // ─── Helper sub-components ────────────────────────────────────────────────────
 
@@ -135,7 +120,9 @@ const Card = ({ children, style }) => {
 };
 
 const SevBadge = ({ sev }) => {
-  const color = SEV_COLORS[sev] || C.gray;
+  const { theme: t } = useTheme();
+  const SEV_COLORS = getSevColors(t);
+  const color = SEV_COLORS[sev] || t.textMuted;
   return (
     <span style={{
       display: 'inline-block',
@@ -151,7 +138,9 @@ const SevBadge = ({ sev }) => {
 };
 
 const StatusBadge = ({ status }) => {
-  const color = STATUS_COLORS[status] || C.gray;
+  const { theme: t } = useTheme();
+  const STATUS_COLORS = getStatusColors(t);
+  const color = STATUS_COLORS[status] || t.textMuted;
   return (
     <span style={{
       display: 'inline-block',
@@ -167,6 +156,7 @@ const StatusBadge = ({ status }) => {
 
 const SlaBar = ({ value, sla, label }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
   const pct = sla ? Math.min(100, (value / sla) * 100) : 0;
   const color = pct > 100 ? C.red : pct > 80 ? C.orange : C.green;
   return (
@@ -215,9 +205,12 @@ const CustomTooltip = ({ active, payload, label }) => {
 // ─── TAB 1: Volumen & Flujo ───────────────────────────────────────────────────
 const TabVolumen = ({ data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
+  const SEV_COLORS = getSevColors(t);
+  const STATUS_COLORS = getStatusColors(t);
   const volData = (data.volByMonth || []).map(r => ({ ...r, month: formatMonth(r.month) }));
-  const pieStatus = (data.byStatus || []).map(r => ({ name: r.status, value: r.count, fill: STATUS_COLORS[r.status] || C.gray }));
-  const pieSev = (data.bySeverity || []).map(r => ({ name: r.severity, value: r.count, fill: SEV_COLORS[r.severity] || C.gray }));
+  const pieStatus = (data.byStatus || []).map(r => ({ name: r.status, value: r.count, fill: STATUS_COLORS[r.status] || t.textMuted }));
+  const pieSev = (data.bySeverity || []).map(r => ({ name: r.severity, value: r.count, fill: SEV_COLORS[r.severity] || t.textMuted }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -320,6 +313,8 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const SlaConfigModal = ({ slaConfig, onClose, onSaved }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
+  const SEV_COLORS = getSevColors(t);
   const [rows, setRows] = useState(() =>
     slaConfig.map(sc => ({ ...sc, response_hours: String(sc.response_hours), closure_hours: String(sc.closure_hours) }))
   );
@@ -440,6 +435,8 @@ const SlaConfigModal = ({ slaConfig, onClose, onSaved }) => {
 // ─── TAB 2: Tiempo & Respuesta ────────────────────────────────────────────────
 const TabTiempo = ({ data, onEditSLA }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
+  const SEV_COLORS = getSevColors(t);
   const distRows = data.responseDistribution || [];
   const slaRows = data.slaBySeverity || [];
   const tb = data.topBar || {};
@@ -449,7 +446,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
     name: r.severity,
     respOk: r.respOk, respLate: r.respLate,
     closeOk: r.closeOk, closeLate: r.closeLate,
-    fill: SEV_COLORS[r.severity] || C.gray,
+    fill: SEV_COLORS[r.severity] || t.textMuted,
   }));
 
   return (
@@ -503,9 +500,9 @@ const TabTiempo = ({ data, onEditSLA }) => {
                       <span style={{ fontSize: '12px', fontWeight: '600', color: SEV_COLORS[r.name] || C.blue }}>{r.name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ fontSize: '11px', color: t.textMuted }}>
-                          <span style={{ color: C.green, fontWeight: '600' }}>✓ {r.respOk || 0}</span>
+                          <span style={{ color: C.green, fontWeight: '600' }}>{r.respOk || 0}</span>
                           {' / '}
-                          <span style={{ color: C.red, fontWeight: '600' }}>✗ {r.respLate || 0}</span>
+                          <span style={{ color: C.red, fontWeight: '600' }}>{r.respLate || 0}</span>
                         </span>
                         <span style={{ fontSize: '14px', fontWeight: '800', color, minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
                       </div>
@@ -534,9 +531,9 @@ const TabTiempo = ({ data, onEditSLA }) => {
                       <span style={{ fontSize: '12px', fontWeight: '600', color: SEV_COLORS[r.name] || C.blue }}>{r.name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ fontSize: '11px', color: t.textMuted }}>
-                          <span style={{ color: C.green, fontWeight: '600' }}>✓ {r.closeOk || 0}</span>
+                          <span style={{ color: C.green, fontWeight: '600' }}>{r.closeOk || 0}</span>
                           {' / '}
-                          <span style={{ color: C.red, fontWeight: '600' }}>✗ {r.closeLate || 0}</span>
+                          <span style={{ color: C.red, fontWeight: '600' }}>{r.closeLate || 0}</span>
                         </span>
                         <span style={{ fontSize: '14px', fontWeight: '800', color, minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
                       </div>
@@ -584,6 +581,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
 // ─── TAB 3: Calidad de Respuesta ──────────────────────────────────────────────
 const TabCalidad = ({ data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
   const q = data.quality || {};
   const total = q.total || 1;
 
@@ -707,6 +705,7 @@ const TabCalidad = ({ data }) => {
 // ─── TAB 4: Operación Interna ─────────────────────────────────────────────────
 const TabOperacion = ({ data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
   const deptData = (data.byDept || []).map(r => ({
     name: r.department.length > 14 ? r.department.slice(0, 12) + '…' : r.department,
     fullName: r.department,
@@ -823,6 +822,7 @@ const TabOperacion = ({ data }) => {
 // ─── TAB 5: Cliente / Proyecto ─────────────────────────────────────────────────
 const TabCliente = ({ data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
   const clientData = (data.byClient || []).map(r => ({
     name: r.client.length > 20 ? r.client.slice(0, 18) + '…' : r.client,
     fullName: r.client,
@@ -915,6 +915,9 @@ const TabCliente = ({ data }) => {
 // ─── TAB 6: Riesgo & Alertas ──────────────────────────────────────────────────
 const TabRiesgo = ({ data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
+  const SEV_COLORS = getSevColors(t);
+  const STATUS_COLORS = getStatusColors(t);
   const navigate = useNavigate();
   const riskItems = data.riskItems || [];
 
@@ -1014,7 +1017,7 @@ const TabRiesgo = ({ data }) => {
           items={riskItems.filter(r => r.overdueResponse)}
           renderItem={(item, i) => (
             <RiskRow key={i} item={item}
-              extra={<span style={{ color: C.red }}>⏰ {formatHours(item.ageHours)} / SLA {item.slaResponse}h</span>}
+              extra={<span style={{ color: C.red }}>{formatHours(item.ageHours)} / SLA {item.slaResponse}h</span>}
             />
           )}
         />
@@ -1051,6 +1054,9 @@ const TabRiesgo = ({ data }) => {
 // ─── ALWAYS-VISIBLE REPORTS TABLE ─────────────────────────────────────────────
 const QARTable = ({ data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
+  const SEV_COLORS = getSevColors(t);
+  const STATUS_COLORS = getStatusColors(t);
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [sevFilter, setSevFilter] = useState('');
@@ -1148,7 +1154,7 @@ const QARTable = ({ data }) => {
                   <td style={{ padding: '8px 10px', color: r.closedAt ? C.green : t.textMuted, whiteSpace: 'nowrap' }}>{formatDate(r.closedAt)}</td>
                   <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
                     {overdue ? (
-                      <span style={{ color: C.red, fontWeight: '700', fontSize: '10px' }}>⏰ VENCIDA</span>
+                      <span style={{ color: C.red, fontWeight: '700', fontSize: '10px' }}>VENCIDA</span>
                     ) : r.status === 'CERRADO' ? (
                       <span style={{ color: C.green, fontSize: '10px' }}>OK</span>
                     ) : r.slaResponse ? (
@@ -1189,34 +1195,34 @@ const STORAGE_KEY = 'qar-custom-dashboard-v1';
 // Catálogo de widgets disponibles
 const WIDGET_CATALOG = [
   // ── KPIs numéricos ─────────────────────────────────────────────────────────
-  { id: 'kpi-total',     cat: 'KPIs',   label: 'Total QARs',            size: 'sm', hasDot: true },
-  { id: 'kpi-activos',   cat: 'KPIs',   label: 'QARs Activas',          size: 'sm', icon: '🔄' },
-  { id: 'kpi-cerrados',  cat: 'KPIs',   label: 'QARs Cerradas',         size: 'sm', hasDot: true },
-  { id: 'kpi-rechazados',cat: 'KPIs',   label: 'Rechazadas',            size: 'sm', icon: '🚫' },
-  { id: 'kpi-alta-sev',  cat: 'KPIs',   label: 'Alta Severidad',        size: 'sm', hasDot: true },
-  { id: 'kpi-vencidas',  cat: 'KPIs',   label: 'Vencidas sin respuesta',size: 'sm', icon: '⏰' },
-  { id: 'kpi-sla-resp',  cat: 'KPIs',   label: 'SLA Respuesta %',       size: 'sm', hasDot: true },
-  { id: 'kpi-sla-cierre',cat: 'KPIs',   label: 'SLA Cierre %',          size: 'sm', hasDot: true },
-  { id: 'kpi-avg-resp',  cat: 'KPIs',   label: 'T. Promedio Respuesta', size: 'sm', icon: '📨' },
-  { id: 'kpi-avg-cierre',cat: 'KPIs',   label: 'T. Promedio Cierre',    size: 'sm', icon: '📦' },
-  { id: 'kpi-no-val',    cat: 'KPIs',   label: 'Sin validación',        size: 'sm', hasDot: true },
-  { id: 'kpi-root-cause',cat: 'KPIs',   label: '% Con Causa Raíz',      size: 'sm', icon: '🔍' },
+  { id: 'kpi-total',     cat: 'KPIs',   label: 'Total QARs',            size: 'sm' },
+  { id: 'kpi-activos',   cat: 'KPIs',   label: 'QARs Activas',          size: 'sm' },
+  { id: 'kpi-cerrados',  cat: 'KPIs',   label: 'QARs Cerradas',         size: 'sm' },
+  { id: 'kpi-rechazados',cat: 'KPIs',   label: 'Rechazadas',            size: 'sm' },
+  { id: 'kpi-alta-sev',  cat: 'KPIs',   label: 'Alta Severidad',        size: 'sm' },
+  { id: 'kpi-vencidas',  cat: 'KPIs',   label: 'Vencidas sin respuesta',size: 'sm' },
+  { id: 'kpi-sla-resp',  cat: 'KPIs',   label: 'SLA Respuesta %',       size: 'sm' },
+  { id: 'kpi-sla-cierre',cat: 'KPIs',   label: 'SLA Cierre %',          size: 'sm' },
+  { id: 'kpi-avg-resp',  cat: 'KPIs',   label: 'T. Promedio Respuesta', size: 'sm' },
+  { id: 'kpi-avg-cierre',cat: 'KPIs',   label: 'T. Promedio Cierre',    size: 'sm' },
+  { id: 'kpi-no-val',    cat: 'KPIs',   label: 'Sin validación',        size: 'sm' },
+  { id: 'kpi-root-cause',cat: 'KPIs',   label: '% Con Causa Raíz',      size: 'sm' },
   // ── Gráficas ───────────────────────────────────────────────────────────────
-  { id: 'chart-vol-mes', cat: 'Gráficas', label: 'Tendencia mensual',     size: 'lg', icon: '📈' },
-  { id: 'chart-estado',  cat: 'Gráficas', label: 'Pie por Estado',        size: 'md', icon: '🥧' },
-  { id: 'chart-sev',     cat: 'Gráficas', label: 'Pie por Severidad',     size: 'md', icon: '🥧' },
-  { id: 'chart-trigger', cat: 'Gráficas', label: 'Tipo de Disparo',       size: 'md', icon: '📡' },
-  { id: 'chart-dept',    cat: 'Gráficas', label: 'Barras por Depto.',     size: 'lg', icon: '🏭' },
-  { id: 'chart-resp',    cat: 'Gráficas', label: 'Carga por Responsable', size: 'lg', icon: '👤' },
-  { id: 'chart-cliente', cat: 'Gráficas', label: 'QARs por Cliente',      size: 'lg', icon: '🤝' },
-  { id: 'chart-sla-sev', cat: 'Gráficas', label: 'SLA Compliance barras', size: 'lg', icon: '🎯' },
+  { id: 'chart-vol-mes', cat: 'Gráficas', label: 'Tendencia mensual',     size: 'lg' },
+  { id: 'chart-estado',  cat: 'Gráficas', label: 'Pie por Estado',        size: 'md' },
+  { id: 'chart-sev',     cat: 'Gráficas', label: 'Pie por Severidad',     size: 'md' },
+  { id: 'chart-trigger', cat: 'Gráficas', label: 'Tipo de Disparo',       size: 'md' },
+  { id: 'chart-dept',    cat: 'Gráficas', label: 'Barras por Depto.',     size: 'lg' },
+  { id: 'chart-resp',    cat: 'Gráficas', label: 'Carga por Responsable', size: 'lg' },
+  { id: 'chart-cliente', cat: 'Gráficas', label: 'QARs por Cliente',      size: 'lg' },
+  { id: 'chart-sla-sev', cat: 'Gráficas', label: 'SLA Compliance barras', size: 'lg' },
   // ── Operación & Riesgo ─────────────────────────────────────────────────────
-  { id: 'risk-score',    cat: 'Riesgo',   label: 'Índice de Riesgo',      size: 'md', icon: '🚨' },
-  { id: 'risk-vencidas', cat: 'Riesgo',   label: 'Lista Vencidas',        size: 'lg', hasDot: true },
-  { id: 'risk-alta-sev', cat: 'Riesgo',   label: 'Alta Sev. Activas',     size: 'lg', hasDot: true },
-  { id: 'quality-val',   cat: 'Calidad',  label: 'Estado de Validación',  size: 'md', hasDot: true },
-  { id: 'quality-docs',  cat: 'Calidad',  label: 'Completitud docs.',     size: 'md', icon: '📄' },
-  { id: 'sla-config',    cat: 'Config',   label: 'Config. SLA vigente',   size: 'md', icon: '⚙️' },
+  { id: 'risk-score',    cat: 'Riesgo',   label: 'Índice de Riesgo',      size: 'md' },
+  { id: 'risk-vencidas', cat: 'Riesgo',   label: 'Lista Vencidas',        size: 'lg' },
+  { id: 'risk-alta-sev', cat: 'Riesgo',   label: 'Alta Sev. Activas',     size: 'lg' },
+  { id: 'quality-val',   cat: 'Calidad',  label: 'Estado de Validación',  size: 'md' },
+  { id: 'quality-docs',  cat: 'Calidad',  label: 'Completitud docs.',     size: 'md' },
+  { id: 'sla-config',    cat: 'Config',   label: 'Config. SLA vigente',   size: 'md' },
 ];
 
 const DEFAULT_WIDGETS = [
@@ -1227,6 +1233,9 @@ const DEFAULT_WIDGETS = [
 // Renders a single widget given its id and the dashboard data
 const WidgetRenderer = ({ id, data, onEditSLA }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
+  const SEV_COLORS = getSevColors(t);
+  const STATUS_COLORS = getStatusColors(t);
   const navigate = useNavigate();
   const tb = data.topBar || {};
   const q  = data.quality || {};
@@ -1236,25 +1245,25 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
   const pctRootCause  = q.total > 0 ? Math.round((q.withRootCause / q.total) * 100) : 0;
 
   // ── KPIs numéricos ─────────────────────────────────────────────────────────
-  if (id === 'kpi-total')      return <KpiTile label="Total QARs"             value={tb.total}               sub="en el período"            color={C.blue}   icon="📋" />;
-  if (id === 'kpi-activos')    return <KpiTile label="QARs Activas"            value={tb.activos}             sub="Emitidas + Respondidas"   color={C.orange} icon="🔄" />;
-  if (id === 'kpi-cerrados')   return <KpiTile label="QARs Cerradas"           value={tb.cerrados}            sub="en el período"            color={C.green}  icon="✅" />;
-  if (id === 'kpi-rechazados') return <KpiTile label="Rechazadas"              value={tb.rechazados}          sub="no aplica corrección"     color={C.gray}   icon="🚫" />;
-  if (id === 'kpi-alta-sev')   return <KpiTile label="Alta Severidad"          value={tb.altaSeveridad}       sub="Crítico + ALTA"           color={C.red}    icon="🔴" />;
-  if (id === 'kpi-vencidas')   return <KpiTile label="Vencidas sin respuesta"  value={tb.vencidasSinRespuesta} sub="fuera de SLA"            color={tb.vencidasSinRespuesta > 0 ? C.red : C.green} icon="⏰" />;
-  if (id === 'kpi-sla-resp')   return <KpiTile label="SLA Respuesta"           value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" color={slaRespColor} icon="⚡" />;
-  if (id === 'kpi-sla-cierre') return <KpiTile label="SLA Cierre"              value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'}   sub="dentro de tiempo" color={slaCloseColor} icon="🔒" />;
-  if (id === 'kpi-avg-resp')   return <KpiTile label="T. Prom. Respuesta"      value={formatHours(tb.avgResponseHours)} sub="desde emisión a respuesta" color={C.purple} icon="📨" />;
-  if (id === 'kpi-avg-cierre') return <KpiTile label="T. Prom. Cierre"         value={formatHours(tb.avgClosureHours)}  sub="desde emisión a cierre"    color={C.teal}   icon="📦" />;
-  if (id === 'kpi-no-val')     return <KpiTile label="Sin Validación"          value={tb.closedNoValidation}  sub="cierres sin validar"      color={tb.closedNoValidation > 0 ? C.orange : C.green} icon="⚠️" />;
-  if (id === 'kpi-root-cause') return <KpiTile label="% Con Causa Raíz"        value={`${pctRootCause}%`}     sub="documentación completa"   color={pctRootCause >= 80 ? C.green : C.red} icon="🔍" />;
+  if (id === 'kpi-total')      return <KpiTile label="Total QARs"             value={tb.total}               sub="en el período"            color={C.blue}   alertDot={C.blue} />;
+  if (id === 'kpi-activos')    return <KpiTile label="QARs Activas"            value={tb.activos}             sub="Emitidas + Respondidas"   color={C.orange} alertDot={C.orange} />;
+  if (id === 'kpi-cerrados')   return <KpiTile label="QARs Cerradas"           value={tb.cerrados}            sub="en el período"            color={C.green}  alertDot={C.green} />;
+  if (id === 'kpi-rechazados') return <KpiTile label="Rechazadas"              value={tb.rechazados}          sub="no aplica corrección"     color={C.gray}   alertDot={C.gray} />;
+  if (id === 'kpi-alta-sev')   return <KpiTile label="Alta Severidad"          value={tb.altaSeveridad}       sub="Crítico + ALTA"           color={C.red}    alertDot={C.red} />;
+  if (id === 'kpi-vencidas')   return <KpiTile label="Vencidas sin respuesta"  value={tb.vencidasSinRespuesta} sub="fuera de SLA"            color={tb.vencidasSinRespuesta > 0 ? C.red : C.green} alertDot={tb.vencidasSinRespuesta > 0 ? C.red : C.green} />;
+  if (id === 'kpi-sla-resp')   return <KpiTile label="SLA Respuesta"           value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" color={slaRespColor} alertDot={slaRespColor} />;
+  if (id === 'kpi-sla-cierre') return <KpiTile label="SLA Cierre"              value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'}   sub="dentro de tiempo" color={slaCloseColor} alertDot={slaCloseColor} />;
+  if (id === 'kpi-avg-resp')   return <KpiTile label="T. Prom. Respuesta"      value={formatHours(tb.avgResponseHours)} sub="desde emisión a respuesta" color={C.purple} alertDot={C.purple} />;
+  if (id === 'kpi-avg-cierre') return <KpiTile label="T. Prom. Cierre"         value={formatHours(tb.avgClosureHours)}  sub="desde emisión a cierre"    color={C.teal}   alertDot={C.teal} />;
+  if (id === 'kpi-no-val')     return <KpiTile label="Sin Validación"          value={tb.closedNoValidation}  sub="cierres sin validar"      color={tb.closedNoValidation > 0 ? C.orange : C.green} alertDot={tb.closedNoValidation > 0 ? C.orange : C.green} />;
+  if (id === 'kpi-root-cause') return <KpiTile label="% Con Causa Raíz"        value={`${pctRootCause}%`}     sub="documentación completa"   color={pctRootCause >= 80 ? C.green : C.red} alertDot={pctRootCause >= 80 ? C.green : C.red} />;
 
   // ── Gráficas ───────────────────────────────────────────────────────────────
   if (id === 'chart-vol-mes') {
     const volData = (data.volByMonth || []).map(r => ({ ...r, month: formatMonth(r.month) }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📈 Tendencia mensual</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Tendencia mensual</div>
         <ResponsiveContainer width="100%" height={180}>
           <ComposedChart data={volData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1274,7 +1283,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const pieStatus = (data.byStatus || []).map(r => ({ name: r.status, value: r.count, fill: STATUS_COLORS[r.status] || C.gray }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>🥧 Por Estado</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>Por Estado</div>
         <ResponsiveContainer width="100%" height={160}>
           <PieChart>
             <Pie data={pieStatus} dataKey="value" cx="50%" cy="50%" outerRadius={58} label={({ name, value }) => `${name}: ${value}`} labelLine={false} fontSize={9}>
@@ -1298,7 +1307,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const pieSev = (data.bySeverity || []).map(r => ({ name: r.severity, value: r.count, fill: SEV_COLORS[r.severity] || C.gray }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>🥧 Por Severidad</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>Por Severidad</div>
         <ResponsiveContainer width="100%" height={160}>
           <PieChart>
             <Pie data={pieSev} dataKey="value" cx="50%" cy="50%" outerRadius={58} label={({ name, value }) => `${name}: ${value}`} labelLine={false} fontSize={9}>
@@ -1322,7 +1331,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const total = (data.byTrigger || []).reduce((s, r) => s + r.count, 0);
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📡 Tipo de Disparo</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Tipo de Disparo</div>
         {(data.byTrigger || []).map((r, i) => {
           const pct = total > 0 ? Math.round((r.count / total) * 100) : 0;
           const color = r.trigger === 'threshold' ? C.red : C.blue;
@@ -1349,7 +1358,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🏭 QARs por Departamento</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>QARs por Departamento</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={deptData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1373,7 +1382,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>👤 Carga por Responsable</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Carga por Responsable</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={respData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1396,7 +1405,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🤝 QARs por Cliente</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>QARs por Cliente</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={clientData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1418,7 +1427,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🎯 SLA Compliance por Severidad</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>SLA Compliance por Severidad</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={slaData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1445,7 +1454,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const color        = score >= 70 ? C.red  : score >= 40 ? C.orange : C.green;
     return (
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>🚨 Índice de Riesgo QAR</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>Índice de Riesgo QAR</div>
         <div style={{ fontSize: '52px', fontWeight: '900', color, lineHeight: 1 }}>{score}</div>
         <div style={{ marginTop: '6px', marginBottom: '10px' }}>
           <span style={{ display: 'inline-block', padding: '3px 14px', borderRadius: '12px', backgroundColor: color + '22', border: `1px solid ${color}`, fontSize: '12px', fontWeight: '700', color }}>{label}</span>
@@ -1471,10 +1480,10 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     return (
       <div>
         <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
-          🔴 Vencidas sin Respuesta <span style={{ color: C.red }}>({vencidas.length})</span>
+          Vencidas sin Respuesta <span style={{ color: C.red }}>({vencidas.length})</span>
         </div>
         {vencidas.length === 0 ? (
-          <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '12px' }}>✓ Sin alertas vencidas</div>
+          <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '12px' }}>Sin alertas vencidas</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '180px', overflowY: 'auto' }}>
             {vencidas.map((r, i) => (
@@ -1499,10 +1508,10 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     return (
       <div>
         <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
-          🟠 Alta Sev. Activas <span style={{ color: C.orange }}>({alta.length})</span>
+          Alta Sev. Activas <span style={{ color: C.orange }}>({alta.length})</span>
         </div>
         {alta.length === 0 ? (
-          <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '12px' }}>✓ Sin alertas críticas activas</div>
+          <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '12px' }}>Sin alertas críticas activas</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '180px', overflowY: 'auto' }}>
             {alta.map((r, i) => (
@@ -1526,11 +1535,11 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
   if (id === 'quality-val') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>✅ Estado de Validación</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Estado de Validación</div>
         {[
           { label: 'Aprobadas',    value: q.validatedApproved, color: C.green },
           { label: 'Rechazadas',   value: q.validatedRejected, color: C.red },
-          { label: '⚠️ Sin validar',  value: q.closedNoVal,       color: C.orange },
+          { label: 'Sin validar',  value: q.closedNoVal,       color: C.orange },
         ].map((r, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', marginBottom: '6px', backgroundColor: t.bgPanel, borderRadius: '6px', borderLeft: `3px solid ${r.color}` }}>
             <span style={{ fontSize: '11px', color: t.text }}>{r.label}</span>
@@ -1549,7 +1558,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     ];
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📄 Completitud de Documentación</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Completitud de Documentación</div>
         {bars.map((r, i) => {
           const pct = Math.round((r.value / total) * 100);
           return (
@@ -1572,7 +1581,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text }}>⚙️ Config. SLA Vigente</div>
+          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text }}>Config. SLA Vigente</div>
           {onEditSLA && (
             <button onClick={onEditSLA} style={{ padding: '4px 10px', fontSize: '11px', fontWeight: '600', color: 'white', backgroundColor: C.blue, border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
               Editar
@@ -1613,6 +1622,7 @@ const migrateSelected = (raw) => {
 // ─── Widget sortable wrapper (DnD) ───────────────────────────────────────────
 const SortableWidget = ({ id, size, data, editMode, onRemove, onEditSLA }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
   const meta = WIDGET_CATALOG.find(w => w.id === id);
   const resolvedSize = size || meta?.size || 'sm';
   const isKpi = resolvedSize === 'sm';
@@ -1694,6 +1704,7 @@ const SortableWidget = ({ id, size, data, editMode, onRemove, onEditSLA }) => {
 // ─── Ghost (overlay mientras se arrastra) ────────────────────────────────────
 const DragGhost = ({ id, data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
   const meta = WIDGET_CATALOG.find(w => w.id === id);
   const isKpi = meta?.size === 'sm';
   return (
@@ -1718,6 +1729,7 @@ const DragGhost = ({ id, data }) => {
 // ─── Tab principal ─────────────────────────────────────────────────────────
 const TabPersonalizado = ({ data, onEditSLA }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
 
   const [selected, setSelected] = useState(() => {
     try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? migrateSelected(JSON.parse(raw)) : DEFAULT_WIDGETS.map(id => ({ id, size: WIDGET_CATALOG.find(c => c.id === id)?.size || 'sm' })); }
@@ -1761,7 +1773,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '10px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>⚙️ Mi Dashboard personalizado</div>
+          <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>Mi Dashboard personalizado</div>
           <div style={{ fontSize: '11px', color: t.textMuted }}>
             {selected.length} widget{selected.length !== 1 ? 's' : ''} activo{selected.length !== 1 ? 's' : ''}
             {!editMode && selected.length > 0 && <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>}
@@ -1774,7 +1786,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
             <button onClick={clearAll} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${C.red}44`, backgroundColor: C.red + '12', color: C.red, cursor: 'pointer' }}>Limpiar</button>
           </>}
           <button onClick={() => setEditMode(e => !e)} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: editMode ? `2px solid ${C.blue}` : `1px solid ${t.border}`, backgroundColor: editMode ? C.blue + '18' : t.bgPanel, color: editMode ? C.blue : t.text, cursor: 'pointer' }}>
-            {editMode ? '✓ Listo' : '✏️ Personalizar'}
+            {editMode ? 'Listo' : 'Personalizar'}
           </button>
         </div>
       </div>
@@ -1782,9 +1794,11 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
       {/* Grid */}
       {selected.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.textMuted }}>
-          <div style={{ fontSize: '32px', marginBottom: '10px' }}>📊</div>
+          <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: t.accent }} />
+          </div>
           <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>Tu dashboard está vacío</div>
-          <div style={{ fontSize: '12px', marginTop: '6px' }}>Haz clic en <strong>✏️ Personalizar</strong> para agregar widgets</div>
+          <div style={{ fontSize: '12px', marginTop: '6px' }}>Haz clic en <strong>Personalizar</strong> para agregar widgets</div>
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -1821,7 +1835,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
                         const active = selected.some(s => s.id === item.id);
                         return (
                           <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? C.blue : t.border}`, backgroundColor: active ? C.blue + '18' : t.bgPanel, color: active ? C.blue : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '700' : '500' }}>
-                            <span style={{ fontSize: '14px' }}>{item.icon}</span><span>{item.label}</span>{active && <span style={{ fontSize: '11px', fontWeight: '900' }}>✓</span>}
+                            <span>{item.label}</span>{active && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: C.blue, marginLeft: 4 }} />}
                           </button>
                         );
                       })}
@@ -1862,6 +1876,9 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
 // ─── TAB 0: Resumen ───────────────────────────────────────────────────────────
 const TabResumen = ({ data }) => {
   const { theme: t } = useTheme();
+  const C = getColors(t);
+  const SEV_COLORS = getSevColors(t);
+  const STATUS_COLORS = getStatusColors(t);
   const bySev      = data.bySeverity || [];
   const bySt       = data.byStatus   || [];
   const volByMonth = data.volByMonth  || [];
@@ -1946,6 +1963,8 @@ const TabResumen = ({ data }) => {
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const QARDashboardComponent = ({ data, onRefresh }) => {
+  const { theme: t } = useTheme();
+  const C = getColors(t);
   const { t: tr, language, changeLanguage } = useLanguage();
   const [tab, setTab] = useState(() => localStorage.getItem('qar-dashboard-tab') || 'resumen');
   const [showSlaModal, setShowSlaModal] = useState(false);
@@ -1966,14 +1985,14 @@ const QARDashboardComponent = ({ data, onRefresh }) => {
   const tb = data.topBar || {};
 
   const TABS = [
-    { id: 'resumen',       label: 'Resumen',                hasDot: true },
-    { id: 'volumen',       label: 'Volumen & Flujo',        icon: '📊' },
-    { id: 'tiempo',        label: 'Tiempo & Respuesta',     icon: '⏱️' },
-    { id: 'calidad',       label: 'Calidad de Respuesta',   hasDot: true },
-    { id: 'operacion',     label: 'Operación Interna',      icon: '🏭' },
-    { id: 'cliente',       label: 'Cliente / Proyecto',     icon: '🤝' },
-    { id: 'riesgo',        label: 'Riesgo & Alertas',       icon: '🚨' },
-    { id: 'personalizado', label: 'Mi Dashboard',           icon: '⚙️' },
+    { id: 'resumen',       label: 'Resumen' },
+    { id: 'volumen',       label: 'Volumen & Flujo' },
+    { id: 'tiempo',        label: 'Tiempo & Respuesta' },
+    { id: 'calidad',       label: 'Calidad de Respuesta' },
+    { id: 'operacion',     label: 'Operación Interna' },
+    { id: 'cliente',       label: 'Cliente / Proyecto' },
+    { id: 'riesgo',        label: 'Riesgo & Alertas' },
+    { id: 'personalizado', label: 'Mi Dashboard' },
   ];
 
   // Top-bar KPIs
@@ -1984,13 +2003,13 @@ const QARDashboardComponent = ({ data, onRefresh }) => {
     <div>
       {/* Top KPI bar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <KpiTile label="Total QARs" value={tb.total} sub="período seleccionado" color={C.blue} icon="📋" />
-        <KpiTile label="Activas" value={tb.activos} sub="Emitidas + Respondidas" color={C.orange} icon="🔄" />
-        <KpiTile label="Cerradas" value={tb.cerrados} sub="en período" color={C.green} icon="✅" />
-        <KpiTile label="Alta Severidad" value={tb.altaSeveridad} sub="Crítico + ALTA" color={C.red} icon="🔴" />
-        <KpiTile label="SLA Respuesta" value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" color={slaRespColor} icon="⚡" />
-        <KpiTile label="SLA Cierre" value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'} sub="dentro de tiempo" color={slaCloseColor} icon="🔒" />
-        <KpiTile label="Vencidas" value={tb.vencidasSinRespuesta} sub="sin respuesta" color={tb.vencidasSinRespuesta > 0 ? C.red : C.green} icon="⏰" />
+        <KpiTile label="Total QARs" value={tb.total} sub="período seleccionado" color={C.blue} alertDot={C.blue} />
+        <KpiTile label="Activas" value={tb.activos} sub="Emitidas + Respondidas" color={C.orange} alertDot={C.orange} />
+        <KpiTile label="Cerradas" value={tb.cerrados} sub="en período" color={C.green} alertDot={C.green} />
+        <KpiTile label="Alta Severidad" value={tb.altaSeveridad} sub="Crítico + ALTA" color={C.red} alertDot={C.red} />
+        <KpiTile label="SLA Respuesta" value={tb.slaResponsePct != null ? `${tb.slaResponsePct}%` : '—'} sub="dentro de tiempo" color={slaRespColor} alertDot={slaRespColor} />
+        <KpiTile label="SLA Cierre" value={tb.slaClosurePct != null ? `${tb.slaClosurePct}%` : '—'} sub="dentro de tiempo" color={slaCloseColor} alertDot={slaCloseColor} />
+        <KpiTile label="Vencidas" value={tb.vencidasSinRespuesta} sub="sin respuesta" color={tb.vencidasSinRespuesta > 0 ? C.red : C.green} alertDot={tb.vencidasSinRespuesta > 0 ? C.red : C.green} />
       </div>
 
       {/* Tabs */}
