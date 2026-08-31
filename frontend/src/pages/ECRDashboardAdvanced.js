@@ -29,8 +29,8 @@ const TABS = [
   { id: 'calidad',      label: 'Calidad & Riesgo' },
   { id: 'proceso',      label: 'Proceso & Auditoría' },
   { id: 'cliente',      label: 'Cliente & Negocio' },
-  { id: 'personalizado',label: '⚙️ Mi Dashboard' },
-  { id: 'alertas',      label: '🚨 Alertas' },
+  { id: 'personalizado',label: 'Mi Dashboard' },
+  { id: 'alertas',      label: 'Alertas' },
 ];
 
 const PRESETS = [
@@ -57,33 +57,33 @@ const WIDGET_SIZES = [
 
 const ALL_WIDGETS = [
   // Resumen
-  { id: 'w1',  type: 'kpi_total',            title: 'Total ECRs',          icon: '📋', category: 'Resumen',             defaultSize: 'sm' },
-  { id: 'w2',  type: 'kpi_open',             title: 'Abiertos',            icon: '🕐', category: 'Resumen',             defaultSize: 'sm' },
-  { id: 'w3',  type: 'kpi_approved',         title: 'Aprobados',           icon: '✅', category: 'Resumen',             defaultSize: 'sm' },
-  { id: 'w4',  type: 'kpi_rejected',         title: 'No Adoptables',       icon: '❌', category: 'Resumen',             defaultSize: 'sm' },
-  { id: 'w5',  type: 'kpi_avg_time',         title: 'Tiempo Promedio',     icon: '⏱️', category: 'Resumen',             defaultSize: 'sm' },
-  { id: 'w6',  type: 'kpi_effectiveness',    title: 'Efectividad',         icon: '🎯', category: 'Resumen',             defaultSize: 'sm' },
-  { id: 'w13', type: 'chart_by_status',      title: 'Por Status',          icon: '📊', category: 'Resumen',             defaultSize: 'md' },
+  { id: 'w1',  type: 'kpi_total',            title: 'Total ECRs',          category: 'Resumen',             defaultSize: 'sm' },
+  { id: 'w2',  type: 'kpi_open',             title: 'Abiertos',            category: 'Resumen',             defaultSize: 'sm' },
+  { id: 'w3',  type: 'kpi_approved',         title: 'Aprobados',           category: 'Resumen',             defaultSize: 'sm' },
+  { id: 'w4',  type: 'kpi_rejected',         title: 'No Adoptables',       category: 'Resumen',             defaultSize: 'sm' },
+  { id: 'w5',  type: 'kpi_avg_time',         title: 'Tiempo Promedio',     category: 'Resumen',             defaultSize: 'sm' },
+  { id: 'w6',  type: 'kpi_effectiveness',    title: 'Efectividad',         category: 'Resumen',             defaultSize: 'sm' },
+  { id: 'w13', type: 'chart_by_status',      title: 'Por Status',          category: 'Resumen',             defaultSize: 'md' },
   // Volumen & Tendencias
-  { id: 'w9',  type: 'chart_trend',          title: 'Tendencia Mensual',   icon: '📈', category: 'Volumen & Tendencias', defaultSize: 'lg' },
-  { id: 'w10', type: 'chart_by_type',        title: 'Por Tipo de Cambio',  icon: '📊', category: 'Volumen & Tendencias', defaultSize: 'md' },
-  { id: 'w11', type: 'chart_by_category',    title: 'Por Categoría',       icon: '📊', category: 'Volumen & Tendencias', defaultSize: 'md' },
-  { id: 'w12', type: 'chart_by_priority',    title: 'Por Prioridad',       icon: '🚦', category: 'Volumen & Tendencias', defaultSize: 'md' },
+  { id: 'w9',  type: 'chart_trend',          title: 'Tendencia Mensual',   category: 'Volumen & Tendencias', defaultSize: 'lg' },
+  { id: 'w10', type: 'chart_by_type',        title: 'Por Tipo de Cambio',  category: 'Volumen & Tendencias', defaultSize: 'md' },
+  { id: 'w11', type: 'chart_by_category',    title: 'Por Categoría',       category: 'Volumen & Tendencias', defaultSize: 'md' },
+  { id: 'w12', type: 'chart_by_priority',    title: 'Por Prioridad',       category: 'Volumen & Tendencias', defaultSize: 'md' },
   // Impacto Financiero
-  { id: 'w7',  type: 'kpi_net_impact',       title: 'Balance Neto $',      icon: '💰', category: 'Impacto Financiero',  defaultSize: 'sm' },
-  { id: 'w16', type: 'financial_impact',     title: 'Impacto Financiero',  icon: '💵', category: 'Impacto Financiero',  defaultSize: 'lg' },
+  { id: 'w7',  type: 'kpi_net_impact',       title: 'Balance Neto $',      category: 'Impacto Financiero',  defaultSize: 'sm' },
+  { id: 'w16', type: 'financial_impact',     title: 'Impacto Financiero',  category: 'Impacto Financiero',  defaultSize: 'lg' },
   // Calidad & Riesgo
-  { id: 'w8',  type: 'kpi_cpk',             title: 'CPK Promedio',        icon: '📐', category: 'Calidad & Riesgo',    defaultSize: 'sm' },
-  { id: 'w17', type: 'chart_cpk',            title: 'CPK Distribución',    icon: '📊', category: 'Calidad & Riesgo',    defaultSize: 'md' },
-  { id: 'w15', type: 'heatmap_risk',         title: 'Matriz de Riesgo',    icon: '🔥', category: 'Calidad & Riesgo',    defaultSize: 'lg' },
+  { id: 'w8',  type: 'kpi_cpk',             title: 'CPK Promedio',        category: 'Calidad & Riesgo',    defaultSize: 'sm' },
+  { id: 'w17', type: 'chart_cpk',            title: 'CPK Distribución',    category: 'Calidad & Riesgo',    defaultSize: 'md' },
+  { id: 'w15', type: 'heatmap_risk',         title: 'Matriz de Riesgo',    category: 'Calidad & Riesgo',    defaultSize: 'lg' },
   // Proceso & Auditoría
-  { id: 'w14', type: 'chart_adoption',       title: 'Adopción por Etapa',  icon: '🔄', category: 'Proceso & Auditoría', defaultSize: 'lg' },
-  { id: 'w18', type: 'chart_audit',          title: 'Auditoría Cierre',    icon: '🔍', category: 'Proceso & Auditoría', defaultSize: 'md' },
-  { id: 'w19', type: 'chart_ppap',           title: 'Estado PPAP',         icon: '📋', category: 'Proceso & Auditoría', defaultSize: 'md' },
+  { id: 'w14', type: 'chart_adoption',       title: 'Adopción por Etapa',  category: 'Proceso & Auditoría', defaultSize: 'lg' },
+  { id: 'w18', type: 'chart_audit',          title: 'Auditoría Cierre',    category: 'Proceso & Auditoría', defaultSize: 'md' },
+  { id: 'w19', type: 'chart_ppap',           title: 'Estado PPAP',         category: 'Proceso & Auditoría', defaultSize: 'md' },
   // Cliente & Negocio
-  { id: 'w20', type: 'ranking_clients',      title: 'Top Clientes',        icon: '🏢', category: 'Cliente & Negocio',   defaultSize: 'md' },
-  { id: 'w21', type: 'ranking_areas',        title: 'Top Áreas',           icon: '🏭', category: 'Cliente & Negocio',   defaultSize: 'md' },
-  { id: 'w22', type: 'ranking_responsibles', title: 'Top Responsables',    icon: '👤', category: 'Cliente & Negocio',   defaultSize: 'md' },
+  { id: 'w20', type: 'ranking_clients',      title: 'Top Clientes',        category: 'Cliente & Negocio',   defaultSize: 'md' },
+  { id: 'w21', type: 'ranking_areas',        title: 'Top Áreas',           category: 'Cliente & Negocio',   defaultSize: 'md' },
+  { id: 'w22', type: 'ranking_responsibles', title: 'Top Responsables',    category: 'Cliente & Negocio',   defaultSize: 'md' },
 ];
 
 const DEFAULT_WIDGETS = ALL_WIDGETS.filter(w =>
@@ -576,7 +576,6 @@ const EcrSortableCell = ({ widget, isEditMode, onRemove, children }) => {
       <DashboardWidget
         id={widget.uid}
         title={widget.title}
-        icon={widget.icon}
         isEditMode={isEditMode}
         onRemove={onRemove}
         isDragging={isDragging}
@@ -592,7 +591,7 @@ const EcrSortableCell = ({ widget, isEditMode, onRemove, children }) => {
 // ─── EcrDragGhost ─────────────────────────────────────────────────────────────
 const EcrDragGhost = ({ widget, t }) => (
   <div style={{ backgroundColor: t.bgCard, border: `2px solid ${t.accent}`, borderRadius: '12px', padding: '14px', boxShadow: `0 16px 40px ${t.accent}44`, opacity: 0.95, minWidth: '200px', transform: 'rotate(2deg)' }}>
-    <div style={{ fontSize: '12px', fontWeight: '600', color: t.accent }}>{widget?.icon} {widget?.title}</div>
+    <div style={{ fontSize: '12px', fontWeight: '600', color: t.accent }}>{widget?.title}</div>
     <div style={{ fontSize: '11px', color: t.textMuted }}>Arrastrando…</div>
   </div>
 );
@@ -802,7 +801,6 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
                             return (
                               <button key={item.id} onClick={() => toggleCatalogWidget(item)}
                                 style={{ display:'flex', alignItems:'center', gap:'7px', padding:'8px 12px', borderRadius:'8px', border:`2px solid ${active ? t.accent : t.border}`, backgroundColor: active ? t.accent + '18' : t.bgPanel, color: active ? t.accent : t.text, cursor:'pointer', fontSize:'12px', fontWeight: active ? '600' : '500', transition:'all 0.15s' }}>
-                                <span style={{ fontSize:'14px' }}>{item.icon}</span>
                                 <span>{item.title}</span>
                                 {active && <span style={{ fontSize:'11px', fontWeight:'900' }}>✓</span>}
                               </button>
@@ -893,8 +891,7 @@ const TabAlertas = ({ data, ecrs, t, navigate }) => {
       {alerts.length === 0 ? (
         <Card t={t}>
           <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>✅</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', color: '#166534' }}>Sin alertas activas</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', color: t.textMuted }}>Sin alertas activas</div>
             <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>Todos los indicadores dentro de parámetros</div>
           </div>
         </Card>
@@ -1078,20 +1075,20 @@ const ECRDashboardAdvanced = () => {
         </select>
         <select value={filters.riskLevel} onChange={e => setFilters(f => ({ ...f, riskLevel: e.target.value }))} style={{ padding: '5px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgCard, color: t.text }}>
           <option value="">Nivel de Riesgo</option>
-          <option value="bajo">🟢 Bajo</option>
-          <option value="medio">🟡 Medio</option>
-          <option value="alto">🟠 Alto</option>
-          <option value="critico">🔴 Crítico</option>
+          <option value="bajo">Bajo</option>
+          <option value="medio">Medio</option>
+          <option value="alto">Alto</option>
+          <option value="critico">Crítico</option>
         </select>
         <select value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))} style={{ padding: '5px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgCard, color: t.text }}>
           <option value="">Estado</option>
-          <option value="draft">📝 Borrador</option>
-          <option value="submitted">📤 Enviado</option>
-          <option value="pending_approval">⏳ Pend. Aprobación</option>
-          <option value="approved">✅ Aprobado</option>
-          <option value="pending_closure">📋 Pend. Cierre</option>
-          <option value="closed">🔒 Cerrado</option>
-          <option value="closed_rejected">❌ No Adoptable</option>
+          <option value="draft">Borrador</option>
+          <option value="submitted">Enviado</option>
+          <option value="pending_approval">Pend. Aprobación</option>
+          <option value="approved">Aprobado</option>
+          <option value="pending_closure">Pend. Cierre</option>
+          <option value="closed">Cerrado</option>
+          <option value="closed_rejected">No Adoptable</option>
         </select>
         <button onClick={() => { setFilters({ startDate: '', endDate: '', clientId: '', department: '', riskLevel: '', status: '' }); applyPreset('Mes actual'); }} style={{ padding: '5px 10px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgPanel, color: t.textMuted, cursor: 'pointer' }}>↺ Reset</button>
       </div>
@@ -1102,7 +1099,6 @@ const ECRDashboardAdvanced = () => {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px', color: t.textMuted }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
             Cargando dashboard...
           </div>
         ) : (
