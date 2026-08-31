@@ -729,7 +729,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
               <RotateCcw size={14} /> Restaurar
             </button>
             {hasChanges && (
-              <button onClick={save} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 14px', borderRadius:'8px', border:'none', backgroundColor:'#2E7D32', color:'white', cursor:'pointer', fontSize:'13px' }}>
+              <button onClick={save} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 14px', borderRadius:'8px', border:'none', backgroundColor: t.success, color:'white', cursor:'pointer', fontSize:'13px' }}>
                 <Save size={14} /> Guardar
               </button>
             )}
@@ -741,7 +741,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
       </div>
 
       {isEditMode && (
-        <div style={{ backgroundColor:'#dbeafe', borderRadius:'10px', padding:'10px 16px', marginBottom:'16px', border:`2px dashed ${t.accent}`, fontSize:'13px', color:'#1e40af', fontWeight:'600' }}>
+        <div style={{ backgroundColor: t.accentBg, borderRadius:'10px', padding:'10px 16px', marginBottom:'16px', border:`2px dashed ${t.accent}`, fontSize:'13px', color: t.accent, fontWeight:'600' }}>
           Modo edición — Arrastra para reorganizar, usa × para quitar widgets
         </div>
       )}
@@ -1020,7 +1020,7 @@ const ECRDashboardAdvanced = () => {
     display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
     borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '500',
     ...(variant === 'primary'   ? { backgroundColor: t.accent,   color: 'white' } :
-        variant === 'success'   ? { backgroundColor: '#2E7D32',  color: 'white' } :
+        variant === 'success'   ? { backgroundColor: t.success,  color: 'white' } :
         { backgroundColor: t.bgCard, color: t.text, border: `1px solid ${t.border}` })
   });
 
