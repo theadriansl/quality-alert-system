@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-29
+> Última actualización: 2026-08-30
 
 ---
 
@@ -68,7 +68,8 @@
 | 7 | ~~Refactor temas D3/D4/D5 (Approval sections)~~ | Arrastrado | ✅ 28-Ago |
 | 8 | ~~**MÓDULO 8D COMPLETO**: 10 tabs + header/navigation → tokens tema~~ | 29-Ago | ✅ 29-Ago |
 | 9 | Refactor temas Dashboard (EightDDashboard, QARDashboard, etc.) | 29-Ago | ⏳ |
-| 10 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
+| 10 | QAR Rediseño Visual Parte 2 (pendiente prompt del usuario) | 29-Ago | ⏳ |
+| 11 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
 | 9 | ~~Review permisos Hospital~~ | 05-Ago | ✅ 17-Ago |
@@ -81,6 +82,8 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ **MÓDULO ECR CERRADO**: ECRConfig, ECRChangeRequest, ECRTeamTab, ECRImpactAnalysis, ECRDashboardAdvanced, ECRValidationPlan, ECRClosure → tokens tema, fontWeight ≤600, DATA colors preservados | 30-Ago |
+| ✅ **QAR Rediseño Visual (Parte 1)**: QARList.js y DefectConfig.js con tokens tema, tarjetas compactas, control segmentado, tabla 44px, tabs con underline | 29-Ago |
 | ✅ **MÓDULO 8D CERRADO**: TeamAssignmentTab (167→0), HistoryTab (35→0), GanttChart (priority map), 8DWorkflow (header/tabs redesign), ProcessFlowBuilder (t.error) | 29-Ago |
 | ✅ Refactor D7Validation.js: 40+ literales de color → tokens semánticos tema | 28-Ago |
 | ✅ Refactor D8FollowUpEvidence.js: 35+ literales de color → tokens semánticos tema | 28-Ago |
@@ -306,6 +309,29 @@
 
 ---
 
+## Notas Sesión 30-Ago-2026
+
+### Completado hoy:
+1. **MÓDULO ECR CERRADO** - Tokenización estética completa ✅
+   - Verificado c1d6fb7: ECRClosure.js y ECRValidationPlan.js
+   - Sin backgroundColor con *Fg
+   - Sin fontWeight sobre 600
+   - DATA colors preservados (financieros, CP/CPK)
+
+### Commits del módulo ECR:
+| Tanda | Archivos | Commit |
+|-------|----------|--------|
+| 2 fix | ECRConfig.js | `0b24f05` |
+| 3 | ECRChangeRequest, ECRTeamTab, ECRImpactAnalysis, ECRDashboardAdvanced | `3717132` |
+| 4a | ECRValidationPlan.js | `ad9bb77` |
+| 4b | ECRClosure.js | `c1d6fb7` |
+
+### PENDIENTE para próxima sesión:
+1. **DefectHospital.js** - Tokenización por secciones (archivo grande)
+2. **Limpieza emoji ECRDashboardAdvanced.js** - Paso aparte (mismo patrón que EightDDashboard.js y QARDashboardComponent.js)
+
+---
+
 ## Notas Sesión 29-Ago-2026
 
 ### Completado hoy:
@@ -315,6 +341,20 @@
 4. **D5CorrectiveActions.js**: 89 → 0 literales ✅ (commit dd973b8)
    - Todos los hover effects convertidos a opacity transitions
 5. **TeamAssignmentTab.js**: 257 → 167 literales (parcial, commit dd973b8)
+6. **8D Dashboard Filtros**: Barra filtros con presets, rango fechas, depto, cliente, severidad ✅ (commit b628b33)
+7. **QARList.js rediseño visual** ✅ (commit c5c99f3):
+   - Tarjetas de estado compactas: dot semántico 5px + label 11.5px + valor mono 22px
+   - Control segmentado para filtros de periodo (bgPanel → bgCard activo)
+   - Tabla: filas 44px, header 34px con fondo field
+   - Severidad: cuadrado 8px + hex monospace (no bloque de color)
+   - Acciones: links texto en accent (no botones)
+   - Empty state: texto simple sin icono grande
+8. **DefectConfig.js rediseño visual** ✅ (commit c5c99f3):
+   - Tabs: 13px, activo weight 600 con underline 2px primary
+   - Badge "Admin" en tabs administrativos
+   - Chips de estado con colores semánticos (fallbacks a tema)
+   - Footer con conteo y texto de contexto
+   - Removido código muerto (stages tab inexistente)
 
 ### PENDIENTE para continuar:
 
