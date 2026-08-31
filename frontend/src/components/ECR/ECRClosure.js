@@ -72,7 +72,7 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
         maxHeight: '90vh',
         overflowY: 'auto'
       }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '700', color: isClosingAsRejected ? '#991b1b' : t.text, marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600', color: isClosingAsRejected ? t.errorFg : t.text, marginBottom: '20px' }}>
           {isClosingAsRejected
             ? (language === 'es' ? ' Cierre como NO ADOPTABLE' : ' Closure as NOT ADOPTABLE')
             : (language === 'es' ? 'Revisar Firma de Cierre' : 'Review Closure Signature')}
@@ -83,20 +83,20 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
           <div style={{
             marginBottom: '20px',
             padding: '16px',
-            backgroundColor: '#fef2f2',
-            border: '2px solid #dc2626',
+            backgroundColor: t.errorBg,
+            border: `2px solid ${t.error}`,
             borderRadius: '8px'
           }}>
-            <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>
+            <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: t.errorFg }}>
               Este ECR será cerrado como NO ADOPTABLE
             </p>
-            <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7f1d1d' }}>
+            <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: t.errorFg }}>
               El cambio no será implementado. Al firmar, confirmas que el ECR debe cerrarse sin adoptar.
             </p>
             {rejectionReason && (
-              <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #fca5a5' }}>
-                <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Motivo del rechazo:</p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#991b1b' }}>{rejectionReason}</p>
+              <div style={{ marginTop: '12px', padding: '10px', backgroundColor: t.bgCard, borderRadius: '6px', border: `1px solid ${t.errorBorder}` }}>
+                <p style={{ margin: 0, fontSize: '12px', color: t.textMuted }}>Motivo del rechazo:</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: t.errorFg }}>{rejectionReason}</p>
               </div>
             )}
           </div>
@@ -119,7 +119,7 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
-                backgroundColor: isClosingAsRejected ? '#991b1b' : '#2E7D32',
+                backgroundColor: isClosingAsRejected ? t.error : t.success,
                 color: 'white'
               }}
             >
@@ -135,7 +135,7 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
-                backgroundColor: isClosingAsRejected ? '#C77700' : '#ef4444',
+                backgroundColor: isClosingAsRejected ? t.warning : t.error,
                 color: 'white'
               }}
             >
@@ -164,7 +164,7 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                {language === 'es' ? 'Comentarios' : 'Comments'} {action === 'reject' && <span style={{ color: '#ef4444' }}>*</span>}
+                {language === 'es' ? 'Comentarios' : 'Comments'} {action === 'reject' && <span style={{ color: t.error }}>*</span>}
               </label>
               <textarea
                 value={comments}
@@ -186,7 +186,7 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
                 required={action === 'reject'}
               />
               {action === 'reject' && (
-                <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>
+                <p style={{ fontSize: '12px', color: t.error, marginTop: '6px' }}>
                   {language === 'es' ? 'Debes proporcionar una razón para rechazar' : 'You must provide a reason for rejection'}
                 </p>
               )}
@@ -196,10 +196,10 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
               <div style={{
                 marginBottom: '16px',
                 padding: '12px',
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fca5a5',
+                backgroundColor: t.errorBg,
+                border: `1px solid ${t.errorBorder}`,
                 borderRadius: '6px',
-                color: '#ef4444',
+                color: t.errorFg,
                 fontSize: '14px'
               }}>
                 {error}
@@ -2128,8 +2128,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: t.warningBg,
+          border: `1px solid ${t.warningBorder}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -2138,7 +2138,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: t.warningFg, fontWeight: '500' }}>
             {tr('ecr.messages.readOnlyMode')}
           </span>
         </div>
@@ -2197,8 +2197,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 return (
                   <div key={subsectionKey} style={{
                     ...styles.subsectionCard,
-                    backgroundColor: isSubsectionLocked ? '#f0fdf4' : t.bg,
-                    border: isSubsectionLocked ? '1px solid #2E7D32' : `1px solid ${t.border}`
+                    backgroundColor: isSubsectionLocked ? t.successBg : t.bg,
+                    border: isSubsectionLocked ? `1px solid ${t.successBorder}` : `1px solid ${t.border}`
                   }}>
                     {/* Subsection Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -2208,8 +2208,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                       {isSubsectionLocked && (
                         <span style={{
                           padding: '4px 12px',
-                          backgroundColor: '#d1fae5',
-                          color: '#065f46',
+                          backgroundColor: t.successBg,
+                          color: t.successFg,
                           borderRadius: '12px',
                           fontSize: '12px',
                           fontWeight: '600'
@@ -2228,8 +2228,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           alignItems: 'center',
                           gap: '8px',
                           padding: '10px 16px',
-                          backgroundColor: verificationData.verdict === 'approved' ? '#d1fae5' : t.bgCard,
-                          border: `2px solid ${verificationData.verdict === 'approved' ? '#2E7D32' : t.border}`,
+                          backgroundColor: verificationData.verdict === 'approved' ? t.successBg : t.bgCard,
+                          border: `2px solid ${verificationData.verdict === 'approved' ? t.successBorder : t.border}`,
                           borderRadius: '8px',
                           cursor: isSubsectionLocked ? 'default' : 'pointer',
                           opacity: isSubsectionLocked ? 0.8 : 1
@@ -2242,7 +2242,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                             disabled={isSubsectionLocked}
                             style={{ width: '16px', height: '16px' }}
                           />
-                          <span style={{ color: '#065f46', fontWeight: '600' }}> {language === 'es' ? 'Aprobado' : 'Approved'}</span>
+                          <span style={{ color: t.successFg, fontWeight: '600' }}> {language === 'es' ? 'Aprobado' : 'Approved'}</span>
                         </label>
 
                         <label style={{
@@ -2250,8 +2250,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           alignItems: 'center',
                           gap: '8px',
                           padding: '10px 16px',
-                          backgroundColor: verificationData.verdict === 'conditional' ? '#fef3c7' : t.bgCard,
-                          border: `2px solid ${verificationData.verdict === 'conditional' ? '#C77700' : t.border}`,
+                          backgroundColor: verificationData.verdict === 'conditional' ? t.warningBg : t.bgCard,
+                          border: `2px solid ${verificationData.verdict === 'conditional' ? t.warningBorder : t.border}`,
                           borderRadius: '8px',
                           cursor: isSubsectionLocked ? 'default' : 'pointer',
                           opacity: isSubsectionLocked ? 0.8 : 1
@@ -2264,7 +2264,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                             disabled={isSubsectionLocked}
                             style={{ width: '16px', height: '16px' }}
                           />
-                          <span style={{ color: '#92400e', fontWeight: '600' }}> {language === 'es' ? 'Condicional' : 'Conditional'}</span>
+                          <span style={{ color: t.warningFg, fontWeight: '600' }}> {language === 'es' ? 'Condicional' : 'Conditional'}</span>
                         </label>
 
                         <label style={{
@@ -2272,8 +2272,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           alignItems: 'center',
                           gap: '8px',
                           padding: '10px 16px',
-                          backgroundColor: verificationData.verdict === 'rejected' ? '#fee2e2' : t.bgCard,
-                          border: `2px solid ${verificationData.verdict === 'rejected' ? '#ef4444' : t.border}`,
+                          backgroundColor: verificationData.verdict === 'rejected' ? t.errorBg : t.bgCard,
+                          border: `2px solid ${verificationData.verdict === 'rejected' ? t.errorBorder : t.border}`,
                           borderRadius: '8px',
                           cursor: isSubsectionLocked ? 'default' : 'pointer',
                           opacity: isSubsectionLocked ? 0.8 : 1
@@ -2286,7 +2286,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                             disabled={isSubsectionLocked}
                             style={{ width: '16px', height: '16px' }}
                           />
-                          <span style={{ color: '#B00020', fontWeight: '600' }}> {language === 'es' ? 'No Adoptable' : 'Not Adoptable'}</span>
+                          <span style={{ color: t.errorFg, fontWeight: '600' }}> {language === 'es' ? 'No Adoptable' : 'Not Adoptable'}</span>
                         </label>
                       </div>
                     </div>
@@ -2728,7 +2728,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 const target = qualityTargets.cpTarget;
                 const color = val >= target ? '#166534' : val >= 1.0 ? '#92400e' : '#991b1b';
                 const label = val >= target ? (language === 'es' ? '✓ Capaz' : '✓ Capable') : val >= 1.0 ? (language === 'es' ? '⚠ Marginal' : '⚠ Marginal') : (language === 'es' ? '✗ No capaz' : '✗ Not capable');
-                return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '700', color }}>{label}</span>;
+                return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color }}>{label}</span>;
               })()}
             </label>
             <input
@@ -2754,7 +2754,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 const target = qualityTargets.cpkTarget;
                 const color = val >= target ? '#166534' : val >= 1.0 ? '#92400e' : '#991b1b';
                 const label = val >= target ? (language === 'es' ? '✓ Capaz' : '✓ Capable') : val >= 1.0 ? (language === 'es' ? '⚠ Marginal' : '⚠ Marginal') : (language === 'es' ? '✗ No capaz' : '✗ Not capable');
-                return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '700', color }}>{label}</span>;
+                return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color }}>{label}</span>;
               })()}
             </label>
             <input
@@ -2777,15 +2777,15 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
         <div style={{
           marginTop: '20px',
           padding: '16px',
-          backgroundColor: formData.productionJudgment === 'OK' ? '#dcfce7' :
-                          formData.productionJudgment === 'Condicional' ? '#fef3c7' :
-                          formData.productionJudgment === 'NOK' ? '#fee2e2' : '#f9fafb',
-          border: `2px solid ${formData.productionJudgment === 'OK' ? '#22c55e' :
-                              formData.productionJudgment === 'Condicional' ? '#f59e0b' :
-                              formData.productionJudgment === 'NOK' ? '#ef4444' : '#d1d5db'}`,
+          backgroundColor: formData.productionJudgment === 'OK' ? t.successBg :
+                          formData.productionJudgment === 'Condicional' ? t.warningBg :
+                          formData.productionJudgment === 'NOK' ? t.errorBg : t.bgPanel,
+          border: `2px solid ${formData.productionJudgment === 'OK' ? t.successBorder :
+                              formData.productionJudgment === 'Condicional' ? t.warningBorder :
+                              formData.productionJudgment === 'NOK' ? t.errorBorder : t.border}`,
           borderRadius: '8px'
         }}>
-          <label style={{ ...styles.label, fontWeight: '700', marginBottom: '12px', display: 'block' }}>
+          <label style={{ ...styles.label, fontWeight: '600', marginBottom: '12px', display: 'block' }}>
             {language === 'es' ? 'Juicio de Resultados de Producción *' : 'Production Results Judgment *'}
           </label>
           <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
@@ -2796,12 +2796,12 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 gap: '8px',
                 padding: '8px 16px',
                 backgroundColor: formData.productionJudgment === opt ? (
-                  opt === 'OK' ? '#166534' : opt === 'Condicional' ? '#92400e' : '#991b1b'
+                  opt === 'OK' ? t.success : opt === 'Condicional' ? t.warning : t.error
                 ) : t.bgCard,
                 color: formData.productionJudgment === opt ? 'white' : t.text,
                 borderRadius: '6px',
                 cursor: isLocked ? 'not-allowed' : 'pointer',
-                border: `1px solid ${opt === 'OK' ? '#22c55e' : opt === 'Condicional' ? '#f59e0b' : '#ef4444'}`,
+                border: `1px solid ${opt === 'OK' ? t.successBorder : opt === 'Condicional' ? t.warningBorder : t.errorBorder}`,
                 fontWeight: '600',
                 fontSize: '14px'
               }}>
@@ -2822,7 +2822,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
           {/* Comentarios - obligatorio si es Condicional */}
           <div>
             <label style={styles.label}>
-              {language === 'es' ? 'Comentarios' : 'Comments'} {formData.productionJudgment === 'Condicional' && <span style={{ color: '#dc2626' }}>*</span>}
+              {language === 'es' ? 'Comentarios' : 'Comments'} {formData.productionJudgment === 'Condicional' && <span style={{ color: t.errorFg }}>*</span>}
             </label>
             <textarea
               value={formData.productionComments}
@@ -2836,7 +2836,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 ...styles.input,
                 width: '100%',
                 resize: 'vertical',
-                borderColor: formData.productionJudgment === 'Condicional' && !formData.productionComments?.trim() ? '#dc2626' : t.border
+                borderColor: formData.productionJudgment === 'Condicional' && !formData.productionComments?.trim() ? t.errorBorder : t.border
               }}
             />
           </div>
@@ -2848,8 +2848,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
             </label>
             <div style={{
               padding: '12px',
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #86efac',
+              backgroundColor: t.successBg,
+              border: `1px solid ${t.successBorder}`,
               borderRadius: '8px'
             }}>
               {/* Upload Button */}
@@ -3505,9 +3505,9 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                       <div>
                                         {item.auditorJudgment && (
                                           <span style={{
-                                            display: 'inline-block', padding: '2px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: '700', marginBottom: '4px',
-                                            backgroundColor: item.auditorJudgment === 'OK' ? '#dcfce7' : item.auditorJudgment === 'NOK' ? '#fee2e2' : '#fef3c7',
-                                            color: item.auditorJudgment === 'OK' ? '#166534' : item.auditorJudgment === 'NOK' ? '#991b1b' : '#92400e'
+                                            display: 'inline-block', padding: '2px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: '600', marginBottom: '4px',
+                                            backgroundColor: item.auditorJudgment === 'OK' ? t.successBg : item.auditorJudgment === 'NOK' ? t.errorBg : t.warningBg,
+                                            color: item.auditorJudgment === 'OK' ? t.successFg : item.auditorJudgment === 'NOK' ? t.errorFg : t.warningFg
                                           }}>
                                             {item.auditorJudgment}
                                           </span>
@@ -3530,7 +3530,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                       {item.auditRound > 1 && (
                                         <button
                                           onClick={() => openHistoryModal(item)}
-                                          style={{ padding: '3px 8px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          style={{ padding: '3px 8px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
                                           title={language === 'es' ? 'Ver historial de rondas' : 'View round history'}
                                         >
                                           {language === 'es' ? 'Historial' : 'History'}
@@ -3541,7 +3541,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                         (['NOK', 'OBS'].includes(item.leaderJudgment) || ['NOK', 'OBS'].includes(item.auditorJudgment)) && (
                                         <button
                                           onClick={() => resendClosureAuditItem(item)}
-                                          style={{ padding: '3px 8px', backgroundColor: '#0369a1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          style={{ padding: '3px 8px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
                                           title={language === 'es' ? `Re-enviar a ronda ${(item.auditRound || 1) + 1}` : `Re-send to round ${(item.auditRound || 1) + 1}`}
                                         >
                                           ↻ {language === 'es' ? 'Ronda' : 'Round'} {(item.auditRound || 1) + 1}
@@ -3567,7 +3567,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                               showError(language === 'es' ? 'Error al revertir el ítem' : 'Error reverting item');
                                             }
                                           }}
-                                          style={{ padding: '3px 8px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          style={{ padding: '3px 8px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
                                           title={language === 'es' ? 'Revertir a pendiente (admin)' : 'Revert to pending (admin)'}
                                         >
                                           ↩ {language === 'es' ? 'Revertir' : 'Revert'}
@@ -3577,7 +3577,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                       {isTFTLeader && !item.sentToAudit && (
                                         <button
                                           onClick={() => duplicateClosureAuditItem(item)}
-                                          style={{ padding: '3px 8px', backgroundColor: '#0369a1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          style={{ padding: '3px 8px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
                                           title={language === 'es' ? 'Duplicar ítem' : 'Duplicate item'}
                                         >
                                           + {language === 'es' ? 'Fila' : 'Row'}
@@ -3586,7 +3586,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                       {isTFTLeader && !item.sentToAudit && (
                                         <button
                                           onClick={() => deleteClosureAuditItem(item.id)}
-                                          style={{ padding: '3px 8px', backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
+                                          style={{ padding: '3px 8px', backgroundColor: t.error, color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
                                           title={language === 'es' ? 'Eliminar ítem' : 'Delete item'}
                                         >
                                           {language === 'es' ? 'Eliminar' : 'Delete'}
@@ -3618,7 +3618,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
               <div style={{
                 marginTop: '16px',
                 padding: '12px',
-                backgroundColor: '#e0f2fe',
+                backgroundColor: t.accentBg,
                 borderRadius: '6px',
                 display: 'flex',
                 gap: '24px',
@@ -3627,7 +3627,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 <span> <strong>{language === 'es' ? 'Total items:' : 'Total items:'}</strong> {closureAuditItems.length}</span>
                 <span> <strong>{language === 'es' ? 'Notificados:' : 'Notified:'}</strong> {closureAuditItems.filter(i => i.sentToAudit).length}</span>
                 <span> <strong>{language === 'es' ? 'Completados:' : 'Completed:'}</strong> {closureAuditItems.filter(i => i.auditorCompleted).length}</span>
-                <span style={{ color: closureAuditItems.filter(i => i.auditorJudgment === 'NOK').length > 0 ? '#B00020' : t.textDim }}>
+                <span style={{ color: closureAuditItems.filter(i => i.auditorJudgment === 'NOK').length > 0 ? t.errorFg : t.textDim }}>
                    <strong>NOK:</strong> {closureAuditItems.filter(i => i.auditorJudgment === 'NOK').length}
                 </span>
               </div>
@@ -3639,7 +3639,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 onClick={() => setShowAddCategoryModal(true)}
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: '#2E7D32',
+                  backgroundColor: t.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -3656,7 +3656,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                   disabled={!closureAuditItems.some(item => item.checkItem && !item.auditorCompleted && item.assignedAuditors?.length > 0)}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: closureAuditItems.some(item => item.checkItem && !item.auditorCompleted && item.assignedAuditors?.length > 0) ? '#0369a1' : t.border,
+                    backgroundColor: closureAuditItems.some(item => item.checkItem && !item.auditorCompleted && item.assignedAuditors?.length > 0) ? t.accent : t.border,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -3679,7 +3679,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
               type="date"
               style={{
                 ...styles.input,
-                border: !formData.effectiveDate ? '1px solid #C77700' : `1px solid ${t.border}`
+                border: !formData.effectiveDate ? `1px solid ${t.warningBorder}` : `1px solid ${t.border}`
               }}
               value={formData.effectiveDate}
               onChange={(e) => handleInputChange('effectiveDate', e.target.value)}
@@ -3692,7 +3692,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
               type="text"
               style={{
                 ...styles.input,
-                border: !formData.adoptionLotNumber ? '1px solid #C77700' : `1px solid ${t.border}`
+                border: !formData.adoptionLotNumber ? `1px solid ${t.warningBorder}` : `1px solid ${t.border}`
               }}
               value={formData.adoptionLotNumber || ''}
               onChange={(e) => handleInputChange('adoptionLotNumber', e.target.value)}
@@ -3706,7 +3706,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
           <textarea
             style={{
               ...styles.textarea,
-              border: !formData.closureNotes ? '1px solid #C77700' : `1px solid ${t.border}`
+              border: !formData.closureNotes ? `1px solid ${t.warningBorder}` : `1px solid ${t.border}`
             }}
             value={formData.closureNotes}
             onChange={(e) => handleInputChange('closureNotes', e.target.value)}
@@ -3820,8 +3820,8 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                         onClick={() => removeFinancialItem(item.id)}
                         style={{
                           padding: '4px 8px',
-                          backgroundColor: '#fee2e2',
-                          color: '#B00020',
+                          backgroundColor: t.errorBg,
+                          color: t.errorFg,
                           border: 'none',
                           borderRadius: '4px',
                           cursor: 'pointer',
@@ -3848,13 +3848,13 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
               }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', color: t.textDim, marginBottom: '4px' }}>{language === 'es' ? 'Total Gastos' : 'Total Expenses'}</div>
-                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#fca5a5' }}>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: '#fca5a5' }}>
                     ${(formData.financialImpact?.totalCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', color: t.textDim, marginBottom: '4px' }}>{language === 'es' ? 'Total Ahorros' : 'Total Savings'}</div>
-                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#86efac' }}>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: '#86efac' }}>
                     -${(formData.financialImpact?.totalSavings || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
@@ -3862,7 +3862,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                   <div style={{ fontSize: '11px', color: t.textDim, marginBottom: '4px' }}>{language === 'es' ? 'Impacto Neto' : 'Net Impact'}</div>
                   <div style={{
                     fontSize: '18px',
-                    fontWeight: '700',
+                    fontWeight: '600',
                     color: (formData.financialImpact?.netImpact || 0) > 0 ? '#fca5a5' : '#86efac'
                   }}>
                     {(formData.financialImpact?.netImpact || 0) >= 0 ? '$' : '-$'}
@@ -3876,7 +3876,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
 
         {/* Closure Status Panel - Same style as ECR-3 */}
         <div style={{ marginTop: '24px', padding: '20px', backgroundColor: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
-          <h4 style={{ fontSize: '16px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>
+          <h4 style={{ fontSize: '16px', fontWeight: '600', color: t.text, marginBottom: '16px' }}>
             Estado de Aprobación de Cierre
           </h4>
 
@@ -3890,11 +3890,11 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
               fontSize: '14px',
               fontWeight: '600',
               backgroundColor:
-                data.status === 'closed' ? '#2E7D32' :
-                data.status === 'closed_rejected' ? '#7f1d1d' :
-                data.status === 'pending_rejected_closure' ? '#dc2626' :
-                data.status === 'pending_approval' ? '#C77700' :
-                '#6b7280'
+                data.status === 'closed' ? t.success :
+                data.status === 'closed_rejected' ? t.error :
+                data.status === 'pending_rejected_closure' ? t.error :
+                data.status === 'pending_approval' ? t.warning :
+                t.textMuted
             }}>
               {data.status === 'closed' ? (language === 'es' ? ' Cerrado' : ' Closed') :
                data.status === 'closed_rejected' ? (language === 'es' ? ' Cerrado como No Adoptable' : ' Closed as Not Adoptable') :
@@ -4162,7 +4162,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
 
           return (
         <div style={{ marginTop: '24px' }}>
-          <h4 style={{ fontSize: '15px', fontWeight: '600', color: isRejectionFlow ? '#991b1b' : t.text, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h4 style={{ fontSize: '15px', fontWeight: '600', color: isRejectionFlow ? t.errorFg : t.text, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isRejectionFlow
               ? (language === 'es' ? 'Flujo de Confirmación - No Adoptable' : 'Confirmation Flow - Not Adoptable')
               : (language === 'es' ? 'Flujo de Aprobación de Cierre' : 'Closure Approval Flow')}
@@ -4178,7 +4178,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 backgroundColor: t.border,
                 color: t.textMuted,
                 fontSize: '12px',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 cursor: 'help'
               }}
               className="approval-flow-help"
@@ -4223,10 +4223,10 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
             <div style={{
               padding: '24px',
               textAlign: 'center',
-              backgroundColor: '#fef3c7',
-              border: '2px dashed #C77700',
+              backgroundColor: t.warningBg,
+              border: `2px dashed ${t.warningBorder}`,
               borderRadius: '8px',
-              color: '#92400e'
+              color: t.warningFg
             }}>
               <p style={{ margin: 0, fontWeight: '600' }}> {language === 'es' ? 'No hay aprobadores definidos' : 'No approvers defined'}</p>
               <p style={{ margin: '8px 0 0 0', fontSize: '13px' }}>
@@ -4277,7 +4277,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '14px',
-                          fontWeight: '700',
+                          fontWeight: '600',
                           flexShrink: 0
                         }}>
                           {index + 1}
@@ -4331,11 +4331,11 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 return (
                   <div style={{
                     padding: '16px',
-                    backgroundColor: validationStatus.canApprove ? '#eff6ff' : '#fef3c7',
-                    border: `2px solid ${validationStatus.canApprove ? '#3b82f6' : '#C77700'}`,
+                    backgroundColor: validationStatus.canApprove ? t.accentBg : t.warningBg,
+                    border: `2px solid ${validationStatus.canApprove ? t.accent : t.warningBorder}`,
                     borderRadius: '8px'
                   }}>
-                    <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: isRejectionFlow ? '#991b1b' : t.text }}>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: isRejectionFlow ? t.errorFg : t.text }}>
                       <strong>{approverUser?.firstName} {approverUser?.lastName}</strong> - Es tu turno de {isRejectionFlow ? 'confirmar el cierre como No Adoptable' : 'firmar el cierre'}
                     </p>
 
@@ -4344,14 +4344,14 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                       <div style={{
                         marginBottom: '12px',
                         padding: '12px',
-                        backgroundColor: '#fee2e2',
-                        border: '1px solid #fca5a5',
+                        backgroundColor: t.errorBg,
+                        border: `1px solid ${t.errorBorder}`,
                         borderRadius: '6px'
                       }}>
-                        <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600', color: '#991b1b' }}>
+                        <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600', color: t.errorFg }}>
                            No se puede aprobar el cierre. Pendientes:
                         </p>
-                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#7f1d1d' }}>
+                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: t.errorFg }}>
                           {validationStatus.errors.slice(0, 5).map((error, idx) => (
                             <li key={idx}>{error}</li>
                           ))}
@@ -4370,7 +4370,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                               onClick={() => handleSignRejection(currentPendingLevel.key, 'approved')}
                               style={{
                                 padding: '10px 24px',
-                                backgroundColor: '#991b1b',
+                                backgroundColor: t.error,
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '6px',
@@ -4385,7 +4385,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                               onClick={() => handleSignRejection(currentPendingLevel.key, 'rejected')}
                               style={{
                                 padding: '10px 24px',
-                                backgroundColor: '#C77700',
+                                backgroundColor: t.warning,
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '6px',
@@ -4406,7 +4406,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                             disabled={!validationStatus.canApprove}
                             style={{
                               padding: '10px 24px',
-                              backgroundColor: validationStatus.canApprove ? '#2E7D32' : '#9ca3af',
+                              backgroundColor: validationStatus.canApprove ? t.success : t.textMuted,
                               color: 'white',
                               border: 'none',
                               borderRadius: '6px',
@@ -4690,7 +4690,7 @@ function getStyles(t) { return ({
   },
   title: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     margin: '0 0 8px 0'
   },
@@ -4764,8 +4764,8 @@ function getStyles(t) { return ({
   verifiedBadge: {
     marginLeft: '12px',
     padding: '2px 8px',
-    backgroundColor: '#d1fae5',
-    color: '#065f46',
+    backgroundColor: t.successBg,
+    color: t.successFg,
     borderRadius: '4px',
     fontSize: '12px',
     fontWeight: '600'
@@ -4853,8 +4853,8 @@ function getStyles(t) { return ({
     flex: 1
   },
   removeFileButton: {
-    backgroundColor: '#fee2e2',
-    color: '#ef4444',
+    backgroundColor: t.errorBg,
+    color: t.errorFg,
     border: 'none',
     borderRadius: '4px',
     width: '28px',
@@ -4862,7 +4862,7 @@ function getStyles(t) { return ({
     cursor: 'pointer',
     fontSize: '20px',
     lineHeight: '1',
-    fontWeight: 'bold'
+    fontWeight: '600'
   },
   emptyState: {
     textAlign: 'center',
@@ -4924,7 +4924,7 @@ function getStyles(t) { return ({
     marginBottom: '12px'
   },
   signButton: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: t.success,
     color: 'white',
     border: 'none',
     borderRadius: '6px',
@@ -4936,26 +4936,26 @@ function getStyles(t) { return ({
   },
   warningText: {
     fontSize: '13px',
-    color: '#C77700',
+    color: t.warningFg,
     margin: '8px 0'
   },
   completionBanner: {
     marginTop: '24px',
     padding: '20px',
-    backgroundColor: '#d1fae5',
-    border: '2px solid #2E7D32',
+    backgroundColor: t.successBg,
+    border: `2px solid ${t.successBorder}`,
     borderRadius: '8px',
     textAlign: 'center'
   },
   completionTitle: {
     fontSize: '20px',
-    fontWeight: '700',
-    color: '#065f46',
+    fontWeight: '600',
+    color: t.successFg,
     margin: '0 0 8px 0'
   },
   completionText: {
     fontSize: '14px',
-    color: '#2E7D32',
+    color: t.success,
     margin: 0
   }
 }); }
