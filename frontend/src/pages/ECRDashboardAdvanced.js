@@ -282,7 +282,7 @@ const TabFinanciero = ({ data, t, qualityTargets = { initialScrapTarget: 5 } }) 
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Basado en {scrapStats?.total || 0} ECRs cerrados</div>
           {scrapStats?.avg != null && (
             <div style={{ marginTop: '8px', padding: '4px 10px', borderRadius: '6px', display: 'inline-block', backgroundColor: scrapStats.avg > qualityTargets.initialScrapTarget ? t.errorBg : t.successBg, fontSize: '11px', fontWeight: '600', color: scrapStats.avg > qualityTargets.initialScrapTarget ? t.errorFg : t.successFg }}>
-              {scrapStats.avg > qualityTargets.initialScrapTarget ? `⚠ >${qualityTargets.initialScrapTarget}%` : `✓ ≤${qualityTargets.initialScrapTarget}%`}
+              {scrapStats.avg > qualityTargets.initialScrapTarget ? `>${qualityTargets.initialScrapTarget}%` : `≤${qualityTargets.initialScrapTarget}%`}
             </div>
           )}
         </Card>
@@ -346,7 +346,7 @@ const CapabilityAvgCard = ({ stats, title, subtitle, t, target = 1.33 }) => {
             backgroundColor: s.avg >= target ? t.successBg : s.avg >= marginalMin ? t.warningBg : t.errorBg,
             color: s.avg >= target ? t.successFg : s.avg >= marginalMin ? t.warningFg : t.errorFg
           }}>
-            {s.avg >= target ? '✓ Proceso Capaz' : s.avg >= marginalMin ? '⚠ Marginal' : '✗ No Capaz'}
+            {s.avg >= target ? 'Proceso Capaz' : s.avg >= marginalMin ? 'Marginal' : 'No Capaz'}
           </div>
         )}
       </div>
@@ -362,9 +362,9 @@ const CapabilityDetailCard = ({ stats, title, t, target = 1.33 }) => {
       <CardTitle t={t}>{title}</CardTitle>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
         {[
-          { label: `✓ Capaz (≥${target})`,     value: s.capable    || 0, bg: '#dcfce7', color: '#166534' },
-          { label: `⚠ Marginal (${marginalMin}–${target})`, value: s.marginal   || 0, bg: '#fef3c7', color: '#92400e' },
-          { label: `✗ No capaz (<${marginalMin})`,   value: s.notCapable || 0, bg: '#fee2e2', color: '#991b1b' },
+          { label: `Capaz (≥${target})`,     value: s.capable    || 0, bg: t.successBg, color: t.successFg },
+          { label: `Marginal (${marginalMin}–${target})`, value: s.marginal   || 0, bg: t.warningBg, color: t.warningFg },
+          { label: `No capaz (<${marginalMin})`,   value: s.notCapable || 0, bg: t.errorBg, color: t.errorFg },
         ].map(row => (
           <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', backgroundColor: row.bg }}>
             <span style={{ fontSize: '12px', color: row.color, fontWeight: '500' }}>{row.label}</span>
@@ -506,10 +506,10 @@ const TabProcesoAuditoria = ({ data, t }) => {
           <CardTitle t={t}>Detalle Auditoría</CardTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
             {[
-              { label: '✓ OK',   value: cas.byJudgment?.ok  || 0, color: '#166534', bg: '#dcfce7' },
-              { label: '✗ NOK',  value: cas.byJudgment?.nok || 0, color: '#991b1b', bg: '#fee2e2' },
-              { label: '⚠ OBS',  value: cas.byJudgment?.obs || 0, color: '#92400e', bg: '#fef3c7' },
-              { label: 'N/A',    value: cas.byJudgment?.na  || 0, color: '#6b7280', bg: t.bg },
+              { label: 'OK',   value: cas.byJudgment?.ok  || 0, color: t.successFg, bg: t.successBg },
+              { label: 'NOK',  value: cas.byJudgment?.nok || 0, color: t.errorFg, bg: t.errorBg },
+              { label: 'OBS',  value: cas.byJudgment?.obs || 0, color: t.warningFg, bg: t.warningBg },
+              { label: 'N/A',  value: cas.byJudgment?.na  || 0, color: t.textMuted, bg: t.bg },
             ].map(row => (
               <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', borderRadius: '6px', backgroundColor: row.bg }}>
                 <span style={{ fontSize: '12px', fontWeight: '500', color: row.color }}>{row.label}</span>
@@ -860,30 +860,30 @@ const TabAlertas = ({ data, ecrs, t, navigate }) => {
 
   const alerts = [
     cpkStats?.notCapable > 0 && {
-      level: 'error', icon: '✗', title: `${cpkStats.notCapable} ECR(s) con CPK < 1.0`,
+      level: 'error', title: `${cpkStats.notCapable} ECR(s) con CPK < 1.0`,
       desc: 'Procesos no capaces según IATF 8.3.2.3 — requieren acción inmediata'
     },
     cpkStats?.marginal > 0 && {
-      level: 'warning', icon: '⚠', title: `${cpkStats.marginal} ECR(s) con CPK marginal (1.0–1.33)`,
+      level: 'warning', title: `${cpkStats.marginal} ECR(s) con CPK marginal (1.0–1.33)`,
       desc: 'Procesos marginales — requieren monitoreo estricto'
     },
     (financialImpact?.netImpact || 0) > 0 && {
-      level: 'warning', icon: '$', title: `Balance neto negativo: ${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:0}).format(financialImpact.netImpact)}`,
+      level: 'warning', title: `Balance neto negativo: ${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:0}).format(financialImpact.netImpact)}`,
       desc: 'Los costos superan los ahorros en el período seleccionado'
     },
     overdue.length > 0 && {
-      level: 'error', icon: '⏰', title: `${overdue.length} ECR(s) abiertos más de ${ALERT_DAYS} días`,
+      level: 'error', title: `${overdue.length} ECR(s) abiertos más de ${ALERT_DAYS} días`,
       desc: `ECRs sin cerrar: ${overdue.map(e => e.ecrNumber).join(', ')}`
     },
     closureAuditStats?.byJudgment?.nok > 0 && {
-      level: 'warning', icon: '✗', title: `${closureAuditStats.byJudgment.nok} item(s) de auditoría con NOK`,
+      level: 'warning', title: `${closureAuditStats.byJudgment.nok} item(s) de auditoría con NOK`,
       desc: 'Items de auditoría de cierre con juicio negativo pendientes de resolución'
     },
   ].filter(Boolean);
 
   const colors = {
-    error:   { bg: '#fee2e2', border: '#fca5a5', text: '#991b1b' },
-    warning: { bg: '#fef3c7', border: '#fcd34d', text: '#92400e' },
+    error:   { bg: t.errorBg, border: t.error, text: t.errorFg },
+    warning: { bg: t.warningBg, border: t.warning, text: t.warningFg },
   };
 
   return (
