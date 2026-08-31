@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-30
+> Última actualización: 2026-08-31
 
 ---
 
@@ -328,7 +328,42 @@
 
 ### PENDIENTE para próxima sesión:
 1. **DefectHospital.js** - Tokenización por secciones (archivo grande)
-2. **Limpieza emoji ECRDashboardAdvanced.js** - Paso aparte (mismo patrón que EightDDashboard.js y QARDashboardComponent.js)
+2. ~~**Limpieza emoji ECRDashboardAdvanced.js**~~ ✅ 31-Ago
+
+---
+
+## Notas Sesión 31-Ago-2026
+
+### Completado hoy:
+1. **ECRDashboardAdvanced.js - Limpieza emoji completa** ✅
+   - Tabs: ⚙️/🚨 removidos de Mi Dashboard y Alertas
+   - ALL_WIDGETS: propiedad `icon` eliminada de 22 widgets
+   - Dropdowns estado/prioridad: emojis removidos
+   - Estados cargando/sin alertas: emojis removidos
+   - Commit: `a1ecaf4`
+
+2. **ECRDashboardAdvanced.js - Símbolos tipográficos** ✅
+   - ✓/⚠/✗ removidos de etiquetas capacidad y auditoría
+   - Alertas: propiedad `icon` eliminada
+   - Colores hardcodeados → tokens (successBg/Fg, warningBg/Fg, errorBg/Fg)
+   - Commit: `376da41`
+
+3. **ECRDashboardAdvanced.js - Últimos 3 literales UI** ✅
+   - Botón Guardar: #2E7D32 → t.success
+   - Banner modo edición: #dbeafe/#1e40af → t.accentBg/t.accent
+   - btnStyle success: #2E7D32 → t.success
+   - Commit: `f05fa40`
+
+### Estado módulos tokenización:
+| Módulo | Estado |
+|--------|--------|
+| 8D (10 tabs + header) | ✅ Cerrado |
+| ECR (7 archivos) | ✅ Cerrado |
+| QAR (QARList, DefectConfig) | ✅ Parcial |
+| Hospital (DefectHospital) | ⏳ Pendiente |
+
+### PENDIENTE para próxima sesión:
+1. **DefectHospital.js** - Tokenización por secciones (archivo grande)
 
 ---
 
