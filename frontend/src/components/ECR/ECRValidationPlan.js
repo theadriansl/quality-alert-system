@@ -1170,17 +1170,17 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
   };
 
   const getProgressColor = (actual, planned) => {
-    if (actual >= 100) return '#2E7D32'; // Green - completed
+    if (actual >= 100) return t.success; // Green - completed
     if (actual >= planned) return t.accent; // Blue - on track
-    if (actual >= planned - 10) return '#C77700'; // Orange - slight delay
-    return '#ef4444'; // Red - delayed
+    if (actual >= planned - 10) return t.warning; // Orange - slight delay
+    return t.error; // Red - delayed
   };
 
   const getStatusBadge = (status) => {
     const badges = {
       pending: { text: 'Pendiente', color: t.textDim },
       in_progress: { text: 'En Progreso', color: t.accent },
-      completed: { text: 'Completado', color: '#2E7D32' }
+      completed: { text: 'Completado', color: t.success }
     };
     const badge = badges[status] || badges.pending;
     return (
@@ -1293,8 +1293,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: t.warningBg,
+          border: `1px solid ${t.warning}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -1303,7 +1303,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ color: t.warningFg, fontWeight: '500' }}>
             {tr('ecr.messages.readOnlyMode')}
           </span>
         </div>
@@ -1351,8 +1351,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
         {/* Legend about Gantt for progress */}
         <div style={{
           padding: '10px 16px',
-          backgroundColor: '#eff6ff',
-          border: '1px solid #bfdbfe',
+          backgroundColor: t.accentBg,
+          border: `1px solid ${t.border}`,
           borderRadius: '6px',
           marginBottom: '16px',
           display: 'flex',
@@ -1410,8 +1410,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           {getStatusBadge(action.status)}
                           <span style={{
                             padding: '4px 12px',
-                            backgroundColor: '#e0f2fe',
-                            color: '#0369a1',
+                            backgroundColor: t.accentBg,
+                            color: t.accentFg,
                             borderRadius: '12px',
                             fontSize: '11px',
                             fontWeight: '600'
@@ -1421,12 +1421,12 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           {isActionIncomplete(action) && (
                             <span style={{
                               padding: '4px 12px',
-                              backgroundColor: '#fef3c7',
-                              color: '#92400e',
+                              backgroundColor: t.warningBg,
+                              color: t.warningFg,
                               borderRadius: '12px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              border: '1px solid #f59e0b'
+                              border: `1px solid ${t.warning}`
                             }}>
                               Falta información
                             </span>
@@ -1443,14 +1443,14 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                             alignItems: 'center',
                             gap: '8px',
                             padding: '4px 12px',
-                            backgroundColor: getProgressColor(action.actualProgress, currentPlanned) === '#2E7D32' ? '#d1fae5' :
-                                           getProgressColor(action.actualProgress, currentPlanned) === '#C77700' ? '#fef3c7' : '#fee2e2',
+                            backgroundColor: action.actualProgress >= 100 ? t.successBg :
+                                           action.actualProgress >= currentPlanned - 10 ? t.warningBg : t.errorBg,
                             borderRadius: '16px'
                           }}>
                             <span style={{ fontSize: '11px', color: t.textMuted }}>Avance:</span>
                             <span style={{
                               fontSize: '13px',
-                              fontWeight: '700',
+                              fontWeight: '600',
                               color: getProgressColor(action.actualProgress, currentPlanned)
                             }}>
                               {action.actualProgress || 0}%
@@ -1463,7 +1463,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                             }}
                             style={{
                               padding: '4px 8px',
-                              backgroundColor: editingAction === action.id ? '#C77700' : t.accent,
+                              backgroundColor: editingAction === action.id ? t.warning : t.accent,
                               color: 'white',
                               border: 'none',
                               borderRadius: '4px',
@@ -1492,7 +1492,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
 
                       {/* Edit Mode */}
                       {editingAction === action.id && (
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `2px solid ${t.accent}`, backgroundColor: '#eff6ff', margin: '16px -16px -16px -16px', padding: '16px', borderRadius: '0 0 8px 8px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `2px solid ${t.accent}`, backgroundColor: t.accentBg, margin: '16px -16px -16px -16px', padding: '16px', borderRadius: '0 0 8px 8px' }} onClick={(e) => e.stopPropagation()}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                             <div style={styles.field}>
                               <label style={styles.label}>Acción de Validación *</label>
@@ -1579,7 +1579,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                             onClick={() => setEditingAction(null)}
                             style={{
                               padding: '8px 24px',
-                              backgroundColor: '#2E7D32',
+                              backgroundColor: t.success,
                               color: 'white',
                               border: 'none',
                               borderRadius: '6px',
@@ -1598,7 +1598,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                         <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${t.border}` }}>
                           {/* Resultado esperado */}
                           {action.result && (
-                            <div style={{ fontSize: '13px', color: '#2E7D32', marginBottom: '12px', fontStyle: 'italic' }}>
+                            <div style={{ fontSize: '13px', color: t.successFg, marginBottom: '12px', fontStyle: 'italic' }}>
                                Resultado esperado: {action.result}
                             </div>
                           )}
@@ -1663,7 +1663,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                       padding: '10px 12px',
                                       backgroundColor: t.bgCard,
                                       borderRadius: '6px',
-                                      border: subAction.status === 'completed' ? '1px solid #2E7D32' : `1px solid ${t.border}`,
+                                      border: subAction.status === 'completed' ? `1px solid ${t.success}` : `1px solid ${t.border}`,
                                       display: 'flex',
                                       alignItems: 'center',
                                       gap: '12px'
@@ -1673,13 +1673,13 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                         width: '24px',
                                         height: '24px',
                                         borderRadius: '50%',
-                                        backgroundColor: subAction.status === 'completed' ? '#2E7D32' : '#8b5cf6',
+                                        backgroundColor: subAction.status === 'completed' ? t.success : t.accent,
                                         color: 'white',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         fontSize: '11px',
-                                        fontWeight: '700',
+                                        fontWeight: '600',
                                         flexShrink: 0
                                       }}>
                                         {subAction.status === 'completed' ? '' : subIndex + 1}
@@ -1724,11 +1724,11 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                           fontSize: '11px',
                                           border: `1px solid ${t.border}`,
                                           borderRadius: '4px',
-                                          backgroundColor: subAction.status === 'completed' ? '#d1fae5' :
-                                                          subAction.status === 'in_progress' ? '#fef3c7' : t.bgCard,
+                                          backgroundColor: subAction.status === 'completed' ? t.successBg :
+                                                          subAction.status === 'in_progress' ? t.warningBg : t.bgCard,
                                           fontWeight: '500',
-                                          color: subAction.status === 'completed' ? '#2E7D32' :
-                                                 subAction.status === 'in_progress' ? '#C77700' : t.text
+                                          color: subAction.status === 'completed' ? t.successFg :
+                                                 subAction.status === 'in_progress' ? t.warningFg : t.text
                                         }}
                                         value={subAction.status || 'pending'}
                                         onChange={(e) => handleUpdateSubAction(action.id, subAction.id, { status: e.target.value })}
@@ -1859,7 +1859,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                   style={{
                                     width: '100%',
                                     padding: '6px 12px',
-                                    backgroundColor: '#2E7D32',
+                                    backgroundColor: t.success,
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '4px',
@@ -1895,8 +1895,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                             <span style={{
                                               fontSize: '11px',
                                               fontWeight: '600',
-                                              color: '#7c3aed',
-                                              backgroundColor: '#ede9fe',
+                                              color: t.accentFg,
+                                              backgroundColor: t.accentBg,
                                               padding: '2px 6px',
                                               borderRadius: '3px'
                                             }}>
@@ -1906,8 +1906,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                           <span style={{
                                             fontSize: '11px',
                                             fontWeight: '600',
-                                            color: t.accent,
-                                            backgroundColor: '#dbeafe',
+                                            color: t.accentFg,
+                                            backgroundColor: t.accentBg,
                                             padding: '2px 6px',
                                             borderRadius: '3px'
                                           }}>
@@ -1921,7 +1921,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                                 background: 'none',
                                                 border: 'none',
                                                 cursor: 'pointer',
-                                                color: '#ef4444',
+                                                color: t.error,
                                                 padding: '2px',
                                                 fontSize: '12px',
                                                 opacity: 0.7
@@ -1950,8 +1950,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           </div>
 
                           {/* Evidence Upload Section */}
-                          <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #86efac' }} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#15803d', marginBottom: '8px' }}>
+                          <div style={{ padding: '12px', backgroundColor: t.successBg, borderRadius: '6px', border: `1px solid ${t.successBorder}` }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: t.successFg, marginBottom: '8px' }}>
                                Evidencia de Implementación
                             </div>
 
@@ -1962,7 +1962,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                     padding: '8px',
                                     backgroundColor: t.bgCard,
                                     borderRadius: '4px',
-                                    border: '1px solid #86efac',
+                                    border: `1px solid ${t.successBorder}`,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
@@ -1971,7 +1971,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                       href={`http://localhost:5000${file.url}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      style={{ fontSize: '12px', fontWeight: '500', color: '#15803d', textDecoration: 'none', flex: 1 }}
+                                      style={{ fontSize: '12px', fontWeight: '500', color: t.successFg, textDecoration: 'none', flex: 1 }}
                                     >
                                        {file.name}
                                     </a>
@@ -1979,7 +1979,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                       onClick={() => removeActionEvidenceFile(action.id, fileIndex)}
                                       style={{
                                         padding: '4px 8px',
-                                        backgroundColor: '#B00020',
+                                        backgroundColor: t.error,
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '4px',
@@ -1987,7 +1987,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                         cursor: 'pointer'
                                       }}
                                     >
-                                      
+
                                     </button>
                                   </div>
                                 ))}
@@ -2013,7 +2013,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                 alignItems: 'center',
                                 gap: '4px',
                                 padding: '6px 12px',
-                                backgroundColor: data.id ? '#2E7D32' : t.textDim,
+                                backgroundColor: data.id ? t.success : t.textDim,
                                 color: 'white',
                                 borderRadius: '4px',
                                 fontSize: '11px',
@@ -2024,7 +2024,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               {uploadingActionEvidence === action.id ? (language === 'es' ? ' Subiendo...' : ' Uploading...') : (language === 'es' ? ' Subir Evidencia' : ' Upload Evidence')}
                             </label>
                             {!data.id && (
-                              <span style={{ fontSize: '10px', color: '#B00020', marginLeft: '8px' }}>
+                              <span style={{ fontSize: '10px', color: t.errorFg, marginLeft: '8px' }}>
                                 {language === 'es' ? 'Guarda el ECR primero' : 'Save ECR first'}
                               </span>
                             )}
@@ -2209,12 +2209,12 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
         {(formData.validationEvidence?.requiresValidation === null || formData.validationEvidence?.requiresValidation === undefined) && (
           <div style={{
             padding: '24px',
-            backgroundColor: '#f0f9ff',
+            backgroundColor: t.accentBg,
             borderRadius: '12px',
-            border: '2px solid #0ea5e9',
+            border: `2px solid ${t.accent}`,
             textAlign: 'center'
           }}>
-            <p style={{ fontSize: '16px', fontWeight: '600', color: '#0369a1', marginBottom: '20px' }}>
+            <p style={{ fontSize: '16px', fontWeight: '600', color: t.accentFg, marginBottom: '20px' }}>
               ¿Este cambio requirió validación funcional o modificación de documentos?
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
@@ -2222,7 +2222,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                 onClick={() => updateValidationEvidence('requiresValidation', true)}
                 style={{
                   padding: '12px 32px',
-                  backgroundColor: '#2E7D32',
+                  backgroundColor: t.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -2428,8 +2428,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                 padding: '8px 10px',
                                 fontSize: '13px',
                                 boxSizing: 'border-box',
-                                backgroundColor: criteria.status === 'pass' ? '#d1fae5' : criteria.status === 'fail' ? '#fee2e2' : t.bgCard,
-                                color: criteria.status === 'pass' ? '#065f46' : criteria.status === 'fail' ? '#991b1b' : t.textMuted
+                                backgroundColor: criteria.status === 'pass' ? t.successBg : criteria.status === 'fail' ? t.errorBg : t.bgCard,
+                                color: criteria.status === 'pass' ? t.successFg : criteria.status === 'fail' ? t.errorFg : t.textMuted
                               }}
                             >
                               <option value="">Seleccionar</option>
@@ -2444,15 +2444,15 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                                 onClick={() => removeValidationCriteria(criteria.id)}
                                 style={{
                                   padding: '4px 8px',
-                                  backgroundColor: '#fee2e2',
-                                  color: '#B00020',
+                                  backgroundColor: t.errorBg,
+                                  color: t.errorFg,
                                   border: 'none',
                                   borderRadius: '4px',
                                   cursor: 'pointer',
                                   fontSize: '12px'
                                 }}
                               >
-                                
+
                               </button>
                             )}
                           </td>
@@ -2469,11 +2469,11 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
               {/* Before Evidence */}
               <div style={{
                 padding: '16px',
-                backgroundColor: '#fef3c7',
+                backgroundColor: t.warningBg,
                 borderRadius: '8px',
-                border: '1px solid #C77700'
+                border: `1px solid ${t.warning}`
               }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', display: 'block', marginBottom: '12px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: t.warningFg, display: 'block', marginBottom: '12px' }}>
                    {language === 'es' ? 'Evidencia ANTES' : 'BEFORE Evidence'}
                 </label>
                 <textarea
@@ -2496,7 +2496,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           backgroundColor: '#fff',
                           borderRadius: '6px',
                           overflow: 'hidden',
-                          border: '1px solid #C77700'
+                          border: `1px solid ${t.warning}`
                         }}>
                           {isImage ? (
                             <img
@@ -2508,7 +2508,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           ) : (
                             <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                              width: '100%', height: '100%', textDecoration: 'none', color: '#92400e', fontSize: '11px', textAlign: 'center', padding: '8px'
+                              width: '100%', height: '100%', textDecoration: 'none', color: t.warningFg, fontSize: '11px', textAlign: 'center', padding: '8px'
                             }}>
                               <span style={{ fontSize: '24px', marginBottom: '4px' }}></span>
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{file.name}</span>
@@ -2519,7 +2519,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               onClick={() => removeEvidenceFile('beforeEvidence', idx)}
                               style={{
                                 position: 'absolute', top: '4px', right: '4px',
-                                backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '50%',
+                                backgroundColor: t.error, color: 'white', border: 'none', borderRadius: '50%',
                                 width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1'
                               }}
@@ -2544,7 +2544,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                       style={{
                         display: 'inline-block',
                         padding: '8px 16px',
-                        backgroundColor: data.id ? '#C77700' : t.border,
+                        backgroundColor: data.id ? t.warning : t.border,
                         color: 'white',
                         borderRadius: '6px',
                         fontSize: '12px',
@@ -2561,11 +2561,11 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
               {/* After Evidence */}
               <div style={{
                 padding: '16px',
-                backgroundColor: '#d1fae5',
+                backgroundColor: t.successBg,
                 borderRadius: '8px',
-                border: '1px solid #2E7D32'
+                border: `1px solid ${t.success}`
               }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#065f46', display: 'block', marginBottom: '12px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: t.successFg, display: 'block', marginBottom: '12px' }}>
                    {language === 'es' ? 'Evidencia DESPUÉS' : 'AFTER Evidence'}
                 </label>
                 <textarea
@@ -2588,7 +2588,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           backgroundColor: '#fff',
                           borderRadius: '6px',
                           overflow: 'hidden',
-                          border: '1px solid #2E7D32'
+                          border: `1px solid ${t.success}`
                         }}>
                           {isImage ? (
                             <img
@@ -2600,7 +2600,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           ) : (
                             <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                              width: '100%', height: '100%', textDecoration: 'none', color: '#065f46', fontSize: '11px', textAlign: 'center', padding: '8px'
+                              width: '100%', height: '100%', textDecoration: 'none', color: t.successFg, fontSize: '11px', textAlign: 'center', padding: '8px'
                             }}>
                               <span style={{ fontSize: '24px', marginBottom: '4px' }}></span>
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{file.name}</span>
@@ -2611,7 +2611,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                               onClick={() => removeEvidenceFile('afterEvidence', idx)}
                               style={{
                                 position: 'absolute', top: '4px', right: '4px',
-                                backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '50%',
+                                backgroundColor: t.error, color: 'white', border: 'none', borderRadius: '50%',
                                 width: '22px', height: '22px', cursor: 'pointer', fontSize: '14px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1'
                               }}
@@ -2636,7 +2636,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                       style={{
                         display: 'inline-block',
                         padding: '8px 16px',
-                        backgroundColor: data.id ? '#2E7D32' : t.border,
+                        backgroundColor: data.id ? t.success : t.border,
                         color: 'white',
                         borderRadius: '6px',
                         fontSize: '12px',
@@ -2670,7 +2670,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                     onChange={() => updateEvidenceSection('summary', 'status', 'pass')}
                     disabled={isFieldsLocked}
                   />
-                  <span style={{ color: '#2E7D32', fontWeight: '600' }}> {language === 'es' ? 'Aprobado' : 'Approved'}</span>
+                  <span style={{ color: t.successFg, fontWeight: '600' }}> {language === 'es' ? 'Aprobado' : 'Approved'}</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: isFieldsLocked ? 'default' : 'pointer' }}>
                   <input
@@ -2680,7 +2680,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                     onChange={() => updateEvidenceSection('summary', 'status', 'conditional')}
                     disabled={isFieldsLocked}
                   />
-                  <span style={{ color: '#C77700', fontWeight: '600' }}> {language === 'es' ? 'Condicional' : 'Conditional'}</span>
+                  <span style={{ color: t.warningFg, fontWeight: '600' }}> {language === 'es' ? 'Condicional' : 'Conditional'}</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: isFieldsLocked ? 'default' : 'pointer' }}>
                   <input
@@ -2690,7 +2690,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                     onChange={() => updateEvidenceSection('summary', 'status', 'fail')}
                     disabled={isFieldsLocked}
                   />
-                  <span style={{ color: '#B00020', fontWeight: '600' }}> {language === 'es' ? 'No Aprobado' : 'Not Approved'}</span>
+                  <span style={{ color: t.errorFg, fontWeight: '600' }}> {language === 'es' ? 'No Aprobado' : 'Not Approved'}</span>
                 </label>
               </div>
               <textarea
@@ -2706,17 +2706,17 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
             <div style={{
               marginTop: '24px',
               padding: '20px',
-              backgroundColor: isValidationLocked ? '#d1fae5' : '#fef3c7',
+              backgroundColor: isValidationLocked ? t.successBg : t.warningBg,
               borderRadius: '8px',
-              border: `2px solid ${isValidationLocked ? '#2E7D32' : '#C77700'}`
+              border: `2px solid ${isValidationLocked ? t.success : t.warning}`
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: isValidationLocked ? '#065f46' : '#92400e' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: isValidationLocked ? t.successFg : t.warningFg }}>
                     {isValidationLocked ? (language === 'es' ? ' Validación Firmada' : ' Validation Signed') : (language === 'es' ? ' Firma de Validación' : ' Validation Signature')}
                   </h4>
                   {isValidationLocked ? (
-                    <div style={{ fontSize: '13px', color: '#065f46' }}>
+                    <div style={{ fontSize: '13px', color: t.successFg }}>
                       <p style={{ margin: '0 0 4px 0' }}>
                         <strong>{language === 'es' ? 'Firmado por:' : 'Signed by:'}</strong> {formData.validationEvidence.signedByName}
                       </p>
@@ -2725,7 +2725,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                       </p>
                     </div>
                   ) : (
-                    <div style={{ fontSize: '13px', color: '#92400e' }}>
+                    <div style={{ fontSize: '13px', color: t.warningFg }}>
                       <p style={{ margin: '0 0 4px 0' }}>
                         <strong>{language === 'es' ? 'Usuario responsable:' : 'Responsible user:'}</strong> {currentUser?.firstName} {currentUser?.lastName}
                       </p>
@@ -2740,7 +2740,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                     onClick={handleSignValidation}
                     style={{
                       padding: '12px 24px',
-                      backgroundColor: '#2E7D32',
+                      backgroundColor: t.success,
                       color: 'white',
                       border: 'none',
                       borderRadius: '8px',
@@ -2760,10 +2760,10 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                 <div style={{
                   marginTop: '12px',
                   padding: '8px 12px',
-                  backgroundColor: '#ecfdf5',
+                  backgroundColor: t.successBg,
                   borderRadius: '6px',
                   fontSize: '12px',
-                  color: '#2E7D32'
+                  color: t.successFg
                 }}>
                    Esta sección ha sido bloqueada y no puede ser modificada.
                 </div>
@@ -2881,9 +2881,9 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                             }
                           }));
                         }}
-                        style={{ background: 'none', border: 'none', color: '#B00020', cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', color: t.error, cursor: 'pointer' }}
                       >
-                        
+
                       </button>
                     </div>
                   ))}
@@ -2912,7 +2912,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                  Subir archivo
               </label>
               {!data.id && (
-                <span style={{ fontSize: '11px', color: '#B00020', marginLeft: '8px' }}>
+                <span style={{ fontSize: '11px', color: t.error, marginLeft: '8px' }}>
                   Guarda el ECR primero
                 </span>
               )}
@@ -3035,13 +3035,13 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
       {/* Customer Approval */}
       <div style={{
         ...styles.section,
-        backgroundColor: formData.customerApproval.required ? '#fef3c7' : t.bgPanel,
-        border: formData.customerApproval.required ? '2px solid #C77700' : `1px solid ${t.border}`
+        backgroundColor: formData.customerApproval.required ? t.warningBg : t.bgPanel,
+        border: formData.customerApproval.required ? `2px solid ${t.warning}` : `1px solid ${t.border}`
       }}>
         <h3 style={styles.sectionTitle}>
           <span style={{
             ...styles.badge,
-            backgroundColor: formData.customerApproval.required ? '#C77700' : '#8b5cf6'
+            backgroundColor: formData.customerApproval.required ? t.warning : t.accent
           }}>
             Customer Approval
           </span>
@@ -3172,8 +3172,8 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                       <button
                         onClick={() => removeCustomerApprovalEvidence(idx)}
                         style={{
-                          backgroundColor: '#fee2e2',
-                          color: '#ef4444',
+                          backgroundColor: t.errorBg,
+                          color: t.error,
                           border: 'none',
                           borderRadius: '4px',
                           width: '28px',
@@ -3181,7 +3181,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
                           cursor: 'pointer',
                           fontSize: '20px',
                           lineHeight: '1',
-                          fontWeight: 'bold'
+                          fontWeight: '600'
                         }}
                       >
                         ×
@@ -3196,11 +3196,11 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
               <div style={{
                 marginTop: '16px',
                 padding: '12px',
-                backgroundColor: '#fef3c7',
-                border: '1px solid #C77700',
+                backgroundColor: t.warningBg,
+                border: `1px solid ${t.warning}`,
                 borderRadius: '6px'
               }}>
-                <p style={{ fontSize: '14px', color: '#92400e', margin: 0, fontWeight: '600' }}>
+                <p style={{ fontSize: '14px', color: t.warningFg, margin: 0, fontWeight: '600' }}>
                    Este ECR requiere aprobación del cliente antes de implementar
                 </p>
               </div>
@@ -3210,11 +3210,11 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
               <div style={{
                 marginTop: '16px',
                 padding: '12px',
-                backgroundColor: '#fee2e2',
-                border: '1px solid #ef4444',
+                backgroundColor: t.errorBg,
+                border: `1px solid ${t.error}`,
                 borderRadius: '6px'
               }}>
-                <p style={{ fontSize: '14px', color: '#991b1b', margin: 0, fontWeight: '600' }}>
+                <p style={{ fontSize: '14px', color: t.errorFg, margin: 0, fontWeight: '600' }}>
                    El cliente rechazó este cambio. Revisar comentarios y replantear.
                 </p>
               </div>
@@ -3305,7 +3305,7 @@ function getStyles(t) { return ({
   },
   title: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     margin: '0 0 8px 0'
   },
@@ -3334,7 +3334,7 @@ function getStyles(t) { return ({
   },
   badge: {
     padding: '4px 12px',
-    backgroundColor: '#8b5cf6',
+    backgroundColor: t.accent,
     color: 'white',
     borderRadius: '6px',
     fontSize: '14px',
@@ -3372,14 +3372,14 @@ function getStyles(t) { return ({
   },
   addActionForm: {
     padding: '20px',
-    backgroundColor: '#f0fdf4',
+    backgroundColor: t.successBg,
     borderRadius: '8px',
-    border: '2px solid #86efac',
+    border: `2px solid ${t.successBorder}`,
     marginBottom: '24px'
   },
   addButton: {
     padding: '10px 20px',
-    backgroundColor: '#2E7D32',
+    backgroundColor: t.success,
     color: 'white',
     border: 'none',
     borderRadius: '6px',
@@ -3411,7 +3411,7 @@ function getStyles(t) { return ({
   },
   removeButton: {
     padding: '8px 16px',
-    backgroundColor: '#ef4444',
+    backgroundColor: t.error,
     color: 'white',
     border: 'none',
     borderRadius: '6px',
