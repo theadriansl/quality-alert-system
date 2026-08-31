@@ -840,13 +840,13 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                       cursor: 'pointer',
                       borderRadius: '4px',
                       fontSize: '13px',
-                      backgroundColor: isMember ? '#eff6ff' : 'transparent',
-                      border: isMember ? '1px solid #0072CE' : '1px solid transparent',
+                      backgroundColor: isMember ? t.accentBg : 'transparent',
+                      border: isMember ? `1px solid ${t.accent}` : '1px solid transparent',
                       transition: 'all 0.2s'
                     }}
                     onMouseEnter={(e) => {
                       if (!isMember) {
-                        e.currentTarget.style.backgroundColor = '#FAFBFC';
+                        e.currentTarget.style.backgroundColor = t.bgPanel;
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -899,8 +899,8 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                   key={area.areaKey}
                   onClick={() => handleAreaToggle(area)}
                   style={{
-                    backgroundColor: isSelected ? '#eff6ff' : 'white',
-                    border: isSelected ? '2px solid #0072CE' : '1px solid #E6EAEE',
+                    backgroundColor: isSelected ? t.accentBg : t.bgCard,
+                    border: isSelected ? `2px solid ${t.accent}` : `1px solid ${t.border}`,
                     borderRadius: '8px',
                     padding: '12px',
                     cursor: 'pointer',
@@ -916,7 +916,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                     />
                     <span style={{
                       fontWeight: isSelected ? '600' : '500',
-                      color: isSelected ? '#1d4ed8' : '#374151'
+                      color: isSelected ? t.accentFg : t.text
                     }}>
                       {area.areaName}
                     </span>
@@ -940,8 +940,8 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
 
                           return (
                             <span key={memberId || idx} style={{
-                              backgroundColor: isSelected ? '#dbeafe' : t.bg,
-                              color: isSelected ? '#0F3B5F' : '#374151',
+                              backgroundColor: isSelected ? t.accentBg : t.bg,
+                              color: isSelected ? t.accentFg : t.text,
                               padding: '2px 8px',
                               borderRadius: '10px',
                               fontSize: '11px',
@@ -988,8 +988,8 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                   key={area.areaKey}
                   onClick={() => handleValidationAreaToggle(area)}
                   style={{
-                    backgroundColor: isSelected ? '#eff6ff' : 'white',
-                    border: isSelected ? '2px solid #0072CE' : '1px solid #E6EAEE',
+                    backgroundColor: isSelected ? t.accentBg : t.bgCard,
+                    border: isSelected ? `2px solid ${t.accent}` : `1px solid ${t.border}`,
                     borderRadius: '8px',
                     padding: '12px',
                     cursor: 'pointer',
@@ -1005,7 +1005,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                     />
                     <span style={{
                       fontWeight: isSelected ? '600' : '500',
-                      color: isSelected ? '#1d4ed8' : '#374151'
+                      color: isSelected ? t.accentFg : t.text
                     }}>
                       {area.areaName}
                     </span>
@@ -1029,8 +1029,8 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
 
                           return (
                             <span key={memberId || idx} style={{
-                              backgroundColor: isSelected ? '#dbeafe' : t.bg,
-                              color: isSelected ? '#0F3B5F' : '#374151',
+                              backgroundColor: isSelected ? t.accentBg : t.bg,
+                              color: isSelected ? t.accentFg : t.text,
                               padding: '2px 8px',
                               borderRadius: '10px',
                               fontSize: '11px',
@@ -1059,7 +1059,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
       {showTemplateModal && (
         <div style={styles.modalOverlay} onClick={() => setShowTemplateModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>
                {language === 'es' ? 'Cargar Plantilla de Equipo' : 'Load Team Template'}
             </h3>
 
@@ -1155,7 +1155,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
       {showSaveModal && (
         <div style={styles.modalOverlay} onClick={() => setShowSaveModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>
                {language === 'es' ? 'Guardar Plantilla de Equipo' : 'Save Team Template'}
             </h3>
 
@@ -1255,7 +1255,7 @@ const getStyles = (t) => ({
   },
   title: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     margin: '0 0 8px 0'
   },

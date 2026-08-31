@@ -275,11 +275,11 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
   const getRiskDisplay = (riskLevel) => {
     switch(riskLevel) {
       case 'low':
-        return { label: 'BAJO', color: '#2E7D32', icon: '' };
+        return { label: 'BAJO', color: t.successFg, icon: '' };
       case 'medium':
-        return { label: 'MEDIO', color: '#C77700', icon: '' };
+        return { label: 'MEDIO', color: t.warningFg, icon: '' };
       case 'high':
-        return { label: 'ALTO', color: '#ef4444', icon: '' };
+        return { label: 'ALTO', color: t.errorFg, icon: '' };
       default:
         return null;
     }
@@ -479,8 +479,8 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
               <h3 style={{
                 margin: '0 0 8px 0',
                 fontSize: '16px',
-                fontWeight: '700',
-                color: '#B00020'
+                fontWeight: '600',
+                color: t.error
               }}>
                 {language === 'es' ? 'Error: Evaluación de Riesgo Incompleta' : 'Error: Incomplete Risk Assessment'}
               </h3>
@@ -665,7 +665,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
                               color: 'white',
                               borderRadius: '6px',
                               textAlign: 'center',
-                              fontWeight: '700',
+                              fontWeight: '600',
                               fontSize: '14px',
                               height: '42px',
                               display: 'flex',
@@ -1027,7 +1027,7 @@ const getStyles = (t) => ({
   },
   title: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     margin: '0 0 8px 0'
   },

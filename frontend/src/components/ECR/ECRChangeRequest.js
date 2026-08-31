@@ -417,15 +417,15 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           {/* Before Condition */}
           <div style={{
-            border: '2px solid #ef4444',
+            border: `2px solid ${t.error}`,
             borderRadius: '8px',
             padding: '16px',
-            backgroundColor: '#fef2f2'
+            backgroundColor: t.errorBg
           }}>
             <h4 style={{
               fontSize: '15px',
-              fontWeight: 'bold',
-              color: '#B00020',
+              fontWeight: '600',
+              color: t.errorFg,
               marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -440,7 +440,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                 display: 'block',
                 fontSize: '13px',
                 fontWeight: '600',
-                color: '#991b1b',
+                color: t.errorFg,
                 marginBottom: '6px'
               }}>
                 {language === 'es' ? 'Describe a detalle la condición anterior:' : 'Describe in detail the previous condition:'}
@@ -452,7 +452,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                   width: '100%',
                   minHeight: '80px',
                   padding: '10px',
-                  border: '1px solid #fca5a5',
+                  border: `1px solid ${t.errorBorder}`,
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontFamily: 'inherit',
@@ -471,12 +471,12 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
               padding: '8px 12px',
               cursor: 'pointer',
               backgroundColor: '#fff',
-              border: '1px solid #fca5a5',
+              border: `1px solid ${t.errorBorder}`,
               borderRadius: '6px',
               transition: 'all 0.2s',
               marginBottom: '12px',
               fontSize: '13px',
-              color: '#991b1b',
+              color: t.errorFg,
               fontWeight: '500'
             }}>
               <span style={{ fontSize: '16px' }}></span>
@@ -522,7 +522,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                         position: 'absolute',
                         top: '4px',
                         right: '4px',
-                        backgroundColor: '#B00020',
+                        backgroundColor: t.error,
                         color: 'white',
                         border: 'none',
                         borderRadius: '50%',
@@ -546,15 +546,15 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
 
           {/* After Condition */}
           <div style={{
-            border: '2px solid #22c55e',
+            border: `2px solid ${t.success}`,
             borderRadius: '8px',
             padding: '16px',
-            backgroundColor: '#f0fdf4'
+            backgroundColor: t.successBg
           }}>
             <h4 style={{
               fontSize: '15px',
-              fontWeight: 'bold',
-              color: '#16a34a',
+              fontWeight: '600',
+              color: t.successFg,
               marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -569,7 +569,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                 display: 'block',
                 fontSize: '13px',
                 fontWeight: '600',
-                color: '#166534',
+                color: t.successFg,
                 marginBottom: '6px'
               }}>
                 {language === 'es' ? 'Describe a detalle la condición nueva:' : 'Describe in detail the new condition:'}
@@ -581,7 +581,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                   width: '100%',
                   minHeight: '80px',
                   padding: '10px',
-                  border: '1px solid #86efac',
+                  border: `1px solid ${t.successBorder}`,
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontFamily: 'inherit',
@@ -600,12 +600,12 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
               padding: '8px 12px',
               cursor: 'pointer',
               backgroundColor: '#fff',
-              border: '1px solid #86efac',
+              border: `1px solid ${t.successBorder}`,
               borderRadius: '6px',
               transition: 'all 0.2s',
               marginBottom: '12px',
               fontSize: '13px',
-              color: '#166534',
+              color: t.successFg,
               fontWeight: '500'
             }}>
               <span style={{ fontSize: '16px' }}></span>
@@ -651,7 +651,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                         position: 'absolute',
                         top: '4px',
                         right: '4px',
-                        backgroundColor: '#16a34a',
+                        backgroundColor: t.success,
                         color: 'white',
                         border: 'none',
                         borderRadius: '50%',
@@ -678,20 +678,20 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
         <div style={{
           marginTop: '24px',
           padding: '16px',
-          backgroundColor: '#f0f9ff',
+          backgroundColor: t.accentBg,
           borderRadius: '8px',
-          border: '2px solid #0284c7'
+          border: `2px solid ${t.accent}`
         }}>
           <label style={{
             display: 'block',
             fontSize: '14px',
-            fontWeight: 'bold',
-            color: '#0369a1',
+            fontWeight: '600',
+            color: t.accentFg,
             marginBottom: '8px'
           }}>
              {language === 'es' ? 'Documentos Adjuntos (opcional)' : 'Attachments (optional)'}
           </label>
-          <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
+          <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
             {language === 'es' ? 'Adjunta PDFs, documentos, planos, especificaciones u otros archivos que ayuden a explicar el cambio' : 'Attach PDFs, documents, drawings, specifications or other files that help explain the change'}
           </p>
 
@@ -701,13 +701,13 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
             justifyContent: 'center',
             padding: '12px 24px',
             cursor: 'pointer',
-            border: '2px dashed #0284c7',
+            border: `2px dashed ${t.accent}`,
             borderRadius: '6px',
             backgroundColor: t.bgCard,
             transition: 'all 0.2s',
             fontSize: '14px',
             fontWeight: '500',
-            color: '#0369a1'
+            color: t.accentFg
           }}>
             <span style={{ marginRight: '8px' }}></span>
             {language === 'es' ? 'Seleccionar Archivos' : 'Select Files'}
@@ -838,7 +838,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
             {selectedClient && projects.length > 0 && (
               <div style={{ marginTop: '16px' }}>
                 <label style={styles.label}>{language === 'es' ? 'Proyectos (Selección Múltiple)' : 'Projects (Multi-Select)'} *</label>
-                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
+                <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
                   {language === 'es' ? 'Selecciona uno o más proyectos del cliente para ver sus partes' : 'Select one or more client projects to view their parts'}
                 </p>
                 <div style={{
@@ -861,10 +861,10 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                           display: 'flex',
                           alignItems: 'center',
                           padding: '10px',
-                          backgroundColor: selectedProjects.some(p => p.id === project.id) ? '#e3f2fd' : 'white',
+                          backgroundColor: selectedProjects.some(p => p.id === project.id) ? t.accentBg : t.bgCard,
                           borderRadius: '6px',
                           cursor: 'pointer',
-                          border: selectedProjects.some(p => p.id === project.id) ? '2px solid #2196f3' : '1px solid #e0e0e0',
+                          border: selectedProjects.some(p => p.id === project.id) ? `2px solid ${t.accent}` : `1px solid ${t.border}`,
                           transition: 'all 0.2s'
                         }}
                       >
@@ -875,10 +875,10 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                           style={{ marginRight: '8px', transform: 'scale(1.2)' }}
                         />
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: '600', color: '#1976d2', fontSize: '13px' }}>
+                          <div style={{ fontWeight: '600', color: t.accentFg, fontSize: '13px' }}>
                             {project.projectNumber}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                          <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>
                             {project.projectName}
                           </div>
                         </div>
@@ -894,12 +894,12 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
               <div style={{ marginTop: '16px' }}>
                 <label style={styles.label}>{language === 'es' ? 'Números de Parte Afectados (Selección Múltiple)' : 'Affected Part Numbers (Multi-Select)'} *</label>
                 <div style={{
-                  border: '1px solid #ddd',
+                  border: `1px solid ${t.border}`,
                   borderRadius: '8px',
                   padding: '12px',
                   maxHeight: '400px',
                   overflowY: 'auto',
-                  backgroundColor: '#fafafa'
+                  backgroundColor: t.bgPanel
                 }}>
                   <div style={{
                     display: 'grid',
@@ -913,10 +913,10 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                           display: 'flex',
                           flexDirection: 'column',
                           padding: '8px',
-                          backgroundColor: selectedParts.some(p => p.id === part.id) ? '#e3f2fd' : 'white',
+                          backgroundColor: selectedParts.some(p => p.id === part.id) ? t.accentBg : t.bgCard,
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          border: selectedParts.some(p => p.id === part.id) ? '2px solid #2196f3' : '1px solid #e0e0e0',
+                          border: selectedParts.some(p => p.id === part.id) ? `2px solid ${t.accent}` : `1px solid ${t.border}`,
                           transition: 'all 0.2s',
                           minHeight: '90px',
                           fontSize: '11px'
@@ -929,14 +929,14 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                             onChange={() => handlePartToggle(part)}
                             style={{ marginRight: '4px', transform: 'scale(0.9)' }}
                           />
-                          <div style={{ fontWeight: 'bold', color: '#1976d2', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontWeight: '600', color: t.accentFg, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {part.partNumber}
                           </div>
                         </div>
-                        <div style={{ fontSize: '10px', color: '#333', marginBottom: '3px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        <div style={{ fontSize: '10px', color: t.text, marginBottom: '3px', lineHeight: '1.2', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                           {part.partName}
                         </div>
-                        <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '9px', color: t.textMuted, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {part.clientPartNumber}
                         </div>
                         <div style={{ fontSize: '11px', color: '#d32f2f', fontWeight: '600', marginTop: 'auto' }}>
@@ -1379,7 +1379,7 @@ const getStyles = (t) => ({
   },
   title: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     margin: '0 0 8px 0'
   },

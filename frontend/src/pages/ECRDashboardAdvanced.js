@@ -124,7 +124,7 @@ const TabBar = ({ tabs, active, onSelect, t }) => (
         onClick={() => onSelect(tab.id)}
         style={{
           padding: '10px 18px', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-          fontSize: '13px', fontWeight: active === tab.id ? '700' : '500',
+          fontSize: '13px', fontWeight: active === tab.id ? '600' : '500',
           color: active === tab.id ? t.accent : t.textMuted,
           borderBottom: active === tab.id ? `3px solid ${t.accent}` : '3px solid transparent',
           backgroundColor: 'transparent', transition: 'all 0.15s', marginBottom: '-2px'
@@ -164,7 +164,7 @@ const TabResumen = ({ data, ecrs, t, isAdmin, onDelete }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <SectionGrid cols="repeat(auto-fit, minmax(180px, 1fr))">
-        <KPICard value={kpis?.total || 0} label="Total ECRs" icon={<FileText size={22} color="#0072CE" />} color="#0072CE" />
+        <KPICard value={kpis?.total || 0} label="Total ECRs" icon={<FileText size={22} color={t.accent} />} color={t.accent} />
         <KPICard value={kpis?.open || 0} label="En Proceso" icon={<Clock size={22} color="#C77700" />} color="#C77700" />
         <KPICard value={kpis?.closed || 0} label="Cerrados" icon={<CheckCircle size={22} color="#2E7D32" />} color="#2E7D32" />
         <KPICard value={kpis?.rejected || 0} label="No Adoptables" icon={<XCircle size={22} color="#ef4444" />} color="#ef4444" />
@@ -186,7 +186,7 @@ const TabResumen = ({ data, ecrs, t, isAdmin, onDelete }) => {
         </Card>
         <Card t={t}>
           <CardTitle t={t}>Top Clientes</CardTitle>
-          <RankingWidget data={data.topClients} nameKey="name" valueKey="count" color="#0072CE" />
+          <RankingWidget data={data.topClients} nameKey="name" valueKey="count" color={t.accent} />
         </Card>
       </div>
 
@@ -257,17 +257,17 @@ const TabFinanciero = ({ data, t, qualityTargets = { initialScrapTarget: 5 } }) 
       <SectionGrid cols="repeat(4, 1fr)">
         <Card t={t}>
           <CardTitle t={t}>Costo Total Acumulado</CardTitle>
-          <div style={{ fontSize: '26px', fontWeight: '800', color: '#991b1b' }}>{fmt$(fi.totalCost)}</div>
+          <div style={{ fontSize: '26px', fontWeight: '600', color: t.errorFg }}>{fmt$(fi.totalCost)}</div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{fi.withData || 0} ECRs con datos financieros</div>
         </Card>
         <Card t={t}>
           <CardTitle t={t}>Ahorro Total Acumulado</CardTitle>
-          <div style={{ fontSize: '26px', fontWeight: '800', color: '#166534' }}>{fmt$(fi.totalSavings)}</div>
+          <div style={{ fontSize: '26px', fontWeight: '600', color: t.successFg }}>{fmt$(fi.totalSavings)}</div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{fi.negativeCount || 0} ECRs con ahorro neto</div>
         </Card>
         <Card t={t}>
           <CardTitle t={t}>Balance Neto</CardTitle>
-          <div style={{ fontSize: '26px', fontWeight: '800', color: (fi.netImpact || 0) <= 0 ? '#166534' : '#991b1b' }}>
+          <div style={{ fontSize: '26px', fontWeight: '600', color: (fi.netImpact || 0) <= 0 ? t.successFg : t.errorFg }}>
             {(fi.netImpact || 0) <= 0 ? '-' : '+'}{fmt$(Math.abs(fi.netImpact || 0))}
           </div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
@@ -276,12 +276,12 @@ const TabFinanciero = ({ data, t, qualityTargets = { initialScrapTarget: 5 } }) 
         </Card>
         <Card t={t}>
           <CardTitle t={t}>Scrap Inicial Promedio</CardTitle>
-          <div style={{ fontSize: '26px', fontWeight: '800', color: scrapStats?.avg != null ? (scrapStats.avg > qualityTargets.initialScrapTarget ? '#991b1b' : '#166534') : t.textMuted }}>
+          <div style={{ fontSize: '26px', fontWeight: '600', color: scrapStats?.avg != null ? (scrapStats.avg > qualityTargets.initialScrapTarget ? t.errorFg : t.successFg) : t.textMuted }}>
             {scrapStats?.avg != null ? `${scrapStats.avg}%` : 'Sin datos'}
           </div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Basado en {scrapStats?.total || 0} ECRs cerrados</div>
           {scrapStats?.avg != null && (
-            <div style={{ marginTop: '8px', padding: '4px 10px', borderRadius: '6px', display: 'inline-block', backgroundColor: scrapStats.avg > qualityTargets.initialScrapTarget ? '#fee2e2' : '#dcfce7', fontSize: '11px', fontWeight: '600', color: scrapStats.avg > qualityTargets.initialScrapTarget ? '#991b1b' : '#166534' }}>
+            <div style={{ marginTop: '8px', padding: '4px 10px', borderRadius: '6px', display: 'inline-block', backgroundColor: scrapStats.avg > qualityTargets.initialScrapTarget ? t.errorBg : t.successBg, fontSize: '11px', fontWeight: '600', color: scrapStats.avg > qualityTargets.initialScrapTarget ? t.errorFg : t.successFg }}>
               {scrapStats.avg > qualityTargets.initialScrapTarget ? `⚠ >${qualityTargets.initialScrapTarget}%` : `✓ ≤${qualityTargets.initialScrapTarget}%`}
             </div>
           )}
@@ -337,14 +337,14 @@ const CapabilityAvgCard = ({ stats, title, subtitle, t, target = 1.33 }) => {
       <CardTitle t={t}>{title}</CardTitle>
       {subtitle && <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '8px' }}>{subtitle}</div>}
       <div style={{ textAlign: 'center', padding: '8px 0' }}>
-        <div style={{ fontSize: '36px', fontWeight: '800', color: s.avg != null ? (s.avg >= target ? '#166534' : s.avg >= marginalMin ? '#C77700' : '#991b1b') : t.textMuted }}>
+        <div style={{ fontSize: '36px', fontWeight: '600', color: s.avg != null ? (s.avg >= target ? t.successFg : s.avg >= marginalMin ? t.warningFg : t.errorFg) : t.textMuted }}>
           {s.avg != null ? s.avg.toFixed(3) : 'N/D'}
         </div>
         <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Meta: ≥ {target} · {s.total || 0} ECRs con datos</div>
         {s.avg != null && (
-          <div style={{ marginTop: '8px', padding: '4px 12px', borderRadius: '12px', display: 'inline-block', fontSize: '12px', fontWeight: '700',
-            backgroundColor: s.avg >= target ? '#dcfce7' : s.avg >= marginalMin ? '#fef3c7' : '#fee2e2',
-            color: s.avg >= target ? '#166534' : s.avg >= marginalMin ? '#92400e' : '#991b1b'
+          <div style={{ marginTop: '8px', padding: '4px 12px', borderRadius: '12px', display: 'inline-block', fontSize: '12px', fontWeight: '600',
+            backgroundColor: s.avg >= target ? t.successBg : s.avg >= marginalMin ? t.warningBg : t.errorBg,
+            color: s.avg >= target ? t.successFg : s.avg >= marginalMin ? t.warningFg : t.errorFg
           }}>
             {s.avg >= target ? '✓ Proceso Capaz' : s.avg >= marginalMin ? '⚠ Marginal' : '✗ No Capaz'}
           </div>
@@ -368,7 +368,7 @@ const CapabilityDetailCard = ({ stats, title, t, target = 1.33 }) => {
         ].map(row => (
           <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', backgroundColor: row.bg }}>
             <span style={{ fontSize: '12px', color: row.color, fontWeight: '500' }}>{row.label}</span>
-            <span style={{ fontSize: '18px', fontWeight: '800', color: row.color }}>{row.value}</span>
+            <span style={{ fontSize: '18px', fontWeight: '600', color: row.color }}>{row.value}</span>
           </div>
         ))}
       </div>
@@ -431,7 +431,7 @@ const TabProcesoAuditoria = ({ data, t }) => {
         <CardTitle t={t}>Días Abierto — ECRs en Proceso</CardTitle>
         <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '16px', alignItems: 'center' }}>
           <div style={{ textAlign: 'center', minWidth: '120px' }}>
-            <div style={{ fontSize: '38px', fontWeight: '800', color: ag.avgDaysOpen != null ? (ag.avgDaysOpen <= 7 ? '#166534' : ag.avgDaysOpen <= 30 ? '#C77700' : '#991b1b') : t.textMuted }}>
+            <div style={{ fontSize: '38px', fontWeight: '600', color: ag.avgDaysOpen != null ? (ag.avgDaysOpen <= 7 ? t.successFg : ag.avgDaysOpen <= 30 ? t.warningFg : t.errorFg) : t.textMuted }}>
               {ag.avgDaysOpen != null ? `${ag.avgDaysOpen}` : 'N/D'}
             </div>
             <div style={{ fontSize: '11px', color: t.textMuted }}>días promedio · {ag.openTotal || 0} abiertos</div>
@@ -449,7 +449,7 @@ const TabProcesoAuditoria = ({ data, t }) => {
                 <div key={row.label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '2px' }}>
                     <span style={{ color: t.text }}>{row.label}</span>
-                    <span style={{ fontWeight: '700', color: row.color }}>{row.value}</span>
+                    <span style={{ fontWeight: '600', color: row.color }}>{row.value}</span>
                   </div>
                   <div style={{ height: '6px', backgroundColor: t.border, borderRadius: '3px' }}>
                     <div style={{ height: '100%', width: `${pct}%`, backgroundColor: row.color, borderRadius: '3px', transition: 'width 0.4s' }} />
@@ -470,7 +470,7 @@ const TabProcesoAuditoria = ({ data, t }) => {
             {(ps.byLevel || []).map(r => (
               <div key={r.level} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', backgroundColor: t.bg, borderRadius: '6px' }}>
                 <span style={{ fontSize: '13px', color: t.text }}>Nivel {r.level}</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: t.accent }}>{r.count}</span>
+                <span style={{ fontSize: '16px', fontWeight: '600', color: t.accent }}>{r.count}</span>
               </div>
             ))}
             {(ps.byLevel || []).length === 0 && (
@@ -485,12 +485,12 @@ const TabProcesoAuditoria = ({ data, t }) => {
         <Card t={t}>
           <CardTitle t={t}>Progreso Auditoría</CardTitle>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '800', color: completedPct >= 80 ? '#166534' : completedPct >= 50 ? '#C77700' : '#991b1b' }}>
+            <div style={{ fontSize: '36px', fontWeight: '600', color: completedPct >= 80 ? t.successFg : completedPct >= 50 ? t.warningFg : t.errorFg }}>
               {completedPct}%
             </div>
             <div style={{ fontSize: '12px', color: t.textMuted }}>{cas.completed || 0} de {cas.totalItems || 0} items completados</div>
             <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', marginTop: '12px' }}>
-              <div style={{ height: '100%', width: `${completedPct}%`, backgroundColor: completedPct >= 80 ? '#166534' : completedPct >= 50 ? '#C77700' : '#991b1b', borderRadius: '4px', transition: 'width 0.4s' }} />
+              <div style={{ height: '100%', width: `${completedPct}%`, backgroundColor: completedPct >= 80 ? t.success : completedPct >= 50 ? t.warning : t.error, borderRadius: '4px', transition: 'width 0.4s' }} />
             </div>
             <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '8px' }}>{cas.ecrsWithAudit || 0} ECRs con auditoría activa</div>
           </div>
@@ -513,7 +513,7 @@ const TabProcesoAuditoria = ({ data, t }) => {
             ].map(row => (
               <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', borderRadius: '6px', backgroundColor: row.bg }}>
                 <span style={{ fontSize: '12px', fontWeight: '500', color: row.color }}>{row.label}</span>
-                <span style={{ fontSize: '18px', fontWeight: '800', color: row.color }}>{row.value}</span>
+                <span style={{ fontSize: '18px', fontWeight: '600', color: row.color }}>{row.value}</span>
               </div>
             ))}
             {cas.avgRounds != null && (
@@ -544,7 +544,7 @@ const TabClienteNegocio = ({ data, t }) => {
       <SectionGrid cols="repeat(2, 1fr)">
         <Card t={t}>
           <CardTitle t={t}>Top Clientes por Volumen</CardTitle>
-          <RankingWidget data={topClients} nameKey="name" valueKey="count" color="#0072CE" />
+          <RankingWidget data={topClients} nameKey="name" valueKey="count" color={t.accent} />
         </Card>
         <Card t={t}>
           <CardTitle t={t}>Participación por Cliente</CardTitle>
@@ -592,7 +592,7 @@ const EcrSortableCell = ({ widget, isEditMode, onRemove, children }) => {
 // ─── EcrDragGhost ─────────────────────────────────────────────────────────────
 const EcrDragGhost = ({ widget, t }) => (
   <div style={{ backgroundColor: t.bgCard, border: `2px solid ${t.accent}`, borderRadius: '12px', padding: '14px', boxShadow: `0 16px 40px ${t.accent}44`, opacity: 0.95, minWidth: '200px', transform: 'rotate(2deg)' }}>
-    <div style={{ fontSize: '12px', fontWeight: '700', color: t.accent }}>{widget?.icon} {widget?.title}</div>
+    <div style={{ fontSize: '12px', fontWeight: '600', color: t.accent }}>{widget?.icon} {widget?.title}</div>
     <div style={{ fontSize: '11px', color: t.textMuted }}>Arrastrando…</div>
   </div>
 );
@@ -675,7 +675,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
     const { kpis, trends, byType, byCategory, byPriority, byStatus, adoption, riskMatrix, riskMatrixMeta, topClients, topAreas, topResponsibles, financialImpact, cpkStats } = data;
 
     switch (widget.type) {
-      case 'kpi_total':         return <KPICard value={kpis?.total || 0} label="Total ECRs" icon={<FileText size={22} color="#0072CE" />} color="#0072CE" />;
+      case 'kpi_total':         return <KPICard value={kpis?.total || 0} label="Total ECRs" icon={<FileText size={22} color={t.accent} />} color={t.accent} />;
       case 'kpi_open':          return <KPICard value={kpis?.open || 0} label="Abiertos" icon={<Clock size={22} color="#C77700" />} color="#C77700" />;
       case 'kpi_approved':      return <KPICard value={kpis?.approved || 0} label="Aprobados" icon={<CheckCircle size={22} color="#2E7D32" />} color="#2E7D32" />;
       case 'kpi_rejected':      return <KPICard value={kpis?.rejected || 0} label="No Adoptables" icon={<XCircle size={22} color="#ef4444" />} color="#ef4444" />;
@@ -694,7 +694,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
       case 'chart_cpk':
         const cpkD = [{name:'Capaz',value:cpkStats?.capable||0,color:'#166534'},{name:'Marginal',value:cpkStats?.marginal||0,color:'#C77700'},{name:'No capaz',value:cpkStats?.notCapable||0,color:'#991b1b'}].filter(d=>d.value>0);
         return cpkD.length > 0 ? <ChartWidget type="horizontalBar" data={cpkD} height={200} /> : <div style={{textAlign:'center',color:t.textMuted,padding:'40px 0'}}>Sin datos CPK</div>;
-      case 'ranking_clients':       return <RankingWidget data={topClients} nameKey="name" valueKey="count" color="#0072CE" />;
+      case 'ranking_clients':       return <RankingWidget data={topClients} nameKey="name" valueKey="count" color={t.accent} />;
       case 'ranking_areas':         return <RankingWidget data={topAreas} nameKey="name" valueKey="count" color="#2E7D32" />;
       case 'ranking_responsibles':  return <RankingWidget data={topResponsibles} nameKey="name" valueKey="count" color="#8b5cf6" />;
       case 'chart_ppap':
@@ -770,7 +770,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
             {/* Header */}
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
               <div>
-                <h2 style={{ margin:0, fontSize:'17px', fontWeight:'700', color:t.text }}>
+                <h2 style={{ margin:0, fontSize:'17px', fontWeight:'600', color:t.text }}>
                   {pendingWidget ? `Tamaño — ${pendingWidget.title}` : 'Widgets del Dashboard'}
                 </h2>
                 {pendingWidget && (
@@ -801,7 +801,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
                             const active = widgets.some(w => w.id === item.id);
                             return (
                               <button key={item.id} onClick={() => toggleCatalogWidget(item)}
-                                style={{ display:'flex', alignItems:'center', gap:'7px', padding:'8px 12px', borderRadius:'8px', border:`2px solid ${active ? t.accent : t.border}`, backgroundColor: active ? t.accent + '18' : t.bgPanel, color: active ? t.accent : t.text, cursor:'pointer', fontSize:'12px', fontWeight: active ? '700' : '500', transition:'all 0.15s' }}>
+                                style={{ display:'flex', alignItems:'center', gap:'7px', padding:'8px 12px', borderRadius:'8px', border:`2px solid ${active ? t.accent : t.border}`, backgroundColor: active ? t.accent + '18' : t.bgPanel, color: active ? t.accent : t.text, cursor:'pointer', fontSize:'12px', fontWeight: active ? '600' : '500', transition:'all 0.15s' }}>
                                 <span style={{ fontSize:'14px' }}>{item.icon}</span>
                                 <span>{item.title}</span>
                                 {active && <span style={{ fontSize:'11px', fontWeight:'900' }}>✓</span>}
@@ -831,7 +831,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
                           <div key={i} style={{ height:'10px', flex:1, borderRadius:'3px', backgroundColor: i <= sz.cols ? t.accent : t.border }} />
                         ))}
                       </div>
-                      <div style={{ fontSize:'13px', fontWeight:'700', color:t.text }}>{sz.label}</div>
+                      <div style={{ fontSize:'13px', fontWeight:'600', color:t.text }}>{sz.label}</div>
                       <div style={{ fontSize:'11px', color:t.textMuted, marginTop:'2px' }}>{sz.desc}</div>
                       {sz.key === pendingWidget.defaultSize && <div style={{ fontSize:'10px', color:t.accent, fontWeight:'600', marginTop:'4px' }}>Recomendado</div>}
                     </button>
@@ -1033,7 +1033,7 @@ const ECRDashboardAdvanced = () => {
       <div style={{ backgroundColor: t.bgCard, borderRadius: '12px', padding: '16px 24px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: t.accent, cursor: 'pointer', fontSize: '14px' }}>← Volver</button>
-          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: t.text }}>ECR Dashboard</h1>
+          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: t.text }}>ECR Dashboard</h1>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <ThemeSelector />
