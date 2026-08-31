@@ -12,7 +12,7 @@ const ECRConfig = () => {
     <div style={{ minHeight: '100vh', backgroundColor: t.bg, fontFamily: 'Inter, sans-serif' }}>
       <header style={{ backgroundColor: t.bgCard, borderBottom: `1px solid ${t.border}`, padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '20px', fontWeight: '700', color: t.text }}>⚙ Configuración ECR</span>
+          <span style={{ fontSize: '20px', fontWeight: '600', color: t.text }}>⚙ Configuración ECR</span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <ThemeSelector />
