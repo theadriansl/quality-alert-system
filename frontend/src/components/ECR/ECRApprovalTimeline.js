@@ -30,15 +30,15 @@ const ECRApprovalTimeline = ({ approvalHistory, language = 'es' }) => {
   });
 
   const actionStyles = language === 'es' ? {
-    submitted: { bg: '#dbeafe', color: '#1e40af', label: '→ Enviado' },
-    approved: { bg: '#d1fae5', color: '#166534', label: '✓ Aprobado' },
-    rejected: { bg: '#fee2e2', color: '#991b1b', label: '↩ Devuelto' },
-    resubmitted: { bg: '#fef3c7', color: '#92400e', label: '↻ Re-enviado' }
+    submitted: { bg: t.accentBg, color: t.accent, label: '→ Enviado' },
+    approved: { bg: t.successBg, color: t.successFg, label: '✓ Aprobado' },
+    rejected: { bg: t.errorBg, color: t.errorFg, label: '↩ Devuelto' },
+    resubmitted: { bg: t.warningBg, color: t.warningFg, label: '↻ Re-enviado' }
   } : {
-    submitted: { bg: '#dbeafe', color: '#1e40af', label: '→ Submitted' },
-    approved: { bg: '#d1fae5', color: '#166534', label: '✓ Approved' },
-    rejected: { bg: '#fee2e2', color: '#991b1b', label: '↩ Returned' },
-    resubmitted: { bg: '#fef3c7', color: '#92400e', label: '↻ Re-submitted' }
+    submitted: { bg: t.accentBg, color: t.accent, label: '→ Submitted' },
+    approved: { bg: t.successBg, color: t.successFg, label: '✓ Approved' },
+    rejected: { bg: t.errorBg, color: t.errorFg, label: '↩ Returned' },
+    resubmitted: { bg: t.warningBg, color: t.warningFg, label: '↻ Re-submitted' }
   };
 
   return (

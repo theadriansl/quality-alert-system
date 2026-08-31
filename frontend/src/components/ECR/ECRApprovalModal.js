@@ -204,7 +204,7 @@ const ECRApprovalModal = ({
                 disabled={loading}
                 style={{
                   ...styles.submitButton,
-                  backgroundColor: action === 'approve' ? '#2E7D32' : '#ef4444',
+                  backgroundColor: action === 'approve' ? t.success : t.error,
                   opacity: loading ? 0.5 : 1
                 }}
               >
@@ -250,7 +250,7 @@ const getStyles = (t) => ({
   },
   title: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     marginBottom: '20px'
   },

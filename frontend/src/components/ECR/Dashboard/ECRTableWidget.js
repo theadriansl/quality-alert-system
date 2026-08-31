@@ -113,7 +113,7 @@ const ECRTableWidget = ({ ecrs = [], loading = false, isAdmin = false, onDelete,
       pending_approval: { bg: t.warningBg, color: t.warningFg },
       approved: { bg: t.successBg, color: t.successFg },
       rejected: { bg: t.errorBg, color: t.errorFg },
-      closed: { bg: '#e0e7ff', color: '#4338ca' }
+      closed: { bg: t.bgPanel, color: t.textMuted }
     };
     return statusColors[status] || statusColors.draft;
   };

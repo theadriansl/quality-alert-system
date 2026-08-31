@@ -135,7 +135,7 @@ const ECRApprovalAssignment = ({ data, onDataUpdate, language = 'es' }) => {
                 className="approver-cell"
                 style={{
                   ...styles.userCell,
-                  borderColor: isActive ? '#0072CE' : '#d1d5db'
+                  borderColor: isActive ? t.accent : t.border
                 }}
                 onClick={() => !user && handleCellClick(level)}
               >
@@ -278,7 +278,7 @@ const getStyles = (t) => ({
   },
   title: {
     fontSize: '20px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     margin: '0 0 8px 0'
   },
@@ -479,7 +479,7 @@ const getStyles = (t) => ({
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '14px',
-    fontWeight: '700'
+    fontWeight: '600'
   },
   stepTitle: {
     fontSize: '14px',

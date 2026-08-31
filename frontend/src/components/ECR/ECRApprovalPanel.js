@@ -155,24 +155,24 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
 
   const getChainStatusStyle = (status) => {
     switch (status) {
-      case 'approved': return { bg: '#dcfce7', border: '#22c55e', color: '#166534', icon: '✓', text: language === 'es' ? 'Aprobado' : 'Approved' };
-      case 'rejected': return { bg: '#fee2e2', border: '#ef4444', color: '#991b1b', icon: '↩', text: language === 'es' ? 'Devuelto' : 'Returned' };
-      case 'pending': return { bg: '#fef3c7', border: '#f59e0b', color: '#92400e', icon: '⏳', text: language === 'es' ? 'Pendiente' : 'Pending' };
-      default: return { bg: '#f3f4f6', border: '#d1d5db', color: '#6b7280', icon: '○', text: language === 'es' ? 'No iniciado' : 'Not started' };
+      case 'approved': return { bg: t.successBg, border: t.success, color: t.successFg, icon: '✓', text: language === 'es' ? 'Aprobado' : 'Approved' };
+      case 'rejected': return { bg: t.errorBg, border: t.error, color: t.errorFg, icon: '↩', text: language === 'es' ? 'Devuelto' : 'Returned' };
+      case 'pending': return { bg: t.warningBg, border: t.warning, color: t.warningFg, icon: '⏳', text: language === 'es' ? 'Pendiente' : 'Pending' };
+      default: return { bg: t.bgPanel, border: t.border, color: t.textMuted, icon: '○', text: language === 'es' ? 'No iniciado' : 'Not started' };
     }
   };
 
   const getStatusBadge = (status) => {
     const badges = language === 'es' ? {
-      draft: { text: 'Borrador', color: '#6b7280' },
-      pending_approval: { text: 'Esperando Aprobación', color: '#C77700' },
-      approved: { text: 'Aprobado', color: '#2E7D32' },
-      rejected: { text: 'Devuelto', color: '#ef4444' }
+      draft: { text: 'Borrador', color: t.textMuted },
+      pending_approval: { text: 'Esperando Aprobación', color: t.warning },
+      approved: { text: 'Aprobado', color: t.success },
+      rejected: { text: 'Devuelto', color: t.error }
     } : {
-      draft: { text: 'Draft', color: '#6b7280' },
-      pending_approval: { text: 'Pending Approval', color: '#C77700' },
-      approved: { text: 'Approved', color: '#2E7D32' },
-      rejected: { text: 'Returned', color: '#ef4444' }
+      draft: { text: 'Draft', color: t.textMuted },
+      pending_approval: { text: 'Pending Approval', color: t.warning },
+      approved: { text: 'Approved', color: t.success },
+      rejected: { text: 'Returned', color: t.error }
     };
     const badge = badges[status] || badges.draft;
 
@@ -201,8 +201,8 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
         {currentStatus === 'draft' && createdBy === currentUser?.id && (
           <div style={{
             ...styles.submitSection,
-            backgroundColor: validationStatus.canSubmit ? '#f0fdf4' : '#fef3c7',
-            border: `2px solid ${validationStatus.canSubmit ? '#22c55e' : '#C77700'}`,
+            backgroundColor: validationStatus.canSubmit ? t.successBg : t.warningBg,
+            border: `2px solid ${validationStatus.canSubmit ? t.success : t.warning}`,
             borderRadius: '8px',
             padding: '16px',
             marginTop: '20px'
@@ -212,19 +212,19 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
               <div style={{
                 marginBottom: '12px',
                 padding: '12px',
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fca5a5',
+                backgroundColor: t.errorBg,
+                border: `1px solid ${t.errorBorder}`,
                 borderRadius: '6px'
               }}>
-                <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600', color: '#991b1b' }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600', color: t.errorFg }}>
                   {language === 'es' ? 'No se puede enviar a aprobación. Pendientes:' : 'Cannot submit for approval. Pending:'}
                 </p>
-                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#7f1d1d' }}>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: t.errorFg }}>
                   {validationStatus.errors.slice(0, 5).map((error, idx) => (
                     <li key={idx}>{error}</li>
                   ))}
                   {validationStatus.errors.length > 5 && (
-                    <li style={{ color: '#6b7280' }}>{language === 'es' ? `...y ${validationStatus.errors.length - 5} más` : `...and ${validationStatus.errors.length - 5} more`}</li>
+                    <li style={{ color: t.textMuted }}>{language === 'es' ? `...y ${validationStatus.errors.length - 5} más` : `...and ${validationStatus.errors.length - 5} more`}</li>
                   )}
                 </ul>
               </div>
@@ -310,7 +310,7 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
                   disabled={submitting}
                   style={{
                     ...styles.submitButton,
-                    backgroundColor: '#C77700'
+                    backgroundColor: t.warning
                   }}
                 >
                   {submitting ? (language === 'es' ? 'Enviando...' : 'Submitting...') : (language === 'es' ? 'Re-enviar a Aprobación' : 'Re-submit for Approval')}
@@ -356,7 +356,7 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '13px',
-                      fontWeight: '700',
+                      fontWeight: '600',
                       flexShrink: 0
                     }}>
                       {approver.level}
@@ -523,7 +523,7 @@ const getStyles = (t) => ({
   },
   cardTitle: {
     fontSize: '20px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     marginBottom: '20px'
   },

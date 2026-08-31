@@ -75,7 +75,7 @@ const ECRQualityTargets = () => {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: t.bg, fontFamily: 'Inter, sans-serif' }}>
       <header style={{ backgroundColor: t.bgCard, borderBottom: `1px solid ${t.border}`, padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '20px', fontWeight: '700', color: t.text }}>Metas de Calidad ECR</span>
+        <span style={{ fontSize: '20px', fontWeight: '600', color: t.text }}>Metas de Calidad ECR</span>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <ThemeSelector />
           <button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer' }}>

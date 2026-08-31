@@ -102,7 +102,7 @@ const KPICard = ({ title, value, subtitle, color, theme }) => {
       <div style={{ fontSize: '11px', fontWeight: '500', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '4px' }}>
         {title}
       </div>
-      <div style={{ fontSize: '24px', fontWeight: '700', color: color || t.text }}>{value}</div>
+      <div style={{ fontSize: '24px', fontWeight: '600', color: color || t.text }}>{value}</div>
       {subtitle && (
         <div style={{ fontSize: '11px', color: t.textDim, marginTop: '4px' }}>{subtitle}</div>
       )}
@@ -153,7 +153,7 @@ const AdoptionProgressBar = ({ stage, stats, theme }) => {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
         <span style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>{stage.label}</span>
-        <span style={{ fontSize: '14px', fontWeight: '700', color: t.primary }}>{percentage}%</span>
+        <span style={{ fontSize: '14px', fontWeight: '600', color: t.primary }}>{percentage}%</span>
       </div>
       <div style={{ fontSize: '10px', color: t.textMuted, marginBottom: '8px' }}>{stage.name}</div>
       <div style={{ height: '4px', backgroundColor: t.border, borderRadius: '2px', overflow: 'hidden' }}>
@@ -337,7 +337,7 @@ const ECRDashboard = () => {
     header: { backgroundColor: t.bgCard, borderBottom: `1px solid ${t.border}`, padding: '16px 24px', position: 'sticky', top: 0, zIndex: 50 },
     headerContent: { maxWidth: '1600px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
     headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
-    logo: { width: '40px', height: '40px', backgroundColor: t.primary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '12px' },
+    logo: { width: '40px', height: '40px', backgroundColor: t.primary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600', fontSize: '12px' },
     headerActions: { display: 'flex', alignItems: 'center', gap: '12px' },
     themeSelector: { display: 'flex', gap: '6px', alignItems: 'center', marginRight: '12px', paddingRight: '12px', borderRight: `1px solid ${t.border}` },
     themeButton: { width: '20px', height: '20px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s ease' },
@@ -472,7 +472,7 @@ const ECRDashboard = () => {
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <td style={styles.td}>
-                          <span style={{ fontFamily: 'monospace', color: COLORS.primary, fontWeight: '500' }}>{ecr.ecrNumber}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: COLORS.primary, fontWeight: '500' }}>{ecr.ecrNumber}</span>
                         </td>
                         <td style={{ ...styles.td, maxWidth: '200px' }}>
                           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ecr.changeTitle || 'Sin título'}</div>
