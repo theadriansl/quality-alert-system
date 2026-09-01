@@ -8039,7 +8039,7 @@ const DefectHospital = () => {
                       backgroundColor: t.bgInput,
                       color: t.text,
                       fontSize: '14px',
-                      fontFamily: 'monospace',
+                      fontFamily: "'IBM Plex Mono', monospace",
                       resize: 'vertical'
                     }}
                   />
@@ -8072,7 +8072,7 @@ const DefectHospital = () => {
                   borderRadius: '8px',
                   border: 'none',
                   backgroundColor: '#8b5cf6',
-                  color: '#fff',
+                  color: 'white',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: reportLoading ? 'not-allowed' : 'pointer',
@@ -8094,8 +8094,8 @@ const DefectHospital = () => {
                   padding: '12px 24px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: '#22c55e',
-                  color: '#fff',
+                  backgroundColor: t.success,
+                  color: 'white',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: (reportLoading || !reportPreview) ? 'not-allowed' : 'pointer',
@@ -8115,7 +8115,7 @@ const DefectHospital = () => {
                   borderRadius: '8px',
                   border: 'none',
                   backgroundColor: '#10b981',
-                  color: '#fff',
+                  color: 'white',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: (reportLoading || !reportPreview) ? 'not-allowed' : 'pointer',
@@ -8234,12 +8234,12 @@ const DefectHospital = () => {
                               borderRadius: '4px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              backgroundColor: (row.repairStatus || row.repair_status) === 'RELEASED' || (row.repairStatus || row.repair_status) === 'CLOSED' ? '#22c55e20' :
-                                             (row.repairStatus || row.repair_status) === 'OPEN' ? '#ef444420' :
-                                             (row.repairStatus || row.repair_status) === 'IN_REPAIR' ? '#f59e0b20' : '#6b728020',
-                              color: (row.repairStatus || row.repair_status) === 'RELEASED' || (row.repairStatus || row.repair_status) === 'CLOSED' ? '#22c55e' :
-                                    (row.repairStatus || row.repair_status) === 'OPEN' ? '#ef4444' :
-                                    (row.repairStatus || row.repair_status) === 'IN_REPAIR' ? '#f59e0b' : '#6b7280'
+                              backgroundColor: (row.repairStatus || row.repair_status) === 'RELEASED' || (row.repairStatus || row.repair_status) === 'CLOSED' ? t.success + '20' :
+                                             (row.repairStatus || row.repair_status) === 'OPEN' ? t.error + '20' :
+                                             (row.repairStatus || row.repair_status) === 'IN_REPAIR' ? t.warning + '20' : t.textMuted + '20',
+                              color: (row.repairStatus || row.repair_status) === 'RELEASED' || (row.repairStatus || row.repair_status) === 'CLOSED' ? t.success :
+                                    (row.repairStatus || row.repair_status) === 'OPEN' ? t.error :
+                                    (row.repairStatus || row.repair_status) === 'IN_REPAIR' ? t.warning : t.textMuted
                             }}>
                               {row.repairStatus || row.repair_status || '-'}
                             </span>
