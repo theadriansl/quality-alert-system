@@ -6688,7 +6688,7 @@ const DefectHospital = () => {
         {/* Ready for Validation: defectos reparados esperando destino */}
         {showRepairContent && (
           <button
-            style={{ ...styles.tab, ...(activeTab === 'handoff' ? styles.tabActive : styles.tabInactive), backgroundColor: activeTab === 'handoff' ? (t.warning || '#f59e0b') : undefined }}
+            style={{ ...styles.tab, ...(activeTab === 'handoff' ? styles.tabActive : styles.tabInactive), backgroundColor: activeTab === 'handoff' ? t.warning : undefined }}
             onClick={() => setActiveTab('handoff')}
           >
             {language === 'es' ? 'Listo para Validación' : 'Ready for Validation'} ({pendingHandoff.length})
@@ -6710,8 +6710,8 @@ const DefectHospital = () => {
           style={{
             ...styles.tab,
             ...(activeTab === 'mrb' ? styles.tabActive : styles.tabInactive),
-            backgroundColor: activeTab === 'mrb' ? '#dc2626' : undefined,
-            color: activeTab === 'mrb' ? '#fff' : undefined
+            backgroundColor: activeTab === 'mrb' ? t.error : undefined,
+            color: activeTab === 'mrb' ? 'white' : undefined
           }}
           onClick={() => setActiveTab('mrb')}
         >
@@ -6753,7 +6753,7 @@ const DefectHospital = () => {
             ...styles.tab,
             ...(activeTab === 'reports' ? styles.tabActive : styles.tabInactive),
             backgroundColor: activeTab === 'reports' ? '#8b5cf6' : undefined,
-            color: activeTab === 'reports' ? '#fff' : undefined
+            color: activeTab === 'reports' ? 'white' : undefined
           }}
           onClick={() => setActiveTab('reports')}
         >
