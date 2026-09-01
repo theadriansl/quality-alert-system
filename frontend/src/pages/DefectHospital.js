@@ -5036,7 +5036,7 @@ const DefectHospital = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div>
-              <div style={{ fontSize: '36px', fontWeight: '700', color: t.accent }}>{totalWip}</div>
+              <div style={{ fontSize: '36px', fontWeight: '600', color: t.accent }}>{totalWip}</div>
               <div style={{ fontSize: '12px', color: t.textMuted, textTransform: 'uppercase' }}>Total WIP</div>
             </div>
             <div style={{ width: '1px', height: '40px', backgroundColor: t.border }} />
@@ -5122,7 +5122,7 @@ const DefectHospital = () => {
                   </div>
                   <div style={{
                     fontSize: '28px',
-                    fontWeight: '700',
+                    fontWeight: '600',
                     color: loc.wipCount > 0 ? t.text : t.textDim,
                     lineHeight: 1
                   }}>
