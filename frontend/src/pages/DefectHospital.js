@@ -10946,7 +10946,7 @@ const DefectHospital = () => {
                       </span>
                       <span style={{
                         backgroundColor: t.primary,
-                        color: '#fff',
+                        color: 'white',
                         padding: '2px 8px',
                         borderRadius: '10px',
                         fontSize: '11px',
@@ -10986,7 +10986,7 @@ const DefectHospital = () => {
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: '6px',
-                  border: `1px solid ${packageDestinationLocationId ? t.border : '#ef4444'}`,
+                  border: `1px solid ${packageDestinationLocationId ? t.border : t.error}`,
                   backgroundColor: t.bgPanel,
                   color: t.text,
                   fontSize: '13px'
@@ -11000,7 +11000,7 @@ const DefectHospital = () => {
                 ))}
               </select>
               {!packageDestinationLocationId && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#ef4444' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: t.errorFg }}>
                   {language === 'es' ? 'Requerido para control de inventario' : 'Required for inventory control'}
                 </p>
               )}
@@ -11085,7 +11085,7 @@ const DefectHospital = () => {
                   border: 'none',
                   borderRadius: '6px',
                   backgroundColor: (!packageDestinationLocationId || selectedForMrb.size === 0) ? t.border : t.primary,
-                  color: '#fff',
+                  color: 'white',
                   cursor: (creatingPackage || !packageDestinationLocationId) ? 'not-allowed' : 'pointer',
                   fontSize: '14px',
                   fontWeight: '500',
