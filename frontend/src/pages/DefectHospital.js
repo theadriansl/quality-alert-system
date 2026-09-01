@@ -6785,7 +6785,7 @@ const DefectHospital = () => {
               fontSize: '12px',
               fontWeight: '500',
               backgroundColor: repairsSubTab === 'all' ? t.accent : 'transparent',
-              color: repairsSubTab === 'all' ? '#fff' : t.text,
+              color: repairsSubTab === 'all' ? 'white' : t.text,
               border: `1px solid ${repairsSubTab === 'all' ? t.accent : t.border}`,
               transition: 'all 0.2s'
             }}
@@ -6802,7 +6802,7 @@ const DefectHospital = () => {
               fontSize: '12px',
               fontWeight: '500',
               backgroundColor: repairsSubTab === 'sinUbicacion' ? t.warning : 'transparent',
-              color: repairsSubTab === 'sinUbicacion' ? '#fff' : t.warning,
+              color: repairsSubTab === 'sinUbicacion' ? 'white' : t.warning,
               border: `1px solid ${t.warning}`,
               transition: 'all 0.2s'
             }}
@@ -6819,7 +6819,7 @@ const DefectHospital = () => {
               fontSize: '12px',
               fontWeight: '500',
               backgroundColor: repairsSubTab === 'enCola' ? t.success : 'transparent',
-              color: repairsSubTab === 'enCola' ? '#fff' : t.success,
+              color: repairsSubTab === 'enCola' ? 'white' : t.success,
               border: `1px solid ${t.success}`,
               transition: 'all 0.2s'
             }}
