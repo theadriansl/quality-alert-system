@@ -6979,9 +6979,9 @@ const DefectHospital = () => {
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: '500',
-                backgroundColor: mrbSubTab === 'scrap' ? t.errorFg : 'transparent',
+                backgroundColor: mrbSubTab === 'scrap' ? t.error : 'transparent',
                 color: mrbSubTab === 'scrap' ? 'white' : t.errorFg,
-                border: `1px solid ${t.errorFg}`,
+                border: `1px solid ${t.error}`,
                 transition: 'all 0.2s'
               }}
               onClick={() => { setMrbSubTab('scrap'); setSelectedForMrb(new Set()); }}
@@ -7142,7 +7142,7 @@ const DefectHospital = () => {
                               borderRadius: '12px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              backgroundColor: defect._mrbType === 'quarantine' ? t.warning + '20' : t.errorFg + '20',
+                              backgroundColor: defect._mrbType === 'quarantine' ? t.warning + '20' : t.error + '20',
                               color: defect._mrbType === 'quarantine' ? t.warning : t.errorFg
                             }}>
                               {defect._mrbType === 'quarantine'
