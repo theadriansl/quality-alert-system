@@ -6945,9 +6945,9 @@ const DefectHospital = () => {
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: '500',
-                backgroundColor: mrbSubTab === 'all' ? '#dc2626' : 'transparent',
-                color: mrbSubTab === 'all' ? '#fff' : '#dc2626',
-                border: '1px solid #dc2626',
+                backgroundColor: mrbSubTab === 'all' ? t.error : 'transparent',
+                color: mrbSubTab === 'all' ? 'white' : t.error,
+                border: `1px solid ${t.error}`,
                 transition: 'all 0.2s'
               }}
               onClick={() => { setMrbSubTab('all'); setSelectedForMrb(new Set()); }}
@@ -6963,7 +6963,7 @@ const DefectHospital = () => {
                 fontSize: '12px',
                 fontWeight: '500',
                 backgroundColor: mrbSubTab === 'quarantine' ? t.warning : 'transparent',
-                color: mrbSubTab === 'quarantine' ? '#fff' : t.warning,
+                color: mrbSubTab === 'quarantine' ? 'white' : t.warning,
                 border: `1px solid ${t.warning}`,
                 transition: 'all 0.2s'
               }}
@@ -6979,9 +6979,9 @@ const DefectHospital = () => {
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: '500',
-                backgroundColor: mrbSubTab === 'scrap' ? '#7f1d1d' : 'transparent',
-                color: mrbSubTab === 'scrap' ? '#fff' : '#7f1d1d',
-                border: '1px solid #7f1d1d',
+                backgroundColor: mrbSubTab === 'scrap' ? t.errorFg : 'transparent',
+                color: mrbSubTab === 'scrap' ? 'white' : t.errorFg,
+                border: `1px solid ${t.errorFg}`,
                 transition: 'all 0.2s'
               }}
               onClick={() => { setMrbSubTab('scrap'); setSelectedForMrb(new Set()); }}
@@ -7015,12 +7015,12 @@ const DefectHospital = () => {
               alignItems: 'center',
               gap: '12px',
               padding: '12px 16px',
-              backgroundColor: '#dc262620',
+              backgroundColor: t.error + '20',
               borderRadius: '8px',
               marginBottom: '16px',
-              border: `1px solid #dc2626`
+              border: `1px solid ${t.error}`
             }}>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626' }}>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: t.error }}>
                 {selectedForMrb.size} {language === 'es' ? 'seleccionado(s)' : 'selected'}
               </span>
               {/* Hint hacia ActionBar */}
@@ -7090,7 +7090,7 @@ const DefectHospital = () => {
 
                   return mrbFilteredDefects.map(defect => {
                     const hours = defect._mrbType === 'quarantine' ? defect.hoursInQuarantine : defect.hoursInScrap;
-                    const hoursColor = hours > 72 ? '#dc2626' : hours > 24 ? '#f59e0b' : t.success;
+                    const hoursColor = hours > 72 ? t.error : hours > 24 ? t.warning : t.success;
                     const defectSerial = defect.serialNumber || defect.lotNumber;
                     const isInPendingPackage = defectSerial && pendingSerials.has(defectSerial);
                     return (
@@ -7098,7 +7098,7 @@ const DefectHospital = () => {
                         key={defect.id}
                         style={{
                           borderBottom: `1px solid ${t.border}`,
-                          backgroundColor: isInPendingPackage ? '#6b728020' : selectedForMrb.has(defect.id) ? '#dc262610' : 'transparent',
+                          backgroundColor: isInPendingPackage ? t.textMuted + '20' : selectedForMrb.has(defect.id) ? t.error + '10' : 'transparent',
                           opacity: isInPendingPackage ? 0.6 : 1
                         }}
                       >
@@ -7109,8 +7109,8 @@ const DefectHospital = () => {
                               borderRadius: '4px',
                               fontSize: '9px',
                               fontWeight: '600',
-                              backgroundColor: '#6b728030',
-                              color: '#6b7280',
+                              backgroundColor: t.textMuted + '30',
+                              color: t.textMuted,
                               whiteSpace: 'nowrap'
                             }}>
                               {language === 'es' ? 'EN PKG' : 'IN PKG'}
@@ -7128,11 +7128,11 @@ const DefectHospital = () => {
                                 }
                                 setSelectedForMrb(newSet);
                               }}
-                              style={{ cursor: 'pointer', accentColor: '#dc2626' }}
+                              style={{ cursor: 'pointer', accentColor: t.error }}
                             />
                           )}
                         </td>
-                        <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontSize: '12px', color: t.accent }}>
+                        <td style={{ padding: '10px 8px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', color: t.accent }}>
                           {defect.entryNumber}
                         </td>
                         {mrbSubTab === 'all' && (
@@ -7142,8 +7142,8 @@ const DefectHospital = () => {
                               borderRadius: '12px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              backgroundColor: defect._mrbType === 'quarantine' ? '#f59e0b20' : '#7f1d1d20',
-                              color: defect._mrbType === 'quarantine' ? '#f59e0b' : '#7f1d1d'
+                              backgroundColor: defect._mrbType === 'quarantine' ? t.warning + '20' : t.errorFg + '20',
+                              color: defect._mrbType === 'quarantine' ? t.warning : t.errorFg
                             }}>
                               {defect._mrbType === 'quarantine'
                                 ? (language === 'es' ? 'Cuarentena' : 'Quarantine')
@@ -7151,7 +7151,7 @@ const DefectHospital = () => {
                             </span>
                           </td>
                         )}
-                        <td style={{ padding: '10px 8px', fontFamily: 'monospace', fontWeight: '600', color: t.text }}>
+                        <td style={{ padding: '10px 8px', fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600', color: t.text }}>
                           {defect.serialNumber || defect.lotNumber || '-'}
                         </td>
                         <td style={{ padding: '10px 8px', color: t.text }}>
@@ -7171,8 +7171,8 @@ const DefectHospital = () => {
                                   borderRadius: '4px',
                                   fontSize: '11px',
                                   fontWeight: '600',
-                                  backgroundColor: '#dc262620',
-                                  color: '#dc2626',
+                                  backgroundColor: t.error + '20',
+                                  color: t.error,
                                   cursor: 'pointer',
                                   display: 'inline-block'
                                 }}
@@ -7231,8 +7231,8 @@ const DefectHospital = () => {
                               borderRadius: '4px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              backgroundColor: '#16a34a20',
-                              color: '#16a34a',
+                              backgroundColor: t.success + '20',
+                              color: t.success,
                               cursor: 'pointer'
                             }}
                             onClick={() => navigate(`/8d/${defect.eightdId}`)}
