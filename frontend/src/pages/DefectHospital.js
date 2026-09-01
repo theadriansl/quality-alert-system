@@ -4552,7 +4552,7 @@ const DefectHospital = () => {
           </button>
           {canDoScrapActions && (
             <button
-              style={{ ...styles.actionButton, backgroundColor: '#991b1b', color: '#fff' }}
+              style={{ ...styles.actionButton, backgroundColor: t.error, color: 'white' }}
               onClick={(e) => { e.stopPropagation(); handleScrap(defect); }}
               title={language === 'es' ? 'Enviar directo a SCRAP' : 'Send directly to SCRAP'}
             >
@@ -4580,7 +4580,7 @@ const DefectHospital = () => {
           </button>
           {canDoScrapActions && (
             <button
-              style={{ ...styles.actionButton, backgroundColor: '#991b1b', color: '#fff' }}
+              style={{ ...styles.actionButton, backgroundColor: t.error, color: 'white' }}
               onClick={(e) => { e.stopPropagation(); handleScrap(defect); }}
               title={language === 'es' ? 'No se puede reparar - SCRAP' : 'Cannot repair - SCRAP'}
             >
