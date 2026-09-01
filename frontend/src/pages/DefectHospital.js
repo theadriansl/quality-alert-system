@@ -7304,7 +7304,7 @@ const DefectHospital = () => {
                   borderRadius: '8px',
                   backgroundColor: t.bgPanel,
                   color: t.text,
-                  fontFamily: 'monospace',
+                  fontFamily: "'IBM Plex Mono', monospace",
                   letterSpacing: '1px'
                 }}
                 placeholder={language === 'es' ? 'Escanea serial, lote o entry...' : 'Scan serial, lot or entry...'}
@@ -7317,7 +7317,7 @@ const DefectHospital = () => {
                 style={{
                   padding: '14px 24px',
                   backgroundColor: t.accent,
-                  color: '#fff',
+                  color: 'white',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
@@ -7371,8 +7371,8 @@ const DefectHospital = () => {
                   onClick={exportTraceabilityPDF}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: '#dc2626',
-                    color: '#fff',
+                    backgroundColor: t.error,
+                    color: 'white',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
@@ -7416,7 +7416,7 @@ const DefectHospital = () => {
                       <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '4px' }}>
                         Serial / Lote
                       </div>
-                      <div style={{ fontSize: '14px', fontWeight: '600', color: t.text, fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: t.text, fontFamily: "'IBM Plex Mono', monospace" }}>
                         {traceDefects[0].serialNumber || traceDefects[0].serial_number || traceDefects[0].lotNumber || traceDefects[0].lot_number || '-'}
                       </div>
                     </div>
@@ -7585,7 +7585,7 @@ const DefectHospital = () => {
                                     padding: '3px 10px',
                                     borderRadius: '4px',
                                     fontSize: '12px',
-                                    fontWeight: '700',
+                                    fontWeight: '600',
                                     backgroundColor: eventInfo.color + '20',
                                     color: eventInfo.color
                                   }}>
@@ -7791,7 +7791,7 @@ const DefectHospital = () => {
               style={{
                 padding: '10px 20px',
                 backgroundColor: t.accent,
-                color: '#fff',
+                color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
