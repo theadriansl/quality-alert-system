@@ -360,16 +360,16 @@
 | 8D (10 tabs + header) | ✅ Cerrado |
 | ECR (7 archivos) | ✅ Cerrado |
 | QAR (QARList, DefectConfig) | ✅ Parcial |
-| Hospital (DefectHospital) | 🔄 En progreso (53/~100 cambios, 8 bloques pendientes) |
+| Hospital (DefectHospital) | ✅ Cerrado (15 commits, 113 cambios) |
 
 ### PENDIENTE para próxima sesión:
-1. **DefectHospital.js** - Continuar tokenización (8 bloques restantes, ver sesión 01-Sep)
+1. Definir tokens para colores sin equivalente (ver sesión 01-Sep)
 
 ---
 
 ## Notas Sesión 01-Sep-2026
 
-### Completado hoy - DefectHospital.js Tokenización (53 cambios en 7 commits):
+### ✅ COMPLETADO: DefectHospital.js Tokenización (113 cambios en 15 commits)
 
 | Commit | Bloque | Cambios |
 |--------|--------|---------|
@@ -380,6 +380,14 @@
 | `4abf522` | Traceability+Deviations (7270-7906) | 7 |
 | `384544a` | Tab Reports (7907-8269) | 11 |
 | `0667a25` | renderWIPDashboard (~5001) | 2 |
+| `8a98fef` | renderDefectActions | 4 |
+| `c11b383` | Badge en card | 2 |
+| `ab87e8b` | Banners/Modales error/success | 20 |
+| `fa3a731` | Barra de tabs | 4 |
+| `4282ebc` | Modal Handoff | 1 |
+| `d7fa8bf` | Modal CreatePackage | 4 |
+| `372197b` | Modal ReceivePackage | 11 |
+| `761a0a6` | Modal MRB | 14 |
 
 ### Reglas aplicadas:
 - Whitelist: color, backgroundColor, borderColor, border shorthand, fontWeight, fontFamily
@@ -392,32 +400,16 @@
 - Commit `74fd453` usó `t.errorFg` como backgroundColor (líneas 6982, 6984, 7145)
 - Fix en `2778dd4`: cambiado a `t.error` (token base para fondos/bordes)
 
-### PENDIENTE DefectHospital.js (8 bloques restantes):
+### Literales sin token equivalente (PENDIENTE DECISIÓN):
+| Literal | Uso | Ubicación |
+|---------|-----|-----------|
+| `#8b5cf6` | Tab Reports (backgroundColor activo) | Barra de tabs |
+| `#450a0a` | Botón confirmScrap (backgroundColor) | Modal MRB |
 
-| # | Bloque | Líneas | Literales |
-|---|--------|--------|-----------|
-| 1 | renderDefectActions | ~4555-4583 | #991b1b |
-| 2 | Badge en card | ~4838-4839 | #dbeafe, #1e40af |
-| 3 | Banners error/success | ~6240-6500 | ~11 literales |
-| 4 | Barra de tabs compartida | ~6691-6756 | #dc2626, #8b5cf6, #f59e0b |
-| 5 | Modal Handoff | ~10580-10900 | Por verificar |
-| 6 | Modal CreatePackage | ~10900-11105 | Por verificar |
-| 7 | Modal ReceivePackage | ~11105-11318 | Por verificar |
-| 8 | Modal MRB | ~11318-11700 | Por verificar |
-
-### Literales sin token equivalente (reportar/decidir):
-- `#9b59b6` - púrpura
-- `#8b5cf6` - violeta
-- `#10b981` - verde esmeralda
-- `#7c3aed` - violeta oscuro
-- `#3b82f6` - azul
-- `#06b6d4` - cyan
-- `#450a0a` - rojo muy oscuro
-
-### Tabs sin bloque propio (ya cubiertos):
-- Tab "inRepair" → comparte render de Tab General
-- Tab "releases" → comparte render de Tab General
-- Tab "Handoff" → ya tokenizado (6847-6881)
+**Opciones:**
+1. Crear tokens `t.purple` / `t.errorDark` en ThemeContext
+2. Dejar hardcodeados (colores específicos de contexto)
+3. Reemplazar por tokens existentes más cercanos
 
 ---
 
