@@ -11433,7 +11433,7 @@ const DefectHospital = () => {
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                              <span style={{ fontWeight: '700', color: t.primary, fontSize: '13px' }}>
+                              <span style={{ fontWeight: '600', color: t.primary, fontSize: '13px' }}>
                                 {d.referenceNumber || `DEV-${d.id}`}
                               </span>
                               <span style={{ fontSize: '10px', color: t.textMuted, backgroundColor: t.bgCard, padding: '2px 6px', borderRadius: '4px' }}>
@@ -11484,7 +11484,7 @@ const DefectHospital = () => {
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.text, marginBottom: '6px' }}>
                 {language === 'es' ? 'Notas / Justificación' : 'Notes / Justification'}
-                {(mrbAction === 'toScrap' || mrbAction === 'confirmScrap') && <span style={{ color: '#dc2626' }}> *</span>}
+                {(mrbAction === 'toScrap' || mrbAction === 'confirmScrap') && <span style={{ color: t.errorFg }}> *</span>}
               </label>
               <DebouncedTextarea
                 value={mrbNotes}
@@ -11514,12 +11514,12 @@ const DefectHospital = () => {
             {(mrbAction === 'toScrap' || mrbAction === 'confirmScrap') && (
               <div style={{
                 padding: '12px',
-                backgroundColor: '#dc262610',
-                border: '1px solid #dc2626',
+                backgroundColor: t.error + '10',
+                border: `1px solid ${t.error}`,
                 borderRadius: '8px',
                 marginBottom: '20px'
               }}>
-                <p style={{ margin: 0, color: '#dc2626', fontSize: '13px', fontWeight: '500' }}>
+                <p style={{ margin: 0, color: t.errorFg, fontSize: '13px', fontWeight: '500' }}>
                   ⚠️ {mrbAction === 'confirmScrap'
                     ? (language === 'es' ? 'Esta acción es IRREVERSIBLE. El scrap quedará confirmado como disposición final.' : 'This action is IRREVERSIBLE. Scrap will be confirmed as final disposition.')
                     : (language === 'es' ? 'Los defectos serán marcados para scrap.' : 'Defects will be marked for scrap.')
@@ -11615,11 +11615,11 @@ const DefectHospital = () => {
                   borderRadius: '6px',
                   backgroundColor:
                     mrbAction === 'returnToRepair' ? (t.warning || '#f59e0b') :
-                    mrbAction === 'toScrap' ? '#7f1d1d' :
+                    mrbAction === 'toScrap' ? t.error :
                     mrbAction === 'releaseWithDeviation' ? (t.success || '#22c55e') :
                     mrbAction === 'confirmScrap' ? '#450a0a' :
                     (t.warning || '#f59e0b'),
-                  color: '#fff',
+                  color: 'white',
                   cursor: loading ? 'not-allowed' : 'pointer',
                   fontSize: '14px',
                   fontWeight: '500'
@@ -11639,7 +11639,7 @@ const DefectHospital = () => {
         <div style={styles.modal} onClick={() => setMrbWarningOpen(false)}>
           <div style={{ ...styles.modalContent, maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ ...styles.modalTitle, margin: 0, color: '#dc2626' }}>
+              <h3 style={{ ...styles.modalTitle, margin: 0, color: t.errorFg }}>
                 {language === 'es' ? 'Inspecciones MRB Pendientes' : 'Pending MRB Inspections'}
               </h3>
               <button
@@ -11647,18 +11647,18 @@ const DefectHospital = () => {
                 style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: t.textMuted }}
               >×</button>
             </div>
-            <div style={{ padding: '16px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '16px' }}>
-              <p style={{ margin: '0 0 12px 0', color: '#991b1b', fontWeight: '500' }}>
+            <div style={{ padding: '16px', backgroundColor: t.errorBg, borderRadius: '8px', border: `1px solid ${t.errorBorder}`, marginBottom: '16px' }}>
+              <p style={{ margin: '0 0 12px 0', color: t.errorFg, fontWeight: '500' }}>
                 {language === 'es'
                   ? 'Este serial tiene campañas MRB pendientes. Complete las inspecciones antes de aplicar disposición.'
                   : 'This serial has pending MRB campaigns. Complete inspections before applying disposition.'}
               </p>
-              <div style={{ fontWeight: '600', marginBottom: '8px', color: '#7f1d1d' }}>
+              <div style={{ fontWeight: '600', marginBottom: '8px', color: t.errorFg }}>
                 {language === 'es' ? 'Campañas pendientes:' : 'Pending campaigns:'}
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px' }}>
                 {mrbPendingCampaigns.map((c, idx) => (
-                  <li key={idx} style={{ color: '#991b1b', marginBottom: '4px' }}>
+                  <li key={idx} style={{ color: t.errorFg, marginBottom: '4px' }}>
                     <strong>{c.campaignNumber}</strong>: {c.title}
                   </li>
                 ))}
@@ -11673,7 +11673,7 @@ const DefectHospital = () => {
               </button>
               <button
                 onClick={sendToMrbFromWarning}
-                style={{ padding: '10px 20px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+                style={{ padding: '10px 20px', backgroundColor: t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
               >
                 {language === 'es' ? 'Enviar a Cuarentena' : 'Send to Quarantine'}
               </button>
