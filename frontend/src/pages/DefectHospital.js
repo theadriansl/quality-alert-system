@@ -8288,7 +8288,7 @@ const DefectHospital = () => {
                 {language === 'es' ? 'Colapsar' : 'Collapse'}
               </button>
               <button
-                style={{ ...styles.smallBtn, backgroundColor: t.success, color: '#fff' }}
+                style={{ ...styles.smallBtn, backgroundColor: t.success, color: 'white' }}
                 onClick={exportToExcel}
                 title="Exportar a Excel"
               >
@@ -8581,7 +8581,7 @@ const DefectHospital = () => {
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: t.info,
-                color: '#fff',
+                color: 'white',
                 fontSize: '12px',
                 cursor: 'pointer'
               }}
@@ -8612,7 +8612,7 @@ const DefectHospital = () => {
                 <span style={{
                   padding: '4px 10px',
                   backgroundColor: t.warning,
-                  color: '#fff',
+                  color: 'white',
                   borderRadius: '12px',
                   fontSize: '12px',
                   fontWeight: '600'
@@ -8626,7 +8626,7 @@ const DefectHospital = () => {
                     borderRadius: '6px',
                     border: 'none',
                     backgroundColor: t.accent,
-                    color: '#fff',
+                    color: 'white',
                     fontSize: '13px',
                     fontWeight: '600',
                     cursor: 'pointer',
