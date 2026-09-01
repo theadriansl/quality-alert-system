@@ -4835,8 +4835,8 @@ const DefectHospital = () => {
                 <span style={{
                   marginLeft: '8px',
                   padding: '2px 6px',
-                  backgroundColor: '#dbeafe',
-                  color: '#1e40af',
+                  backgroundColor: t.accentBg,
+                  color: t.accentFg,
                   borderRadius: '4px',
                   fontSize: '11px',
                   fontWeight: '500'
