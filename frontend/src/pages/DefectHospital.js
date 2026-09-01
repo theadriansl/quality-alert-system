@@ -6237,8 +6237,8 @@ const DefectHospital = () => {
       {/* Access Denied Banner */}
       {showAccessDenied && (
         <div style={{
-          backgroundColor: '#fef2f2',
-          borderBottom: '2px solid #ef4444',
+          backgroundColor: t.errorBg,
+          borderBottom: `2px solid ${t.error}`,
           padding: '16px 24px',
           display: 'flex',
           alignItems: 'center',
@@ -6248,10 +6248,10 @@ const DefectHospital = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '24px' }}>🚫</span>
             <div>
-              <div style={{ color: '#991b1b', fontWeight: '600', fontSize: '16px' }}>
+              <div style={{ color: t.errorFg, fontWeight: '600', fontSize: '16px' }}>
                 Acceso a Captura de Defectos Denegado
               </div>
-              <div style={{ color: '#b91c1c', fontSize: '14px' }}>
+              <div style={{ color: t.errorFg, fontSize: '14px' }}>
                 {accessDeniedReason}
               </div>
             </div>
@@ -6263,7 +6263,7 @@ const DefectHospital = () => {
               border: 'none',
               cursor: 'pointer',
               fontSize: '20px',
-              color: '#991b1b'
+              color: t.errorFg
             }}
           >
             ✕
@@ -6330,7 +6330,7 @@ const DefectHospital = () => {
             {language === 'es' ? 'Captura' : 'Capture'}
           </button>
           <button
-            style={{ ...styles.refreshButton, backgroundColor: '#0369a1', color: 'white' }}
+            style={{ ...styles.refreshButton, backgroundColor: t.info, color: 'white' }}
             onClick={() => navigate('/repair-station')}
           >
             {language === 'es' ? 'Estación' : 'Station'}
@@ -6403,19 +6403,19 @@ const DefectHospital = () => {
               width: '70px',
               height: '70px',
               borderRadius: '50%',
-              backgroundColor: '#fef2f2',
+              backgroundColor: t.errorBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 20px',
-              border: '3px solid #991b1b',
+              border: `3px solid ${t.error}`,
               fontSize: '32px'
             }}>✕</div>
-            <h3 style={{ color: '#991b1b', fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>Error</h3>
+            <h3 style={{ color: t.errorFg, fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>Error</h3>
             <p style={{ color: t.textMuted, fontSize: '15px', marginBottom: '24px', lineHeight: '1.5' }}>{error}</p>
             <button
               onClick={() => setError(null)}
-              style={{ padding: '14px 32px', backgroundColor: '#991b1b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '15px' }}
+              style={{ padding: '14px 32px', backgroundColor: t.error, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '15px' }}
             >Aceptar</button>
           </div>
         </div>
@@ -6446,19 +6446,19 @@ const DefectHospital = () => {
               width: '70px',
               height: '70px',
               borderRadius: '50%',
-              backgroundColor: '#dbeafe',
+              backgroundColor: t.accentBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 20px',
-              border: '3px solid #1e40af',
+              border: `3px solid ${t.accent}`,
               fontSize: '32px'
             }}>✓</div>
-            <h3 style={{ color: '#1e40af', fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>Éxito</h3>
+            <h3 style={{ color: t.accentFg, fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>Éxito</h3>
             <p style={{ color: t.textMuted, fontSize: '15px', marginBottom: '24px', lineHeight: '1.5' }}>{success}</p>
             <button
               onClick={() => setSuccess(null)}
-              style={{ padding: '14px 32px', backgroundColor: '#1e40af', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '15px' }}
+              style={{ padding: '14px 32px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '15px' }}
             >Aceptar</button>
           </div>
         </div>
@@ -6468,8 +6468,8 @@ const DefectHospital = () => {
       {incomingPackages.length > 0 && (
         <div style={{
           padding: '12px 16px',
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: t.warningBg,
+          border: `1px solid ${t.warning}`,
           borderRadius: '8px',
           marginBottom: '12px',
           display: 'flex',
@@ -6480,10 +6480,10 @@ const DefectHospital = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '20px' }}>📦</span>
             <div>
-              <div style={{ fontWeight: '600', color: '#92400e', fontSize: '14px' }}>
+              <div style={{ fontWeight: '600', color: t.warningFg, fontSize: '14px' }}>
                 {incomingPackages.length} {language === 'es' ? 'paquete(s) desde MRB pendiente(s)' : 'pending package(s) from MRB'}
               </div>
-              <div style={{ fontSize: '12px', color: '#a16207' }}>
+              <div style={{ fontSize: '12px', color: t.warningFg }}>
                 {language === 'es' ? 'Material REWORK listo para recibir' : 'REWORK material ready to receive'}
               </div>
             </div>
@@ -6495,10 +6495,10 @@ const DefectHospital = () => {
             }}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#f59e0b',
+              backgroundColor: t.warning,
               border: 'none',
               borderRadius: '6px',
-              color: '#fff',
+              color: 'white',
               cursor: 'pointer',
               fontSize: '13px',
               fontWeight: '600'
