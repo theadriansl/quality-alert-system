@@ -11124,7 +11124,7 @@ const DefectHospital = () => {
             maxHeight: '85vh',
             overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#f59e0b' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: t.warning }}>
               📦 {language === 'es' ? 'Paquetes desde MRB' : 'Packages from MRB'}
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: t.textMuted }}>
@@ -11141,8 +11141,8 @@ const DefectHospital = () => {
                   style={{
                     padding: '12px 16px',
                     marginBottom: '8px',
-                    backgroundColor: selectedIncomingPackage?.id === pkg.id ? '#f59e0b15' : t.bgPanel,
-                    border: `1px solid ${selectedIncomingPackage?.id === pkg.id ? '#f59e0b' : t.border}`,
+                    backgroundColor: selectedIncomingPackage?.id === pkg.id ? t.warning + '15' : t.bgPanel,
+                    border: `1px solid ${selectedIncomingPackage?.id === pkg.id ? t.warning : t.border}`,
                     borderRadius: '8px',
                     cursor: 'pointer'
                   }}
@@ -11153,7 +11153,7 @@ const DefectHospital = () => {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <span style={{ fontWeight: '700', color: t.primary, marginRight: '10px' }}>
+                      <span style={{ fontWeight: '600', color: t.primary, marginRight: '10px' }}>
                         {pkg.packageNumber}
                       </span>
                       <span style={{ fontSize: '12px', color: t.textMuted }}>
@@ -11166,8 +11166,8 @@ const DefectHospital = () => {
                         borderRadius: '10px',
                         fontSize: '11px',
                         fontWeight: '600',
-                        backgroundColor: pkg.alertTriggered ? '#dc262620' : '#f59e0b20',
-                        color: pkg.alertTriggered ? '#dc2626' : '#f59e0b'
+                        backgroundColor: pkg.alertTriggered ? t.error + '20' : t.warning + '20',
+                        color: pkg.alertTriggered ? t.error : t.warning
                       }}>
                         {pkg.minutesElapsed < 60
                           ? `${Math.round(pkg.minutesElapsed)}m`
@@ -11201,7 +11201,7 @@ const DefectHospital = () => {
                   <tbody>
                     {incomingPackageDetails.items?.map(item => (
                       <tr key={item.id} style={{ borderTop: `1px solid ${t.border}` }}>
-                        <td style={{ padding: '8px', fontFamily: 'monospace', color: t.primary }}>{item.serialNumber || '-'}</td>
+                        <td style={{ padding: '8px', fontFamily: "'IBM Plex Mono', monospace", color: t.primary }}>{item.serialNumber || '-'}</td>
                         <td style={{ padding: '8px', color: t.text }}>{item.partNumber}</td>
                         <td style={{ padding: '8px', color: t.text }}>{item.defectSummary || '-'}</td>
                       </tr>
@@ -11221,7 +11221,7 @@ const DefectHospital = () => {
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '6px',
-                      border: `1px solid ${receiveLocationId ? t.border : '#ef4444'}`,
+                      border: `1px solid ${receiveLocationId ? t.border : t.error}`,
                       backgroundColor: t.bgCard,
                       color: t.text,
                       fontSize: '13px',
@@ -11236,7 +11236,7 @@ const DefectHospital = () => {
                     ))}
                   </select>
                   {!receiveLocationId && (
-                    <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
+                    <div style={{ fontSize: '11px', color: t.errorFg, marginTop: '4px' }}>
                       {language === 'es' ? 'Requerido para recibir el paquete' : 'Required to receive package'}
                     </div>
                   )}
@@ -11296,8 +11296,8 @@ const DefectHospital = () => {
                     padding: '10px 24px',
                     border: 'none',
                     borderRadius: '6px',
-                    backgroundColor: (receivingPackage || !receiveLocationId) ? '#6b7280' : '#16a34a',
-                    color: '#fff',
+                    backgroundColor: (receivingPackage || !receiveLocationId) ? t.textMuted : t.success,
+                    color: 'white',
                     cursor: (receivingPackage || !receiveLocationId) ? 'not-allowed' : 'pointer',
                     fontSize: '14px',
                     fontWeight: '500',
