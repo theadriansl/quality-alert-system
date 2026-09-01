@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-08-31
+> Última actualización: 2026-09-01
 
 ---
 
@@ -360,10 +360,64 @@
 | 8D (10 tabs + header) | ✅ Cerrado |
 | ECR (7 archivos) | ✅ Cerrado |
 | QAR (QARList, DefectConfig) | ✅ Parcial |
-| Hospital (DefectHospital) | ⏳ Pendiente |
+| Hospital (DefectHospital) | 🔄 En progreso (53/~100 cambios, 8 bloques pendientes) |
 
 ### PENDIENTE para próxima sesión:
-1. **DefectHospital.js** - Tokenización por secciones (archivo grande)
+1. **DefectHospital.js** - Continuar tokenización (8 bloques restantes, ver sesión 01-Sep)
+
+---
+
+## Notas Sesión 01-Sep-2026
+
+### Completado hoy - DefectHospital.js Tokenización (53 cambios en 7 commits):
+
+| Commit | Bloque | Cambios |
+|--------|--------|---------|
+| `89b6e7d` | Tab General (8270-8738) | 4 |
+| `d611ead` | Tab Repairs (6765-6844) | 3 |
+| `74fd453` | Tab MRB (6893-7266) | 23 |
+| `2778dd4` | MRB fix (*Fg→base) | 3 |
+| `4abf522` | Traceability+Deviations (7270-7906) | 7 |
+| `384544a` | Tab Reports (7907-8269) | 11 |
+| `0667a25` | renderWIPDashboard (~5001) | 2 |
+
+### Reglas aplicadas:
+- Whitelist: color, backgroundColor, borderColor, border shorthand, fontWeight, fontFamily
+- `#fff/#ffffff` en fondos sólidos → `'white'`
+- `fontWeight: '700'|'800'|'900'|'bold'` → `'600'`
+- `fontFamily: 'monospace'` → `"'IBM Plex Mono', monospace"`
+- **Crítico**: *Fg tokens (t.errorFg, t.successFg) SOLO para texto/iconos, NUNCA para backgroundColor/border
+
+### Error corregido:
+- Commit `74fd453` usó `t.errorFg` como backgroundColor (líneas 6982, 6984, 7145)
+- Fix en `2778dd4`: cambiado a `t.error` (token base para fondos/bordes)
+
+### PENDIENTE DefectHospital.js (8 bloques restantes):
+
+| # | Bloque | Líneas | Literales |
+|---|--------|--------|-----------|
+| 1 | renderDefectActions | ~4555-4583 | #991b1b |
+| 2 | Badge en card | ~4838-4839 | #dbeafe, #1e40af |
+| 3 | Banners error/success | ~6240-6500 | ~11 literales |
+| 4 | Barra de tabs compartida | ~6691-6756 | #dc2626, #8b5cf6, #f59e0b |
+| 5 | Modal Handoff | ~10580-10900 | Por verificar |
+| 6 | Modal CreatePackage | ~10900-11105 | Por verificar |
+| 7 | Modal ReceivePackage | ~11105-11318 | Por verificar |
+| 8 | Modal MRB | ~11318-11700 | Por verificar |
+
+### Literales sin token equivalente (reportar/decidir):
+- `#9b59b6` - púrpura
+- `#8b5cf6` - violeta
+- `#10b981` - verde esmeralda
+- `#7c3aed` - violeta oscuro
+- `#3b82f6` - azul
+- `#06b6d4` - cyan
+- `#450a0a` - rojo muy oscuro
+
+### Tabs sin bloque propio (ya cubiertos):
+- Tab "inRepair" → comparte render de Tab General
+- Tab "releases" → comparte render de Tab General
+- Tab "Handoff" → ya tokenizado (6847-6881)
 
 ---
 
