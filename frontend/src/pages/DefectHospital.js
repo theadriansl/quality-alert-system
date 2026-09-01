@@ -10881,7 +10881,7 @@ const DefectHospital = () => {
                   backgroundColor: handoffDestination === 'QA' ? (t.success || '#22c55e') :
                                    handoffDestination === 'SCRAP' ? (t.danger || '#dc2626') :
                                    (t.warning || '#f59e0b'),
-                  color: '#fff',
+                  color: 'white',
                   cursor: handoffLoading ? 'not-allowed' : 'pointer',
                   fontSize: '14px',
                   fontWeight: '500'
