@@ -27,9 +27,10 @@ const Home = () => {
   // Módulos de acceso rápido (flujo principal)
   const quickAccessModules = [
     { id: 'quick_ins', moduleId: 'quality_alert', code: 'INS', name: { es: 'Inspección', en: 'Inspection' }, path: '/defect-capture' },
-    { id: 'quick_est', moduleId: 'quality_alert', code: 'EST', name: { es: 'Estación Reparación', en: 'Repair Station' }, path: '/repair-station' },
+    { id: 'quick_rep', moduleId: 'quality_alert', code: 'REP', name: { es: 'Reparación', en: 'Repair' }, path: '/repair-station' },
     { id: 'quick_rel', moduleId: 'quality_alert', code: 'REL', name: { es: 'Release', en: 'Release' }, path: '/release-ok' },
-    { id: 'quick_mrb', moduleId: 'mrb', code: 'MRB', name: { es: 'Material Review', en: 'Material Review' }, path: '/mrb-dashboard' }
+    { id: 'quick_mrb', moduleId: 'mrb', code: 'MRB', name: { es: 'Cuarentena', en: 'Quarantine' }, path: '/mrb-dashboard' },
+    { id: 'quick_wlm', moduleId: 'workload', code: 'WLM', name: { es: 'Workload', en: 'Workload' }, path: '/workload' }
   ];
 
   // Módulos organizados en 4 grupos principales
@@ -119,7 +120,7 @@ const Home = () => {
     background: t.primary,
     opacity: isHovered ? 1 : 0.85,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color: '#fff', fontSize: 11, fontWeight: 800,
+    color: '#fff', fontSize: 11, fontWeight: 600,
     fontFamily: "'IBM Plex Mono', monospace",
     transition: 'opacity 0.15s ease'
   });
@@ -131,9 +132,9 @@ const Home = () => {
       <div style={{ height: 64, background: t.bgCard, borderBottom: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 32, height: 32, minWidth: 32, borderRadius: 6, background: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>QMS</span>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>QMS</span>
           </div>
-          <div style={{ fontSize: 15.5, fontWeight: 700, color: t.text, letterSpacing: -0.1 }}>Quality Management System</div>
+          <div style={{ fontSize: 15.5, fontWeight: 600, color: t.text, letterSpacing: -0.1 }}>Quality Management System</div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -149,11 +150,11 @@ const Home = () => {
           <div style={{ width: 1, height: 22, background: t.border }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 30, height: 30, minWidth: 30, borderRadius: '50%', background: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 11.5 }}>
+            <div style={{ width: 30, height: 30, minWidth: 30, borderRadius: '50%', background: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 600, fontSize: 11.5 }}>
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </div>
             <div style={{ lineHeight: 1.25, whiteSpace: 'nowrap' }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: t.text }}>{user?.firstName} {user?.lastName}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: t.text }}>{user?.firstName} {user?.lastName}</div>
               <div style={{ fontSize: 10.5, color: t.textMuted }}>{user?.position || user?.role}</div>
             </div>
           </div>
@@ -165,7 +166,7 @@ const Home = () => {
       </div>
 
       {/* Main Content */}
-      <div style={{ padding: '24px 28px 48px 28px', display: 'flex', gap: 24 }}>
+      <div style={{ padding: '14px 28px 48px 28px', display: 'flex', gap: 24 }}>
 
         {/* Columna izquierda: Mi Workload + Notificaciones */}
         <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -197,14 +198,14 @@ const Home = () => {
                   top: 8,
                   left: 16,
                   fontSize: 11,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   color: t.text,
                   letterSpacing: 0.5,
                   opacity: 0.5
                 }}>
                   {language === 'es' ? 'ACCESOS DIRECTOS' : 'QUICK ACCESS'}
                 </span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
                   {quickAccessModules.map(mod => (
                     <div
                       key={mod.id}
@@ -214,17 +215,18 @@ const Home = () => {
                       style={{
                         background: hoveredCard === mod.id ? t.bgPanel : 'transparent',
                         borderRadius: 8,
-                        padding: '12px',
+                        padding: 12,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        gap: 12,
+                        textAlign: 'center',
                         border: `1px solid ${hoveredCard === mod.id ? t.border : 'transparent'}`
                       }}
                     >
                       <div style={badgeStyle(hoveredCard === mod.id)}>{mod.code}</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{mod.name[language]}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: t.text, marginTop: 10 }}>{mod.name[language]}</div>
                     </div>
                   ))}
                 </div>
@@ -236,11 +238,21 @@ const Home = () => {
                   background: t.bgCard,
                   borderRadius: 10,
                   border: `1px solid ${t.border}`,
-                  padding: 16
+                  padding: '28px 16px 16px 16px',
+                  position: 'relative'
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 16, letterSpacing: 0.5, opacity: 0.5 }}>
+                  <span style={{
+                    position: 'absolute',
+                    top: 8,
+                    left: 16,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: t.text,
+                    letterSpacing: 0.5,
+                    opacity: 0.5
+                  }}>
                     {visibleCategories.find(c => c.id === 'proceso')?.name[language]}
-                  </div>
+                  </span>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
                     {visibleCategories.find(c => c.id === 'proceso')?.modules.map(mod => (
                       <div
@@ -281,7 +293,7 @@ const Home = () => {
                     border: `1px solid ${t.border}`,
                     padding: 16
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
                       {visibleCategories.find(c => c.id === 'documentacion')?.name[language]}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -322,7 +334,7 @@ const Home = () => {
                     border: `1px solid ${t.border}`,
                     padding: 16
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
                       {visibleCategories.find(c => c.id === 'administracion')?.name[language]}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -363,7 +375,7 @@ const Home = () => {
                     border: `1px solid ${t.border}`,
                     padding: 16
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: t.text, marginBottom: 14, letterSpacing: 0.5, opacity: 0.5 }}>
                       {visibleCategories.find(c => c.id === 'sistema')?.name[language]}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
