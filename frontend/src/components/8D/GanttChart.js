@@ -1069,6 +1069,9 @@ const GanttRow = memo(({
   if (prevProps.task.status !== nextProps.task.status) return false;
   if (prevProps.cellWidth !== nextProps.cellWidth) return false;
   if (prevProps.disabled !== nextProps.disabled) return false;
+  // Detectar cambios en columns (rango de fechas)
+  if (prevProps.columns?.length !== nextProps.columns?.length) return false;
+  if (prevProps.columns?.[0]?.toDateString() !== nextProps.columns?.[0]?.toDateString()) return false;
   const prevEditing = prevProps.editingDay?.taskId === prevProps.task.id;
   const nextEditing = nextProps.editingDay?.taskId === nextProps.task.id;
   if (prevEditing !== nextEditing) return false;
@@ -1351,20 +1354,32 @@ const GanttChart = memo(({ tasks, users, onTaskUpdate, viewScale = 'Week', disab
 
   // Calcular posición de la barra (en píxeles basado en cellWidth)
   const calculateBarPosition = (task, columns, cw) => {
+    if (!columns || columns.length === 0) return { left: '0px', width: `${cw}px` };
+
     const startDate = task.startDate ? parseLocalDate(task.startDate.split('T')[0]) : new Date();
     const endDate = task.endDate ? parseLocalDate(task.endDate.split('T')[0]) : new Date();
 
-    const startIndex = columns.findIndex(col =>
-      col.toDateString() === startDate.toDateString()
-    );
-    const endIndex = columns.findIndex(col =>
-      col.toDateString() === endDate.toDateString()
-    );
+    // Normalizar fechas a medianoche para comparaciones consistentes
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
 
-    const leftPx = startIndex >= 0 ? startIndex * cw : 0;
-    const widthPx = endIndex >= 0 && startIndex >= 0
-      ? (endIndex - startIndex + 1) * cw
-      : cw;
+    const firstCol = new Date(columns[0]);
+    firstCol.setHours(0, 0, 0, 0);
+
+    // Calcular índices basados en diferencia de días desde la primera columna
+    const msPerDay = 24 * 60 * 60 * 1000;
+    let startIndex = Math.round((startDate - firstCol) / msPerDay);
+    let endIndex = Math.round((endDate - firstCol) / msPerDay);
+
+    // Clamp a rango válido
+    startIndex = Math.max(0, Math.min(columns.length - 1, startIndex));
+    endIndex = Math.max(0, Math.min(columns.length - 1, endIndex));
+
+    // Asegurar que endIndex >= startIndex
+    if (endIndex < startIndex) endIndex = startIndex;
+
+    const leftPx = startIndex * cw;
+    const widthPx = Math.max(cw, (endIndex - startIndex + 1) * cw);
 
     return { left: `${leftPx}px`, width: `${widthPx}px` };
   };

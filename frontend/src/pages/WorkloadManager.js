@@ -2727,15 +2727,106 @@ const WorkloadManager = () => {
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   }); // { activityId: boolean } - collapse history with persistence
-  // Activity filters (multi-select)
-  const [activityFilters, setActivityFilters] = useState({
-    kpis: [],
-    projects: [],
-    users: [],
-    statuses: []
+  // Activity filters (multi-select) with persistence
+  const [activityFilters, setActivityFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem('workload_activity_filters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          kpis: parsed.kpis || [],
+          projects: parsed.projects || [],
+          users: parsed.users || [],
+          statuses: parsed.statuses || [],
+          types: parsed.types || [],
+          priorities: parsed.priorities || []
+        };
+      }
+    } catch {}
+    return { kpis: [], projects: [], users: [], statuses: [], types: [], priorities: [] };
   });
+
+  // Filter options for types and priorities
+  const ACTIVITY_TYPES = [
+    { id: 'planned', label: 'Planeada', color: '#3b82f6' },
+    { id: 'recurring', label: 'Recurrente', color: '#8b5cf6' },
+    { id: 'assigned', label: 'Asignada', color: '#f59e0b' },
+    { id: 'unplanned', label: 'No planeada', color: '#ef4444' }
+  ];
+
+  const PRIORITY_OPTIONS = [
+    { id: 'critical', label: 'Crítica', color: '#dc2626' },
+    { id: 'high', label: 'Alta', color: '#f97316' },
+    { id: 'medium', label: 'Media', color: '#eab308' },
+    { id: 'low', label: 'Baja', color: '#22c55e' }
+  ];
   const [showFilters, setShowFilters] = useState(false);
-  const [openFilterDropdown, setOpenFilterDropdown] = useState(null); // 'kpis' | 'projects' | 'users' | 'statuses' | null
+  const [openFilterDropdown, setOpenFilterDropdown] = useState(null); // 'kpis' | 'projects' | 'users' | 'statuses' | 'types' | 'priorities' | null
+
+  // Period/date filters with persistence
+  const [periodPreset, setPeriodPreset] = useState(() => {
+    return localStorage.getItem('workload_period_preset') || 'month';
+  });
+  const [dateFrom, setDateFrom] = useState(() => {
+    const saved = localStorage.getItem('workload_date_from');
+    if (saved) return saved;
+    const d = new Date();
+    d.setDate(1); // First day of current month
+    return d.toISOString().split('T')[0];
+  });
+  const [dateTo, setDateTo] = useState(() => {
+    const saved = localStorage.getItem('workload_date_to');
+    if (saved) return saved;
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1, 0); // Last day of current month
+    return d.toISOString().split('T')[0];
+  });
+
+  // Period presets
+  const PERIOD_PRESETS = [
+    { id: 'week', label: 'Semana' },
+    { id: 'month', label: 'Mes' },
+    { id: 'quarter', label: 'Trimestre' },
+    { id: 'all', label: 'Todo' }
+  ];
+
+  const applyPeriodPreset = (presetId) => {
+    setPeriodPreset(presetId);
+    const today = new Date();
+    let from, to;
+
+    switch (presetId) {
+      case 'week':
+        // Current week (Monday to Sunday)
+        const day = today.getDay();
+        const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
+        from = new Date(today.getFullYear(), today.getMonth(), diffToMonday);
+        to = new Date(from);
+        to.setDate(to.getDate() + 6);
+        break;
+      case 'month':
+        // Current month
+        from = new Date(today.getFullYear(), today.getMonth(), 1);
+        to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case 'quarter':
+        // Current quarter
+        const quarterMonth = Math.floor(today.getMonth() / 3) * 3;
+        from = new Date(today.getFullYear(), quarterMonth, 1);
+        to = new Date(today.getFullYear(), quarterMonth + 3, 0);
+        break;
+      case 'all':
+        // All time - 1 year back to 1 year forward
+        from = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+        to = new Date(today.getFullYear() + 1, today.getMonth(), 0);
+        break;
+      default:
+        return;
+    }
+
+    setDateFrom(from.toISOString().split('T')[0]);
+    setDateTo(to.toISOString().split('T')[0]);
+  };
   const [weekStart, setWeekStart] = useState(() => {
     const today = new Date();
     const day = today.getDay();
@@ -2747,6 +2838,23 @@ const WorkloadManager = () => {
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('workload_view_mode') || 'gantt';
   });
+
+  // Persist filters to localStorage
+  useEffect(() => {
+    localStorage.setItem('workload_activity_filters', JSON.stringify(activityFilters));
+  }, [activityFilters]);
+
+  useEffect(() => {
+    localStorage.setItem('workload_period_preset', periodPreset);
+  }, [periodPreset]);
+
+  useEffect(() => {
+    localStorage.setItem('workload_date_from', dateFrom);
+  }, [dateFrom]);
+
+  useEffect(() => {
+    localStorage.setItem('workload_date_to', dateTo);
+  }, [dateTo]);
 
   // Permission checks
   const canEdit = canUserEdit('workload');
@@ -3664,6 +3772,15 @@ const WorkloadManager = () => {
   // Filter activities based on selected filters
   const filteredActivities = activities
     .filter(a => {
+      // Date range filter (activity visible if overlaps with filter range)
+      if (dateFrom && dateTo) {
+        const actStart = a.start_date;
+        const actEnd = a.end_date || a.start_date;
+        // Activity is visible if: ends >= dateFrom AND starts <= dateTo
+        if (actEnd < dateFrom || actStart > dateTo) {
+          return false;
+        }
+      }
       // KPI filter
       if (activityFilters.kpis.length > 0 && !activityFilters.kpis.includes(a.kpi_id)) {
         return false;
@@ -3678,6 +3795,14 @@ const WorkloadManager = () => {
       }
       // Status filter
       if (activityFilters.statuses.length > 0 && !activityFilters.statuses.includes(a.status)) {
+        return false;
+      }
+      // Type filter
+      if (activityFilters.types.length > 0 && !activityFilters.types.includes(a.activity_type)) {
+        return false;
+      }
+      // Priority filter
+      if (activityFilters.priorities.length > 0 && !activityFilters.priorities.includes(a.priority)) {
         return false;
       }
       return true;
@@ -4347,8 +4472,177 @@ const WorkloadManager = () => {
 
             {/* Activity Filters - Compact Dropdowns */}
             {showFilters && (
-              <div style={{ ...styles.card, backgroundColor: `${t.warning}10`, border: '1px solid ${t.warning}60', padding: '12px 16px' }}>
+              <div style={{ ...styles.card, backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, padding: '12px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  {/* Period Presets */}
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {PERIOD_PRESETS.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => applyPeriodPreset(p.id)}
+                        style={{
+                          padding: '5px 10px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          borderRadius: '6px',
+                          border: `1px solid ${t.border}`,
+                          cursor: 'pointer',
+                          backgroundColor: periodPreset === p.id ? t.accent : t.bgCard,
+                          color: periodPreset === p.id ? 'white' : t.text
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ width: '1px', height: '28px', backgroundColor: t.border }} />
+
+                  {/* Date Range */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={e => { setDateFrom(e.target.value); setPeriodPreset(''); }}
+                      style={{ padding: '5px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgCard, color: t.text }}
+                    />
+                    <span style={{ color: t.textMuted, fontSize: '12px' }}>→</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={e => { setDateTo(e.target.value); setPeriodPreset(''); }}
+                      style={{ padding: '5px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgCard, color: t.text }}
+                    />
+                  </div>
+
+                  <div style={{ width: '1px', height: '28px', backgroundColor: t.border }} />
+
+                  {/* Type Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setOpenFilterDropdown(openFilterDropdown === 'types' ? null : 'types')}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: activityFilters.types.length > 0 ? t.accent : t.bgCard,
+                        color: activityFilters.types.length > 0 ? 'white' : t.text,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      Tipo {activityFilters.types.length > 0 && `(${activityFilters.types.length})`} ▼
+                    </button>
+                    {openFilterDropdown === 'types' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: '4px',
+                        backgroundColor: t.bgCard,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        zIndex: 100,
+                        minWidth: '160px'
+                      }}>
+                        {ACTIVITY_TYPES.map(type => (
+                          <label key={type.id} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            borderBottom: `1px solid ${t.bgPanel}`
+                          }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = t.bgPanel}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = t.bgCard}>
+                            <input
+                              type="checkbox"
+                              checked={activityFilters.types.includes(type.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setActivityFilters({ ...activityFilters, types: [...activityFilters.types, type.id] });
+                                } else {
+                                  setActivityFilters({ ...activityFilters, types: activityFilters.types.filter(id => id !== type.id) });
+                                }
+                              }}
+                            />
+                            <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: type.color }} />
+                            <span style={{ color: t.text }}>{type.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Priority Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setOpenFilterDropdown(openFilterDropdown === 'priorities' ? null : 'priorities')}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: activityFilters.priorities.length > 0 ? t.accent : t.bgCard,
+                        color: activityFilters.priorities.length > 0 ? 'white' : t.text,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      Prioridad {activityFilters.priorities.length > 0 && `(${activityFilters.priorities.length})`} ▼
+                    </button>
+                    {openFilterDropdown === 'priorities' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: '4px',
+                        backgroundColor: t.bgCard,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        zIndex: 100,
+                        minWidth: '140px'
+                      }}>
+                        {PRIORITY_OPTIONS.map(pri => (
+                          <label key={pri.id} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            borderBottom: `1px solid ${t.bgPanel}`
+                          }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = t.bgPanel}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = t.bgCard}>
+                            <input
+                              type="checkbox"
+                              checked={activityFilters.priorities.includes(pri.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setActivityFilters({ ...activityFilters, priorities: [...activityFilters.priorities, pri.id] });
+                                } else {
+                                  setActivityFilters({ ...activityFilters, priorities: activityFilters.priorities.filter(id => id !== pri.id) });
+                                }
+                              }}
+                            />
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: pri.color }} />
+                            <span style={{ color: t.text }}>{pri.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* KPI Dropdown */}
                   <div style={{ position: 'relative' }}>
                     <button
@@ -4627,25 +4921,27 @@ const WorkloadManager = () => {
 
                   {/* Clear & Count */}
                   <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '12px', color: t.warning }}>
-                      {filteredActivities.length}/{activities.length}
+                    <span style={{ fontSize: '12px', color: t.textMuted }}>
+                      {filteredActivities.length} de {activities.length} actividades
                     </span>
-                    {Object.values(activityFilters).some(f => f.length > 0) && (
-                      <button
-                        onClick={() => { setActivityFilters({ kpis: [], projects: [], users: [], statuses: [] }); setOpenFilterDropdown(null); }}
-                        style={{
-                          padding: '4px 10px',
-                          fontSize: '12px',
-                          backgroundColor: `${t.error}15`,
-                          color: t.error,
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                         Limpiar
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        setActivityFilters({ kpis: [], projects: [], users: [], statuses: [], types: [], priorities: [] });
+                        setOpenFilterDropdown(null);
+                        applyPeriodPreset('month');
+                      }}
+                      style={{
+                        padding: '5px 10px',
+                        fontSize: '12px',
+                        backgroundColor: t.bgCard,
+                        color: t.textMuted,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ↺ Reset
+                    </button>
                   </div>
                 </div>
               </div>
