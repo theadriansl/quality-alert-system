@@ -1916,7 +1916,7 @@ const EightDWorkflow = () => {
     header: {
       backgroundColor: t.bgCard,
       color: t.text,
-      padding: '16px 24px',
+      padding: '8px 16px',
       position: 'sticky',
       top: 0,
       zIndex: 100,
@@ -1927,22 +1927,29 @@ const EightDWorkflow = () => {
       margin: '0 auto',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      gap: '12px'
     },
     titleSection: {
-      flex: 1
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      minWidth: 0
     },
     title: {
-      fontSize: '24px',
-      fontWeight: 'bold',
-      margin: '0 0 5px 0',
-      color: t.text
+      fontSize: '16px',
+      fontWeight: '600',
+      margin: 0,
+      color: t.text,
+      whiteSpace: 'nowrap'
     },
     subtitle: {
-      fontSize: '14px',
-      opacity: 0.8,
+      fontSize: '13px',
       margin: 0,
-      color: t.textMuted
+      color: t.textMuted,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
     },
     languageSelector: {
       padding: '8px 12px',
@@ -2213,34 +2220,25 @@ const EightDWorkflow = () => {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header - Compact single row */}
       <div style={styles.header}>
         <div style={styles.headerContent}>
+          {/* Title + Status + ID */}
           <div style={styles.titleSection}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <h1 style={styles.title}>{tr('title')}</h1>
-              {workflowData?.status && <StatusBadge status={workflowData.status} />}
-            </div>
-            <p style={styles.subtitle}>
-              {workflowData?.reportId || 'New 8D Process'} - {tabs[currentTab]?.subtitle}
-            </p>
-          </div>
-          
-          {/* Theme Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: '16px', paddingRight: '16px', borderRight: `1px solid ${t.border}` }}>
-            <ThemeSelector />
+            <h1 style={styles.title}>{workflowData?.reportId || 'Nuevo 8D'}</h1>
+            {workflowData?.status && <StatusBadge status={workflowData.status} />}
+            <span style={styles.subtitle}>{tabs[currentTab]?.subtitle}</span>
           </div>
 
-          {/* Navigation Buttons */}
-          <div style={styles.headerNavigation}>
-            {/* Left group: Exit actions */}
+          {/* Actions: Back + PDF */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => navigate('/dashboard')}
-              style={{...styles.headerButton, ...styles.headerButtonSecondary}}
+              style={{...styles.headerButton, ...styles.headerButtonSecondary, padding: '6px 10px', fontSize: '12px'}}
               onMouseEnter={(e) => e.target.style.opacity = '0.8'}
               onMouseLeave={(e) => e.target.style.opacity = '1'}
             >
-              ← {tr('backToDashboard')}
+              ← Dashboard
             </button>
 
             {workflowData?.id && (
@@ -2250,28 +2248,29 @@ const EightDWorkflow = () => {
                 style={{
                   ...styles.headerButton,
                   ...styles.headerButtonSecondary,
+                  padding: '6px 10px',
+                  fontSize: '12px',
                   opacity: isCapturingPDF ? 0.6 : 1
                 }}
                 onMouseEnter={(e) => !isCapturingPDF && (e.target.style.opacity = '0.8')}
                 onMouseLeave={(e) => !isCapturingPDF && (e.target.style.opacity = '1')}
-                title="Exportar PDF completo (captura todas las pestañas)"
+                title="Exportar PDF completo"
               >
-                {isCapturingPDF ? `⏳ ${captureProgress}` : '📄 Exportar PDF'}
+                {isCapturingPDF ? `⏳ ${captureProgress}` : '📄 PDF'}
               </button>
             )}
+          </div>
 
-            {/* Spacer */}
-            <div style={{ flex: 1 }} />
-
-            {/* Right group: Navigation */}
+          {/* Navigation: Prev/Next */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {currentTab > 0 && (
               <button
                 onClick={() => handleTabChange(currentTab - 1)}
-                style={{...styles.headerButton, ...styles.headerButtonSecondary}}
+                style={{...styles.headerButton, ...styles.headerButtonSecondary, padding: '6px 10px', fontSize: '12px'}}
                 onMouseEnter={(e) => e.target.style.opacity = '0.8'}
                 onMouseLeave={(e) => e.target.style.opacity = '1'}
               >
-                ← {tr('previous')}
+                ← Anterior
               </button>
             )}
 
@@ -2281,6 +2280,8 @@ const EightDWorkflow = () => {
                 style={{
                   ...styles.headerButton,
                   ...styles.headerButtonPrimary,
+                  padding: '6px 10px',
+                  fontSize: '12px',
                   opacity: !tabs[currentTab + 1]?.enabled ? 0.5 : 1,
                   cursor: !tabs[currentTab + 1]?.enabled ? 'not-allowed' : 'pointer'
                 }}
@@ -2288,7 +2289,7 @@ const EightDWorkflow = () => {
                 onMouseEnter={(e) => tabs[currentTab + 1]?.enabled && (e.target.style.opacity = '0.85')}
                 onMouseLeave={(e) => tabs[currentTab + 1]?.enabled && (e.target.style.opacity = '1')}
               >
-                {tr('next')} →
+                Siguiente →
               </button>
             ) : (
               <button
@@ -2299,6 +2300,8 @@ const EightDWorkflow = () => {
                 style={{
                   ...styles.headerButton,
                   ...styles.successButton,
+                  padding: '6px 10px',
+                  fontSize: '12px',
                   opacity: !tabCompletionStatus.d8 ? 0.5 : 1,
                   cursor: !tabCompletionStatus.d8 ? 'not-allowed' : 'pointer'
                 }}
@@ -2306,19 +2309,23 @@ const EightDWorkflow = () => {
                 onMouseEnter={(e) => tabCompletionStatus.d8 && (e.target.style.opacity = '0.85')}
                 onMouseLeave={(e) => tabCompletionStatus.d8 && (e.target.style.opacity = '1')}
               >
-                {tr('complete')}
+                Completar
               </button>
             )}
           </div>
-          
-          <select
-            value={language}
-            onChange={(e) => changeLanguage(e.target.value)}
-            style={styles.languageSelector}
-          >
-            <option value="es"> Español</option>
-            <option value="en"> English</option>
-          </select>
+
+          {/* Theme + Language */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ThemeSelector />
+            <select
+              value={language}
+              onChange={(e) => changeLanguage(e.target.value)}
+              style={{...styles.languageSelector, padding: '4px 8px', fontSize: '12px'}}
+            >
+              <option value="es">ES</option>
+              <option value="en">EN</option>
+            </select>
+          </div>
         </div>
       </div>
 
