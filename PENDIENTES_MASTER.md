@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-09-01
+> Última actualización: 2026-09-02
 
 ---
 
@@ -82,6 +82,11 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ Fix [object Object] en aprobaciones 8D (D3MFG, D5, D6, D7) - extracción ID de objetos | 02-Sep |
+| ✅ 8DConsultation rediseño visual (header 56px, filas 44px, tokens, sin emojis) | 02-Sep |
+| ✅ Dark mode form inputs 8D (todos los componentes + PartsInventoryTable) | 02-Sep |
+| ✅ 8DWorkflow header compactado (single row, botones cortos) | 02-Sep |
+| ✅ WorkloadManager filtros con persistencia localStorage | 02-Sep |
 | ✅ **MÓDULO ECR CERRADO**: ECRConfig, ECRChangeRequest, ECRTeamTab, ECRImpactAnalysis, ECRDashboardAdvanced, ECRValidationPlan, ECRClosure → tokens tema, fontWeight ≤600, DATA colors preservados | 30-Ago |
 | ✅ **QAR Rediseño Visual (Parte 1)**: QARList.js y DefectConfig.js con tokens tema, tarjetas compactas, control segmentado, tabla 44px, tabs con underline | 29-Ago |
 | ✅ **MÓDULO 8D CERRADO**: TeamAssignmentTab (167→0), HistoryTab (35→0), GanttChart (priority map), 8DWorkflow (header/tabs redesign), ProcessFlowBuilder (t.error) | 29-Ago |
@@ -426,6 +431,46 @@
 **No tocado:**
 - Mi Workload (HomeReminders)
 - Open Items (HomeNotifications)
+
+---
+
+## Notas Sesión 02-Sep-2026
+
+### Completado hoy:
+1. **WorkloadManager filtros con persistencia** ✅ (commit anterior)
+   - localStorage para activityFilters, periodPreset, dateFrom, dateTo
+   - Filtros se mantienen al recargar página
+
+2. **8DWorkflow header compactado** ✅
+   - Header reducido de multi-línea a fila única (8px 16px padding)
+   - Título cambiado a ID del reporte
+   - Botones con etiquetas cortas
+
+3. **Dark mode form inputs 8D** ✅
+   - D3MFG, D4, D5, D5D6D7, D7, TeamAssignment, History
+   - PartsInventoryTable refactorizado de Tailwind a inline styles
+   - Todos los inputs con backgroundColor: bgCard, color: text
+
+4. **8DConsultation rediseñado** ✅
+   - Header 56px con bgCard (no primary oscuro)
+   - Filas 44px, column headers 30px con micro-titles
+   - Emojis removidos
+   - Todos los colores tokenizados
+
+5. **Fix [object Object] en aprobaciones** ✅ (commit 92eb91a)
+   - D3MFG: getUserInfo + approval steps
+   - D5CorrectiveActions: 3 secciones (escalation, approvers, history)
+   - D5D6D7Countermeasures: sección aprobación D6
+   - D7Validation: sección aprobación D7
+   - Ahora extrae ID correctamente cuando countermeasure_users contiene objetos
+
+### Commits sesión:
+| Commit | Descripción |
+|--------|-------------|
+| `8eb5f21` | feat(WorkloadManager): add period/date filters with persistence |
+| `fcf4211` | style(8DWorkflow): compact header to single row |
+| `d571251` | fix(8D): dark mode support for all form inputs |
+| `92eb91a` | fix(8D): resolve [object Object] display in approval sections |
 
 ---
 
