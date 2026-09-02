@@ -167,6 +167,7 @@ const generateDerivedTokens = (baseTheme) => {
     errorBg: mixColors(baseTheme.bgCard, baseTheme.error, bgMix),
     errorBorder: mixColors(baseTheme.bgCard, baseTheme.error, borderMix),
     errorFg: isDark ? mixColors(baseTheme.error, white, fgMix) : baseTheme.error,
+    errorDark: mixColors(baseTheme.error, black, 30), // ~#450a0a equivalent
 
     // Accent tints (blue)
     accentBg: mixColors(baseTheme.bgCard, baseTheme.accent, bgMix),

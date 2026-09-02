@@ -6752,7 +6752,7 @@ const DefectHospital = () => {
           style={{
             ...styles.tab,
             ...(activeTab === 'reports' ? styles.tabActive : styles.tabInactive),
-            backgroundColor: activeTab === 'reports' ? '#8b5cf6' : undefined,
+            backgroundColor: activeTab === 'reports' ? t.accent : undefined,
             color: activeTab === 'reports' ? 'white' : undefined
           }}
           onClick={() => setActiveTab('reports')}
@@ -7935,14 +7935,14 @@ const DefectHospital = () => {
                     style={{
                       padding: '16px 20px',
                       borderRadius: '8px',
-                      border: reportType === type.value ? `2px solid #8b5cf6` : `1px solid ${t.border}`,
-                      backgroundColor: reportType === type.value ? '#8b5cf620' : t.bgPanel,
+                      border: reportType === type.value ? `2px solid ${t.accent}` : `1px solid ${t.border}`,
+                      backgroundColor: reportType === type.value ? t.accent + '20' : t.bgPanel,
                       cursor: 'pointer',
                       textAlign: 'left',
                       minWidth: '180px'
                     }}
                   >
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: reportType === type.value ? '#8b5cf6' : t.text }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: reportType === type.value ? t.accent : t.text }}>
                       {type.label}
                     </div>
                     <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
@@ -8071,7 +8071,7 @@ const DefectHospital = () => {
                   padding: '12px 24px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: '#8b5cf6',
+                  backgroundColor: t.accent,
                   color: 'white',
                   fontSize: '14px',
                   fontWeight: '600',
@@ -11617,7 +11617,7 @@ const DefectHospital = () => {
                     mrbAction === 'returnToRepair' ? (t.warning || '#f59e0b') :
                     mrbAction === 'toScrap' ? t.error :
                     mrbAction === 'releaseWithDeviation' ? (t.success || '#22c55e') :
-                    mrbAction === 'confirmScrap' ? '#450a0a' :
+                    mrbAction === 'confirmScrap' ? t.errorDark :
                     (t.warning || '#f59e0b'),
                   color: 'white',
                   cursor: loading ? 'not-allowed' : 'pointer',
