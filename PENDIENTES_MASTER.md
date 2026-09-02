@@ -360,16 +360,16 @@
 | 8D (10 tabs + header) | ✅ Cerrado |
 | ECR (7 archivos) | ✅ Cerrado |
 | QAR (QARList, DefectConfig) | ✅ Parcial |
-| Hospital (DefectHospital) | ✅ Cerrado (15 commits, 113 cambios) |
+| Hospital (DefectHospital) | ✅ Cerrado (16 commits, 119 cambios) |
 
 ### PENDIENTE para próxima sesión:
-1. Definir tokens para colores sin equivalente (ver sesión 01-Sep)
+1. Continuar tokenización en otros módulos (Dashboards, Skills, etc.)
 
 ---
 
 ## Notas Sesión 01-Sep-2026
 
-### ✅ COMPLETADO: DefectHospital.js Tokenización (113 cambios en 15 commits)
+### ✅ COMPLETADO: DefectHospital.js Tokenización (119 cambios en 16 commits)
 
 | Commit | Bloque | Cambios |
 |--------|--------|---------|
@@ -388,6 +388,7 @@
 | `d7fa8bf` | Modal CreatePackage | 4 |
 | `372197b` | Modal ReceivePackage | 11 |
 | `761a0a6` | Modal MRB | 14 |
+| `e6867c0` | Cierre literales finales | 6 |
 
 ### Reglas aplicadas:
 - Whitelist: color, backgroundColor, borderColor, border shorthand, fontWeight, fontFamily
@@ -400,16 +401,14 @@
 - Commit `74fd453` usó `t.errorFg` como backgroundColor (líneas 6982, 6984, 7145)
 - Fix en `2778dd4`: cambiado a `t.error` (token base para fondos/bordes)
 
-### Literales sin token equivalente (PENDIENTE DECISIÓN):
-| Literal | Uso | Ubicación |
-|---------|-----|-----------|
-| `#8b5cf6` | Tab Reports (backgroundColor activo) | Barra de tabs |
-| `#450a0a` | Botón confirmScrap (backgroundColor) | Modal MRB |
+### ✅ Literales cerrados (commit `e6867c0`):
+| Literal | Solución |
+|---------|----------|
+| `#8b5cf6` | → `t.accent` (5 instancias) |
+| `#450a0a` | → `t.errorDark` (nuevo token derivado) |
 
-**Opciones:**
-1. Crear tokens `t.purple` / `t.errorDark` en ThemeContext
-2. Dejar hardcodeados (colores específicos de contexto)
-3. Reemplazar por tokens existentes más cercanos
+**Nuevo token agregado en ThemeContext.js:**
+- `errorDark: mixColors(baseTheme.error, black, 30)` — variante oscura de error
 
 ---
 
