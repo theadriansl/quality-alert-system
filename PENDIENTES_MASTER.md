@@ -410,6 +410,23 @@
 **Nuevo token agregado en ThemeContext.js:**
 - `errorDark: mixColors(baseTheme.error, black, 30)` — variante oscura de error
 
+### ✅ COMPLETADO: Home.js Rediseño (commit `b75e67a`)
+
+**Cambios funcionales:**
+- Workload Manager (WLM) agregado a Quick Access → `/workload`
+
+**Cambios visuales:**
+- Quick Access: layout horizontal → vertical (alineado con Proceso)
+- Grid: 4 → 5 columnas
+- Etiquetas cortas: Reparación, Cuarentena, Workload
+- PROCESO: título con posición absoluta (compacto)
+- Padding superior: 24px → 14px
+- fontWeight 700/800 → 600 (11 instancias)
+
+**No tocado:**
+- Mi Workload (HomeReminders)
+- Open Items (HomeNotifications)
+
 ---
 
 ## Notas Sesión 29-Ago-2026
