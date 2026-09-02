@@ -635,6 +635,7 @@ const getStyles = (t) => ({
     borderRadius: '4px',
     fontSize: '12px',
     backgroundColor: t.bgCard,
+    color: t.text,
     cursor: 'pointer',
     minWidth: '180px'
   },
@@ -643,7 +644,9 @@ const getStyles = (t) => ({
     border: `1px solid ${t.border}`,
     borderRadius: '4px',
     fontSize: '12px',
-    minWidth: '130px'
+    minWidth: '130px',
+    backgroundColor: t.bgCard,
+    color: t.text
   },
   clearBtn: {
     padding: '6px 12px',

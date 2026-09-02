@@ -1190,7 +1190,9 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       fontSize: '13px',
       border: `1px solid ${themeColors.border}`,
       borderRadius: '4px',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     textarea: {
       width: '100%',
@@ -1201,7 +1203,9 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       minHeight: '60px',
       resize: 'vertical',
       fontFamily: 'inherit',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     select: {
       width: '100%',
@@ -1210,7 +1214,8 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
       border: `1px solid ${themeColors.border}`,
       borderRadius: '4px',
       backgroundColor: themeColors.bgCard,
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      color: themeColors.text
     },
     buttonGroup: {
       display: 'flex',

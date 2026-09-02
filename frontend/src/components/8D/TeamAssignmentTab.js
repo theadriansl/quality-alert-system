@@ -2065,14 +2065,17 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       padding: '8px',
       border: `1px solid ${themeColors.border}`,
       borderRadius: '4px',
-      fontSize: '14px'
+      fontSize: '14px',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     select: {
       padding: '8px',
       border: `1px solid ${themeColors.border}`,
       borderRadius: '4px',
       fontSize: '14px',
-      backgroundColor: themeColors.bgCard
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     escalationGrid: {
       display: 'grid',
@@ -3474,7 +3477,9 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                     border: `1px solid ${themeColors.border}`,
                     borderRadius: '6px',
                     fontSize: '13px',
-                    outline: 'none'
+                    outline: 'none',
+                    backgroundColor: themeColors.bgCard,
+                    color: themeColors.text
                   }}
                   placeholder={`Ingrese la razón ${num}...`}
                   disabled={fieldsLocked && !isEditingD3}

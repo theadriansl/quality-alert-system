@@ -1209,7 +1209,9 @@ Por favor no responda a este correo.`;
       border: `1px solid ${themeColors.border}`,
       borderRadius: '6px',
       fontSize: '14px',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     textarea: {
       width: '100%',
@@ -1219,7 +1221,9 @@ Por favor no responda a este correo.`;
       fontSize: '14px',
       minHeight: '100px',
       resize: 'vertical',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     select: {
       width: '100%',
@@ -1227,7 +1231,9 @@ Por favor no responda a este correo.`;
       border: `1px solid ${themeColors.border}`,
       borderRadius: '6px',
       fontSize: '14px',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     button: {
       padding: '12px 24px',

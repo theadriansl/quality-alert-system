@@ -1827,7 +1827,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
       fontSize: '14px',
       border: `1px solid ${themeColors.border}`,
       borderRadius: '6px',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     textarea: {
       width: '100%',
@@ -1838,7 +1840,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
       minHeight: '100px',
       resize: 'vertical',
       fontFamily: 'inherit',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     select: {
       width: '100%',
@@ -1847,7 +1851,8 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
       border: `1px solid ${themeColors.border}`,
       borderRadius: '6px',
       backgroundColor: themeColors.bgCard,
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      color: themeColors.text
     },
     addButton: {
       padding: '10px 20px',
@@ -3195,7 +3200,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={formData.d3Implemented === null ? '' : formData.d3Implemented ? 'si' : 'no'}
                     onChange={(e) => handleInputChange('d3Implemented', e.target.value === 'si' ? true : e.target.value === 'no' ? false : null)}
@@ -3213,7 +3220,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={formData.d3Effective === null ? '' : formData.d3Effective ? 'si' : 'no'}
                     onChange={(e) => handleInputChange('d3Effective', e.target.value === 'si' ? true : e.target.value === 'no' ? false : null)}
@@ -3231,7 +3240,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={normalizeJudgment(formData.d3SpcJudgment)}
                     onChange={(e) => handleInputChange('d3SpcJudgment', e.target.value)}
@@ -3250,7 +3261,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={normalizeJudgment(formData.d3ClientJudgment)}
                     onChange={(e) => handleInputChange('d3ClientJudgment', e.target.value)}
@@ -3272,7 +3285,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       fontSize: '12px',
                       minHeight: '80px',
                       resize: 'vertical',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={formData.d3Comments || ''}
                     onChange={(e) => handleInputChange('d3Comments', e.target.value)}
@@ -3295,7 +3310,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={formData.d5Implemented === null ? '' : formData.d5Implemented ? 'si' : 'no'}
                     onChange={(e) => handleInputChange('d5Implemented', e.target.value === 'si' ? true : e.target.value === 'no' ? false : null)}
@@ -3313,7 +3330,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={formData.d5Effective === null ? '' : formData.d5Effective ? 'si' : 'no'}
                     onChange={(e) => handleInputChange('d5Effective', e.target.value === 'si' ? true : e.target.value === 'no' ? false : null)}
@@ -3331,7 +3350,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={normalizeJudgment(formData.d5SpcJudgment)}
                     onChange={(e) => handleInputChange('d5SpcJudgment', e.target.value)}
@@ -3350,7 +3371,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       border: `1px solid ${themeColors.border}`,
                       borderRadius: '4px',
                       fontSize: '13px',
-                      width: '100%'
+                      width: '100%',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={normalizeJudgment(formData.d5ClientJudgment)}
                     onChange={(e) => handleInputChange('d5ClientJudgment', e.target.value)}
@@ -3372,7 +3395,9 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       fontSize: '12px',
                       minHeight: '80px',
                       resize: 'vertical',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                     value={formData.d5Comments || ''}
                     onChange={(e) => handleInputChange('d5Comments', e.target.value)}

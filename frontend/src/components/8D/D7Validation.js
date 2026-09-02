@@ -1331,7 +1331,7 @@ Sistema de Gestión de Calidad`
                     {/* Check Item - What to verify */}
                     <td style={styles.td}>
                       <textarea
-                        style={{ width: '100%', fontSize: '14px', padding: '8px', minHeight: '60px', border: `1px solid ${t.border}`, borderRadius: '4px', resize: 'vertical' }}
+                        style={{ width: '100%', fontSize: '14px', padding: '8px', minHeight: '60px', border: `1px solid ${t.border}`, borderRadius: '4px', resize: 'vertical', backgroundColor: t.bgCard, color: t.text }}
                         value={item.checkItem || ''}
                         onChange={(e) => updateAuditItem(item.id, 'checkItem', e.target.value)}
                         placeholder="¿Qué verificar?"
@@ -1350,7 +1350,8 @@ Sistema de Gestión de Calidad`
                           padding: '8px',
                           border: `1px solid ${t.border}`,
                           borderRadius: '4px',
-                          backgroundColor: isOverdue ? t.errorBg : isDueSoon ? t.warningBg : t.bgCard
+                          backgroundColor: isOverdue ? t.errorBg : isDueSoon ? t.warningBg : t.bgCard,
+                          color: t.text
                         }}
                         value={item.dueDate || ''}
                         onChange={(e) => updateAuditItem(item.id, 'dueDate', e.target.value)}
@@ -1412,7 +1413,7 @@ Sistema de Gestión de Calidad`
                           )}
                           {/* Dropdown to add more auditors */}
                           <select
-                            style={{ width: '100%', fontSize: '13px', padding: '6px', border: `1px solid ${t.border}`, borderRadius: '4px' }}
+                            style={{ width: '100%', fontSize: '13px', padding: '6px', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgCard, color: t.text }}
                             value=""
                             onChange={(e) => {
                               if (!e.target.value) return;
@@ -1447,7 +1448,7 @@ Sistema de Gestión de Calidad`
                     {/* Comments */}
                     <td style={styles.td}>
                       <textarea
-                        style={{ width: '100%', fontSize: '14px', padding: '8px', minHeight: '60px', border: `1px solid ${t.border}`, borderRadius: '4px', resize: 'vertical' }}
+                        style={{ width: '100%', fontSize: '14px', padding: '8px', minHeight: '60px', border: `1px solid ${t.border}`, borderRadius: '4px', resize: 'vertical', backgroundColor: t.bgCard, color: t.text }}
                         value={item.comments || ''}
                         onChange={(e) => updateAuditItem(item.id, 'comments', e.target.value)}
                         placeholder="Comentarios del líder..."
@@ -1577,7 +1578,9 @@ Sistema de Gestión de Calidad`
                             borderRadius: '4px',
                             fontSize: '14px',
                             minHeight: '60px',
-                            resize: 'vertical'
+                            resize: 'vertical',
+                            backgroundColor: t.bgCard,
+                            color: t.text
                           }}
                           value={item.auditorComments || ''}
                           onChange={(e) => updateAuditItem(item.id, 'auditorComments', e.target.value)}
@@ -2200,7 +2203,9 @@ Sistema de Gestión de Calidad`
                     padding: '10px 14px',
                     border: `1px solid ${t.border}`,
                     borderRadius: '8px',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    backgroundColor: t.bgCard,
+                    color: t.text
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && addCustomCategory()}
                 />
@@ -2720,7 +2725,9 @@ const getStyles = (t) => ({
     padding: '8px 12px',
     border: `1px solid ${t.border}`,
     borderRadius: '6px',
-    fontSize: '14px'
+    fontSize: '14px',
+    backgroundColor: t.bgCard,
+    color: t.text
   },
   textarea: {
     width: '100%',
@@ -2728,7 +2735,9 @@ const getStyles = (t) => ({
     border: `1px solid ${t.border}`,
     borderRadius: '6px',
     fontSize: '14px',
-    resize: 'vertical'
+    resize: 'vertical',
+    backgroundColor: t.bgCard,
+    color: t.text
   },
   radioLabel: {
     display: 'flex',

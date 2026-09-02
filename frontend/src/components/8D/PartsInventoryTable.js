@@ -333,89 +333,85 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
               {parts.map((part, index) => (
                 <tr
                   key={index}
-                  className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                  style={{ backgroundColor: index % 2 === 0 ? t.bgCard : t.bgPanel }}
                 >
-                  <td className="border border-gray-300 px-2 py-2 text-xs text-center text-gray-700">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '8px', fontSize: '12px', textAlign: 'center', color: t.text }}>
                     {index + 1}
                   </td>
-                  <td className="border border-gray-300 px-2 py-2 text-xs font-medium text-gray-800">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '8px', fontSize: '12px', fontWeight: '500', color: t.text }}>
                     {part.partNumber || part.part_number || 'N/A'}
                   </td>
-                  <td className="border border-gray-300 px-2 py-2 text-xs text-gray-700">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '8px', fontSize: '12px', color: t.text }}>
                     {part.partName || part.part_name || tr.noDescription}
                   </td>
 
                   {/* Input: Almacén */}
-                  <td className="border border-gray-300 px-1 py-1">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px' }}>
                     <input
                       type="number"
                       min="0"
                       value={part.qtyWarehouse || 0}
                       onChange={(e) => handleQuantityChange(index, 'qtyWarehouse', e.target.value)}
-                      className="w-full px-1 py-1 text-xs text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      style={{ width: '60px' }}
+                      style={{ width: '60px', padding: '4px', fontSize: '12px', textAlign: 'center', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgCard, color: t.text }}
                     />
                   </td>
 
                   {/* Input: En Proceso */}
-                  <td className="border border-gray-300 px-1 py-1">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px' }}>
                     <input
                       type="number"
                       min="0"
                       value={part.qtyInProcess || 0}
                       onChange={(e) => handleQuantityChange(index, 'qtyInProcess', e.target.value)}
-                      className="w-full px-1 py-1 text-xs text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      style={{ width: '60px' }}
+                      style={{ width: '60px', padding: '4px', fontSize: '12px', textAlign: 'center', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgCard, color: t.text }}
                     />
                   </td>
 
                   {/* Input: En Tránsito */}
-                  <td className="border border-gray-300 px-1 py-1">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px' }}>
                     <input
                       type="number"
                       min="0"
                       value={part.qtyInTransit || 0}
                       onChange={(e) => handleQuantityChange(index, 'qtyInTransit', e.target.value)}
-                      className="w-full px-1 py-1 text-xs text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      style={{ width: '60px' }}
+                      style={{ width: '60px', padding: '4px', fontSize: '12px', textAlign: 'center', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgCard, color: t.text }}
                     />
                   </td>
 
                   {/* Input: Con Cliente */}
-                  <td className="border border-gray-300 px-1 py-1">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px' }}>
                     <input
                       type="number"
                       min="0"
                       value={part.qtyWithCustomer || 0}
                       onChange={(e) => handleQuantityChange(index, 'qtyWithCustomer', e.target.value)}
-                      className="w-full px-1 py-1 text-xs text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      style={{ width: '60px' }}
+                      style={{ width: '60px', padding: '4px', fontSize: '12px', textAlign: 'center', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgCard, color: t.text }}
                     />
                   </td>
 
                   {/* Total Afectado (calculado) */}
-                  <td className="border border-gray-300 px-1 py-1 text-xs font-bold text-center bg-yellow-50">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', fontWeight: 'bold', textAlign: 'center', backgroundColor: t.warningBg, color: t.warningFg }}>
                     {part.totalAffectedQty || 0}
                   </td>
 
                   {/* Costo Unitario (read-only) */}
-                  <td className="border border-gray-300 px-1 py-1 text-xs text-right bg-gray-100">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'right', backgroundColor: t.bgPanel, color: t.text }}>
                     ${(parseFloat(part.unitCost) || 0).toFixed(2)}
                   </td>
 
                   {/* Impacto Total (calculado) */}
-                  <td className="border border-gray-300 px-1 py-1 text-xs font-bold text-right bg-red-50">
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', fontWeight: 'bold', textAlign: 'right', backgroundColor: t.errorBg, color: t.errorFg }}>
                     ${(parseFloat(part.totalCostImpact) || 0).toFixed(2)}
                   </td>
 
                   {/* Campos personalizados */}
                   {customColumns.map(col => (
-                    <td key={col.id} className="border border-gray-300 px-1 py-1 bg-green-50">
+                    <td key={col.id} style={{ border: `1px solid ${t.border}`, padding: '4px', backgroundColor: t.successBg }}>
                       <input
                         type={col.type}
                         value={part.customFields?.[col.id] || ''}
                         onChange={(e) => handleCustomFieldChange(index, col.id, e.target.value)}
-                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                        style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgCard, color: t.text }}
                         placeholder={`${col.name}...`}
                       />
                     </td>
@@ -424,34 +420,34 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
               ))}
 
               {/* Fila de Totales */}
-              <tr className="bg-blue-700 text-white font-bold">
-                <td colSpan="3" className="border border-gray-300 px-2 py-1 text-xs text-right">
+              <tr style={{ backgroundColor: t.primary, color: 'white', fontWeight: 'bold' }}>
+                <td colSpan="3" style={{ border: `1px solid ${t.border}`, padding: '4px 8px', fontSize: '12px', textAlign: 'right' }}>
                   TOTALES:
                 </td>
-                <td className="border border-gray-300 px-1 py-1 text-xs text-center">
+                <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'center' }}>
                   {totals.warehouse}
                 </td>
-                <td className="border border-gray-300 px-1 py-1 text-xs text-center">
+                <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'center' }}>
                   {totals.inProcess}
                 </td>
-                <td className="border border-gray-300 px-1 py-1 text-xs text-center">
+                <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'center' }}>
                   {totals.inTransit}
                 </td>
-                <td className="border border-gray-300 px-1 py-1 text-xs text-center">
+                <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'center' }}>
                   {totals.withCustomer}
                 </td>
-                <td className="border border-gray-300 px-1 py-1 text-xs text-center bg-yellow-100 text-gray-900">
+                <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'center', backgroundColor: t.warningBg, color: t.warningFg }}>
                   {totals.totalQty}
                 </td>
-                <td className="border border-gray-300 px-1 py-1 text-xs text-right">
+                <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'right' }}>
                   -
                 </td>
-                <td className="border border-gray-300 px-1 py-1 text-xs text-right bg-red-100 text-gray-900">
+                <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', textAlign: 'right', backgroundColor: t.errorBg, color: t.errorFg }}>
                   ${totals.totalCost.toFixed(2)}
                 </td>
                 {/* Celdas vacías para columnas personalizadas */}
                 {customColumns.map(col => (
-                  <td key={col.id} className="border border-gray-300 bg-green-700"></td>
+                  <td key={col.id} style={{ border: `1px solid ${t.border}`, backgroundColor: t.success }}></td>
                 ))}
               </tr>
             </tbody>

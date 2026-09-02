@@ -914,7 +914,9 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       fontSize: '14px',
       border: `1px solid ${themeColors.border}`,
       borderRadius: '6px',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     textarea: {
       width: '100%',
@@ -925,7 +927,9 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       minHeight: '120px',
       resize: 'vertical',
       fontFamily: 'inherit',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      backgroundColor: themeColors.bgCard,
+      color: themeColors.text
     },
     select: {
       width: '100%',
@@ -934,7 +938,8 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       border: `1px solid ${themeColors.border}`,
       borderRadius: '6px',
       backgroundColor: themeColors.bgCard,
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      color: themeColors.text
     },
     addButton: {
       padding: '10px 20px',
@@ -1398,7 +1403,9 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                       border: `1px solid ${themeColors.errorBorder}`,
                       borderRadius: '6px',
                       resize: 'vertical',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                   />
                 </div>
@@ -1423,7 +1430,9 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                       fontSize: '13px',
                       border: `1px solid ${themeColors.errorBorder}`,
                       borderRadius: '6px',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      backgroundColor: themeColors.bgCard,
+                      color: themeColors.text
                     }}
                   />
                   <p style={{ fontSize: '11px', color: themeColors.errorFg, marginTop: '4px', marginBottom: 0 }}>
@@ -1621,7 +1630,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         </select>
                         <StatusChip
                           status={item.standardJudgment === 'NG' ? 'NOK' : 'Completed'}
-                          themeColors={themeColors}
+                          t={themeColors}
                         />
                       </div>
                     </td>
@@ -1646,7 +1655,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         </select>
                         <StatusChip
                           status={item.qualityJudgment === 'NG' ? 'NOK' : 'Completed'}
-                          themeColors={themeColors}
+                          t={themeColors}
                         />
                       </div>
                     </td>
