@@ -1977,11 +1977,12 @@ Sistema de Gestión de Calidad`
                   const isPast = step < d7CurrentStep;
                   const isCurrent = step === d7CurrentStep && data?.d7Status === 'under_review';
                   const approval = approvalData[step];
-                  const approverId = confirmationUsers[step];
+                  const approverData = confirmationUsers[step];
+                  const approverId = typeof approverData === 'object' ? (approverData?.id || approverData) : approverData;
                   const approverUser = users.find(u => u.id === approverId);
                   const approverName = approverUser
                     ? `${approverUser.firstName || approverUser.first_name || ''} ${approverUser.lastName || approverUser.last_name || ''}`.trim() || approverUser.email
-                    : `ID: ${approverId}`;
+                    : (typeof approverData === 'object' && approverData?.name) ? approverData.name : `ID: ${approverId}`;
                   const approverEmail = approverUser?.email || '';
 
                   return (

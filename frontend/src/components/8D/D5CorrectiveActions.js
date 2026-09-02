@@ -2138,11 +2138,12 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   const isPast = step < d5CurrentStep;
                   const isCurrent = step === d5CurrentStep;
                   const approvalData = approvalHistory[`approval${step}`];
-                  const approverId = countermeasureUsers[step];
+                  const approverData = countermeasureUsers[step];
+                  const approverId = typeof approverData === 'object' ? (approverData?.id || approverData) : approverData;
                   const approverUser = users.find(u => u.id === approverId);
                   const approverName = approverUser
                     ? `${approverUser.firstName || approverUser.first_name || ''} ${approverUser.lastName || approverUser.last_name || ''}`.trim() || approverUser.email
-                    : `ID: ${approverId}`;
+                    : (typeof approverData === 'object' && approverData?.name) ? approverData.name : `ID: ${approverId}`;
                   const approverEmail = approverUser?.email || '';
 
                   return (
@@ -2198,14 +2199,15 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               {[1, 2, 3].map(step => {
                 const approval = approvalHistory[`approval${step}`];
                 const countermeasureUsers = data?.escalationPath?.countermeasure_users || [];
-                const approverId = countermeasureUsers[step];
-                const approverExists = approverId !== undefined && approverId !== null;
+                const approverData = countermeasureUsers[step];
+                const approverExists = approverData !== undefined && approverData !== null;
                 if (!approverExists || !approval?.status) return null;
 
+                const approverId = typeof approverData === 'object' ? (approverData?.id || approverData) : approverData;
                 const approverUser = users.find(u => u.id === approverId);
                 const approverName = approverUser
                   ? `${approverUser.firstName || approverUser.first_name || ''} ${approverUser.lastName || approverUser.last_name || ''}`.trim() || approverUser.email
-                  : `ID: ${approverId}`;
+                  : (typeof approverData === 'object' && approverData?.name) ? approverData.name : `ID: ${approverId}`;
 
                 return (
                   <div key={step} style={{ marginBottom: '8px', fontSize: '13px' }}>
@@ -2266,12 +2268,18 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               );
             }
 
-            const getUserInfo = (userId) => {
-              if (!userId) return null;
-              const user = users.find(u => u.id === userId);
+            const getUserInfo = (userIdOrObj) => {
+              if (!userIdOrObj) return null;
+              // Si ya es un objeto con name, usarlo directamente
+              if (typeof userIdOrObj === 'object' && userIdOrObj.name) {
+                return { name: userIdOrObj.name, email: '', position: '' };
+              }
+              // Extraer ID si es objeto
+              const actualId = typeof userIdOrObj === 'object' ? userIdOrObj.id : userIdOrObj;
+              const user = users.find(u => u.id === actualId);
               const name = user
                 ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email
-                : `ID: ${userId}`;
+                : `ID: ${actualId}`;
               const email = user?.email || '';
               const position = user?.position || user?.cargo || '';
               return { name, email, position };

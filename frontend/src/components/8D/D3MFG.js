@@ -2825,11 +2825,12 @@ Por favor no responda a este correo.`;
                   const isPast = step < d3MfgCurrentStep;
                   const isCurrent = step === d3MfgCurrentStep;
                   const approvalData = approvalHistory[`approval${step}`];
-                  const approverId = countermeasureUsers[step];
+                  const approverData = countermeasureUsers[step];
+                  const approverId = typeof approverData === 'object' ? (approverData?.id || approverData) : approverData;
                   const approverUser = users.find(u => u.id === approverId);
                   const approverName = approverUser
                     ? `${approverUser.firstName || approverUser.first_name || ''} ${approverUser.lastName || approverUser.last_name || ''}`.trim() || approverUser.email
-                    : `ID: ${approverId}`;
+                    : (typeof approverData === 'object' && approverData?.name) ? approverData.name : `ID: ${approverId}`;
                   const approverEmail = approverUser?.email || '';
 
                   return (
@@ -3095,12 +3096,18 @@ Por favor no responda a este correo.`;
               );
             }
 
-            const getUserInfo = (userId, role) => {
-              if (!userId) return null;
-              const user = users.find(u => u.id === userId);
+            const getUserInfo = (userIdOrObj, role) => {
+              if (!userIdOrObj) return null;
+              // Si ya es un objeto con name, usarlo directamente
+              if (typeof userIdOrObj === 'object' && userIdOrObj.name) {
+                return { name: userIdOrObj.name, email: '', position: '', role };
+              }
+              // Extraer ID si es objeto
+              const actualId = typeof userIdOrObj === 'object' ? userIdOrObj.id : userIdOrObj;
+              const user = users.find(u => u.id === actualId);
               const name = user
                 ? `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || user.email
-                : `ID: ${userId}`;
+                : `ID: ${actualId}`;
               const email = user?.email || '';
               const position = user?.position || user?.cargo || '';
               return { name, email, position, role };

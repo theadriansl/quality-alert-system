@@ -2849,11 +2849,12 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                       const isPast = step < d6CurrentStep;
                       const isCurrent = step === d6CurrentStep && data?.d6Status === 'under_review';
                       const approval = approvalData[step];
-                      const approverId = countermeasureUsers[step];
+                      const approverData = countermeasureUsers[step];
+                      const approverId = typeof approverData === 'object' ? (approverData?.id || approverData) : approverData;
                       const approverUser = users.find(u => u.id === approverId);
                       const approverName = approverUser
                         ? `${approverUser.firstName || approverUser.first_name || ''} ${approverUser.lastName || approverUser.last_name || ''}`.trim() || approverUser.email
-                        : `ID: ${approverId}`;
+                        : (typeof approverData === 'object' && approverData?.name) ? approverData.name : `ID: ${approverId}`;
                       const approverEmail = approverUser?.email || '';
 
                       return (
