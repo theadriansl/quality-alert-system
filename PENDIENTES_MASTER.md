@@ -67,8 +67,8 @@
 | 6 | ~~Refactor temas D7/D8 (8D Validation + FollowUp)~~ | Arrastrado | ✅ 28-Ago |
 | 7 | ~~Refactor temas D3/D4/D5 (Approval sections)~~ | Arrastrado | ✅ 28-Ago |
 | 8 | ~~**MÓDULO 8D COMPLETO**: 10 tabs + header/navigation → tokens tema~~ | 29-Ago | ✅ 29-Ago |
-| 9 | Refactor temas Dashboard (EightDDashboard, QARDashboard, etc.) | 29-Ago | ⏳ |
-| 10 | QAR Rediseño Visual Parte 2 (pendiente prompt del usuario) | 29-Ago | ⏳ |
+| 9 | ~~Refactor temas Dashboard (EightDDashboard, QARDashboard, SharedComponents)~~ | 29-Ago | ✅ 01-Sep |
+| 10 | ~~QAR Rediseño Visual Parte 2 (QARDashboard, QARDashboardComponent)~~ | 29-Ago | ✅ 01-Sep |
 | 11 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |

@@ -708,101 +708,110 @@ const MRBDefectCapture = () => {
             // NO return - continuar para permitir registro de defecto (no OK)
           }
 
+          // Determinar la parte a usar: del lookup o de la campaña seleccionada
+          let partToUse = null;
+
           if (lookupData.success && lookupData.unit) {
+            // Serial encontrado en producción - usar esa parte
             const unit = lookupData.unit;
-            const newPartId = unit.partId;
+            partToUse = {
+              id: unit.partId,
+              partNumber: unit.partNumber,
+              partName: unit.partName,
+              clientName: unit.clientName
+            };
 
             // Verificar si el serial pertenece a una parte diferente a la seleccionada
-            if (selectedPart && newPartId && selectedPart.id !== newPartId) {
-              // Verificar si la parte del serial está en la campaña
-              const matchingPart = campaignParts.find(p => p.id === newPartId);
+            if (selectedPart && unit.partId && selectedPart.id !== unit.partId) {
+              const matchingPart = campaignParts.find(p => p.id === unit.partId);
               if (matchingPart) {
-                // Auto-cambiar a la parte correcta
                 selectPart(matchingPart, selectedCampaign?.id);
                 setSerialPartMismatch(null);
               } else {
-                // Parte no está en la campaña - advertir
                 setSerialPartMismatch({
                   expected: selectedPart.partNumber,
                   found: unit.partNumber
                 });
               }
             } else if (selectedCampaign && campaignParts.length > 0 && !selectedPart) {
-              // No hay parte seleccionada, auto-seleccionar si está en campaña
-              const matchingPart = campaignParts.find(p => p.id === newPartId);
+              const matchingPart = campaignParts.find(p => p.id === unit.partId);
               if (matchingPart) {
                 selectPart(matchingPart, selectedCampaign.id);
               }
             }
+          } else if (selectedPart) {
+            // Serial NO encontrado en producción - usar parte de la campaña seleccionada
+            partToUse = {
+              id: selectedPart.id,
+              partNumber: selectedPart.partNumber,
+              partName: selectedPart.partName || selectedPart.description,
+              clientName: selectedPart.clientName
+            };
+          }
 
-            // Actualizar detectedPart y campañas disponibles (modo multi-campaña)
-            if (newPartId !== lastDetectedPartId.current) {
-              setDetectedPart({
-                id: unit.partId,
-                partNumber: unit.partNumber,
-                partName: unit.partName,
-                clientName: unit.clientName
-              });
-              lastDetectedPartId.current = newPartId;
+          // Actualizar detectedPart y campañas disponibles (modo multi-campaña)
+          if (partToUse && partToUse.id !== lastDetectedPartId.current) {
+            setDetectedPart(partToUse);
+            lastDetectedPartId.current = partToUse.id;
 
-              const campRes = await fetch(
-                `${API_URL}/mrb/campaigns-by-part/${newPartId}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-              if (campRes.ok) {
-                const campData = await campRes.json();
-                const campaigns = campData.campaigns || [];
-                setAvailableCampaigns(campaigns);
-                setPartCampaigns(campaigns);
-                setCampaignResults({});
+            const campRes = await fetch(
+              `${API_URL}/mrb/campaigns-by-part/${partToUse.id}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (campRes.ok) {
+              const campData = await campRes.json();
+              const campaigns = campData.campaigns || [];
+              setAvailableCampaigns(campaigns);
+              setPartCampaigns(campaigns);
+              setCampaignResults({});
 
-                // Verificar estado afectado para TODAS las campañas de esta parte
-                if (campaigns.length > 0) {
-                  const newAffectedStatus = {};
-                  const newPriorResults = {};
-                  for (const camp of campaigns) {
-                    const campId = camp.campaignId || camp.id;
-                    try {
-                      const affectedRes = await fetch(
-                        `${API_URL}/mrb/${campId}/check-affected/${encodeURIComponent(val)}`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                      );
-                      if (affectedRes.ok) {
-                        const affectedData = await affectedRes.json();
-                        newAffectedStatus[campId] = affectedData.affectedStatus;
-                        if (affectedData.affectedSerial) {
-                          newPriorResults[campId] = {
-                            inspected: affectedData.affectedSerial.inspected || false,
-                            result: affectedData.affectedSerial.inspectionResult || null
-                          };
-                        }
+              // Verificar estado afectado para TODAS las campañas de esta parte
+              if (campaigns.length > 0) {
+                const newAffectedStatus = {};
+                const newPriorResults = {};
+                for (const camp of campaigns) {
+                  const campId = camp.campaignId || camp.id;
+                  try {
+                    const affectedRes = await fetch(
+                      `${API_URL}/mrb/${campId}/check-affected/${encodeURIComponent(val)}`,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (affectedRes.ok) {
+                      const affectedData = await affectedRes.json();
+                      newAffectedStatus[campId] = affectedData.affectedStatus;
+                      if (affectedData.affectedSerial) {
+                        newPriorResults[campId] = {
+                          inspected: affectedData.affectedSerial.inspected || false,
+                          result: affectedData.affectedSerial.inspectionResult || null
+                        };
                       }
-                    } catch (e) { /* silent */ }
-                  }
-                  setAffectedStatus(newAffectedStatus);
-                  setPriorInspectionResults(newPriorResults);
+                    }
+                  } catch (e) { /* silent */ }
+                }
+                setAffectedStatus(newAffectedStatus);
+                setPriorInspectionResults(newPriorResults);
 
-                  // Auto-seleccionar campañas donde el serial está IN_LIST o NO_LIST_DEFINED
-                  const campaignsToAutoSelect = campaigns.filter(camp => {
-                    const campId = camp.campaignId || camp.id;
-                    const status = newAffectedStatus[campId];
-                    return status === 'IN_LIST' || status === 'NO_LIST_DEFINED';
-                  });
+                // Auto-seleccionar campañas donde el serial aplica (IN_LIST, NO_LIST_DEFINED, o OUT_OF_LIST como adicional)
+                const campaignsToAutoSelect = campaigns.filter(camp => {
+                  const campId = camp.campaignId || camp.id;
+                  const status = newAffectedStatus[campId];
+                  // IN_LIST: está en lista, NO_LIST_DEFINED: no hay lista, OUT_OF_LIST: se agregará como adicional
+                  return status === 'IN_LIST' || status === 'NO_LIST_DEFINED' || status === 'OUT_OF_LIST';
+                });
 
-                  if (campaignsToAutoSelect.length > 0) {
-                    setSelectedCampaigns(campaignsToAutoSelect);
-                  } else {
-                    // Si ninguna campaña tiene el serial, mostrar todas para que elija
-                    setSelectedCampaigns([]);
-                  }
+                if (campaignsToAutoSelect.length > 0) {
+                  setSelectedCampaigns(campaignsToAutoSelect);
+                } else {
+                  // Fallback: seleccionar todas las campañas disponibles
+                  setSelectedCampaigns(campaigns);
                 }
               }
+            }
 
-              // Resetear campañas adicionales cuando cambia la parte
-              if (newPartId !== lastPartIdForAdditional.current) {
-                setAdditionalCampaigns([]);
-                lastPartIdForAdditional.current = newPartId;
-              }
+            // Resetear campañas adicionales cuando cambia la parte
+            if (partToUse.id !== lastPartIdForAdditional.current) {
+              setAdditionalCampaigns([]);
+              lastPartIdForAdditional.current = partToUse.id;
             }
           }
         }
