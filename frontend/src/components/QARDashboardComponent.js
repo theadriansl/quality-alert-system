@@ -84,12 +84,13 @@ const TabBar = ({ tabs, active, onSelect }) => {
   );
 };
 
+// SectionTitle - standardized to 10.5px/600 micro-title style (matches SharedComponents)
 const SectionTitle = ({ title, sub }) => {
   const { theme: t } = useTheme();
   return (
     <div style={{ marginBottom: '12px' }}>
-      <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>{title}</div>
-      {sub && <div style={{ fontSize: '11px', color: t.textMuted }}>{sub}</div>}
+      <div style={{ fontSize: '10.5px', fontWeight: '600', color: t.textDim, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{title}</div>
+      {sub && <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>{sub}</div>}
     </div>
   );
 };

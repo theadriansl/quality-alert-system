@@ -8,6 +8,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import CustomDashboard from './CustomDashboard';
+import { KpiTile as SharedKpiTile } from './shared/SharedComponents';
 
 const API_URL = 'http://localhost:5000';
 
@@ -32,25 +33,22 @@ const riskColor = (idx) => {
 const fmt1 = (v) => (typeof v === 'number' ? Math.round(v * 10) / 10 : v);
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-const KpiTile = ({ label, value, unit = '', color, sub, icon, size = 'md' }) => {
+// Local KpiTile wrapper for Workload-style (borderTop accent, colored value)
+// Note: icon prop ignored per emoji cleanup protocol
+const KpiTile = ({ label, value, unit = '', color, sub, size = 'md' }) => {
   const { theme: t } = useTheme();
-  const valFontSize = size === 'lg' ? '32px' : size === 'sm' ? '20px' : '26px';
   return (
-    <div style={{
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '10px',
-      padding: size === 'sm' ? '12px 14px' : '16px 18px',
-      borderTop: `3px solid ${color || t.accent}`
-    }}>
-      <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-        {icon && <span style={{ marginRight: '4px' }}>{icon}</span>}{label}
-      </div>
-      <div style={{ fontSize: valFontSize, fontWeight: '600', color: color || t.text, lineHeight: 1.1 }}>
-        {value}<span style={{ fontSize: '14px', fontWeight: '400', marginLeft: '3px', color: t.textMuted }}>{unit}</span>
-      </div>
-      {sub && <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{sub}</div>}
-    </div>
+    <SharedKpiTile
+      label={label}
+      value={value}
+      unit={unit}
+      sub={sub}
+      borderAccent="top"
+      accentColor={color}
+      valueColor={color}
+      size={size}
+      t={t}
+    />
   );
 };
 
@@ -758,9 +756,9 @@ const renderWorkloadWidget = (id, kpis, t) => {
   if (id === 'kpi-real-plan')
     return <KpiTile label="Real vs Planeado" value={`${topBar.realVsPlanned ?? 0}%`} color={Math.abs((topBar.realVsPlanned ?? 100) - 100) < 15 ? '#2E7D32' : Math.abs((topBar.realVsPlanned ?? 100) - 100) < 30 ? '#C77700' : '#ef4444'} />;
   if (id === 'kpi-retrasadas')
-    return <KpiTile label="% Retrasadas" value={`${topBar.delayedPercent ?? 0}%`} color={(topBar.delayedPercent ?? 0) > 20 ? '#ef4444' : (topBar.delayedPercent ?? 0) > 10 ? '#C77700' : '#2E7D32'} icon="⏰" sub="Fecha vencida" />;
+    return <KpiTile label="% Retrasadas" value={`${topBar.delayedPercent ?? 0}%`} color={(topBar.delayedPercent ?? 0) > 20 ? '#ef4444' : (topBar.delayedPercent ?? 0) > 10 ? '#C77700' : '#2E7D32'} sub="Fecha vencida" />;
   if (id === 'kpi-cumplimiento')
-    return <KpiTile label="Cumplimiento" value={`${ejecucion.compliancePercent ?? 0}%`} color={clr(ejecucion.compliancePercent ?? 0)} icon="✅" />;
+    return <KpiTile label="Cumplimiento" value={`${ejecucion.compliancePercent ?? 0}%`} color={clr(ejecucion.compliancePercent ?? 0)} />;
   if (id === 'kpi-productividad')
     return <KpiTile label="Productividad" value={`${ejecucion.productivity ?? 0}x`} color={(ejecucion.productivity ?? 0) >= 1 ? '#2E7D32' : '#ef4444'} sub="est / real" />;
   if (id === 'kpi-leadtime')

@@ -8,6 +8,7 @@ import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSocket } from '../context/SocketContext';
 import { isUserAdmin } from '../utils/permissions';
+import { KpiTile } from '../components/shared/SharedComponents';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
@@ -34,13 +35,7 @@ const getPresets = (lang) => [
   { label: lang === 'es' ? 'Todo' : 'All',               days: null},
 ];
 
-const KPI = ({ label, value, sub, color, t }) => (
-  <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: `4px solid ${color || t.accent}` }}>
-    <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{label}</div>
-    <div style={{ fontSize: '26px', fontWeight: '600', color: color || t.text }}>{value ?? '—'}</div>
-    {sub && <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{sub}</div>}
-  </div>
-);
+// KPI component removed - using KpiTile from SharedComponents with borderAccent='left'
 
 const SectionCard = ({ title, children, t }) => (
   <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '20px', marginBottom: '20px' }}>
@@ -80,16 +75,18 @@ const getSevColors = (t) => ({
   'BAJA':    t.success
 });
 
-const KpiTile = ({ label, value, sub, color }) => {
-  const { theme: t } = useTheme();
-  return (
-    <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '14px 16px', borderLeft: `4px solid ${color}` }}>
-      <div style={{ fontSize: '10px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '22px', fontWeight: '600', color }}>{value ?? '—'}</div>
-      {sub && <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>{sub}</div>}
-    </div>
-  );
-};
+// Local KpiTile wrapper for MRB-style (borderLeft accent, colored value)
+const MrbKpi = ({ label, value, sub, color, t }) => (
+  <KpiTile
+    label={label}
+    value={value}
+    sub={sub}
+    borderAccent="left"
+    accentColor={color}
+    valueColor={color}
+    t={t}
+  />
+);
 
 const MRB_WIDGET_CATALOG = [
   // ── Resumen ────────────────────────────────────────────────────────────────
@@ -155,11 +152,11 @@ const MrbWidgetRenderer = ({ id, data }) => {
   const tm = data?.timing      || {};
 
   // ── Resumen ─────────────────────────────────────────────────────────────────
-  if (id === 'kpi-yield')       return <KpiTile label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} sub="calidad de inspección" color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} />;
-  if (id === 'kpi-ppm')         return <KpiTile label="PPM" value={s.ppm != null ? Number(s.ppm).toLocaleString('es-MX') : '—'} color={t.error} />;
-  if (id === 'kpi-costo-total') return <KpiTile label="Costo Total" value={fmt$(s.totalCost || 0)} color={t.accent} />;
-  if (id === 'kpi-backlog')     return <KpiTile label="Backlog" value={s.backlog ?? '—'} sub={`${s.total || 0} totales`} color={t.warning} />;
-  if (id === 'kpi-cerradas')    return <KpiTile label="Cerradas" value={s.closed ?? '—'} sub={`${s.totalInsp ? Number(s.totalInsp).toLocaleString('es-MX') : 0} pzas insp.`} color={t.success} />;
+  if (id === 'kpi-yield')       return <MrbKpi label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} sub="calidad de inspección" color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} t={t} />;
+  if (id === 'kpi-ppm')         return <MrbKpi label="PPM" value={s.ppm != null ? Number(s.ppm).toLocaleString('es-MX') : '—'} color={t.error} t={t} />;
+  if (id === 'kpi-costo-total') return <MrbKpi label="Costo Total" value={fmt$(s.totalCost || 0)} color={t.accent} t={t} />;
+  if (id === 'kpi-backlog')     return <MrbKpi label="Backlog" value={s.backlog ?? '—'} sub={`${s.total || 0} totales`} color={t.warning} t={t} />;
+  if (id === 'kpi-cerradas')    return <MrbKpi label="Cerradas" value={s.closed ?? '—'} sub={`${s.totalInsp ? Number(s.totalInsp).toLocaleString('es-MX') : 0} pzas insp.`} color={t.success} t={t} />;
 
   if (id === 'chart-camp-mes') {
     const { data: mdData, depts: mdDepts } = (() => {
@@ -249,11 +246,11 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── Material ────────────────────────────────────────────────────────────────
-  if (id === 'kpi-scrap')     return <KpiTile label="Scrap" value={Number(d.scrap || 0).toLocaleString('es-MX')} sub="piezas" color={t.error} />;
-  if (id === 'kpi-rework')    return <KpiTile label="Rework" value={Number(d.rework || 0).toLocaleString('es-MX')} sub="piezas" color={t.warning} />;
-  if (id === 'kpi-use-as-is') return <KpiTile label="Use As-Is" value={Number(d.use_as_is || 0).toLocaleString('es-MX')} sub="piezas" color={t.success} />;
-  if (id === 'kpi-return')    return <KpiTile label="Return" value={Number(d.return_sup || 0).toLocaleString('es-MX')} sub="piezas" color={t.accent} />;
-  if (id === 'kpi-hold')      return <KpiTile label="Hold" value={Number(d.hold || 0).toLocaleString('es-MX')} sub="piezas" color={t.textMuted} />;
+  if (id === 'kpi-scrap')     return <MrbKpi label="Scrap" value={Number(d.scrap || 0).toLocaleString('es-MX')} sub="piezas" color={t.error} t={t} />;
+  if (id === 'kpi-rework')    return <MrbKpi label="Rework" value={Number(d.rework || 0).toLocaleString('es-MX')} sub="piezas" color={t.warning} t={t} />;
+  if (id === 'kpi-use-as-is') return <MrbKpi label="Use As-Is" value={Number(d.use_as_is || 0).toLocaleString('es-MX')} sub="piezas" color={t.success} t={t} />;
+  if (id === 'kpi-return')    return <MrbKpi label="Return" value={Number(d.return_sup || 0).toLocaleString('es-MX')} sub="piezas" color={t.accent} t={t} />;
+  if (id === 'kpi-hold')      return <MrbKpi label="Hold" value={Number(d.hold || 0).toLocaleString('es-MX')} sub="piezas" color={t.textMuted} t={t} />;
 
   if (id === 'chart-disp-pie') {
     const pieData = [
@@ -321,11 +318,11 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── Tiempo & Flujo ──────────────────────────────────────────────────────────
-  if (id === 'kpi-avg-resp')  return <KpiTile label="Avg Respuesta" value={tm.avg_response_days != null ? `${tm.avg_response_days} días` : '—'} color={t.accent} />;
-  if (id === 'kpi-avg-cierre') return <KpiTile label="Avg Cierre" value={tm.avg_close_days != null ? `${tm.avg_close_days} días` : '—'} color={t.success} />;
-  if (id === 'kpi-lead')      return <KpiTile label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} días` : '—'} color={t.accent} />;
-  if (id === 'kpi-aging14')   return <KpiTile label=">14 días abiertas" value={tm.aging_14 ?? '—'} color={tm.aging_14 > 0 ? t.warning : t.success} />;
-  if (id === 'kpi-aging30')   return <KpiTile label=">30 días abiertas" value={tm.aging_30 ?? '—'} color={tm.aging_30 > 0 ? t.error : t.success} />;
+  if (id === 'kpi-avg-resp')  return <MrbKpi label="Avg Respuesta" value={tm.avg_response_days != null ? `${tm.avg_response_days} días` : '—'} color={t.accent} t={t} />;
+  if (id === 'kpi-avg-cierre') return <MrbKpi label="Avg Cierre" value={tm.avg_close_days != null ? `${tm.avg_close_days} días` : '—'} color={t.success} t={t} />;
+  if (id === 'kpi-lead')      return <MrbKpi label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} días` : '—'} color={t.accent} t={t} />;
+  if (id === 'kpi-aging14')   return <MrbKpi label=">14 días abiertas" value={tm.aging_14 ?? '—'} color={tm.aging_14 > 0 ? t.warning : t.success} t={t} />;
+  if (id === 'kpi-aging30')   return <MrbKpi label=">30 días abiertas" value={tm.aging_30 ?? '—'} color={tm.aging_30 > 0 ? t.error : t.success} t={t} />;
 
   if (id === 'tabla-aging') {
     return (
@@ -352,9 +349,9 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── Costo & Impacto ─────────────────────────────────────────────────────────
-  if (id === 'kpi-scrap-cost') return <KpiTile label="Scrap Cost" value={fmt$(c.scrapCost || 0)} color={t.error} />;
-  if (id === 'kpi-labor-cost') return <KpiTile label="Mano de Obra" value={fmt$(c.laborCost || 0)} color={t.warning} />;
-  if (id === 'kpi-total-cost') return <KpiTile label="Costo Total" value={fmt$(c.totalCost || 0)} color={t.accent} />;
+  if (id === 'kpi-scrap-cost') return <MrbKpi label="Scrap Cost" value={fmt$(c.scrapCost || 0)} color={t.error} t={t} />;
+  if (id === 'kpi-labor-cost') return <MrbKpi label="Mano de Obra" value={fmt$(c.laborCost || 0)} color={t.warning} t={t} />;
+  if (id === 'kpi-total-cost') return <MrbKpi label="Costo Total" value={fmt$(c.totalCost || 0)} color={t.accent} t={t} />;
 
   if (id === 'chart-costo-mes') {
     return (
@@ -494,10 +491,10 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── Operación ───────────────────────────────────────────────────────────────
-  if (id === 'kpi-pph')          return <KpiTile label="Piezas / Hora" value={o.piecesPerHour ?? '—'} sub={`${Number(o.inspectorHours || 0).toFixed(1)} hrs inspector`} color={t.accent} />;
-  if (id === 'kpi-dph')          return <KpiTile label="Defectos / Hora" value={o.defectsPerHour ?? '—'} color={t.error} />;
-  if (id === 'kpi-downtime')     return <KpiTile label="Downtime Total" value={o.totalDowntime ? `${Number(o.totalDowntime).toLocaleString('es-MX')} min` : '0 min'} color={t.warning} />;
-  if (id === 'kpi-hrs-inspector') return <KpiTile label="Horas Inspector" value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} />;
+  if (id === 'kpi-pph')          return <MrbKpi label="Piezas / Hora" value={o.piecesPerHour ?? '—'} sub={`${Number(o.inspectorHours || 0).toFixed(1)} hrs inspector`} color={t.accent} t={t} />;
+  if (id === 'kpi-dph')          return <MrbKpi label="Defectos / Hora" value={o.defectsPerHour ?? '—'} color={t.error} t={t} />;
+  if (id === 'kpi-downtime')     return <MrbKpi label="Downtime Total" value={o.totalDowntime ? `${Number(o.totalDowntime).toLocaleString('es-MX')} min` : '0 min'} color={t.warning} t={t} />;
+  if (id === 'kpi-hrs-inspector') return <MrbKpi label="Horas Inspector" value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} t={t} />;
 
   if (id === 'chart-downtime') {
     return (
@@ -1265,11 +1262,11 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} t={t} />
-          <KPI label="PPM" value={s.ppm != null ? fmtN(s.ppm) : '—'} color={t.error} t={t} />
-          <KPI label={L.totalCost} value={fmt$(s.totalCost || 0)} color={t.accent} t={t} />
-          <KPI label="Backlog" value={s.backlog} sub={`${s.total || 0} ${L.total}`} color={t.warning} t={t} />
-          <KPI label={language === 'es' ? 'Cerradas' : 'Closed'} value={s.closed} sub={`${s.totalInsp ? fmtN(s.totalInsp) : 0} ${L.pcsInspected}`} color={t.success} t={t} />
+          <MrbKpi label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} t={t} />
+          <MrbKpi label="PPM" value={s.ppm != null ? fmtN(s.ppm) : '—'} color={t.error} t={t} />
+          <MrbKpi label={L.totalCost} value={fmt$(s.totalCost || 0)} color={t.accent} t={t} />
+          <MrbKpi label="Backlog" value={s.backlog} sub={`${s.total || 0} ${L.total}`} color={t.warning} t={t} />
+          <MrbKpi label={language === 'es' ? 'Cerradas' : 'Closed'} value={s.closed} sub={`${s.totalInsp ? fmtN(s.totalInsp) : 0} ${L.pcsInspected}`} color={t.success} t={t} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
@@ -1450,7 +1447,7 @@ const MRBDashboard = () => {
             { label: 'Use As-Is', val: d.use_as_is,  color: t.success },
             { label: 'Return',    val: d.return_sup, color: t.accent },
             { label: 'Hold',      val: d.hold,       color: t.textMuted },
-          ].map(k => <KPI key={k.label} label={k.label} value={fmtN(k.val)} sub={total > 0 ? `${(((k.val||0)/total)*100).toFixed(1)}%` : undefined} color={k.color} t={t} />)}
+          ].map(k => <MrbKpi key={k.label} label={k.label} value={fmtN(k.val)} sub={total > 0 ? `${(((k.val||0)/total)*100).toFixed(1)}%` : undefined} color={k.color} t={t} />)}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
@@ -1500,11 +1497,11 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label={language === 'es' ? 'Avg Respuesta' : 'Avg Response'} value={tm.avg_response_days != null ? `${tm.avg_response_days} ${L.days}` : '—'} color={t.accent} t={t} />
-          <KPI label={language === 'es' ? 'Avg Cierre' : 'Avg Close'} value={tm.avg_close_days != null ? `${tm.avg_close_days} ${L.days}` : '—'} color={t.success} t={t} />
-          <KPI label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} ${L.days}` : '—'} color={t.accent} t={t} />
-          <KPI label={language === 'es' ? '> 14 días abiertas' : '> 14 days open'} value={tm.aging_14} color={tm.aging_14 > 0 ? t.warning : t.success} t={t} />
-          <KPI label={language === 'es' ? '> 30 días abiertas' : '> 30 days open'} value={tm.aging_30} color={tm.aging_30 > 0 ? t.error : t.success} t={t} />
+          <MrbKpi label={language === 'es' ? 'Avg Respuesta' : 'Avg Response'} value={tm.avg_response_days != null ? `${tm.avg_response_days} ${L.days}` : '—'} color={t.accent} t={t} />
+          <MrbKpi label={language === 'es' ? 'Avg Cierre' : 'Avg Close'} value={tm.avg_close_days != null ? `${tm.avg_close_days} ${L.days}` : '—'} color={t.success} t={t} />
+          <MrbKpi label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} ${L.days}` : '—'} color={t.accent} t={t} />
+          <MrbKpi label={language === 'es' ? '> 14 días abiertas' : '> 14 days open'} value={tm.aging_14} color={tm.aging_14 > 0 ? t.warning : t.success} t={t} />
+          <MrbKpi label={language === 'es' ? '> 30 días abiertas' : '> 30 days open'} value={tm.aging_30} color={tm.aging_30 > 0 ? t.error : t.success} t={t} />
         </div>
 
         <SectionCard title={L.campaignAging} t={t}>
@@ -1529,9 +1526,9 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label={L.scrapCost} value={fmt$(c.scrapCost || 0)} color={t.error} t={t} />
-          <KPI label={L.laborCost} value={fmt$(c.laborCost || 0)} color={t.warning} t={t} />
-          <KPI label={L.totalCost} value={fmt$(c.totalCost || 0)} color={t.accent} t={t} />
+          <MrbKpi label={L.scrapCost} value={fmt$(c.scrapCost || 0)} color={t.error} t={t} />
+          <MrbKpi label={L.laborCost} value={fmt$(c.laborCost || 0)} color={t.warning} t={t} />
+          <MrbKpi label={L.totalCost} value={fmt$(c.totalCost || 0)} color={t.accent} t={t} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
@@ -1633,10 +1630,10 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label={L.pcsPerHour} value={o.piecesPerHour ?? '—'} sub={`${fmtN(o.inspectorHours)} ${language === 'es' ? 'hrs inspector' : 'inspector hrs'}`} color={t.accent} t={t} />
-          <KPI label={L.defectsPerHour} value={o.defectsPerHour ?? '—'} color={t.error} t={t} />
-          <KPI label={L.totalDowntime} value={o.totalDowntime ? `${fmtN(o.totalDowntime)} min` : '0 min'} color={t.warning} t={t} />
-          <KPI label={L.inspectorHours} value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} t={t} />
+          <MrbKpi label={L.pcsPerHour} value={o.piecesPerHour ?? '—'} sub={`${fmtN(o.inspectorHours)} ${language === 'es' ? 'hrs inspector' : 'inspector hrs'}`} color={t.accent} t={t} />
+          <MrbKpi label={L.defectsPerHour} value={o.defectsPerHour ?? '—'} color={t.error} t={t} />
+          <MrbKpi label={L.totalDowntime} value={o.totalDowntime ? `${fmtN(o.totalDowntime)} min` : '0 min'} color={t.warning} t={t} />
+          <MrbKpi label={L.inspectorHours} value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} t={t} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>

@@ -32,6 +32,7 @@ import {
 import { checkMyHospitalPermissions, cacheHospitalPermissions, getCachedHospitalPermissions } from '../services/hospitalRolesService';
 import CustomDashboard from '../components/CustomDashboard';
 import { useSocket } from '../context/SocketContext';
+import { KpiTile } from '../components/shared/SharedComponents';
 
 const COLORS = {
   green: '#16a34a',
@@ -190,20 +191,18 @@ const HOSPITAL_DEFAULT = ['kpi-wip', 'kpi-released', 'kpi-scrap', 'kpi-captured'
 // COMPONENTES REUTILIZABLES
 // ============================================================================
 
+// Local KPI wrapper for Hospital-style (borderLeft accent, colored value, size lg)
 const KPI = ({ label, value, sub, color, t }) => (
-  <div style={{
-    backgroundColor: t.bgCard,
-    border: `1px solid ${t.border}`,
-    borderRadius: '8px',
-    padding: '16px',
-    borderLeft: `4px solid ${color || t.accent}`
-  }}>
-    <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-      {label}
-    </div>
-    <div style={{ fontSize: '26px', fontWeight: '600', color: color || t.text }}>{value ?? '—'}</div>
-    {sub && <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{sub}</div>}
-  </div>
+  <KpiTile
+    label={label}
+    value={value}
+    sub={sub}
+    borderAccent="left"
+    accentColor={color}
+    valueColor={color}
+    size="lg"
+    t={t}
+  />
 );
 
 const SectionCard = ({ title, children, t, action }) => (

@@ -55,31 +55,51 @@ export const Card = ({ children, t, style = {} }) => (
 
 // ─────────────────────────────────────────────────────────────
 // KpiTile - KPI display tile
-// - No icon prop (emojis removed)
-// - Value always in t.text, monospace 22px
-// - Alert dot (5px) next to label for warning/error states
-// - valueColor only for cases where number IS the state (SLA, overdue)
+// - borderAccent: 'left' | 'top' | 'none' (default: 'none')
+// - accentColor: color for border accent (default: t.accent)
+// - size: 'sm' | 'md' | 'lg' (default: 'md') - affects value fontSize
+// - alertType: 'warning' | 'error' | null - shows dot next to label
+// - valueColor: override value color (use when number IS the state)
 // ─────────────────────────────────────────────────────────────
 export const KpiTile = ({
   label,
   value,
   unit = '',
   sub,
-  alertType,      // 'warning' | 'error' | null
-  valueColor,     // Only use when number IS the state (SLA below target, etc)
+  alertType,
+  valueColor,
+  borderAccent = 'none',  // 'left' | 'top' | 'none'
+  accentColor,            // defaults to t.accent if borderAccent set
+  size = 'md',            // 'sm' | 'md' | 'lg'
   t
 }) => {
   const alertDotColor = alertType === 'error' ? t.errorFg
     : alertType === 'warning' ? t.warningFg
     : null;
 
+  // Size variants
+  const sizeConfig = {
+    sm: { valueFontSize: 20, padding: '10px 12px' },
+    md: { valueFontSize: 22, padding: '12px 14px' },
+    lg: { valueFontSize: 28, padding: '14px 16px' }
+  };
+  const { valueFontSize, padding } = sizeConfig[size] || sizeConfig.md;
+
+  // Border accent styling
+  const accentStyle = borderAccent === 'left'
+    ? { borderLeft: `4px solid ${accentColor || t.accent}` }
+    : borderAccent === 'top'
+    ? { borderTop: `3px solid ${accentColor || t.accent}` }
+    : {};
+
   return (
     <div style={{
       backgroundColor: t.bgCard,
       border: `1px solid ${t.border}`,
       borderRadius: 8,
-      padding: '12px 14px',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+      padding,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+      ...accentStyle
     }}>
       {/* Label row with optional alert dot */}
       <div style={{
@@ -109,9 +129,9 @@ export const KpiTile = ({
         </span>
       </div>
 
-      {/* Value - monospace, 22px */}
+      {/* Value - monospace */}
       <div style={{
-        fontSize: 22,
+        fontSize: valueFontSize,
         fontWeight: 500,
         fontFamily: "'IBM Plex Mono', monospace",
         color: valueColor || t.text,
