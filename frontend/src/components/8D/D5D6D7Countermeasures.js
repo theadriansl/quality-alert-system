@@ -1795,7 +1795,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
       marginBottom: '20px',
       marginTop: '30px',
       fontSize: '18px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       display: 'flex',
       alignItems: 'center',
       gap: '10px'
@@ -2871,7 +2871,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                             textAlign: 'center'
                           }}
                         >
-                          <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px', color: themeColors.text }}>
+                          <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px', color: themeColors.text }}>
                             {isPast && approval?.status === 'approved' && ' '}
                             {isPast && approval?.status === 'rejected' && ' '}
                             {isCurrent && ' '}
@@ -2907,7 +2907,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                   borderRadius: '6px',
                   marginBottom: '16px'
                 }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
+                  <div style={{ fontWeight: '600', marginBottom: '10px' }}>
                     Historial de Aprobaciones D6 ({d6ApprovalHistory.length} registros):
                   </div>
                   <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -2977,7 +2977,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                   fontSize: '14px',
                   color: themeColors.successFg,
                   textAlign: 'center',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   flex: 1
                 }}>
                   D6 COMPLETAMENTE APROBADO. Puede continuar con D7.
@@ -2988,7 +2988,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
                     style={{
                       padding: '12px 24px',
                       fontSize: '14px',
-                      fontWeight: 'bold',
+                      fontWeight: '600',
                       backgroundColor: themeColors.errorFg,
                       color: themeColors.bgCard,
                       border: 'none',
@@ -3459,7 +3459,7 @@ const D5D6D7Countermeasures = ({ data, onDataUpdate, language = 'es', isBlocked 
         }}>
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',

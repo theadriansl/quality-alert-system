@@ -1314,7 +1314,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           onClick={() => !disabled && setActiveCell(cellId)}
           >
             <div style={{ flex: 1, fontSize: '12px' }}>
-              <div style={{ fontWeight: 'bold', color: themeColors.text }}>
+              <div style={{ fontWeight: '600', color: themeColors.text }}>
                 {value.firstName} {value.lastName}
               </div>
               <div style={{ fontSize: '10px', color: themeColors.textMuted }}>
@@ -1421,7 +1421,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                     onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.infoBg}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                   >
-                    <div style={{ fontWeight: 'bold', fontSize: '13px', color: themeColors.text, marginBottom: '4px' }}>
+                    <div style={{ fontWeight: '600', fontSize: '13px', color: themeColors.text, marginBottom: '4px' }}>
                       {user.firstName} {user.lastName}
                     </div>
                     <div style={{ fontSize: '12px', color: themeColors.textMuted, marginBottom: '2px' }}>
@@ -2026,7 +2026,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       marginBottom: '20px',
       marginTop: '10px',
       fontSize: '20px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       display: 'flex',
       alignItems: 'center',
       gap: '10px'
@@ -2040,7 +2040,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
     },
     sectionTitle: {
       fontSize: '18px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       color: themeColors.text,
       marginBottom: '15px',
       borderBottom: `2px solid ${themeColors.primary}`,
@@ -2057,7 +2057,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
     },
     label: {
       fontSize: '12px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       marginBottom: '5px',
       color: themeColors.text
     },
@@ -2096,7 +2096,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
       borderRadius: '8px',
       padding: '16px 32px',
       fontSize: '18px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       cursor: 'pointer',
       width: '100%',
       marginTop: '30px',
@@ -2224,7 +2224,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           }}>
             <div style={{
               fontSize: '14px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               marginBottom: '10px',
               color: themeColors.successFg
             }}>
@@ -2269,7 +2269,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                       >
                         <div style={{
                           fontSize: '11px',
-                          fontWeight: 'bold',
+                          fontWeight: '600',
                           color: themeColors.text,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -2296,7 +2296,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                               border: 'none',
                               borderRadius: '3px',
                               fontSize: '10px',
-                              fontWeight: 'bold',
+                              fontWeight: '600',
                               cursor: fieldsLocked ? 'not-allowed' : 'pointer',
                               transition: 'background-color 0.2s',
                               opacity: fieldsLocked ? 0.5 : 1
@@ -2318,7 +2318,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                                 border: 'none',
                                 borderRadius: '3px',
                                 fontSize: '10px',
-                                fontWeight: 'bold',
+                                fontWeight: '600',
                                 cursor: 'pointer',
                                 transition: 'background-color 0.2s'
                               }}
@@ -2385,7 +2385,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 padding: '12px',
                 textAlign: 'left',
                 borderBottom: `2px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 fontSize: '13px',
                 color: themeColors.textMuted
               }}>Etapa</th>
@@ -2393,7 +2393,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 padding: '12px',
                 textAlign: 'left',
                 borderBottom: `2px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 fontSize: '13px',
                 color: themeColors.textMuted
               }}> Responsable Principal *</th>
@@ -2401,7 +2401,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 padding: '12px',
                 textAlign: 'left',
                 borderBottom: `2px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 fontSize: '13px',
                 color: themeColors.textMuted
               }}> Aprobador 1</th>
@@ -2409,7 +2409,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 padding: '12px',
                 textAlign: 'left',
                 borderBottom: `2px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 fontSize: '13px',
                 color: themeColors.textMuted
               }}> Aprobador 2</th>
@@ -2417,7 +2417,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 padding: '12px',
                 textAlign: 'left',
                 borderBottom: `2px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 fontSize: '13px',
                 color: themeColors.textMuted
               }}> Aprobador 3</th>
@@ -2429,7 +2429,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               <td style={{
                 padding: '12px',
                 borderBottom: `1px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 color: themeColors.errorFg,
                 fontSize: '12px'
               }}>
@@ -2481,7 +2481,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               <td style={{
                 padding: '12px',
                 borderBottom: `1px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 color: themeColors.warningFg,
                 fontSize: '12px'
               }}>
@@ -2533,7 +2533,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               <td style={{
                 padding: '12px',
                 borderBottom: `1px solid ${themeColors.border}`,
-                fontWeight: 'bold',
+                fontWeight: '600',
                 color: themeColors.successFg,
                 fontSize: '12px'
               }}>
@@ -2590,7 +2590,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           padding: '15px',
           marginTop: '20px'
         }}>
-          <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px', color: themeColors.infoFg }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: themeColors.infoFg }}>
              Guardar Como Atajo
           </div>
           <button
@@ -2605,7 +2605,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               borderRadius: '6px',
               cursor: (teamPresets.length >= 12 || fieldsLocked) ? 'not-allowed' : 'pointer',
               fontSize: '14px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               transition: 'all 0.2s',
               marginBottom: '10px',
               opacity: fieldsLocked ? 0.5 : 1
@@ -2783,7 +2783,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                         style={{ marginRight: '4px', transform: 'scale(0.9)' }}
                         disabled={fieldsLocked && !isEditingParts}
                       />
-                      <div style={{ fontWeight: 'bold', color: themeColors.info, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: '600', color: themeColors.info, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {part.partNumber}
                       </div>
                     </div>
@@ -2843,7 +2843,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                     <strong style={{ fontSize: '15px', color: themeColors.successFg }}>
                       Costo Estimado Total:
                     </strong>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: themeColors.successFg }}>
+                    <span style={{ fontSize: '18px', fontWeight: '600', color: themeColors.successFg }}>
                       ${(selectedParts?.reduce((total, part) => {
                         const totalCostImpact = parseFloat(part.totalCostImpact) || 0;
                         return total + totalCostImpact;
@@ -2859,7 +2859,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 <div style={{ marginTop: '20px' }}>
                   <h3 style={{
                     fontSize: '16px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     color: themeColors.info,
                     marginBottom: '12px',
                     display: 'flex',
@@ -2948,7 +2948,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
         {/* Sección de Fotos: No Good y OK */}
         <div id="d2-fotos" style={{ marginTop: '20px', scrollMarginTop: '20px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: themeColors.text, marginBottom: '12px' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', color: themeColors.text, marginBottom: '12px' }}>
              Evidencia Visual
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -2963,7 +2963,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               <label style={{
                 display: 'block',
                 fontSize: '13px',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 color: themeColors.errorFg,
                 marginBottom: '8px'
               }}>
@@ -3056,7 +3056,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               <label style={{
                 display: 'block',
                 fontSize: '13px',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 color: themeColors.successFg,
                 marginBottom: '8px'
               }}>
@@ -3143,7 +3143,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
         {/* Sección de Documentos Adjuntos */}
         <div style={{ marginTop: '20px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: themeColors.text, marginBottom: '12px' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', color: themeColors.text, marginBottom: '12px' }}>
              Documentos Adjuntos
           </h4>
           <div style={{
@@ -3160,7 +3160,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               borderRadius: '6px',
               cursor: fieldsLocked ? 'not-allowed' : 'pointer',
               fontSize: '13px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               transition: 'all 0.2s',
               opacity: fieldsLocked ? 0.6 : 1
             }}
@@ -3180,7 +3180,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             {/* Lista de documentos adjuntos */}
             {attachedDocuments.length > 0 && (
               <div style={{ marginTop: '16px' }}>
-                <p style={{ fontSize: '12px', fontWeight: 'bold', color: themeColors.text, marginBottom: '8px' }}>
+                <p style={{ fontSize: '12px', fontWeight: '600', color: themeColors.text, marginBottom: '8px' }}>
                   Archivos adjuntos ({attachedDocuments.length}):
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -3241,7 +3241,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                             padding: '4px 8px',
                             cursor: 'pointer',
                             fontSize: '11px',
-                            fontWeight: 'bold'
+                            fontWeight: '600'
                           }}
                         >
                           Eliminar
@@ -3332,7 +3332,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
         {/* ¿Dónde deberían haberse detectado las partes no conformes? */}
         <div id="d3-deteccion" style={{ marginBottom: '24px', scrollMarginTop: '20px' }}>
-          <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: themeColors.info, marginBottom: '16px' }}>
+          <h4 style={{ fontSize: '15px', fontWeight: '600', color: themeColors.info, marginBottom: '16px' }}>
             ¿Dónde deberían haberse detectado las partes no conformes?
           </h4>
           <div style={{
@@ -3349,7 +3349,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                     padding: '12px 16px',
                     borderBottom: `1px solid ${themeColors.border}`,
                     fontSize: '13px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     width: '60%'
                   }}>
                     Punto de Detección
@@ -3359,7 +3359,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                     padding: '12px 16px',
                     borderBottom: `1px solid ${themeColors.border}`,
                     fontSize: '13px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     width: '20%'
                   }}>
                     Sí
@@ -3369,7 +3369,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                     padding: '12px 16px',
                     borderBottom: `1px solid ${themeColors.border}`,
                     fontSize: '13px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     width: '20%'
                   }}>
                     No
@@ -3453,7 +3453,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
 
         {/* Razón de no-detección: 5 Por qués */}
         <div style={{ marginBottom: '24px' }}>
-          <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: themeColors.info, marginBottom: '16px' }}>
+          <h4 style={{ fontSize: '15px', fontWeight: '600', color: themeColors.info, marginBottom: '16px' }}>
             Razón de no-detección (5 Por qués):
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -3462,7 +3462,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 <label style={{
                   minWidth: '80px',
                   fontSize: '13px',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   color: themeColors.textMuted
                 }}>
                   {num}. ¿Por qué?
@@ -3518,7 +3518,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           <label style={{
             display: 'block',
             fontSize: '14px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginBottom: '12px'
           }}>
@@ -3540,7 +3540,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                 disabled={fieldsLocked && !isEditingD3}
               />
-              <span style={{ fontWeight: d3Data.requiresRework === true ? 'bold' : 'normal' }}>SÍ</span>
+              <span style={{ fontWeight: d3Data.requiresRework === true ? '600' : '400' }}>SÍ</span>
             </label>
             <label style={{
               display: 'flex',
@@ -3557,7 +3557,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                 disabled={fieldsLocked && !isEditingD3}
               />
-              <span style={{ fontWeight: d3Data.requiresRework === false ? 'bold' : 'normal' }}>NO</span>
+              <span style={{ fontWeight: d3Data.requiresRework === false ? '600' : '400' }}>NO</span>
             </label>
           </div>
         </div>
@@ -3571,7 +3571,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             borderRadius: '8px',
             border: `2px solid ${themeColors.warningBorder}`
           }}>
-            <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: themeColors.warningFg, marginBottom: '16px' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: '600', color: themeColors.warningFg, marginBottom: '16px' }}>
                Costos de Retrabajo
             </h4>
 
@@ -3601,7 +3601,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   backgroundColor: themeColors.bgCard,
                   display: 'flex',
                   alignItems: 'center',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   fontSize: '16px',
                   color: themeColors.warningFg
                 }}>
@@ -3625,7 +3625,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             <div>
               <h4 style={{
                 fontSize: '16px',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 color: d3Data.requiresRework === true ? themeColors.infoFg : themeColors.errorFg,
                 marginBottom: '4px'
               }}>
@@ -3646,7 +3646,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
             <div style={{ textAlign: 'right' }}>
               <p style={{
                 fontSize: '28px',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 color: d3Data.requiresRework === true ? themeColors.infoFg : themeColors.errorFg,
                 margin: 0
               }}>
@@ -3725,7 +3725,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
         }}>
           <h3 style={{
             fontSize: '18px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             marginBottom: '15px',
             color: themeColors.text
           }}>
@@ -3777,7 +3777,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                         textAlign: 'center'
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px' }}>
                         {isPast && approvalData?.status === 'approved' && ' '}
                         {isPast && approvalData?.status === 'rejected' && ' '}
                         {isCurrent && ' '}
@@ -3813,7 +3813,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               borderRadius: '6px',
               marginBottom: '15px'
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>Historial de Aprobaciones:</div>
+              <div style={{ fontWeight: '600', marginBottom: '10px' }}>Historial de Aprobaciones:</div>
               {[1, 2, 3].map(step => {
                 const approval = approvalHistory[`approval${step}`];
                 const issueUsers = data?.escalationPath?.issue_users || data?.escalation_path?.issue_users || [];
@@ -3859,7 +3859,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               borderRadius: '6px',
               marginBottom: '15px'
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
+              <div style={{ fontWeight: '600', marginBottom: '10px' }}>
                 Historial de Aprobaciones D3 ({d3ApprovalHistory.length} registros):
               </div>
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -3931,7 +3931,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  fontWeight: 'bold'
+                  fontWeight: '600'
                 }}
                 onMouseEnter={(e) => e.target.style.opacity = '0.85'}
                 onMouseLeave={(e) => e.target.style.opacity = '1'}
@@ -3948,7 +3948,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  fontWeight: 'bold'
+                  fontWeight: '600'
                 }}
                 onMouseEnter={(e) => e.target.style.opacity = '0.85'}
                 onMouseLeave={(e) => e.target.style.opacity = '1'}
@@ -3983,7 +3983,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               fontSize: '14px',
               color: themeColors.successFg,
               textAlign: 'center',
-              fontWeight: 'bold'
+              fontWeight: '600'
             }}>
                D1-D2-D3 COMPLETAMENTE APROBADO. Puede continuar con D4-D5-D6.
 
@@ -4039,7 +4039,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           }}>
             <h3 style={{
               fontSize: '18px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               marginBottom: '15px',
               color: themeColors.errorFg
             }}>
@@ -4102,7 +4102,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   borderRadius: '6px',
                   cursor: rejectComments.trim() ? 'pointer' : 'not-allowed',
                   fontSize: '13px',
-                  fontWeight: 'bold'
+                  fontWeight: '600'
                 }}
                 onMouseEnter={(e) => {
                   if (rejectComments.trim()) e.target.style.opacity = '0.85';
@@ -4141,7 +4141,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
           }}>
             <h3 style={{
               fontSize: '18px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               marginBottom: '15px',
               color: themeColors.error
             }}>
@@ -4205,7 +4205,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                   borderRadius: '6px',
                   cursor: isRevertingD3 || !revertD3Comments.trim() ? 'not-allowed' : 'pointer',
                   fontSize: '13px',
-                  fontWeight: 'bold'
+                  fontWeight: '600'
                 }}
               >
                 {isRevertingD3 ? 'Revirtiendo...' : 'Confirmar Reversión'}
@@ -4293,7 +4293,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
               textAlign: 'center',
               marginTop: '12px',
               fontSize: '14px',
-              fontWeight: 'bold'
+              fontWeight: '600'
             }}>
               {imageModal.imageName}
             </p>
@@ -4364,7 +4364,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
                 borderRadius: '50%',
                 cursor: 'pointer',
                 fontSize: '16px',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -4387,7 +4387,7 @@ const TeamAssignmentTab = ({ data, onDataUpdate, language, activeSection, isRead
         }}>
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginTop: 0,
             marginBottom: '20px'

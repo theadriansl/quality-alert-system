@@ -1136,7 +1136,7 @@ const render8DWidget = (id, { data, derived }, t) => {
             <XAxis dataKey="label" fontSize={10} stroke={t.textMuted} />
             <YAxis fontSize={10} stroke={t.textMuted} />
             <Tooltip formatter={v=>[`${v} reportes`]} />
-            <Bar dataKey="count" radius={[4,4,0,0]} label={{ position:'top', fontSize:11, fontWeight:'700' }}>
+            <Bar dataKey="count" radius={[4,4,0,0]} label={{ position:'top', fontSize:11, fontWeight:'600' }}>
               {buckets.map((e,i) => <Cell key={i} fill={e.color} />)}
             </Bar>
           </BarChart>

@@ -882,7 +882,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
       marginBottom: '20px',
       marginTop: '30px',
       fontSize: '18px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       display: 'flex',
       alignItems: 'center',
       gap: '10px'
@@ -1155,7 +1155,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
               }}>
                 <div style={{
                   fontSize: '24px',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   color: wasOnTime ? themeColors.successFg : themeColors.warningFg,
                   marginBottom: '4px'
                 }}>
@@ -1227,7 +1227,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
               }}>
                 <div style={{
                   fontSize: '28px',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   color: timerColors.text,
                   fontFamily: 'monospace'
                 }}>
@@ -1260,7 +1260,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 </div>
                 <div style={{
                   fontSize: '28px',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   color: timerColors.text,
                   fontFamily: 'monospace',
                   letterSpacing: '1px'
@@ -1301,7 +1301,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
         }}>
           <h4 style={{
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.errorFg,
             marginBottom: '16px',
             marginTop: 0
@@ -1312,7 +1312,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
           {/* Historial de atrasos anteriores */}
           {delayHistory.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
-              <h5 style={{ fontSize: '13px', fontWeight: 'bold', color: themeColors.errorFg, marginBottom: '10px' }}>
+              <h5 style={{ fontSize: '13px', fontWeight: '600', color: themeColors.errorFg, marginBottom: '10px' }}>
                  Historial de Atrasos:
               </h5>
               {delayHistory.map((entry, index) => {
@@ -1331,7 +1331,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: themeColors.errorFg }}>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: themeColors.errorFg }}>
                         Atraso #{index + 1}
                       </span>
                       <span style={{ fontSize: '11px', color: themeColors.textMuted }}>
@@ -1377,7 +1377,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 border: `2px dashed ${themeColors.errorBorder}`,
                 borderRadius: '6px'
               }}>
-                <h5 style={{ fontSize: '13px', fontWeight: 'bold', color: themeColors.errorFg, marginTop: 0, marginBottom: '12px' }}>
+                <h5 style={{ fontSize: '13px', fontWeight: '600', color: themeColors.errorFg, marginTop: 0, marginBottom: '12px' }}>
                   {delayHistory.length === 0 ? ' Nueva Razón de Atraso' : ' Actualizar Razón de Atraso (Fecha compromiso vencida)'}
                 </h5>
 
@@ -1385,7 +1385,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                   <label style={{
                     display: 'block',
                     fontSize: '12px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     color: themeColors.errorFg,
                     marginBottom: '6px'
                   }}>
@@ -1414,7 +1414,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                   <label style={{
                     display: 'block',
                     fontSize: '12px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     color: themeColors.errorFg,
                     marginBottom: '6px'
                   }}>
@@ -1488,7 +1488,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '14px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     cursor: isSaving ? 'not-allowed' : 'pointer',
                     opacity: isSaving ? 0.6 : 1,
                     transition: 'all 0.2s',
@@ -1948,7 +1948,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                 fontSize: '14px',
                 color: themeColors.successFg,
                 textAlign: 'center',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 flex: 1
               }}>
                 D4 COMPLETAMENTE APROBADO. Puede continuar con D5.
@@ -1961,7 +1961,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                     backgroundColor: themeColors.errorFg,
                     padding: '12px 24px',
                     fontSize: '14px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     whiteSpace: 'nowrap'
                   }}
                 >
@@ -2018,7 +2018,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
         }}>
           <h3 style={{
             fontSize: '17px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.warningFg,
             marginTop: 0,
             marginBottom: '16px',
@@ -2081,7 +2081,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
                         textAlign: 'center'
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px' }}>
                         {isPast && approvalData?.status === 'approved' && ' '}
                         {isPast && approvalData?.status === 'rejected' && ' '}
                         {isCurrent && ' '}
@@ -2118,7 +2118,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
               borderRadius: '6px',
               marginBottom: '15px'
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
+              <div style={{ fontWeight: '600', marginBottom: '10px' }}>
                 Historial de Aprobaciones D4 ({d4ApprovalHistory.length} registros):
               </div>
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -2232,7 +2232,7 @@ const D4ContainmentRootCause = ({ data, onDataUpdate, language = 'es', isBlocked
         }}>
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',

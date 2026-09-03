@@ -1166,7 +1166,7 @@ Por favor no responda a este correo.`;
     },
     title: {
       fontSize: '24px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       color: themeColors.accent,
       marginBottom: '8px',
       display: 'flex',
@@ -1183,7 +1183,7 @@ Por favor no responda a este correo.`;
     },
     sectionTitle: {
       fontSize: '18px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       color: themeColors.text,
       marginBottom: '8px'
     },
@@ -1242,7 +1242,7 @@ Por favor no responda a este correo.`;
       border: 'none',
       borderRadius: '6px',
       fontSize: '14px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       cursor: 'pointer',
       marginRight: '12px'
     },
@@ -1297,7 +1297,7 @@ Por favor no responda a este correo.`;
     },
     blockedTitle: {
       fontSize: '18px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       color: themeColors.errorFg,
       marginBottom: '8px'
     },
@@ -2677,7 +2677,7 @@ Por favor no responda a este correo.`;
               fontSize: '14px',
               color: themeColors.successFg,
               textAlign: 'center',
-              fontWeight: 'bold',
+              fontWeight: '600',
               flex: 1
             }}>
               D3-MFG COMPLETAMENTE APROBADO. Puede continuar con D4.
@@ -2690,7 +2690,7 @@ Por favor no responda a este correo.`;
                   backgroundColor: themeColors.errorFg,
                   padding: '12px 24px',
                   fontSize: '14px',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -2708,7 +2708,7 @@ Por favor no responda a este correo.`;
                 backgroundColor: themeColors.error,
                 padding: '12px 24px',
                 fontSize: '16px',
-                fontWeight: 'bold'
+                fontWeight: '600'
               }}
             >
                {language === 'es' ? 'Rechazar' : 'Reject'}
@@ -2722,7 +2722,7 @@ Por favor no responda a este correo.`;
                 backgroundColor: themeColors.success,
                 padding: '12px 24px',
                 fontSize: '16px',
-                fontWeight: 'bold'
+                fontWeight: '600'
               }}
             >
                {language === 'es' ? 'Aprobar' : 'Approve'}
@@ -2784,7 +2784,7 @@ Por favor no responda a este correo.`;
         }}>
           <h3 style={{
             fontSize: '17px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',
@@ -2847,7 +2847,7 @@ Por favor no responda a este correo.`;
                         textAlign: 'center'
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px' }}>
                         {isPast && approvalData?.status === 'approved' && ' '}
                         {isPast && approvalData?.status === 'rejected' && ' '}
                         {isCurrent && ' '}
@@ -2882,7 +2882,7 @@ Por favor no responda a este correo.`;
               padding: '15px',
               borderRadius: '6px'
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
+              <div style={{ fontWeight: '600', marginBottom: '10px' }}>
                 Historial de Aprobaciones D3-MFG ({d3MfgApprovalHistory.length} registros):
               </div>
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -2960,7 +2960,7 @@ Por favor no responda a este correo.`;
             width: '90%',
             maxWidth: '500px'
           }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 'bold' }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: '600' }}>
                {t('saveList')}
             </h3>
 
@@ -3075,7 +3075,7 @@ Por favor no responda a este correo.`;
         }}>
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',

@@ -1489,7 +1489,7 @@ Sistema de Gestión de Calidad`
                       {!item.sentToAudit ? (
                         <span style={{ color: t.textMuted }}>Sin enviar</span>
                       ) : item.auditorCompleted ? (
-                        <span style={{ color: t.success, fontWeight: 'bold' }}> Listo</span>
+                        <span style={{ color: t.success, fontWeight: '600' }}> Listo</span>
                       ) : (
                         <span style={{ color: t.warning }}> Pendiente</span>
                       )}
@@ -1546,7 +1546,7 @@ Sistema de Gestión de Calidad`
                         <span style={{
                           padding: '8px 14px',
                           borderRadius: '6px',
-                          fontWeight: '700',
+                          fontWeight: '600',
                           fontSize: '14px',
                           backgroundColor: item.auditorJudgment === 'OK' ? t.successBg :
                                           item.auditorJudgment === 'NOK' ? t.errorBg :
@@ -1630,7 +1630,7 @@ Sistema de Gestión de Calidad`
                       <span style={{
                         padding: '8px 14px',
                         borderRadius: '12px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         fontSize: '16px',
                         backgroundColor: (item.auditRound || 1) > 1 ? t.warningBg : t.bgPanel,
                         color: (item.auditRound || 1) > 1 ? t.warningFg : t.text
@@ -1802,7 +1802,7 @@ Sistema de Gestión de Calidad`
               fontSize: '14px',
               color: t.successFg,
               textAlign: 'center',
-              fontWeight: 'bold',
+              fontWeight: '600',
               flex: 1
             }}>
               D7 COMPLETAMENTE APROBADO. Puede continuar con D8.
@@ -1813,7 +1813,7 @@ Sistema de Gestión de Calidad`
                 style={{
                   padding: '12px 24px',
                   fontSize: '14px',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   backgroundColor: t.error,
                   color: t.bgCard,
                   border: 'none',
@@ -1932,7 +1932,7 @@ Sistema de Gestión de Calidad`
         }}>
           <h3 style={{
             fontSize: '17px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: t.warningFg,
             marginTop: 0,
             marginBottom: '16px',
@@ -1999,7 +1999,7 @@ Sistema de Gestión de Calidad`
                         textAlign: 'center'
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px' }}>
                         {isPast && approval?.status === 'approved' && ' '}
                         {isPast && approval?.status === 'rejected' && ' '}
                         {isCurrent && ' '}
@@ -2034,7 +2034,7 @@ Sistema de Gestión de Calidad`
               padding: '15px',
               borderRadius: '6px'
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
+              <div style={{ fontWeight: '600', marginBottom: '10px' }}>
                 Historial de Aprobaciones D7 ({d7ApprovalHistory.length} registros):
               </div>
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -2276,7 +2276,7 @@ Sistema de Gestión de Calidad`
           }}>
             <h3 style={{
               fontSize: '18px',
-              fontWeight: '700',
+              fontWeight: '600',
               color: t.text,
               marginTop: 0,
               marginBottom: '20px',
@@ -2321,7 +2321,7 @@ Sistema de Gestión de Calidad`
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontWeight: '700', fontSize: '16px', color: t.text }}>
+                        <span style={{ fontWeight: '600', fontSize: '16px', color: t.text }}>
                           {historyData.currentRound.itemIcon} {historyData.currentRound.itemName}
                         </span>
                         <span style={{ padding: '2px 8px', backgroundColor: t.bgPanel, color: t.text, borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>

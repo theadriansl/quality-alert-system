@@ -990,7 +990,7 @@ const D8FollowUpEvidence = ({
                 fontSize: '14px',
                 color: themeColors.successFg,
                 textAlign: 'center',
-                fontWeight: 'bold',
+                fontWeight: '600',
                 flex: 1
               }}>
                 D8 COMPLETAMENTE APROBADO. El reporte 8D ha sido cerrado exitosamente.
@@ -1003,7 +1003,7 @@ const D8FollowUpEvidence = ({
                     backgroundColor: themeColors.error,
                     padding: '12px 24px',
                     fontSize: '14px',
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     whiteSpace: 'nowrap'
                   }}
                   onMouseEnter={(e) => e.target.style.backgroundColor = themeColors.error}
@@ -1108,7 +1108,7 @@ const D8FollowUpEvidence = ({
           }}>
             <h3 style={{
               fontSize: '17px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               color: themeColors.warningFg,
               marginTop: 0,
               marginBottom: '16px',
@@ -1179,7 +1179,7 @@ const D8FollowUpEvidence = ({
                           textAlign: 'center'
                         }}
                       >
-                        <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}>
+                        <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px' }}>
                           {isPast && approval?.status === 'approved' && ' '}
                           {isPast && approval?.status === 'rejected' && ' '}
                           {isCurrent && ' '}
@@ -1214,7 +1214,7 @@ const D8FollowUpEvidence = ({
                 padding: '15px',
                 borderRadius: '6px'
               }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>
+                <div style={{ fontWeight: '600', marginBottom: '10px' }}>
                   Historial de Aprobaciones D8 ({d8ApprovalHistory.length} registros):
                 </div>
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -1281,7 +1281,7 @@ const D8FollowUpEvidence = ({
         }}>
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',
@@ -1488,7 +1488,7 @@ const D8FollowUpEvidence = ({
               margin: '0 0 16px 0',
               color: themeColors.error,
               fontSize: '20px',
-              fontWeight: '700',
+              fontWeight: '600',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'

@@ -390,7 +390,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                   </td>
 
                   {/* Total Afectado (calculado) */}
-                  <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', fontWeight: 'bold', textAlign: 'center', backgroundColor: t.warningBg, color: t.warningFg }}>
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', fontWeight: '600', textAlign: 'center', backgroundColor: t.warningBg, color: t.warningFg }}>
                     {part.totalAffectedQty || 0}
                   </td>
 
@@ -400,7 +400,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
                   </td>
 
                   {/* Impacto Total (calculado) */}
-                  <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', fontWeight: 'bold', textAlign: 'right', backgroundColor: t.errorBg, color: t.errorFg }}>
+                  <td style={{ border: `1px solid ${t.border}`, padding: '4px', fontSize: '12px', fontWeight: '600', textAlign: 'right', backgroundColor: t.errorBg, color: t.errorFg }}>
                     ${(parseFloat(part.totalCostImpact) || 0).toFixed(2)}
                   </td>
 
@@ -420,7 +420,7 @@ const PartsInventoryTable = ({ parts, onPartsUpdate, customColumns = [], onCusto
               ))}
 
               {/* Fila de Totales */}
-              <tr style={{ backgroundColor: t.primary, color: 'white', fontWeight: 'bold' }}>
+              <tr style={{ backgroundColor: t.primary, color: 'white', fontWeight: '600' }}>
                 <td colSpan="3" style={{ border: `1px solid ${t.border}`, padding: '4px 8px', fontSize: '12px', textAlign: 'right' }}>
                   TOTALES:
                 </td>

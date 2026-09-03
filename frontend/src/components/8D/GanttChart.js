@@ -277,7 +277,7 @@ const getStyles = (t, panelWidth = 470) => ({
     padding: '2px 6px',
     borderRadius: '2px',
     fontSize: '9px',
-    fontWeight: '700',
+    fontWeight: '600',
     fontFamily: "'IBM Plex Mono', monospace",
     whiteSpace: 'nowrap'
   },
@@ -367,7 +367,7 @@ const getStyles = (t, panelWidth = 470) => ({
   },
   recurringChip: {
     fontSize: '9px',
-    fontWeight: '700',
+    fontWeight: '600',
     fontFamily: "'IBM Plex Mono', monospace",
     padding: '1px 4px',
     borderRadius: '2px',
@@ -1098,7 +1098,7 @@ const ComplianceCell = memo(({ task, index }) => {
     }}>
       <div style={{
         fontSize: '14px',
-        fontWeight: 'bold',
+        fontWeight: '600',
         color: color,
         marginBottom: '2px',
         fontFamily: "'IBM Plex Mono', monospace"

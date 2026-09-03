@@ -64,7 +64,7 @@ export const ApprovalSteps = ({
               textAlign: 'center'
             }}
           >
-            <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px', color: t.text }}>
+            <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px', color: t.text }}>
               {isPast && approvalData?.status === 'approved' && ' '}
               {isPast && approvalData?.status === 'rejected' && ' '}
               {isCurrent && ' '}
@@ -112,7 +112,7 @@ export const ApprovalHistory = ({
       borderRadius: '6px',
       marginBottom: '15px'
     }}>
-      <div style={{ fontWeight: 'bold', marginBottom: '10px', color: t.text }}>
+      <div style={{ fontWeight: '600', marginBottom: '10px', color: t.text }}>
         Historial de Aprobaciones {sectionLabel} ({historyEntries.length} registros):
       </div>
       <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -263,7 +263,7 @@ export const EscalationPathDisplay = ({
     }}>
       <h3 style={{
         fontSize: '16px',
-        fontWeight: 'bold',
+        fontWeight: '600',
         color: t.text,
         marginTop: 0,
         marginBottom: '16px',

@@ -1987,7 +1987,7 @@ const EightDWorkflow = () => {
     problemInfoSeparator: {
       fontSize: '18px',
       color: t.textMuted,
-      fontWeight: 'bold'
+      fontWeight: '600'
     },
     problemInfoText: {
       fontSize: '18px',
@@ -2040,7 +2040,7 @@ const EightDWorkflow = () => {
       borderRadius: '6px',
       border: 'none',
       fontSize: '14px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       cursor: 'pointer',
       transition: 'all 0.2s ease'
     },
@@ -2473,7 +2473,7 @@ const EightDWorkflow = () => {
                   padding: '2px 8px',
                   borderRadius: '4px',
                   fontSize: '11px',
-                  fontWeight: 'bold'
+                  fontWeight: '600'
                 }}>
                   ARCHIVADO
                 </span>
@@ -2485,7 +2485,7 @@ const EightDWorkflow = () => {
                   padding: '2px 8px',
                   borderRadius: '4px',
                   fontSize: '11px',
-                  fontWeight: 'bold'
+                  fontWeight: '600'
                 }}>
                   REV {workflowData.revisionNumber}
                 </span>

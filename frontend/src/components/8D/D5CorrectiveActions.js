@@ -1393,7 +1393,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                 <div style={{ fontSize: '13px', color: themeColors.text, fontWeight: '500', marginBottom: '4px' }}>
                   {t.totalRootCauses}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: themeColors.text }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: themeColors.text }}>
                   {summaryStats.totalRootCauses}
                 </div>
               </div>
@@ -1401,7 +1401,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                 <div style={{ fontSize: '13px', color: themeColors.text, fontWeight: '500', marginBottom: '4px' }}>
                   {t.totalPlans}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: themeColors.text }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: themeColors.text }}>
                   {summaryStats.totalPlans}
                 </div>
               </div>
@@ -1409,7 +1409,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                 <div style={{ fontSize: '13px', color: themeColors.text, fontWeight: '500', marginBottom: '4px' }}>
                   {t.completedPlans}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: summaryStats.completedPlans === summaryStats.totalPlans ? themeColors.successFg : themeColors.warningFg }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: summaryStats.completedPlans === summaryStats.totalPlans ? themeColors.successFg : themeColors.warningFg }}>
                   {summaryStats.completedPlans}/{summaryStats.totalPlans}
                 </div>
               </div>
@@ -1471,7 +1471,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   {action.id.startsWith('auto-') && <span style={{ fontSize: '20px' }}></span>}
-                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: themeColors.errorFg, margin: 0 }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: themeColors.errorFg, margin: 0 }}>
                     {action.linkedFactorNG}
                   </h4>
                   {!action.id.startsWith('auto-') && (
@@ -2015,7 +2015,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               fontSize: '14px',
               color: themeColors.successFg,
               textAlign: 'center',
-              fontWeight: 'bold',
+              fontWeight: '600',
               flex: 1
             }}>
               D5 COMPLETAMENTE APROBADO. Puede continuar con D6.
@@ -2028,7 +2028,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                   backgroundColor: themeColors.errorFg,
                   padding: '12px 24px',
                   fontSize: '14px',
-                  fontWeight: 'bold',
+                  fontWeight: '600',
                   whiteSpace: 'nowrap'
                 }}
                 onMouseEnter={(e) => e.target.style.opacity = '0.85'}
@@ -2101,7 +2101,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
         }}>
           <h3 style={{
             fontSize: '17px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.warningFg,
             marginTop: 0,
             marginBottom: '16px',
@@ -2160,7 +2160,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
                         textAlign: 'center'
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '5px', fontSize: '13px' }}>
                         {isPast && approvalData?.status === 'approved' && ' '}
                         {isPast && approvalData?.status === 'rejected' && ' '}
                         {isCurrent && ' '}
@@ -2195,7 +2195,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
               padding: '15px',
               borderRadius: '6px'
             }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>Historial de Aprobaciones:</div>
+              <div style={{ fontWeight: '600', marginBottom: '10px' }}>Historial de Aprobaciones:</div>
               {[1, 2, 3].map(step => {
                 const approval = approvalHistory[`approval${step}`];
                 const countermeasureUsers = data?.escalationPath?.countermeasure_users || [];
@@ -2247,7 +2247,7 @@ const D5CorrectiveActions = ({ data, onDataUpdate, language = 'es', isBlocked = 
         }}>
           <h3 style={{
             fontSize: '16px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             color: themeColors.text,
             marginTop: 0,
             marginBottom: '16px',

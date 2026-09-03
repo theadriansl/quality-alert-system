@@ -415,7 +415,7 @@ const HistoryTab = ({ data }) => {
                 }}>
                   <div style={{ minWidth: '80px' }}>
                     <span style={{
-                      fontSize: '12px', fontWeight: '700',
+                      fontSize: '12px', fontWeight: '600',
                       color: isCurrent ? t.accent : t.textMuted,
                       backgroundColor: isCurrent ? (t.accent + '20') : (t.border),
                       padding: '2px 8px', borderRadius: '4px'

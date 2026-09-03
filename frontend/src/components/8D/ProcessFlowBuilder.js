@@ -307,7 +307,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
                     y={(y1 + y2) / 2 - 5}
                     fill={color}
                     fontSize="10"
-                    fontWeight="bold"
+                    fontWeight="600"
                     textAnchor="middle"
                     style={{ backgroundColor: 'white', padding: '2px' }}
                   >
@@ -345,7 +345,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
     },
     sidebarTitle: {
       fontSize: '11px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       marginBottom: '8px',
       color: t.text,
       textAlign: 'center',
@@ -490,7 +490,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
       border: 'none',
       borderRadius: '4px',
       fontSize: '11px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       cursor: 'pointer',
       marginBottom: '6px',
       transition: 'all 0.2s'
@@ -503,7 +503,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
       border: 'none',
       borderRadius: '4px',
       fontSize: '11px',
-      fontWeight: 'bold',
+      fontWeight: '600',
       cursor: 'pointer',
       marginBottom: '10px',
       transition: 'all 0.2s'
@@ -702,7 +702,7 @@ const ProcessFlowBuilder = ({ initialFlow = [], onChange }) => {
             color: 'white',
             borderRadius: '6px',
             fontSize: '12px',
-            fontWeight: 'bold',
+            fontWeight: '600',
             boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
             zIndex: 1000
           }}>

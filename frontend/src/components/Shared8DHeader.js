@@ -71,7 +71,7 @@ const Shared8DHeader = ({
       alignItems: 'center',
       justifyContent: 'center',
       color: 'white',
-      fontWeight: '700',
+      fontWeight: '600',
       fontSize: '12px'
     },
     title: {
