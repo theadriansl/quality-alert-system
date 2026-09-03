@@ -201,7 +201,7 @@ const KPI = ({ label, value, sub, color, t }) => (
     <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
       {label}
     </div>
-    <div style={{ fontSize: '26px', fontWeight: '700', color: color || t.text }}>{value ?? '—'}</div>
+    <div style={{ fontSize: '26px', fontWeight: '600', color: color || t.text }}>{value ?? '—'}</div>
     {sub && <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{sub}</div>}
   </div>
 );
@@ -209,7 +209,7 @@ const KPI = ({ label, value, sub, color, t }) => (
 const SectionCard = ({ title, children, t, action }) => (
   <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '20px', marginBottom: '20px' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-      <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</div>
+      <div style={{ fontSize: '13px', fontWeight: '600', color: t.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</div>
       {action}
     </div>
     {children}
@@ -225,7 +225,7 @@ const DataTable = ({ rows, cols, t, onRowClick, noDataText = 'No data' }) => (
             padding: '8px 10px',
             textAlign: c.right ? 'right' : 'left',
             color: t.textMuted,
-            fontWeight: '700',
+            fontWeight: '600',
             fontSize: '11px',
             textTransform: 'uppercase'
           }}>{c.label}</th>
@@ -247,7 +247,7 @@ const DataTable = ({ rows, cols, t, onRowClick, noDataText = 'No data' }) => (
             <td key={c.key} style={{
               padding: '8px 10px',
               textAlign: c.right ? 'right' : 'left',
-              fontWeight: c.bold ? '700' : '400',
+              fontWeight: c.bold ? '600' : '400',
               color: c.color ? c.color(row) : t.text
             }}>
               {c.render ? c.render(row[c.key], row) : (c.fmt ? c.fmt(row[c.key]) : row[c.key])}
@@ -305,27 +305,27 @@ const TabResumen = ({ data, t, tr, filterLabel }) => {
         <SectionCard title={tr.wipStatus} t={t}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             <div style={{ textAlign: 'center', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.orange }}>{fmtN(s.pendingRepair)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: COLORS.orange }}>{fmtN(s.pendingRepair)}</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>{tr.pendingRepair}</div>
             </div>
             <div style={{ textAlign: 'center', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.blue }}>{fmtN(s.inRepair)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: COLORS.blue }}>{fmtN(s.inRepair)}</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>{tr.inRepair}</div>
             </div>
             <div style={{ textAlign: 'center', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.cyan }}>{fmtN(s.repairedPendingQa)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: COLORS.cyan }}>{fmtN(s.repairedPendingQa)}</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>{tr.pendingQA}</div>
             </div>
             <div style={{ textAlign: 'center', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.purple }}>{fmtN(s.inValidation)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: COLORS.purple }}>{fmtN(s.inValidation)}</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>{tr.inValidation}</div>
             </div>
             <div style={{ textAlign: 'center', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.red }}>{fmtN(s.inQuarantine)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: COLORS.red }}>{fmtN(s.inQuarantine)}</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>{tr.quarantine}</div>
             </div>
             <div style={{ textAlign: 'center', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.green }}>{fmt$(s.wipCost)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: COLORS.green }}>{fmt$(s.wipCost)}</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>{tr.wipCost}</div>
             </div>
           </div>
@@ -719,18 +719,18 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'wip-status') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.wipStatus}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.wipStatus}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             <div style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: COLORS.yellow }}>{summary.pendingRepair || 0}</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: COLORS.yellow }}>{summary.pendingRepair || 0}</div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>{tr.pendingRepair}</div>
             </div>
             <div style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: COLORS.blue }}>{summary.inRepair || 0}</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: COLORS.blue }}>{summary.inRepair || 0}</div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>{tr.inRepair}</div>
             </div>
             <div style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: COLORS.cyan }}>{summary.repairedPendingQa || 0}</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: COLORS.cyan }}>{summary.repairedPendingQa || 0}</div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>{tr.pendingQA}</div>
             </div>
           </div>
@@ -743,7 +743,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
       const total = (Number(summary.agingGreen) || 0) + (Number(summary.agingYellow) || 0) + (Number(summary.agingRed) || 0);
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.agingSemaphore}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.agingSemaphore}</div>
           <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '12px' }}>
             <div style={{ textAlign: 'center' }}><AgingBadge color="GREEN" count={summary.agingGreen || 0} t={t} /><div style={{ fontSize: '9px', color: t.textMuted, marginTop: '4px' }}>≤2h</div></div>
             <div style={{ textAlign: 'center' }}><AgingBadge color="YELLOW" count={summary.agingYellow || 0} t={t} /><div style={{ fontSize: '9px', color: t.textMuted, marginTop: '4px' }}>2-8h</div></div>
@@ -763,7 +763,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'wip-location') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.wipByLocation}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.wipByLocation}</div>
           {wip.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={wip} layout="vertical">
@@ -783,7 +783,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'throughput') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.throughput}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.throughput}</div>
           {aggregatedThroughput.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={aggregatedThroughput.slice().reverse()}>
@@ -805,7 +805,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'avg-times') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.avgTimes}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.avgTimes}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {aggregatedThroughput.slice(0, 6).map((item, i) => (
               <div key={i} style={{ padding: '8px', backgroundColor: t.bgPanel, borderRadius: '6px' }}>
@@ -823,7 +823,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'top-defects') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.topDefectTypes}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.topDefectTypes}</div>
           {topTypes.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={topTypes.slice(0, 6)} layout="vertical">
@@ -843,7 +843,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'top-parts') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.topPartsWithDefects}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.topPartsWithDefects}</div>
           <DataTable rows={topParts.slice(0, 5)} cols={[{ key: 'partNumber', label: tr.part }, { key: 'defectCount', label: tr.defects, right: true }]} t={t} noDataText={tr.noData} />
         </div>
       );
@@ -853,7 +853,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'repeat-defects') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.serialsWithRepeatDefects}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.serialsWithRepeatDefects}</div>
           <DataTable rows={repeatDefects.slice(0, 5)} cols={[{ key: 'serialNumber', label: tr.serial }, { key: 'defectCount', label: tr.defectCount, right: true }]} t={t} noDataText={tr.noData} />
         </div>
       );
@@ -863,7 +863,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'by-client') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.defectsByClient}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.defectsByClient}</div>
           <DataTable rows={byClient.slice(0, 5)} cols={[{ key: 'clientName', label: tr.client }, { key: 'totalDefects', label: tr.total, right: true }]} t={t} noDataText={tr.noData} />
         </div>
       );
@@ -873,7 +873,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'scrap-trend') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.scrapTrend}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.scrapTrend}</div>
           {aggregatedCosts.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={aggregatedCosts.slice().reverse()}>
@@ -893,7 +893,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'cost-period') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.costByPeriod}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.costByPeriod}</div>
           {aggregatedCosts.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={aggregatedCosts.slice().reverse()}>
@@ -913,7 +913,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'repair-prod') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.repairProductivity}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.repairProductivity}</div>
           {repairersChart.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={repairersChart.slice(0, 5)} layout="vertical">
@@ -934,7 +934,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'release-prod') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.releaseProductivity}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.releaseProductivity}</div>
           {releasersChart.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={releasersChart.slice(0, 5)} layout="vertical">
@@ -955,7 +955,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'repairers-tbl') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.repairTechnicians}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.repairTechnicians}</div>
           <DataTable rows={repairers} cols={[
             { key: 'repairerName', label: tr.technician },
             { key: 'totalRepairs', label: tr.total, right: true },
@@ -971,7 +971,7 @@ const TabMiDashboard = ({ data, t, tr, resolution }) => {
     if (id === 'releasers-tbl') {
       return (
         <div>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '12px' }}>{tr.releaseTechnicians}</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>{tr.releaseTechnicians}</div>
           <DataTable rows={releasers} cols={[
             { key: 'releaserName', label: tr.technician },
             { key: 'totalInspections', label: tr.inspections, right: true },
@@ -1737,7 +1737,7 @@ const HospitalDashboard = () => {
     <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         {PRESETS.map(p => (
-          <button key={p.label} onClick={() => applyPreset(p.label)} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: `1px solid ${t.border}`, cursor: 'pointer', backgroundColor: preset === p.label ? COLORS.blue : t.bgPanel, color: preset === p.label ? '#fff' : t.text }}>
+          <button key={p.label} onClick={() => applyPreset(p.label)} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: `1px solid ${t.border}`, cursor: 'pointer', backgroundColor: preset === p.label ? COLORS.blue : t.bgPanel, color: preset === p.label ? 'white' : t.text }}>
             {p.label}
           </button>
         ))}
@@ -1773,8 +1773,8 @@ const HospitalDashboard = () => {
       {/* Access Denied Banner */}
       {showAccessDenied && (
         <div style={{
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
+          backgroundColor: t.errorBg,
+          border: `1px solid ${t.error}`,
           borderRadius: '8px',
           padding: '16px 24px',
           marginBottom: '24px',
@@ -1784,12 +1784,11 @@ const HospitalDashboard = () => {
           gap: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>🚫</span>
             <div>
-              <div style={{ color: '#991b1b', fontWeight: '600', fontSize: '16px' }}>
+              <div style={{ color: t.errorFg, fontWeight: '600', fontSize: '16px' }}>
                 Acceso a Captura de Defectos Denegado
               </div>
-              <div style={{ color: '#b91c1c', fontSize: '14px' }}>
+              <div style={{ color: t.error, fontSize: '14px' }}>
                 {accessDeniedReason}
               </div>
             </div>
@@ -1801,7 +1800,7 @@ const HospitalDashboard = () => {
               border: 'none',
               cursor: 'pointer',
               fontSize: '20px',
-              color: '#991b1b',
+              color: t.errorFg,
               padding: '4px 8px'
             }}
           >
@@ -1813,7 +1812,7 @@ const HospitalDashboard = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
             {tr.title}
           </h1>
           <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>
@@ -1860,7 +1859,7 @@ const HospitalDashboard = () => {
                 backgroundColor: t.warning,
                 border: 'none',
                 borderRadius: '6px',
-                color: '#fff',
+                color: 'white',
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: '500'
@@ -1877,7 +1876,7 @@ const HospitalDashboard = () => {
                 backgroundColor: t.success,
                 border: 'none',
                 borderRadius: '6px',
-                color: '#fff',
+                color: 'white',
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: '500'
@@ -1894,7 +1893,7 @@ const HospitalDashboard = () => {
                 backgroundColor: t.primary,
                 border: 'none',
                 borderRadius: '6px',
-                color: '#fff',
+                color: 'white',
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: '500'
@@ -1909,10 +1908,10 @@ const HospitalDashboard = () => {
             disabled={loading || exporting}
             style={{
               padding: '8px 14px',
-              backgroundColor: '#dc2626',
+              backgroundColor: t.error,
               border: 'none',
               borderRadius: '6px',
-              color: '#fff',
+              color: 'white',
               cursor: (loading || exporting) ? 'not-allowed' : 'pointer',
               fontSize: '12px',
               fontWeight: '500',
@@ -1932,10 +1931,10 @@ const HospitalDashboard = () => {
             disabled={loading || exportingExcel}
             style={{
               padding: '8px 14px',
-              backgroundColor: '#16a34a',
+              backgroundColor: t.success,
               border: 'none',
               borderRadius: '6px',
-              color: '#fff',
+              color: 'white',
               cursor: (loading || exportingExcel) ? 'not-allowed' : 'pointer',
               fontSize: '12px',
               fontWeight: '500',
@@ -1957,7 +1956,7 @@ const HospitalDashboard = () => {
               backgroundColor: t.accent,
               border: 'none',
               borderRadius: '6px',
-              color: '#fff',
+              color: 'white',
               cursor: loading ? 'not-allowed' : 'pointer',
               fontSize: '13px',
               opacity: loading ? 0.7 : 1
@@ -1993,7 +1992,7 @@ const HospitalDashboard = () => {
                 backgroundColor: activeTab === tab.id ? COLORS.blue : 'transparent',
                 border: 'none',
                 borderRadius: '6px',
-                color: activeTab === tab.id ? '#fff' : t.text,
+                color: activeTab === tab.id ? 'white' : t.text,
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: activeTab === tab.id ? '600' : '400',
@@ -2129,7 +2128,7 @@ const HospitalDashboard = () => {
                   border: 'none',
                   borderRadius: '6px',
                   backgroundColor: selectedStation ? (showStationModal === 'repair' ? t.warning : t.success) : t.border,
-                  color: '#fff',
+                  color: 'white',
                   cursor: selectedStation ? 'pointer' : 'not-allowed',
                   fontSize: '14px',
                   fontWeight: '500'
@@ -2286,7 +2285,7 @@ const HospitalDashboard = () => {
                   border: 'none',
                   borderRadius: '6px',
                   backgroundColor: (adminRepairStation && adminReleaseStation) ? t.primary : t.border,
-                  color: '#fff',
+                  color: 'white',
                   cursor: (adminRepairStation && adminReleaseStation) ? 'pointer' : 'not-allowed',
                   fontSize: '14px',
                   fontWeight: '500'
