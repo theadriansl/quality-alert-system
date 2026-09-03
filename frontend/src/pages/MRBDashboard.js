@@ -74,11 +74,11 @@ const MRB_STORAGE_KEY = 'mrb-custom-dashboard-v1';
 
 const SEV_COLORS = { Crítico: '#ef4444', ALTA: '#f97316', MEDIA: '#f59e0b', BAJA: '#16a34a' };
 
-const KpiTile = ({ label, value, sub, color, icon }) => {
+const KpiTile = ({ label, value, sub, color }) => {
   const { theme: t } = useTheme();
   return (
     <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '14px 16px', borderLeft: `4px solid ${color}` }}>
-      <div style={{ fontSize: '10px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{icon} {label}</div>
+      <div style={{ fontSize: '10px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{label}</div>
       <div style={{ fontSize: '22px', fontWeight: '600', color }}>{value ?? '—'}</div>
       {sub && <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>{sub}</div>}
     </div>
@@ -86,51 +86,51 @@ const KpiTile = ({ label, value, sub, color, icon }) => {
 };
 
 const MRB_WIDGET_CATALOG = [
-  // ── 📊 Resumen ─────────────────────────────────────────────────────────────
-  { id: 'kpi-yield',         cat: '📊 Resumen',        label: 'Yield %',                    size: 'sm', icon: '✅' },
-  { id: 'kpi-ppm',           cat: '📊 Resumen',        label: 'PPM',                        size: 'sm', icon: '🔴' },
-  { id: 'kpi-costo-total',   cat: '📊 Resumen',        label: 'Costo Total',                size: 'sm', icon: '💰' },
-  { id: 'kpi-backlog',       cat: '📊 Resumen',        label: 'Backlog',                    size: 'sm', icon: '⏳' },
-  { id: 'kpi-cerradas',      cat: '📊 Resumen',        label: 'Cerradas',                   size: 'sm', icon: '📦' },
-  { id: 'chart-camp-mes',    cat: '📊 Resumen',        label: 'Campañas por Mes / Depto',   size: 'lg', icon: '📊' },
-  { id: 'chart-costo-mes-r', cat: '📊 Resumen',        label: 'Costo por Mes (Resumen)',    size: 'lg', icon: '📈' },
-  { id: 'tabla-dept-res',    cat: '📊 Resumen',        label: 'Contrib. por Departamento',  size: 'lg', icon: '🏭' },
-  { id: 'campanas-abiertas', cat: '📊 Resumen',        label: 'Campañas Abiertas',          size: 'lg', icon: '🔴' },
-  // ── 🔄 Material ────────────────────────────────────────────────────────────
-  { id: 'kpi-scrap',         cat: '🔄 Material',       label: 'Scrap (pzas)',               size: 'sm', icon: '🗑' },
-  { id: 'kpi-rework',        cat: '🔄 Material',       label: 'Rework (pzas)',              size: 'sm', icon: '🔧' },
-  { id: 'kpi-use-as-is',     cat: '🔄 Material',       label: 'Use As-Is (pzas)',           size: 'sm', icon: '✔' },
-  { id: 'kpi-return',        cat: '🔄 Material',       label: 'Return (pzas)',              size: 'sm', icon: '↩' },
-  { id: 'kpi-hold',          cat: '🔄 Material',       label: 'Hold (pzas)',                size: 'sm', icon: '🔒' },
-  { id: 'chart-disp-pie',    cat: '🔄 Material',       label: 'Distribución Disposición',   size: 'md', icon: '🥧' },
-  { id: 'chart-disp-mes',    cat: '🔄 Material',       label: 'Scrap/Rework por Mes',       size: 'lg', icon: '📈' },
-  { id: 'tabla-disp-dept',   cat: '🔄 Material',       label: 'Disposición por Depto',      size: 'lg', icon: '🏭' },
-  // ── ⏱ Tiempo & Flujo ───────────────────────────────────────────────────────
-  { id: 'kpi-avg-resp',      cat: '⏱ Tiempo & Flujo', label: 'Avg Respuesta (días)',       size: 'sm', icon: '📨' },
-  { id: 'kpi-avg-cierre',    cat: '⏱ Tiempo & Flujo', label: 'Avg Cierre (días)',          size: 'sm', icon: '📦' },
-  { id: 'kpi-lead',          cat: '⏱ Tiempo & Flujo', label: 'Lead Time (días)',           size: 'sm', icon: '⏱' },
-  { id: 'kpi-aging14',       cat: '⏱ Tiempo & Flujo', label: '>14 días abiertas',          size: 'sm', icon: '⚠️' },
-  { id: 'kpi-aging30',       cat: '⏱ Tiempo & Flujo', label: '>30 días abiertas',          size: 'sm', icon: '🔴' },
-  { id: 'tabla-aging',       cat: '⏱ Tiempo & Flujo', label: 'Aging de Campañas',          size: 'lg', icon: '📋' },
-  // ── 💰 Costo & Impacto ─────────────────────────────────────────────────────
-  { id: 'kpi-scrap-cost',    cat: '💰 Costo & Impacto', label: 'Scrap Cost',               size: 'sm', icon: '🗑' },
-  { id: 'kpi-labor-cost',    cat: '💰 Costo & Impacto', label: 'Mano de Obra',             size: 'sm', icon: '👷' },
-  { id: 'kpi-total-cost',    cat: '💰 Costo & Impacto', label: 'Costo Total',              size: 'sm', icon: '💰' },
-  { id: 'chart-costo-mes',   cat: '💰 Costo & Impacto', label: 'Costo por Mes',            size: 'lg', icon: '📈' },
-  { id: 'chart-costo-dept',  cat: '💰 Costo & Impacto', label: 'Costo por Depto',          size: 'lg', icon: '🏭' },
-  { id: 'tabla-top-costo',   cat: '💰 Costo & Impacto', label: 'Top 10 Campañas por Costo',size: 'lg', icon: '📋' },
-  // ── 🧩 Defectos & Causa ────────────────────────────────────────────────────
-  { id: 'chart-top-defectos',cat: '🧩 Defectos & Causa', label: 'Top Defectos',            size: 'lg', icon: '🧩' },
-  { id: 'chart-sev-pie',     cat: '🧩 Defectos & Causa', label: 'Por Severidad',           size: 'md', icon: '🥧' },
-  { id: 'tabla-by-stage',    cat: '🧩 Defectos & Causa', label: 'NOK por Etapa',           size: 'md', icon: '📋' },
-  { id: 'tabla-nok-dept',    cat: '🧩 Defectos & Causa', label: 'NOK por Depto',           size: 'md', icon: '🏭' },
-  // ── 🏭 Operación ───────────────────────────────────────────────────────────
-  { id: 'kpi-pph',           cat: '🏭 Operación',      label: 'Piezas / Hora',             size: 'sm', icon: '⚡' },
-  { id: 'kpi-dph',           cat: '🏭 Operación',      label: 'Defectos / Hora',           size: 'sm', icon: '🔴' },
-  { id: 'kpi-downtime',      cat: '🏭 Operación',      label: 'Downtime Total',            size: 'sm', icon: '⏱' },
-  { id: 'kpi-hrs-inspector', cat: '🏭 Operación',      label: 'Horas Inspector',           size: 'sm', icon: '👷' },
-  { id: 'chart-downtime',    cat: '🏭 Operación',      label: 'Downtime por Turno',        size: 'lg', icon: '📊' },
-  { id: 'chart-down-dept',   cat: '🏭 Operación',      label: 'Downtime por Depto',        size: 'md', icon: '🏭' },
+  // ── Resumen ────────────────────────────────────────────────────────────────
+  { id: 'kpi-yield',         cat: 'Resumen',        label: 'Yield %',                    size: 'sm' },
+  { id: 'kpi-ppm',           cat: 'Resumen',        label: 'PPM',                        size: 'sm' },
+  { id: 'kpi-costo-total',   cat: 'Resumen',        label: 'Costo Total',                size: 'sm' },
+  { id: 'kpi-backlog',       cat: 'Resumen',        label: 'Backlog',                    size: 'sm' },
+  { id: 'kpi-cerradas',      cat: 'Resumen',        label: 'Cerradas',                   size: 'sm' },
+  { id: 'chart-camp-mes',    cat: 'Resumen',        label: 'Campañas por Mes / Depto',   size: 'lg' },
+  { id: 'chart-costo-mes-r', cat: 'Resumen',        label: 'Costo por Mes (Resumen)',    size: 'lg' },
+  { id: 'tabla-dept-res',    cat: 'Resumen',        label: 'Contrib. por Departamento',  size: 'lg' },
+  { id: 'campanas-abiertas', cat: 'Resumen',        label: 'Campañas Abiertas',          size: 'lg' },
+  // ── Material ───────────────────────────────────────────────────────────────
+  { id: 'kpi-scrap',         cat: 'Material',       label: 'Scrap (pzas)',               size: 'sm' },
+  { id: 'kpi-rework',        cat: 'Material',       label: 'Rework (pzas)',              size: 'sm' },
+  { id: 'kpi-use-as-is',     cat: 'Material',       label: 'Use As-Is (pzas)',           size: 'sm' },
+  { id: 'kpi-return',        cat: 'Material',       label: 'Return (pzas)',              size: 'sm' },
+  { id: 'kpi-hold',          cat: 'Material',       label: 'Hold (pzas)',                size: 'sm' },
+  { id: 'chart-disp-pie',    cat: 'Material',       label: 'Distribución Disposición',   size: 'md' },
+  { id: 'chart-disp-mes',    cat: 'Material',       label: 'Scrap/Rework por Mes',       size: 'lg' },
+  { id: 'tabla-disp-dept',   cat: 'Material',       label: 'Disposición por Depto',      size: 'lg' },
+  // ── Tiempo & Flujo ─────────────────────────────────────────────────────────
+  { id: 'kpi-avg-resp',      cat: 'Tiempo & Flujo', label: 'Avg Respuesta (días)',       size: 'sm' },
+  { id: 'kpi-avg-cierre',    cat: 'Tiempo & Flujo', label: 'Avg Cierre (días)',          size: 'sm' },
+  { id: 'kpi-lead',          cat: 'Tiempo & Flujo', label: 'Lead Time (días)',           size: 'sm' },
+  { id: 'kpi-aging14',       cat: 'Tiempo & Flujo', label: '>14 días abiertas',          size: 'sm' },
+  { id: 'kpi-aging30',       cat: 'Tiempo & Flujo', label: '>30 días abiertas',          size: 'sm' },
+  { id: 'tabla-aging',       cat: 'Tiempo & Flujo', label: 'Aging de Campañas',          size: 'lg' },
+  // ── Costo & Impacto ────────────────────────────────────────────────────────
+  { id: 'kpi-scrap-cost',    cat: 'Costo & Impacto', label: 'Scrap Cost',               size: 'sm' },
+  { id: 'kpi-labor-cost',    cat: 'Costo & Impacto', label: 'Mano de Obra',             size: 'sm' },
+  { id: 'kpi-total-cost',    cat: 'Costo & Impacto', label: 'Costo Total',              size: 'sm' },
+  { id: 'chart-costo-mes',   cat: 'Costo & Impacto', label: 'Costo por Mes',            size: 'lg' },
+  { id: 'chart-costo-dept',  cat: 'Costo & Impacto', label: 'Costo por Depto',          size: 'lg' },
+  { id: 'tabla-top-costo',   cat: 'Costo & Impacto', label: 'Top 10 Campañas por Costo',size: 'lg' },
+  // ── Defectos & Causa ───────────────────────────────────────────────────────
+  { id: 'chart-top-defectos',cat: 'Defectos & Causa', label: 'Top Defectos',            size: 'lg' },
+  { id: 'chart-sev-pie',     cat: 'Defectos & Causa', label: 'Por Severidad',           size: 'md' },
+  { id: 'tabla-by-stage',    cat: 'Defectos & Causa', label: 'NOK por Etapa',           size: 'md' },
+  { id: 'tabla-nok-dept',    cat: 'Defectos & Causa', label: 'NOK por Depto',           size: 'md' },
+  // ── Operación ──────────────────────────────────────────────────────────────
+  { id: 'kpi-pph',           cat: 'Operación',      label: 'Piezas / Hora',             size: 'sm' },
+  { id: 'kpi-dph',           cat: 'Operación',      label: 'Defectos / Hora',           size: 'sm' },
+  { id: 'kpi-downtime',      cat: 'Operación',      label: 'Downtime Total',            size: 'sm' },
+  { id: 'kpi-hrs-inspector', cat: 'Operación',      label: 'Horas Inspector',           size: 'sm' },
+  { id: 'chart-downtime',    cat: 'Operación',      label: 'Downtime por Turno',        size: 'lg' },
+  { id: 'chart-down-dept',   cat: 'Operación',      label: 'Downtime por Depto',        size: 'md' },
 ];
 
 const MRB_DEFAULT_WIDGETS = [
@@ -148,12 +148,12 @@ const MrbWidgetRenderer = ({ id, data }) => {
   const df = data?.defects     || {};
   const tm = data?.timing      || {};
 
-  // ── 📊 Resumen ──────────────────────────────────────────────────────────────
-  if (id === 'kpi-yield')       return <KpiTile label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} sub="calidad de inspección" color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} icon="✅" />;
-  if (id === 'kpi-ppm')         return <KpiTile label="PPM" value={s.ppm != null ? Number(s.ppm).toLocaleString('es-MX') : '—'} color={t.error} icon="🔴" />;
-  if (id === 'kpi-costo-total') return <KpiTile label="Costo Total" value={fmt$(s.totalCost || 0)} color={t.accent} icon="💰" />;
-  if (id === 'kpi-backlog')     return <KpiTile label="Backlog" value={s.backlog ?? '—'} sub={`${s.total || 0} totales`} color={t.warning} icon="⏳" />;
-  if (id === 'kpi-cerradas')    return <KpiTile label="Cerradas" value={s.closed ?? '—'} sub={`${s.totalInsp ? Number(s.totalInsp).toLocaleString('es-MX') : 0} pzas insp.`} color={t.success} icon="📦" />;
+  // ── Resumen ─────────────────────────────────────────────────────────────────
+  if (id === 'kpi-yield')       return <KpiTile label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} sub="calidad de inspección" color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} />;
+  if (id === 'kpi-ppm')         return <KpiTile label="PPM" value={s.ppm != null ? Number(s.ppm).toLocaleString('es-MX') : '—'} color={t.error} />;
+  if (id === 'kpi-costo-total') return <KpiTile label="Costo Total" value={fmt$(s.totalCost || 0)} color={t.accent} />;
+  if (id === 'kpi-backlog')     return <KpiTile label="Backlog" value={s.backlog ?? '—'} sub={`${s.total || 0} totales`} color={t.warning} />;
+  if (id === 'kpi-cerradas')    return <KpiTile label="Cerradas" value={s.closed ?? '—'} sub={`${s.totalInsp ? Number(s.totalInsp).toLocaleString('es-MX') : 0} pzas insp.`} color={t.success} />;
 
   if (id === 'chart-camp-mes') {
     const { data: mdData, depts: mdDepts } = (() => {
@@ -163,7 +163,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
     })();
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📊 Campañas por Mes / Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Campañas por Mes / Depto</div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={mdData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -181,7 +181,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-costo-mes-r') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📈 Costo por Mes</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Costo por Mes</div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={s.costByMonth || []}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -200,7 +200,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-dept-res') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Contribución por Departamento</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Contribución por Departamento</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
             {['Departamento','Backlog','Cerradas','Total','Costo'].map(h => <th key={h} style={{ padding: '6px 8px', textAlign: h === 'Departamento' ? 'left' : 'right', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>{h}</th>)}
@@ -223,7 +223,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
     const open = data?.openCampaigns || [];
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>🔴 Campañas Abiertas ({open.length})</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>Campañas Abiertas ({open.length})</div>
         {open.length === 0
           ? <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '12px' }}>✓ Sin campañas abiertas</div>
           : <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '200px', overflowY: 'auto' }}>
@@ -242,12 +242,12 @@ const MrbWidgetRenderer = ({ id, data }) => {
     );
   }
 
-  // ── 🔄 Material ─────────────────────────────────────────────────────────────
-  if (id === 'kpi-scrap')     return <KpiTile label="Scrap" value={Number(d.scrap || 0).toLocaleString('es-MX')} sub="piezas" color={t.error} icon="🗑" />;
-  if (id === 'kpi-rework')    return <KpiTile label="Rework" value={Number(d.rework || 0).toLocaleString('es-MX')} sub="piezas" color={t.warning} icon="🔧" />;
-  if (id === 'kpi-use-as-is') return <KpiTile label="Use As-Is" value={Number(d.use_as_is || 0).toLocaleString('es-MX')} sub="piezas" color={t.success} icon="✔" />;
-  if (id === 'kpi-return')    return <KpiTile label="Return" value={Number(d.return_sup || 0).toLocaleString('es-MX')} sub="piezas" color={t.accent} icon="↩" />;
-  if (id === 'kpi-hold')      return <KpiTile label="Hold" value={Number(d.hold || 0).toLocaleString('es-MX')} sub="piezas" color={t.textMuted} icon="🔒" />;
+  // ── Material ────────────────────────────────────────────────────────────────
+  if (id === 'kpi-scrap')     return <KpiTile label="Scrap" value={Number(d.scrap || 0).toLocaleString('es-MX')} sub="piezas" color={t.error} />;
+  if (id === 'kpi-rework')    return <KpiTile label="Rework" value={Number(d.rework || 0).toLocaleString('es-MX')} sub="piezas" color={t.warning} />;
+  if (id === 'kpi-use-as-is') return <KpiTile label="Use As-Is" value={Number(d.use_as_is || 0).toLocaleString('es-MX')} sub="piezas" color={t.success} />;
+  if (id === 'kpi-return')    return <KpiTile label="Return" value={Number(d.return_sup || 0).toLocaleString('es-MX')} sub="piezas" color={t.accent} />;
+  if (id === 'kpi-hold')      return <KpiTile label="Hold" value={Number(d.hold || 0).toLocaleString('es-MX')} sub="piezas" color={t.textMuted} />;
 
   if (id === 'chart-disp-pie') {
     const pieData = [
@@ -259,7 +259,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
     ].filter(x => x.value > 0);
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>🥧 Distribución Disposición</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>Distribución Disposición</div>
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
             <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={72} label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={9}>
@@ -275,7 +275,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-disp-mes') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📈 Scrap / Rework por Mes</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Scrap / Rework por Mes</div>
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={d.byMonth || []}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -294,7 +294,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-disp-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Disposición por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Disposición por Depto</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
             {['Depto','Scrap','Rework','Use As-Is','Return','Hold'].map(h => <th key={h} style={{ padding: '5px 8px', textAlign: h === 'Depto' ? 'left' : 'right', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>{h}</th>)}
@@ -314,17 +314,17 @@ const MrbWidgetRenderer = ({ id, data }) => {
     );
   }
 
-  // ── ⏱ Tiempo & Flujo ────────────────────────────────────────────────────────
-  if (id === 'kpi-avg-resp')  return <KpiTile label="Avg Respuesta" value={tm.avg_response_days != null ? `${tm.avg_response_days} días` : '—'} color={t.accent} icon="📨" />;
-  if (id === 'kpi-avg-cierre') return <KpiTile label="Avg Cierre" value={tm.avg_close_days != null ? `${tm.avg_close_days} días` : '—'} color={t.success} icon="📦" />;
-  if (id === 'kpi-lead')      return <KpiTile label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} días` : '—'} color={t.accent} icon="⏱" />;
-  if (id === 'kpi-aging14')   return <KpiTile label=">14 días abiertas" value={tm.aging_14 ?? '—'} color={tm.aging_14 > 0 ? t.warning : t.success} icon="⚠️" />;
-  if (id === 'kpi-aging30')   return <KpiTile label=">30 días abiertas" value={tm.aging_30 ?? '—'} color={tm.aging_30 > 0 ? t.error : t.success} icon="🔴" />;
+  // ── Tiempo & Flujo ──────────────────────────────────────────────────────────
+  if (id === 'kpi-avg-resp')  return <KpiTile label="Avg Respuesta" value={tm.avg_response_days != null ? `${tm.avg_response_days} días` : '—'} color={t.accent} />;
+  if (id === 'kpi-avg-cierre') return <KpiTile label="Avg Cierre" value={tm.avg_close_days != null ? `${tm.avg_close_days} días` : '—'} color={t.success} />;
+  if (id === 'kpi-lead')      return <KpiTile label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} días` : '—'} color={t.accent} />;
+  if (id === 'kpi-aging14')   return <KpiTile label=">14 días abiertas" value={tm.aging_14 ?? '—'} color={tm.aging_14 > 0 ? t.warning : t.success} />;
+  if (id === 'kpi-aging30')   return <KpiTile label=">30 días abiertas" value={tm.aging_30 ?? '—'} color={tm.aging_30 > 0 ? t.error : t.success} />;
 
   if (id === 'tabla-aging') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📋 Aging de Campañas</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Aging de Campañas</div>
         <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
@@ -345,15 +345,15 @@ const MrbWidgetRenderer = ({ id, data }) => {
     );
   }
 
-  // ── 💰 Costo & Impacto ───────────────────────────────────────────────────────
-  if (id === 'kpi-scrap-cost') return <KpiTile label="Scrap Cost" value={fmt$(c.scrapCost || 0)} color={t.error} icon="🗑" />;
-  if (id === 'kpi-labor-cost') return <KpiTile label="Mano de Obra" value={fmt$(c.laborCost || 0)} color={t.warning} icon="👷" />;
-  if (id === 'kpi-total-cost') return <KpiTile label="Costo Total" value={fmt$(c.totalCost || 0)} color={t.accent} icon="💰" />;
+  // ── Costo & Impacto ─────────────────────────────────────────────────────────
+  if (id === 'kpi-scrap-cost') return <KpiTile label="Scrap Cost" value={fmt$(c.scrapCost || 0)} color={t.error} />;
+  if (id === 'kpi-labor-cost') return <KpiTile label="Mano de Obra" value={fmt$(c.laborCost || 0)} color={t.warning} />;
+  if (id === 'kpi-total-cost') return <KpiTile label="Costo Total" value={fmt$(c.totalCost || 0)} color={t.accent} />;
 
   if (id === 'chart-costo-mes') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📈 Costo por Mes</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Costo por Mes</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={s.costByMonth || []}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -372,7 +372,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-costo-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Costo por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Costo por Depto</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={c.byDept || []} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -390,7 +390,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-top-costo') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📋 Top Campañas por Costo</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Top Campañas por Costo</div>
         <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
@@ -411,11 +411,11 @@ const MrbWidgetRenderer = ({ id, data }) => {
     );
   }
 
-  // ── 🧩 Defectos & Causa ──────────────────────────────────────────────────────
+  // ── Defectos & Causa ────────────────────────────────────────────────────────
   if (id === 'chart-top-defectos') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🧩 Top Defectos</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Top Defectos</div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={(df.top || []).slice(0, 8)} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -433,7 +433,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
     const sevData = (df.bySeverity || []).map((r, i) => ({ name: r.severity, value: r.qty_nok || 0, fill: SEV_COLORS[r.severity] || DEPT_PALETTE[i] }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>🥧 NOK por Severidad</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>NOK por Severidad</div>
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
             <Pie data={sevData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={72} label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={9}>
@@ -449,7 +449,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-by-stage') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📋 NOK por Etapa</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>NOK por Etapa</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
             <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Etapa</th>
@@ -469,7 +469,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-nok-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 NOK por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>NOK por Depto</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
             <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Departamento</th>
@@ -486,16 +486,16 @@ const MrbWidgetRenderer = ({ id, data }) => {
     );
   }
 
-  // ── 🏭 Operación ─────────────────────────────────────────────────────────────
-  if (id === 'kpi-pph')          return <KpiTile label="Piezas / Hora" value={o.piecesPerHour ?? '—'} sub={`${Number(o.inspectorHours || 0).toFixed(1)} hrs inspector`} color={t.accent} icon="⚡" />;
-  if (id === 'kpi-dph')          return <KpiTile label="Defectos / Hora" value={o.defectsPerHour ?? '—'} color={t.error} icon="🔴" />;
-  if (id === 'kpi-downtime')     return <KpiTile label="Downtime Total" value={o.totalDowntime ? `${Number(o.totalDowntime).toLocaleString('es-MX')} min` : '0 min'} color={t.warning} icon="⏱" />;
-  if (id === 'kpi-hrs-inspector') return <KpiTile label="Horas Inspector" value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} icon="👷" />;
+  // ── Operación ───────────────────────────────────────────────────────────────
+  if (id === 'kpi-pph')          return <KpiTile label="Piezas / Hora" value={o.piecesPerHour ?? '—'} sub={`${Number(o.inspectorHours || 0).toFixed(1)} hrs inspector`} color={t.accent} />;
+  if (id === 'kpi-dph')          return <KpiTile label="Defectos / Hora" value={o.defectsPerHour ?? '—'} color={t.error} />;
+  if (id === 'kpi-downtime')     return <KpiTile label="Downtime Total" value={o.totalDowntime ? `${Number(o.totalDowntime).toLocaleString('es-MX')} min` : '0 min'} color={t.warning} />;
+  if (id === 'kpi-hrs-inspector') return <KpiTile label="Horas Inspector" value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} />;
 
   if (id === 'chart-downtime') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📊 Downtime por Turno</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Downtime por Turno</div>
         {(o.byShift || []).length === 0
           ? <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '20px' }}>Sin registros</div>
           : <ResponsiveContainer width="100%" height={180}>
@@ -514,7 +514,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-down-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Downtime por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Downtime por Depto</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
             <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Departamento</th>
@@ -636,7 +636,7 @@ const MrbTabPersonalizado = ({ data }) => {
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '10px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>⚙️ Mi Dashboard MRB</div>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Mi Dashboard MRB</div>
           <div style={{ fontSize: '11px', color: t.textMuted }}>
             {selected.length} widget{selected.length !== 1 ? 's' : ''} activo{selected.length !== 1 ? 's' : ''}
             {!editMode && selected.length > 0 && <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>}
@@ -657,7 +657,7 @@ const MrbTabPersonalizado = ({ data }) => {
       {/* Grid */}
       {selected.length === 0
         ? <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.textMuted }}>
-            <div style={{ fontSize: '32px', marginBottom: '10px' }}>📊</div>
+            <div style={{ fontSize: '14px', marginBottom: '10px', color: t.textMuted }}>—</div>
             <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>Tu dashboard está vacío</div>
             <div style={{ fontSize: '12px', marginTop: '6px' }}>Haz clic en <strong>✏️ Personalizar</strong> para agregar widgets</div>
           </div>
@@ -994,7 +994,7 @@ const MRBDashboard = () => {
     const events = ['mrb:inspection', 'package:received'];
     const unsubscribes = events.map(event =>
       subscribe(event, (data) => {
-        console.log(`🔄 WebSocket [${event}]:`, data);
+        console.log(`WebSocket [${event}]:`, data);
         loadData();
       })
     );
@@ -1207,13 +1207,13 @@ const MRBDashboard = () => {
   }, [dateFrom, dateTo, deptId, language]);
 
   const TABS = [
-    { id: 'resumen',       label: `📊 ${L.tabSummary}`       },
-    { id: 'disposicion',   label: `🔄 ${L.tabMaterial}`      },
-    { id: 'tiempo',        label: `⏱ ${L.tabTimeFlow}`      },
-    { id: 'costo',         label: `💰 ${L.tabCostImpact}`   },
-    { id: 'defectos',      label: `🧩 ${L.tabDefectsCause}` },
-    { id: 'operacion',     label: `🏭 ${L.tabOperation}`     },
-    { id: 'personalizado', label: `⚙️ ${L.tabMyDashboard}` },
+    { id: 'resumen',       label: L.tabSummary       },
+    { id: 'disposicion',   label: L.tabMaterial      },
+    { id: 'tiempo',        label: L.tabTimeFlow      },
+    { id: 'costo',         label: L.tabCostImpact    },
+    { id: 'defectos',      label: L.tabDefectsCause  },
+    { id: 'operacion',     label: L.tabOperation     },
+    { id: 'personalizado', label: L.tabMyDashboard   },
   ];
 
   const tt = TT({ t });
@@ -1743,7 +1743,7 @@ const MRBDashboard = () => {
               style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: t.success, color: '#fff', cursor: (loading || exportingExcel) ? 'not-allowed' : 'pointer', opacity: (loading || exportingExcel) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '5px' }}
               title={language === 'es' ? 'Exportar datos a Excel' : 'Export data to Excel'}
             >
-              <span>📊</span> {exportingExcel ? '...' : 'Excel'}
+              {exportingExcel ? '...' : 'Excel'}
             </button>
             <button onClick={() => navigate('/mrb-create')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: t.primary, color: '#fff', cursor: 'pointer' }}>+ Campaña</button>
           </div>
