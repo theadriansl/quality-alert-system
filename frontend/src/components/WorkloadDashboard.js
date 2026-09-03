@@ -46,7 +46,7 @@ const KpiTile = ({ label, value, unit = '', color, sub, icon, size = 'md' }) => 
       <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
         {icon && <span style={{ marginRight: '4px' }}>{icon}</span>}{label}
       </div>
-      <div style={{ fontSize: valFontSize, fontWeight: '700', color: color || t.text, lineHeight: 1.1 }}>
+      <div style={{ fontSize: valFontSize, fontWeight: '600', color: color || t.text, lineHeight: 1.1 }}>
         {value}<span style={{ fontSize: '14px', fontWeight: '400', marginLeft: '3px', color: t.textMuted }}>{unit}</span>
       </div>
       {sub && <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{sub}</div>}
@@ -59,7 +59,7 @@ const SectionTitle = ({ icon, label }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
       <span style={{ fontSize: '16px' }}>{icon}</span>
-      <span style={{ fontSize: '15px', fontWeight: '700', color: t.text }}>{label}</span>
+      <span style={{ fontSize: '15px', fontWeight: '600', color: t.text }}>{label}</span>
     </div>
   );
 };
@@ -94,7 +94,7 @@ const RiskGauge = ({ value }) => {
           </Pie>
         </PieChart>
       </ResponsiveContainer>
-      <div style={{ marginTop: '-40px', fontSize: '28px', fontWeight: '800', color }}>
+      <div style={{ marginTop: '-40px', fontSize: '28px', fontWeight: '600', color }}>
         {value}
       </div>
       <div style={{ fontSize: '12px', color: t.textDim, marginTop: '2px' }}>
@@ -200,7 +200,7 @@ const TabCarga = ({ kpis }) => {
                   <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(u.hoursReal)} hrs</td>
                   <td style={{ padding: '8px 12px' }}>
                     <span style={{
-                      padding: '2px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px',
+                      padding: '2px 10px', borderRadius: '12px', fontWeight: '600', fontSize: '12px',
                       backgroundColor: u.utilization > 110 ? '#fee2e2' : u.utilization < 70 ? t.bgPanel : '#dcfce7',
                       color: u.utilization > 110 ? '#ef4444' : u.utilization < 70 ? t.textDim : '#2E7D32'
                     }}>{u.utilization}%</span>
@@ -209,7 +209,7 @@ const TabCarga = ({ kpis }) => {
                   <td style={{ padding: '8px 12px', color: '#2E7D32', textAlign: 'center', fontWeight: '600' }}>{u.completedCount}</td>
                   <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                     {u.delayedCount > 0
-                      ? <span style={{ color: '#ef4444', fontWeight: '700' }}>⚠ {u.delayedCount}</span>
+                      ? <span style={{ color: '#ef4444', fontWeight: '600' }}>⚠ {u.delayedCount}</span>
                       : <span style={{ color: '#2E7D32' }}>✓</span>}
                   </td>
                 </tr>
@@ -258,7 +258,7 @@ const TabEjecucion = ({ kpis }) => {
               <div key={item.label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <span style={{ fontSize: '13px', color: t.text }}>{item.label}</span>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: item.color }}>{fmt1(item.value)} hrs</span>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: item.color }}>{fmt1(item.value)} hrs</span>
                 </div>
               </div>
             ))}
@@ -288,7 +288,7 @@ const TabEjecucion = ({ kpis }) => {
             }}>
               <span style={{ fontSize: '13px', color: t.text }}>Actividades con desviación &gt;20%</span>
               <span style={{
-                fontSize: '14px', fontWeight: '700',
+                fontSize: '14px', fontWeight: '600',
                 color: ejecucion.bigDeviationPercent > 30 ? '#ef4444' : ejecucion.bigDeviationPercent > 15 ? '#C77700' : '#2E7D32'
               }}>{ejecucion.bigDeviationCount} ({ejecucion.bigDeviationPercent}%)</span>
             </div>
@@ -306,7 +306,7 @@ const TabEjecucion = ({ kpis }) => {
               backgroundColor: prodGood ? '#dcfce7' : '#fee2e2'
             }}>
               <div>
-                <div style={{ fontSize: '36px', fontWeight: '800', color: prodGood ? '#2E7D32' : '#ef4444' }}>
+                <div style={{ fontSize: '36px', fontWeight: '600', color: prodGood ? '#2E7D32' : '#ef4444' }}>
                   {ejecucion.productivity}x
                 </div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>est / real</div>
@@ -320,11 +320,11 @@ const TabEjecucion = ({ kpis }) => {
             </div>
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '24px' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '22px', fontWeight: '700', color: '#8b5cf6' }}>{ejecucion.throughput}</div>
+                <div style={{ fontSize: '22px', fontWeight: '600', color: '#8b5cf6' }}>{ejecucion.throughput}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>Completadas</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '22px', fontWeight: '700', color: '#C77700' }}>{ejecucion.avgLeadTimeDays}d</div>
+                <div style={{ fontSize: '22px', fontWeight: '600', color: '#C77700' }}>{ejecucion.avgLeadTimeDays}d</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>Lead Time</div>
               </div>
             </div>
@@ -403,7 +403,7 @@ const TabActividades = ({ kpis }) => {
               <div key={item.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <span style={{ fontSize: '13px', color: t.text }}>{item.name}</span>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: item.color }}>{item.value}%</span>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: item.color }}>{item.value}%</span>
                 </div>
                 <div style={{ height: '8px', backgroundColor: t.bgPanel, borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{
@@ -418,7 +418,7 @@ const TabActividades = ({ kpis }) => {
             {/* Total */}
             <div style={{ marginTop: '8px', padding: '10px 14px', backgroundColor: t.bgPanel, borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '13px', color: t.textMuted }}>Total actividades en periodo</span>
-              <span style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>{actividades.total}</span>
+              <span style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>{actividades.total}</span>
             </div>
           </div>
         </Card>
@@ -492,7 +492,7 @@ const TabRiesgo = ({ kpis }) => {
           <div style={{
             marginTop: '8px', padding: '6px 20px', borderRadius: '20px',
             backgroundColor: riskColor(riesgo.riskIndex), color: 'white',
-            fontWeight: '700', fontSize: '14px'
+            fontWeight: '600', fontSize: '14px'
           }}>
             {riskLevel}
           </div>
@@ -512,7 +512,7 @@ const TabRiesgo = ({ kpis }) => {
               borderLeft: `4px solid ${item.color}`
             }}>
               <div style={{ fontSize: '20px', marginBottom: '4px' }}>{item.icon}</div>
-              <div style={{ fontSize: '22px', fontWeight: '800', color: item.color }}>{item.value}</div>
+              <div style={{ fontSize: '22px', fontWeight: '600', color: item.color }}>{item.value}</div>
               <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginTop: '2px' }}>{item.label}</div>
               <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>{item.desc}</div>
             </div>
@@ -618,12 +618,12 @@ const TabProyectos = ({ kpis }) => {
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <span style={{ fontSize: '11px', color: t.textMuted }}>{d.count} acts</span>
                     <span style={{
-                      fontSize: '12px', fontWeight: '700',
+                      fontSize: '12px', fontWeight: '600',
                       color: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444'
                     }}>{d.completionRate}% ✓</span>
                     {d.efficiency && (
                       <span style={{
-                        fontSize: '12px', fontWeight: '700',
+                        fontSize: '12px', fontWeight: '600',
                         color: d.efficiency >= 1 ? '#2E7D32' : '#ef4444'
                       }}>{d.efficiency}x</span>
                     )}
@@ -666,13 +666,13 @@ const TabProyectos = ({ kpis }) => {
                 <td style={{ padding: '8px 12px', color: t.text, textAlign: 'center' }}>{k.count}</td>
                 <td style={{ padding: '8px 12px', color: '#2E7D32', textAlign: 'center', fontWeight: '600' }}>{k.completed}</td>
                 <td style={{ padding: '8px 12px' }}>
-                  <span style={{ color: clr(k.avgProgress), fontWeight: '700' }}>{k.avgProgress}%</span>
+                  <span style={{ color: clr(k.avgProgress), fontWeight: '600' }}>{k.avgProgress}%</span>
                 </td>
                 <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(k.estimated)}</td>
                 <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(k.actual)}</td>
                 <td style={{ padding: '8px 12px' }}>
                   {k.efficiency
-                    ? <span style={{ color: k.efficiency >= 1 ? '#2E7D32' : '#ef4444', fontWeight: '700' }}>{k.efficiency}x</span>
+                    ? <span style={{ color: k.efficiency >= 1 ? '#2E7D32' : '#ef4444', fontWeight: '600' }}>{k.efficiency}x</span>
                     : <span style={{ color: t.textMuted }}>—</span>}
                 </td>
                 <td style={{ padding: '8px 12px', color: '#8b5cf6', fontWeight: '600' }}>{k.hoursShare}%</td>
@@ -749,7 +749,7 @@ const WORKLOAD_DEFAULT = [
 // Wrapper ligero sin useTheme para usar dentro de renderWorkloadWidget
 const WLCardWrapper = ({ title, children }) => (
   <div>
-    <div style={{ fontSize: '12px', fontWeight: '700', marginBottom: '10px', color: 'inherit' }}>{title}</div>
+    <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '10px', color: 'inherit' }}>{title}</div>
     {children}
   </div>
 );
@@ -838,7 +838,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
             <div key={item.label}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span style={{ fontSize: '12px' }}>{item.label}</span>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: item.color }}>{fmt1(item.value)} hrs</span>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: item.color }}>{fmt1(item.value)} hrs</span>
               </div>
               <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${(item.value / maxVal) * 100}%`, backgroundColor: item.color, borderRadius: '4px' }} />
@@ -861,7 +861,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
         <div style={{ textAlign: 'center', padding: '12px 0' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100px', height: '100px', borderRadius: '50%', border: `8px solid ${prodGood ? '#2E7D32' : '#ef4444'}`, backgroundColor: prodGood ? '#dcfce7' : '#fee2e2' }}>
             <div>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: prodGood ? '#2E7D32' : '#ef4444' }}>{prod}x</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: prodGood ? '#2E7D32' : '#ef4444' }}>{prod}x</div>
               <div style={{ fontSize: '10px', color: t.textDim }}>est / real</div>
             </div>
           </div>
@@ -919,7 +919,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
             <div key={item.label}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
                 <span style={{ fontSize: '11px' }}>{item.label}</span>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: item.color }}>{item.value}%</span>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: item.color }}>{item.value}%</span>
               </div>
               <div style={{ height: '6px', backgroundColor: t.border, borderRadius: '3px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${Math.min(100, item.value)}%`, backgroundColor: item.color, borderRadius: '3px' }} />
@@ -955,7 +955,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
           {items.map(item => (
             <div key={item.label} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${t.border}`, borderLeft: `4px solid ${item.color}` }}>
               <div style={{ fontSize: '16px' }}>{item.icon}</div>
-              <div style={{ fontSize: '18px', fontWeight: '800', color: item.color }}>{item.value}</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: item.color }}>{item.value}</div>
               <div style={{ fontSize: '11px', fontWeight: '600' }}>{item.label}</div>
               <div style={{ fontSize: '10px', color: t.textDim }}>{item.desc}</div>
             </div>
@@ -1018,7 +1018,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
             <div key={d.department}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
                 <span style={{ fontSize: '11px' }}>{d.department}</span>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444' }}>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444' }}>
                   {d.completionRate}% ✓ {d.efficiency ? `· ${d.efficiency}x` : ''}
                 </span>
               </div>
