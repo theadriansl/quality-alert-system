@@ -97,7 +97,7 @@ const SkillsDashboard = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
             {tr('skills.dashboard')}
           </h1>
           <p style={{ margin: '4px 0 0 0', color: t.textMuted }}>
@@ -117,7 +117,7 @@ const SkillsDashboard = () => {
           <button onClick={() => navigate('/skills/config')} style={{ padding: '8px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, cursor: 'pointer' }}>
             {tr('common.configuration')}
           </button>
-          <button onClick={loadData} style={{ padding: '8px 16px', backgroundColor: COLORS.blue, border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}>
+          <button onClick={loadData} style={{ padding: '8px 16px', backgroundColor: COLORS.blue, border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer' }}>
             {tr('common.refresh')}
           </button>
           <ThemeSelector />
@@ -127,23 +127,23 @@ const SkillsDashboard = () => {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <div style={kpiStyle(COLORS.blue)}>
-          <div style={{ fontSize: '36px', fontWeight: '700', color: COLORS.blue }}>{usersWithProfile || 0}</div>
+          <div style={{ fontSize: '36px', fontWeight: '600', color: COLORS.blue }}>{usersWithProfile || 0}</div>
           <div style={{ fontSize: '12px', color: t.textMuted }}>{tr('skills.kpi.usersWithProfile')}</div>
         </div>
         <div style={kpiStyle(COLORS.green)}>
-          <div style={{ fontSize: '36px', fontWeight: '700', color: COLORS.green }}>
+          <div style={{ fontSize: '36px', fontWeight: '600', color: COLORS.green }}>
             {statusData.find(s => s.name === 'COMPLETED')?.value || 0}
           </div>
           <div style={{ fontSize: '12px', color: t.textMuted }}>{tr('skills.kpi.completedEvaluations')}</div>
         </div>
         <div style={kpiStyle(COLORS.orange)}>
-          <div style={{ fontSize: '36px', fontWeight: '700', color: COLORS.orange }}>
+          <div style={{ fontSize: '36px', fontWeight: '600', color: COLORS.orange }}>
             {statusData.find(s => s.name === 'DRAFT')?.value || 0}
           </div>
           <div style={{ fontSize: '12px', color: t.textMuted }}>{tr('skills.kpi.draftEvaluations')}</div>
         </div>
         <div style={kpiStyle(COLORS.red)}>
-          <div style={{ fontSize: '36px', fontWeight: '700', color: COLORS.red }}>
+          <div style={{ fontSize: '36px', fontWeight: '600', color: COLORS.red }}>
             {expiringTraining?.length || 0}
           </div>
           <div style={{ fontSize: '12px', color: t.textMuted }}>{tr('skills.kpi.expiringTraining')}</div>
@@ -288,7 +288,7 @@ const SkillsDashboard = () => {
                     <span style={{ fontWeight: '600', color: t.text }}>{cat.categoryName}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '24px', fontWeight: '700', color: cat.color }}>{cat.avgScore}</span>
+                    <span style={{ fontSize: '24px', fontWeight: '600', color: cat.color }}>{cat.avgScore}</span>
                     <span style={{ fontSize: '14px', color: t.textMuted }}>/ {cat.avgTarget}</span>
                   </div>
                   <div style={{ height: '6px', backgroundColor: t.border, borderRadius: '3px', overflow: 'hidden' }}>
