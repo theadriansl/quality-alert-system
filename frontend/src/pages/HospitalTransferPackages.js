@@ -413,7 +413,7 @@ const HospitalTransferPackages = () => {
     padding: '2px 8px',
     borderRadius: '10px',
     fontSize: '11px',
-    fontWeight: '700',
+    fontWeight: '600',
     minWidth: '20px',
     textAlign: 'center'
   });
@@ -622,10 +622,10 @@ const HospitalTransferPackages = () => {
                           onClick={(e) => e.stopPropagation()}
                         />
                       </td>
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: t.primary, fontWeight: '600' }}>
+                      <td style={{ padding: '12px 16px', fontFamily: "'IBM Plex Mono', monospace", color: t.primary, fontWeight: '600' }}>
                         {d.entryNumber || '-'}
                       </td>
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: '500' }}>
+                      <td style={{ padding: '12px 16px', fontFamily: "'IBM Plex Mono', monospace", fontWeight: '500' }}>
                         {d.serialNumber || d.lotNumber || '-'}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
@@ -763,7 +763,7 @@ const HospitalTransferPackages = () => {
                 <tbody>
                   {sentPackageDetails.items?.map(item => (
                     <tr key={item.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                      <td style={{ padding: '8px', fontFamily: 'monospace' }}>{item.serialNumber || '-'}</td>
+                      <td style={{ padding: '8px', fontFamily: "'IBM Plex Mono', monospace" }}>{item.serialNumber || '-'}</td>
                       <td style={{ padding: '8px' }}>{item.partNumber || '-'}</td>
                       <td style={{ padding: '8px' }}>{item.defectSummary || '-'}</td>
                     </tr>
@@ -932,7 +932,7 @@ const HospitalTransferPackages = () => {
                     <tbody>
                       {incomingPackageDetails.items?.map(item => (
                         <tr key={item.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                          <td style={{ padding: '8px', fontFamily: 'monospace', color: t.primary }}>{item.serialNumber || '-'}</td>
+                          <td style={{ padding: '8px', fontFamily: "'IBM Plex Mono', monospace", color: t.primary }}>{item.serialNumber || '-'}</td>
                           <td style={{ padding: '8px', color: t.text }}>{item.partNumber || '-'}</td>
                           <td style={{ padding: '8px', color: t.text }}>{item.defectSummary || '-'}</td>
                         </tr>
@@ -1042,7 +1042,7 @@ const HospitalTransferPackages = () => {
                         padding: '4px 8px',
                         borderRadius: '4px',
                         fontSize: '10px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         textTransform: 'uppercase',
                         backgroundColor: pkg.direction === 'incoming' ? '#dc262620' : '#3b82f620',
                         color: pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6',
@@ -1071,7 +1071,7 @@ const HospitalTransferPackages = () => {
                         <div style={{ fontSize: '10px', color: t.textMuted, textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Target' : 'Target'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>
                           {formatMinutes(targetMinutes)}
                         </div>
                       </div>
@@ -1079,7 +1079,7 @@ const HospitalTransferPackages = () => {
                         <div style={{ fontSize: '10px', color: '#f59e0b', textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Transcurrido' : 'Elapsed'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#f59e0b' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#f59e0b' }}>
                           {formatMinutes(elapsed)}
                         </div>
                       </div>
@@ -1087,7 +1087,7 @@ const HospitalTransferPackages = () => {
                         <div style={{ fontSize: '10px', color: '#dc2626', textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Excedido' : 'Exceeded'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#dc2626' }}>
                           +{formatMinutes(exceeded)}
                         </div>
                       </div>

@@ -611,7 +611,7 @@ const RepairStation = () => {
           backgroundColor: t.bgCard, borderRadius: '16px', padding: '32px',
           width: '90%', maxWidth: '500px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
         }}>
-          <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '700', color: t.text }}>
+          <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '600', color: t.text }}>
             {language === 'es' ? 'Selecciona tu Ubicación' : 'Select Your Location'}
           </h2>
           <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: t.textMuted }}>
@@ -730,7 +730,7 @@ const RepairStation = () => {
             <div style={{
               padding: '8px 12px',
               backgroundColor: stationType === 'REPAIR' ? t.accent : '#22c55e',
-              color: 'white', fontWeight: '700', fontSize: '12px',
+              color: 'white', fontWeight: '600', fontSize: '12px',
               display: 'flex', alignItems: 'center', gap: '6px'
             }}>
               {stationType === 'REPAIR' ? <Wrench size={14} /> : <CheckCircle size={14} />}
@@ -979,7 +979,7 @@ const RepairStation = () => {
             <>
               {/* Part Header */}
               <div style={{ padding: '16px', borderBottom: `1px solid ${t.border}`, backgroundColor: t.bgCard }}>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: t.text, letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: t.text, letterSpacing: '0.5px' }}>
                   {selectedPart.serial}
                 </div>
                 <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>
