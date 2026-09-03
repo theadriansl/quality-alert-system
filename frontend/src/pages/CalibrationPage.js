@@ -37,7 +37,7 @@ const CalibrationPage = () => {
         <div>
           <h1 style={{
             fontSize: '28px',
-            fontWeight: '700',
+            fontWeight: '600',
             color: t.text,
             margin: 0
           }}>

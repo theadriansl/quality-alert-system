@@ -174,7 +174,7 @@ export default function ReportCenter() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
         <FileSpreadsheet size={28} style={{ color: '#1e40af' }} />
-        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1e3a5f', margin: 0 }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#1e3a5f', margin: 0 }}>
           Centro de Reportes
         </h1>
         <button
