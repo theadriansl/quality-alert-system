@@ -1772,8 +1772,8 @@ const MRBCampaignDetail = () => {
         <div style={{ display: 'flex', borderBottom: `2px solid ${t.border}`, marginBottom: '24px', gap: '0' }}>
           {[
             { id: 'detail', label: L.caseDetail },
-            { id: 'progress', label: `📊 ${L.campaignProgress}` },
-            { id: 'inventory', label: `📦 Inventario (${affectedSerialsSummary.total})` }
+            { id: 'progress', label: L.campaignProgress },
+            { id: 'inventory', label: `Inventario (${affectedSerialsSummary.total})` }
           ].map(tab => (
             <button
               key={tab.id}
@@ -1806,7 +1806,7 @@ const MRBCampaignDetail = () => {
               <div style={{ textAlign: 'center', padding: '60px', color: t.textMuted }}>Cargando avance...</div>
             ) : progressData.length === 0 ? (
               <div style={{ ...styles.card, textAlign: 'center', padding: '60px' }}>
-                <div style={{ fontSize: '40px', marginBottom: '16px' }}>📋</div>
+                <div style={{ fontSize: '40px', marginBottom: '16px' }}></div>
                 <div style={{ color: t.text, fontWeight: '600', marginBottom: '8px' }}>Sin registros de inspección aún</div>
                 <div style={{ color: t.textMuted, fontSize: '13px' }}>Los registros aparecerán aquí conforme los inspectores capturen piezas desde la app de inspección MRB.</div>
               </div>
@@ -2042,7 +2042,7 @@ const MRBCampaignDetail = () => {
                           <button
                             onClick={() => setShiftReport({ shiftId: row.shiftId, date: rawDate, shiftLabel: shiftLabel })}
                             style={{ marginLeft: 'auto', padding: '5px 12px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                            📋 Ver Reporte
+                            Ver Reporte
                           </button>
                         </div>
                       </div>
@@ -2062,7 +2062,7 @@ const MRBCampaignDetail = () => {
                                 rel="noreferrer"
                                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', color: '#92400e', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}
                               >
-                                📄 {tally.filename}
+                                {tally.filename}
                               </a>
                             ))}
                           </div>
@@ -3242,7 +3242,7 @@ const MRBCampaignDetail = () => {
                 <div style={{ textAlign: 'center', padding: '60px', color: t.textMuted }}>Cargando inventario...</div>
               ) : affectedSerials.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px' }}>
-                  <div style={{ fontSize: '40px', marginBottom: '16px' }}>📦</div>
+                  <div style={{ fontSize: '40px', marginBottom: '16px' }}></div>
                   <div style={{ color: t.text, fontWeight: '600', marginBottom: '8px' }}>Sin seriales registrados</div>
                   <div style={{ color: t.textMuted, fontSize: '13px' }}>Use el botón "Seriales Afectados" en la pestaña Detalle para agregar seriales a esta campaña.</div>
                 </div>
