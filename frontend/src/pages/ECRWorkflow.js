@@ -1105,7 +1105,7 @@ const ECRWorkflow = () => {
           alignItems: 'center',
           gap: '12px'
         }}>
-          <span style={{ fontSize: '14px', fontWeight: '700', color: t.warning }}>BLOQUEADO</span>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: t.warning }}>BLOQUEADO</span>
           <span style={{ color: t.warning, fontWeight: '600' }}>
             Modo Solo Lectura - No tienes permisos para modificar este ECR
           </span>
@@ -1349,7 +1349,7 @@ const ECRWorkflow = () => {
         {showLog ? (
           <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: '700', color: t.text, margin: 0 }}>Historial de Actividad</h2>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', color: t.text, margin: 0 }}>Historial de Actividad</h2>
               <button onClick={fetchAuditLog} style={{ padding: '6px 14px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, cursor: 'pointer', fontSize: '12px' }}>
                 Actualizar
               </button>
@@ -1628,7 +1628,7 @@ const getStyles = (t) => ({
   },
   title: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.text,
     margin: 0
   },

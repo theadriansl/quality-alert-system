@@ -387,7 +387,7 @@ const getStyles = (t) => ({
     cursor: 'pointer',
     fontSize: '20px',
     lineHeight: '1',
-    fontWeight: 'bold',
+    fontWeight: '600',
     flexShrink: 0
   },
   emptyCell: {
@@ -493,7 +493,7 @@ const getStyles = (t) => ({
   arrow: {
     fontSize: '20px',
     color: t.success,
-    fontWeight: 'bold'
+    fontWeight: '600'
   }
 });
 

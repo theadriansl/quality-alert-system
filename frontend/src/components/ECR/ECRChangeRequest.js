@@ -771,7 +771,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                         cursor: 'pointer',
                         fontSize: '20px',
                         lineHeight: '1',
-                        fontWeight: 'bold'
+                        fontWeight: '600'
                       }}
                     >
                       ×
@@ -980,7 +980,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                             <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px', fontWeight: '600' }}>
                                {language === 'es' ? 'Parte Seleccionada:' : 'Selected Part:'}
                             </div>
-                            <div style={{ fontWeight: '700', color: '#2196f3', fontSize: '13px' }}>
+                            <div style={{ fontWeight: '600', color: '#2196f3', fontSize: '13px' }}>
                               {part.partNumber}
                             </div>
                             <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
@@ -1044,7 +1044,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                         <strong style={{ fontSize: '15px', color: '#2e7d32' }}>
                           {language === 'es' ? 'Costo Estimado Total:' : 'Total Estimated Cost:'}
                         </strong>
-                        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1b5e20' }}>
+                        <span style={{ fontSize: '18px', fontWeight: '600', color: '#1b5e20' }}>
                           ${(selectedParts?.reduce((total, part) => {
                             const totalCostImpact = parseFloat(part.totalCostImpact) || 0;
                             return total + totalCostImpact;
@@ -1063,7 +1063,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                     <div style={{ marginTop: '20px' }}>
                       <h3 style={{
                         fontSize: '16px',
-                        fontWeight: 'bold',
+                        fontWeight: '600',
                         color: '#1976d2',
                         marginBottom: '12px',
                         display: 'flex',
@@ -1290,7 +1290,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                       cursor: 'pointer',
                       fontSize: '20px',
                       lineHeight: '1',
-                      fontWeight: 'bold',
+                      fontWeight: '600',
                       marginLeft: '12px'
                     }}
                   >
@@ -1341,7 +1341,7 @@ const ECRChangeRequest = ({ data, onDataUpdate, isReadOnly = false, language = '
                 height: '36px',
                 cursor: 'pointer',
                 fontSize: '20px',
-                fontWeight: 'bold'
+                fontWeight: '600'
               }}
             >
               ×

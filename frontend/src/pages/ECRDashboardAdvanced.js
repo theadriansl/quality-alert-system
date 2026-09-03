@@ -794,7 +794,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
                     const items = ALL_WIDGETS.filter(w => w.category === section);
                     return (
                       <div key={section} style={{ marginBottom:'20px' }}>
-                        <div style={{ fontSize:'11px', fontWeight:'700', color:t.textMuted, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'8px', paddingBottom:'4px', borderBottom:`1px solid ${t.border}` }}>{section}</div>
+                        <div style={{ fontSize:'11px', fontWeight:'600', color:t.textMuted, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'8px', paddingBottom:'4px', borderBottom:`1px solid ${t.border}` }}>{section}</div>
                         <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
                           {items.map(item => {
                             const active = widgets.some(w => w.id === item.id);
@@ -903,7 +903,7 @@ const TabAlertas = ({ data, ecrs, t, navigate }) => {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                 <AlertTriangle size={20} color={c.text} style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontWeight: '700', color: c.text, fontSize: '14px' }}>{alert.title}</div>
+                  <div style={{ fontWeight: '600', color: c.text, fontSize: '14px' }}>{alert.title}</div>
                   <div style={{ fontSize: '12px', color: c.text, opacity: 0.8, marginTop: '4px' }}>{alert.desc}</div>
                 </div>
               </div>

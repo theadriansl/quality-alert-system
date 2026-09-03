@@ -765,7 +765,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
         <h3 style={{
           margin: '0 0 16px 0',
           fontSize: '18px',
-          fontWeight: '700',
+          fontWeight: '600',
           color: '#92400e'
         }}>
           Notificación al Cliente
@@ -1176,7 +1176,7 @@ const getStyles = (t) => ({
     cursor: 'pointer',
     fontSize: '18px',
     lineHeight: '1',
-    fontWeight: 'bold'
+    fontWeight: '600'
   },
   summary: {
     marginTop: '24px',
