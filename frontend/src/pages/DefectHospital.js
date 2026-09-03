@@ -4133,7 +4133,7 @@ const DefectHospital = () => {
     },
     statNumber: {
       fontSize: '28px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text
     },
     statLabel: {
@@ -5009,7 +5009,7 @@ const DefectHospital = () => {
         case 'RELEASE': return t.success;
         case 'MRB': return t.error;
         case 'BUFFER': return t.info;
-        case 'INCOMING': return '#9b59b6'; // Morado para en proceso
+        case 'INCOMING': return t.accent; // Morado para en proceso
         default: return t.textMuted;
       }
     };
@@ -5060,7 +5060,7 @@ const DefectHospital = () => {
                 <div style={{ fontSize: '10px', color: t.textMuted }}>MRB</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: '#9b59b6' }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: t.accent }}>
                   {wipData.filter(w => w.locationType === 'INCOMING').reduce((s, w) => s + (w.wipCount || 0), 0)}
                 </div>
                 <div style={{ fontSize: '10px', color: t.textMuted }}>EN PROCESO</div>
@@ -5304,7 +5304,7 @@ const DefectHospital = () => {
           {defect.entryNumber || defect.entry_number}
         </td>
         {/* Serial */}
-        <td style={{ ...cellStyle, fontWeight: '600', color: t.text, fontFamily: 'monospace', fontSize: '13px' }}>
+        <td style={{ ...cellStyle, fontWeight: '600', color: t.text, fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px' }}>
           {showSerial ? group.serial : '↳'}
         </td>
         {/* Parte */}
@@ -5745,7 +5745,7 @@ const DefectHospital = () => {
                   border: `2px solid ${t.danger}`
                 }}>
                   <div style={{
-                    fontWeight: '700',
+                    fontWeight: '600',
                     color: t.danger,
                     marginBottom: '12px',
                     fontSize: '15px'
@@ -7189,8 +7189,8 @@ const DefectHospital = () => {
                               borderRadius: '4px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              backgroundColor: '#7c3aed20',
-                              color: '#7c3aed',
+                              backgroundColor: t.accentBg,
+                              color: t.accent,
                               cursor: 'pointer'
                             }}
                             onClick={() => navigate(`/mrb/${defect.mrbCampaignId}`)}
@@ -7210,8 +7210,8 @@ const DefectHospital = () => {
                               borderRadius: '4px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              backgroundColor: '#3b82f620',
-                              color: '#3b82f6',
+                              backgroundColor: t.accentBg,
+                              color: t.accent,
                               cursor: 'pointer'
                             }}
                             onClick={() => navigate(`/quality-alerts/${defect.qarId}`)}
@@ -9049,7 +9049,7 @@ const DefectHospital = () => {
                       borderRadius: '6px',
                       border: `1px solid ${t.border}`
                     }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: '15px', fontWeight: '600' }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '15px', fontWeight: '600' }}>
                         {assignSingleDefect.serialNumber || assignSingleDefect.serial_number || assignSingleDefect.lotNumber || assignSingleDefect.lot_number}
                       </span>
                       <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '4px' }}>
@@ -9093,7 +9093,7 @@ const DefectHospital = () => {
                               backgroundColor: idx % 2 === 0 ? t.bgCard : t.bgPanel
                             }}
                           >
-                            <span style={{ fontFamily: 'monospace', fontSize: '14px' }}>{serial}</span>
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '14px' }}>{serial}</span>
                             <button
                               onClick={() => removeSerial(serial)}
                               style={{
@@ -9416,7 +9416,7 @@ const DefectHospital = () => {
                         backgroundColor: idx % 2 === 0 ? t.bgCard : t.bgPanel
                       }}
                     >
-                      <span style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: '500' }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '14px', fontWeight: '500' }}>
                         {idx + 1}. {serial}
                       </span>
                       <button
@@ -10048,7 +10048,7 @@ const DefectHospital = () => {
                         width: '100%',
                         minHeight: '60px',
                         resize: 'vertical',
-                        fontFamily: 'monospace',
+                        fontFamily: "'IBM Plex Mono', monospace",
                         fontSize: '12px'
                       }}
                       placeholder={language === 'es'
@@ -10159,11 +10159,11 @@ const DefectHospital = () => {
                   <div style={{
                     marginBottom: '10px',
                     padding: '10px',
-                    backgroundColor: '#fef3c7',
+                    backgroundColor: t.warningBg,
                     borderRadius: '6px',
-                    border: '1px solid #f59e0b'
+                    border: `1px solid ${t.warning}`
                   }}>
-                    <label style={{ fontSize: '11px', color: '#92400e', display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+                    <label style={{ fontSize: '11px', color: t.warningFg, display: 'block', marginBottom: '4px', fontWeight: '500' }}>
                       🏢 {language === 'es' ? 'Asignar Área Responsable (al vincular)' : 'Assign Responsible Area (on link)'}
                     </label>
                     <select
