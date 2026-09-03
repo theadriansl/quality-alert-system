@@ -738,6 +738,44 @@ D3MFG.js: 32 literales
 
 ---
 
+### ✅ Emojis funcionales → lucide-react icons (sesión 03-Sep cont.)
+
+| Archivo | Emojis reemplazados | Icons | Commit |
+|---------|---------------------|-------|--------|
+| MRBDefectCapture.js | ✅⚠️🗑️📎 | CheckCircle, AlertTriangle, Trash2, Paperclip | `64c192a` |
+| SkillsProfile.js | 📎 (3 instancias) | Paperclip | `64c192a` |
+| WIOperatorProfile.js | 📎 (3 instancias) | Paperclip | `64c192a` |
+
+**Regla aplicada:** Iconos heredan tokens tema (`t.success`, `t.warning`, `t.textMuted`) para compatibilidad dark mode.
+
+---
+
+---
+
+### ✅ fontWeight Normalización Global (sesión 03-Sep cont.)
+
+**Objetivo:** Eliminar fontWeight: 'bold'/'700'/'800'/'900' → '600' en todo frontend/src
+
+| Bloque | Archivos | Commits | Notas |
+|--------|----------|---------|-------|
+| 1 - 8D Module | 15 archivos + Dashboard.OLD.js (eliminado) | `9ccaa06` | TeamAssignmentTab tenía 57 ocurrencias |
+| 2 - ECR | 5 archivos | `e31b21e` | |
+| 3 - Components | 14 archivos | `c152165` | Incluye conditionals (active ? '600' : '500') |
+| 4 - Pages | 19 archivos | `7e46a9d` | RiskMatrixConfig tenía 9 ocurrencias |
+
+**Total:** 54 archivos modificados, ~265 ocurrencias normalizadas
+
+**Excluidos (PDF react-pdf):**
+- EightDPDF.js (24 ocurrencias preservadas)
+- QuotePDF.js (9 ocurrencias preservadas)
+
+**Eliminado:**
+- Dashboard.OLD.js — código muerto (sin imports/rutas)
+
+**Corrección nota anterior:** "8D Cerrado 29-Ago" no incluía fontWeight - ahora sí está completamente normalizado.
+
+---
+
 ### Otros pendientes:
 - Testing formal Auditorías
 - Testing Reportes/Dashboard
