@@ -1102,7 +1102,7 @@ const DefectHospital = () => {
 
     const unsubscribes = events.map(event =>
       subscribe(event, (data) => {
-        console.log(`🔄 WebSocket [${event}]:`, data);
+        console.log(`WebSocket [${event}]:`, data);
         // Refrescar datos del tab activo
         loadData();
       })
@@ -3030,15 +3030,15 @@ const DefectHospital = () => {
       },
       'STATION_SCAN': {
         label: language === 'es' ? 'Escaneo Estación' : 'Station Scan',
-        color: '#06b6d4', icon: '📍'
+        color: '#06b6d4', icon: ''
       },
       'STATION_SCAN_OK': {
         label: 'OK',
-        color: '#22c55e', icon: '✓'
+        color: '#22c55e', icon: ''
       },
       'STATION_SCAN_NOK': {
         label: 'NOK',
-        color: '#ef4444', icon: '✗'
+        color: '#ef4444', icon: ''
       }
     };
     return types[eventType] || { label: eventType, color: '#6b7280', icon: '' };
@@ -4413,7 +4413,7 @@ const DefectHospital = () => {
     };
 
     const getDisplayValue = (val) => {
-      if (field === 'mrbType') return val === 'quarantine' ? '🔒 Cuarentena' : '🗑️ Scrap';
+      if (field === 'mrbType') return val === 'quarantine' ? 'Cuarentena' : 'Scrap';
       return val;
     };
 
@@ -4556,7 +4556,7 @@ const DefectHospital = () => {
               onClick={(e) => { e.stopPropagation(); handleScrap(defect); }}
               title={language === 'es' ? 'Enviar directo a SCRAP' : 'Send directly to SCRAP'}
             >
-              🗑️
+              Scrap
             </button>
           )}
         </div>
@@ -4584,7 +4584,7 @@ const DefectHospital = () => {
               onClick={(e) => { e.stopPropagation(); handleScrap(defect); }}
               title={language === 'es' ? 'No se puede reparar - SCRAP' : 'Cannot repair - SCRAP'}
             >
-              🗑️
+              Scrap
             </button>
           )}
         </div>
@@ -4771,8 +4771,8 @@ const DefectHospital = () => {
         {/* Defecto */}
         <span style={{ flex: 1, color: t.text, display: 'flex', alignItems: 'center', gap: '4px' }}>
           {defect.defectTypeName || defect.defect_type_name}
-          {(defect.notes || defect.defectNotes) && <span title={language === 'es' ? 'Comentarios' : 'Comments'}>💬</span>}
-          {defect.photos?.length > 0 && <span title={`${defect.photos.length} 📷`}>📷</span>}
+          {(defect.notes || defect.defectNotes) && <span title={language === 'es' ? 'Comentarios' : 'Comments'}></span>}
+          {defect.photos?.length > 0 && <span title={`${defect.photos.length}`}></span>}
         </span>
 
         {/* Estado */}
@@ -4951,8 +4951,8 @@ const DefectHospital = () => {
                   {/* Defecto */}
                   <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {defect.defectTypeName || defect.defect_type_name}
-                    {(defect.notes || defect.defectNotes) && <span title={language === 'es' ? 'Comentarios' : 'Comments'}>💬</span>}
-                    {defect.photos?.length > 0 && <span title={`${defect.photos.length} 📷`}>📷</span>}
+                    {(defect.notes || defect.defectNotes) && <span title={language === 'es' ? 'Comentarios' : 'Comments'}></span>}
+                    {defect.photos?.length > 0 && <span title={`${defect.photos.length}`}></span>}
                   </span>
 
                   {/* Estado */}
@@ -5188,7 +5188,7 @@ const DefectHospital = () => {
         }}>
           <thead>
             <tr>
-              <th style={{ ...thBase, width: '40px', textAlign: 'center' }}>✓</th>
+              <th style={{ ...thBase, width: '40px', textAlign: 'center' }}></th>
               <MainColumnFilter field="entryNumber" label="Entry" style={thBase} />
               <MainColumnFilter field="serialNumber" label="Serial" style={thBase} />
               <MainColumnFilter field="partNumber" label={language === 'es' ? 'Parte' : 'Part'} style={thBase} />
@@ -5337,10 +5337,10 @@ const DefectHospital = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span>{defect.defectTypeName || defect.defect_type_name || '-'}</span>
             {(defect.notes || defect.defectNotes) && (
-              <span title={language === 'es' ? 'Tiene comentarios' : 'Has comments'} style={{ cursor: 'help' }}>💬</span>
+              <span title={language === 'es' ? 'Tiene comentarios' : 'Has comments'} style={{ cursor: 'help' }}></span>
             )}
             {defect.photos && Array.isArray(defect.photos) && defect.photos.length > 0 && (
-              <span title={language === 'es' ? `${defect.photos.length} foto(s)` : `${defect.photos.length} photo(s)`} style={{ cursor: 'help' }}>📷</span>
+              <span title={language === 'es' ? `${defect.photos.length} foto(s)` : `${defect.photos.length} photo(s)`} style={{ cursor: 'help' }}></span>
             )}
           </div>
         </td>
@@ -5750,7 +5750,7 @@ const DefectHospital = () => {
                     marginBottom: '12px',
                     fontSize: '15px'
                   }}>
-                    ⚠️ {language === 'es' ? 'RE-VERIFICACIÓN REQUERIDA' : 'RE-VERIFICATION REQUIRED'}
+                    {language === 'es' ? 'RE-VERIFICACIÓN REQUERIDA' : 'RE-VERIFICATION REQUIRED'}
                   </div>
 
                   {/* Info de la spec original */}
@@ -5825,7 +5825,7 @@ const DefectHospital = () => {
                           fontSize: '16px'
                         }}
                       >
-                        ✓ OK
+                        OK
                       </button>
                       <button
                         type="button"
@@ -5842,7 +5842,7 @@ const DefectHospital = () => {
                           fontSize: '16px'
                         }}
                       >
-                        ✗ NOK
+                        NOK
                       </button>
                     </div>
                   </div>
@@ -5877,7 +5877,7 @@ const DefectHospital = () => {
                       color: t.danger,
                       fontSize: '13px'
                     }}>
-                      ⚠️ {language === 'es'
+                      {language === 'es'
                         ? 'No se puede liberar si la re-verificación es NOK. El defecto debe volver a reparación.'
                         : 'Cannot release if re-verification is NOK. Defect must return to repair.'}
                     </div>
@@ -6048,7 +6048,7 @@ const DefectHospital = () => {
                       fontSize: '13px'
                     }}
                   >
-                    🔧 {language === 'es' ? 'Reparaciones' : 'Repairs'}
+                    {language === 'es' ? 'Reparaciones' : 'Repairs'}
                   </button>
                   <button
                     type="button"
@@ -6068,7 +6068,7 @@ const DefectHospital = () => {
                       opacity: canDoScrapActions ? 1 : 0.5
                     }}
                   >
-                    🗑️ Scrap
+                    Scrap
                   </button>
                   <button
                     type="button"
@@ -6085,7 +6085,7 @@ const DefectHospital = () => {
                       fontSize: '13px'
                     }}
                   >
-                    ⚠️ MRB
+                    MRB
                   </button>
                 </div>
               </div>
@@ -6094,7 +6094,7 @@ const DefectHospital = () => {
               {rejectDestination === 'REPAIR' && (
                 <div style={styles.formGroup}>
                   <label style={styles.label}>
-                    {language === 'es' ? '📍 Estación de Reparación (destino) *' : '📍 Repair Station (destination) *'}
+                    {language === 'es' ? 'Estación de Reparación (destino) *' : 'Repair Station (destination) *'}
                   </label>
 
                   {/* Dropdown de estaciones */}
@@ -6153,7 +6153,7 @@ const DefectHospital = () => {
                         }
                       }
                     }}
-                    placeholder={language === 'es' ? '📷 Escanear código de estación...' : '📷 Scan station code...'}
+                    placeholder={language === 'es' ? 'Escanear código de estación...' : 'Scan station code...'}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -6179,7 +6179,7 @@ const DefectHospital = () => {
                     }}>
                       <div>
                         <span style={{ fontSize: '13px', fontWeight: '600', color: t.success }}>
-                          ✓ {rejectSelectedStation.code}
+                          {rejectSelectedStation.code}
                         </span>
                         <span style={{ fontSize: '12px', color: t.textMuted, marginLeft: '8px' }}>
                           {rejectSelectedStation.name}
@@ -6246,7 +6246,7 @@ const DefectHospital = () => {
           gap: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>🚫</span>
+            <span style={{ fontSize: '24px' }}></span>
             <div>
               <div style={{ color: t.errorFg, fontWeight: '600', fontSize: '16px' }}>
                 Acceso a Captura de Defectos Denegado
@@ -6453,7 +6453,7 @@ const DefectHospital = () => {
               margin: '0 auto 20px',
               border: `3px solid ${t.accent}`,
               fontSize: '32px'
-            }}>✓</div>
+            }}></div>
             <h3 style={{ color: t.accentFg, fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>Éxito</h3>
             <p style={{ color: t.textMuted, fontSize: '15px', marginBottom: '24px', lineHeight: '1.5' }}>{success}</p>
             <button
@@ -6478,7 +6478,7 @@ const DefectHospital = () => {
           gap: '12px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '20px' }}>📦</span>
+            <span style={{ fontSize: '20px' }}></span>
             <div>
               <div style={{ fontWeight: '600', color: t.warningFg, fontSize: '14px' }}>
                 {incomingPackages.length} {language === 'es' ? 'paquete(s) desde MRB pendiente(s)' : 'pending package(s) from MRB'}
@@ -6757,7 +6757,7 @@ const DefectHospital = () => {
           }}
           onClick={() => setActiveTab('reports')}
         >
-          📊 {language === 'es' ? 'Reportes' : 'Reports'}
+          {language === 'es' ? 'Reportes' : 'Reports'}
         </button>
       </div>
 
@@ -6969,7 +6969,7 @@ const DefectHospital = () => {
               }}
               onClick={() => { setMrbSubTab('quarantine'); setSelectedForMrb(new Set()); }}
             >
-              🔒 {language === 'es' ? 'Cuarentena' : 'Quarantine'} ({quarantineDefects.length})
+              {language === 'es' ? 'Cuarentena' : 'Quarantine'} ({quarantineDefects.length})
             </button>
             {/* Chip: Scrap */}
             <button
@@ -6986,7 +6986,7 @@ const DefectHospital = () => {
               }}
               onClick={() => { setMrbSubTab('scrap'); setSelectedForMrb(new Set()); }}
             >
-              🗑️ Scrap ({scrappedDefects.length})
+              Scrap ({scrappedDefects.length})
             </button>
 
             {/* Indicador de filtros activos */}
@@ -7177,9 +7177,9 @@ const DefectHospital = () => {
                                   display: 'inline-block'
                                 }}
                                 onClick={() => navigate(`/mrb/${c.id}`)}
-                                title={`⚠️ Pendiente: ${c.title}`}
+                                title={`Pendiente: ${c.title}`}
                                 >
-                                  ⚠️ {c.campaignNumber}
+                                  {c.campaignNumber}
                                 </span>
                               ))}
                             </div>
@@ -7279,7 +7279,7 @@ const DefectHospital = () => {
             marginBottom: '20px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '24px' }}>🔍</span>
+              <span style={{ fontSize: '24px' }}></span>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', color: t.text }}>
                   {language === 'es' ? 'Consulta de Trazabilidad' : 'Traceability Query'}
@@ -7356,7 +7356,6 @@ const DefectHospital = () => {
                   justifyContent: 'center',
                   fontSize: '20px'
                 }}>
-                  📦
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>
@@ -7384,7 +7383,7 @@ const DefectHospital = () => {
                   }}
                   title={language === 'es' ? 'Exportar a PDF' : 'Export to PDF'}
                 >
-                  📄 {language === 'es' ? 'Exportar PDF' : 'Export PDF'}
+                  {language === 'es' ? 'Exportar PDF' : 'Export PDF'}
                 </button>
               </div>
 
@@ -7473,7 +7472,7 @@ const DefectHospital = () => {
                           <td style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}` }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {defect.defectTypeName || defect.defect_type_name || '-'}
-                              {defect.photos?.length > 0 && <span>📷</span>}
+                              {defect.photos?.length > 0 && <span></span>}
                             </span>
                           </td>
                           <td style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}` }}>
@@ -7577,7 +7576,7 @@ const DefectHospital = () => {
                                     backgroundColor: '#06b6d420',
                                     color: '#06b6d4'
                                   }}>
-                                    📍 {event.stationName || (event.stationCode ? event.stationCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Estación')}
+                                    {event.stationName || (event.stationCode ? event.stationCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Estación')}
                                   </span>
                                   <span style={{
                                     marginLeft: '8px',
@@ -7589,7 +7588,7 @@ const DefectHospital = () => {
                                     backgroundColor: eventInfo.color + '20',
                                     color: eventInfo.color
                                   }}>
-                                    {scanOk ? '✓ OK' : `✗ NOK (${event.defectCount || 0})`}
+                                    {scanOk ? 'OK' : `NOK (${event.defectCount || 0})`}
                                   </span>
                                 </>
                               ) : (
@@ -7710,7 +7709,7 @@ const DefectHospital = () => {
               borderRadius: '12px',
               border: `1px dashed ${t.border}`
             }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
               <h3 style={{ margin: '0 0 8px 0', color: t.text }}>
                 Consulta el historial de una pieza
               </h3>
@@ -7819,7 +7818,7 @@ const DefectHospital = () => {
               borderRadius: '12px',
               border: `1px dashed ${t.border}`
             }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
               <h3 style={{ margin: '0 0 8px 0', color: t.text }}>
                 No hay desviaciones registradas
               </h3>
@@ -7914,7 +7913,7 @@ const DefectHospital = () => {
             padding: '24px'
           }}>
             <h2 style={{ margin: '0 0 20px 0', color: t.text, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              📊 {language === 'es' ? 'Generador de Reportes' : 'Report Generator'}
+              {language === 'es' ? 'Generador de Reportes' : 'Report Generator'}
             </h2>
 
             {/* Selector de tipo de reporte */}
@@ -7924,10 +7923,10 @@ const DefectHospital = () => {
               </label>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 {[
-                  { value: 'lot', label: language === 'es' ? '📦 Por Lote' : '📦 By Lot', desc: language === 'es' ? 'Todos los seriales de un lote' : 'All serials from a lot' },
-                  { value: 'dateRange', label: language === 'es' ? '📅 Por Fechas' : '📅 By Date Range', desc: language === 'es' ? 'Defectos en un período' : 'Defects in a period' },
-                  { value: 'serialList', label: language === 'es' ? '📋 Lista de Seriales' : '📋 Serial List', desc: language === 'es' ? 'Pega una lista de seriales' : 'Paste a list of serials' },
-                  { value: 'currentTable', label: language === 'es' ? '📊 Tabla Actual' : '📊 Current Table', desc: language === 'es' ? 'Exportar vista actual' : 'Export current view' }
+                  { value: 'lot', label: language === 'es' ? 'Por Lote' : 'By Lot', desc: language === 'es' ? 'Todos los seriales de un lote' : 'All serials from a lot' },
+                  { value: 'dateRange', label: language === 'es' ? 'Por Fechas' : 'By Date Range', desc: language === 'es' ? 'Defectos en un período' : 'Defects in a period' },
+                  { value: 'serialList', label: language === 'es' ? 'Lista de Seriales' : 'Serial List', desc: language === 'es' ? 'Pega una lista de seriales' : 'Paste a list of serials' },
+                  { value: 'currentTable', label: language === 'es' ? 'Tabla Actual' : 'Current Table', desc: language === 'es' ? 'Exportar vista actual' : 'Export current view' }
                 ].map(type => (
                   <button
                     key={type.value}
@@ -8082,7 +8081,7 @@ const DefectHospital = () => {
                   gap: '8px'
                 }}
               >
-                🔍 {language === 'es' ? 'Ver Reporte' : 'View Report'}
+                {language === 'es' ? 'Ver Reporte' : 'View Report'}
               </button>
 
               <div style={{ width: '1px', height: '30px', backgroundColor: t.border }} />
@@ -8105,7 +8104,7 @@ const DefectHospital = () => {
                   gap: '8px'
                 }}
               >
-                📥 CSV
+                CSV
               </button>
               <button
                 onClick={() => generateReport('excel')}
@@ -8125,7 +8124,7 @@ const DefectHospital = () => {
                   gap: '8px'
                 }}
               >
-                📊 Excel
+                Excel
               </button>
               <button
                 onClick={() => generateReport('raw')}
@@ -8145,7 +8144,7 @@ const DefectHospital = () => {
                   gap: '8px'
                 }}
               >
-                🗃️ Raw
+                Raw
               </button>
 
               {reportPreview && (
@@ -8182,7 +8181,7 @@ const DefectHospital = () => {
                   marginBottom: '12px'
                 }}>
                   <h3 style={{ margin: 0, color: t.text, fontSize: '16px' }}>
-                    📋 {language === 'es' ? 'Vista Previa' : 'Preview'} ({reportPreview.length} {language === 'es' ? 'registros' : 'records'})
+                    {language === 'es' ? 'Vista Previa' : 'Preview'} ({reportPreview.length} {language === 'es' ? 'registros' : 'records'})
                   </h3>
                 </div>
                 <div style={{
@@ -8369,7 +8368,7 @@ const DefectHospital = () => {
           }}>
             {/* Filtros de fecha rápida */}
             <span style={{ fontSize: '12px', fontWeight: '500', color: t.textMuted, marginRight: '4px' }}>
-              📅 {language === 'es' ? 'Último mov:' : 'Last update:'}
+              {language === 'es' ? 'Último mov:' : 'Last update:'}
             </span>
             {[
               { key: 'today', label: language === 'es' ? 'Hoy' : 'Today' },
@@ -8455,7 +8454,7 @@ const DefectHospital = () => {
 
             {/* Filtro de Fecha de Captura (rango) */}
             <span style={{ fontSize: '12px', fontWeight: '500', color: t.textMuted, marginRight: '4px' }}>
-              📅 {language === 'es' ? 'Captura:' : 'Captured:'}
+              {language === 'es' ? 'Captura:' : 'Captured:'}
             </span>
             <input
               type="date"
@@ -8636,7 +8635,7 @@ const DefectHospital = () => {
                   }}
                   onClick={() => { setBulkDepartmentId(''); setBulkNotes(''); setShowBulkModal(true); }}
                 >
-                  🔄 Cambiar Responsable
+                  Cambiar Responsable
                 </button>
               </>
             )}
@@ -8902,7 +8901,7 @@ const DefectHospital = () => {
                           : (isAdded ? (language === 'es' ? 'Ya agregado' : 'Already added') : '')}
                       >
                         <span style={{ fontWeight: '500', color: isAdded ? t.success : t.text }}>
-                          {isAdded ? '✓ ' : ''}{serial || '-'}
+                          {serial || '-'}
                         </span>
                         <span style={{ color: t.textMuted }}>
                           {d.entryNumber || d.entry_number}
@@ -9145,7 +9144,7 @@ const DefectHospital = () => {
 
                 {assignResults.errors.length > 0 && (
                   <div style={{ color: t.error }}>
-                    ❌ Errores: {assignResults.errors.map(e => e.serial).join(', ')}
+                    Errores: {assignResults.errors.map(e => e.serial).join(', ')}
                   </div>
                 )}
               </div>
@@ -9188,7 +9187,6 @@ const DefectHospital = () => {
                 justifyContent: 'center',
                 fontSize: '20px'
               }}>
-                📦
               </div>
               <div>
                 <h3 style={{ ...styles.modalTitle, margin: 0 }}>Transferir Piezas Reparadas a QA</h3>
@@ -9220,7 +9218,7 @@ const DefectHospital = () => {
                 fontSize: '14px',
                 fontWeight: '600'
               }}>
-                {handoffLocationData ? '✓' : '1'}
+                {handoffLocationData ? '' : '1'}
               </div>
               <div style={{
                 flex: 1,
@@ -9240,7 +9238,7 @@ const DefectHospital = () => {
                 fontSize: '14px',
                 fontWeight: '600'
               }}>
-                {handoffSerialsList.length > 0 ? '✓' : '2'}
+                {handoffSerialsList.length > 0 ? '' : '2'}
               </div>
               <div style={{
                 flex: 1,
@@ -9260,7 +9258,7 @@ const DefectHospital = () => {
                 fontSize: '14px',
                 fontWeight: '600'
               }}>
-                {handoffResults ? '✓' : '3'}
+                {handoffResults ? '' : '3'}
               </div>
             </div>
 
@@ -9285,7 +9283,7 @@ const DefectHospital = () => {
                   justifyContent: 'center',
                   fontSize: '11px'
                 }}>
-                  {handoffLocationData ? '✓' : '1'}
+                  {handoffLocationData ? '' : '1'}
                 </span>
                 Destino: ¿Dónde entregas las piezas?
               </label>
@@ -9325,7 +9323,7 @@ const DefectHospital = () => {
                 }}>
                   <div>
                     <div style={{ fontWeight: '600', color: t.success, fontSize: '15px' }}>
-                      📍 {handoffLocationData.code}
+                      {handoffLocationData.code}
                     </div>
                     <div style={{ fontSize: '12px', color: t.text, marginTop: '2px' }}>
                       {handoffLocationData.description || handoffLocationData.stationName || 'Estación de Liberación'}
@@ -9375,7 +9373,7 @@ const DefectHospital = () => {
                   justifyContent: 'center',
                   fontSize: '11px'
                 }}>
-                  {handoffSerialsList.length > 0 ? '✓' : '2'}
+                  {handoffSerialsList.length > 0 ? '' : '2'}
                 </span>
                 Piezas: ¿Cuáles piezas entregas?
               </label>
@@ -9464,26 +9462,26 @@ const DefectHospital = () => {
                 marginBottom: '16px'
               }}>
                 <div style={{ fontWeight: '600', marginBottom: '10px', color: t.success, fontSize: '15px' }}>
-                  ✓ Transferencia Completada
+                  Transferencia Completada
                 </div>
 
                 {handoffResults.assigned.length > 0 && (
                   <div style={{ color: t.success, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>✅</span>
+                    <span style={{ fontSize: '16px' }}></span>
                     <span>{handoffResults.assigned.length} pieza{handoffResults.assigned.length !== 1 ? 's' : ''} entregada{handoffResults.assigned.length !== 1 ? 's' : ''} a QA</span>
                   </div>
                 )}
 
                 {handoffResults.notFound.length > 0 && (
                   <div style={{ color: t.warning, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>⚠️</span>
+                    <span style={{ fontSize: '16px' }}></span>
                     <span>No encontrados: {handoffResults.notFound.join(', ')}</span>
                   </div>
                 )}
 
                 {handoffResults.errors.length > 0 && (
                   <div style={{ color: t.error, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>❌</span>
+                    <span style={{ fontSize: '16px' }}></span>
                     <span>Errores: {handoffResults.errors.map(e => e.serial).join(', ')}</span>
                   </div>
                 )}
@@ -9512,7 +9510,7 @@ const DefectHospital = () => {
                     'Procesando...'
                   ) : (
                     <>
-                      <span>📤</span>
+                      <span></span>
                       Confirmar Entrega ({handoffSerialsList.length})
                     </>
                   )}
@@ -9538,7 +9536,6 @@ const DefectHospital = () => {
                 justifyContent: 'center',
                 fontSize: '22px'
               }}>
-                🔄
               </div>
               <div>
                 <h3 style={{ ...styles.modalTitle, margin: 0 }}>{language === 'es' ? 'Cambio Masivo de Responsable' : 'Bulk Responsible Change'}</h3>
@@ -9647,7 +9644,6 @@ const DefectHospital = () => {
                 justifyContent: 'center',
                 fontSize: '22px'
               }}>
-                📋
               </div>
               <div>
                 <h3 style={{ ...styles.modalTitle, margin: 0 }}>
@@ -9854,10 +9850,6 @@ const DefectHospital = () => {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <span style={{ fontSize: '18px' }}>
-                            {att.mimetype?.includes('pdf') ? '📄' :
-                             att.mimetype?.includes('image') ? '🖼️' :
-                             att.mimetype?.includes('word') ? '📝' :
-                             att.mimetype?.includes('excel') || att.mimetype?.includes('sheet') ? '📊' : '📎'}
                           </span>
                           <div>
                             <div style={{ fontSize: '13px', color: t.text, fontWeight: '500' }}>
@@ -10002,7 +9994,7 @@ const DefectHospital = () => {
                     alignItems: 'center',
                     gap: '10px'
                   }}>
-                    <span style={{ fontSize: '16px' }}>🎯</span>
+                    <span style={{ fontSize: '16px' }}></span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>
                         {language === 'es' ? 'Filtro automático activo' : 'Auto-filter active'}
@@ -10034,7 +10026,7 @@ const DefectHospital = () => {
                   marginBottom: '12px'
                 }}>
                   <div style={{ fontSize: '11px', color: t.textMuted, marginBottom: '10px', fontWeight: '600' }}>
-                    {language === 'es' ? '🔍 Buscar Defectos para Vincular' : '🔍 Search Defects to Link'}
+                    {language === 'es' ? 'Buscar Defectos para Vincular' : 'Search Defects to Link'}
                   </div>
 
                   {/* Row 1: Serials (textarea) */}
@@ -10164,7 +10156,7 @@ const DefectHospital = () => {
                     border: `1px solid ${t.warning}`
                   }}>
                     <label style={{ fontSize: '11px', color: t.warningFg, display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                      🏢 {language === 'es' ? 'Asignar Área Responsable (al vincular)' : 'Assign Responsible Area (on link)'}
+                      {language === 'es' ? 'Asignar Área Responsable (al vincular)' : 'Assign Responsible Area (on link)'}
                     </label>
                     <select
                       style={{ ...styles.input, width: '100%' }}
@@ -10197,7 +10189,7 @@ const DefectHospital = () => {
                   >
                     {searchingDefects
                       ? (language === 'es' ? 'Buscando...' : 'Searching...')
-                      : (language === 'es' ? '🔍 Buscar Defectos' : '🔍 Search Defects')}
+                      : (language === 'es' ? 'Buscar Defectos' : 'Search Defects')}
                   </button>
                 </div>
 
@@ -10238,7 +10230,7 @@ const DefectHospital = () => {
                           cursor: 'pointer'
                         }}
                       >
-                        ✓ {language === 'es' ? 'Vincular Todos' : 'Link All'} ({searchedDefects.length})
+                        {language === 'es' ? 'Vincular Todos' : 'Link All'} ({searchedDefects.length})
                       </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '250px', overflowY: 'auto' }}>
@@ -10286,16 +10278,16 @@ const DefectHospital = () => {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: t.textMuted, flexWrap: 'wrap' }}>
                               <span title={language === 'es' ? 'Tipo de Defecto' : 'Defect Type'}>
-                                🔴 {defect.defectTypeName || defect.defectType || '-'}
+                                {defect.defectTypeName || defect.defectType || '-'}
                               </span>
                               {defect.partNumber && (
                                 <span title={language === 'es' ? 'Número de Parte' : 'Part Number'}>
-                                  📦 {defect.partNumber}
+                                  {defect.partNumber}
                                 </span>
                               )}
                               {defect.departmentName && (
                                 <span title={language === 'es' ? 'Área Responsable' : 'Responsible Area'} style={{ color: t.accent }}>
-                                  🏭 {defect.departmentName}
+                                  {defect.departmentName}
                                 </span>
                               )}
                             </div>
@@ -10421,11 +10413,11 @@ const DefectHospital = () => {
                               : (isRepairMode ? 'Repairing...' : 'Releasing...'))
                             : (language === 'es'
                               ? (isRepairMode
-                                ? `🔧 Reparar ${pendingCount} Defecto(s) con Desviación`
-                                : `✅ Liberar ${pendingCount} Defecto(s) con Desviación`)
+                                ? `Reparar ${pendingCount} Defecto(s) con Desviación`
+                                : `Liberar ${pendingCount} Defecto(s) con Desviación`)
                               : (isRepairMode
-                                ? `🔧 Repair ${pendingCount} Defect(s) with Deviation`
-                                : `✅ Release ${pendingCount} Defect(s) with Deviation`))}
+                                ? `Repair ${pendingCount} Defect(s) with Deviation`
+                                : `Release ${pendingCount} Defect(s) with Deviation`))}
                         </button>
                       );
                     })()}
@@ -10469,7 +10461,7 @@ const DefectHospital = () => {
                   }}
                 >
                   <span>
-                    {language === 'es' ? '📋 Historial de Cambios' : '📋 Change History'}
+                    {language === 'es' ? 'Historial de Cambios' : 'Change History'}
                     <span style={{ marginLeft: '8px', fontSize: '11px', color: t.textMuted }}>
                       ({deviationHistory.length})
                     </span>
@@ -10607,10 +10599,10 @@ const DefectHospital = () => {
                      (t.warning || '#f59e0b')
             }}>
               {handoffDestination === 'QA'
-                ? (language === 'es' ? '📦 Enviar a Calidad (QA)' : '📦 Send to Quality (QA)')
+                ? (language === 'es' ? 'Enviar a Calidad (QA)' : 'Send to Quality (QA)')
                 : handoffDestination === 'SCRAP'
-                  ? (language === 'es' ? '🗑️ Enviar a Scrap' : '🗑️ Send to Scrap')
-                  : (language === 'es' ? '⚠️ Enviar a Cuarentena (MRB)' : '⚠️ Send to Quarantine (MRB)')}
+                  ? (language === 'es' ? 'Enviar a Scrap' : 'Send to Scrap')
+                  : (language === 'es' ? 'Enviar a Cuarentena (MRB)' : 'Send to Quarantine (MRB)')}
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: t.textMuted }}>
               {language === 'es'
@@ -10622,7 +10614,7 @@ const DefectHospital = () => {
             {handoffDestination === 'QA' && (
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                  {language === 'es' ? '📍 Estación de Calidad (destino) *' : '📍 Quality Station (destination) *'}
+                  {language === 'es' ? 'Estación de Calidad (destino) *' : 'Quality Station (destination) *'}
                 </label>
 
                 {/* Dropdown de estaciones */}
@@ -10683,7 +10675,7 @@ const DefectHospital = () => {
                         }
                       }
                     }}
-                    placeholder={language === 'es' ? '📷 Escanear código de estación...' : '📷 Scan station code...'}
+                    placeholder={language === 'es' ? 'Escanear código de estación...' : 'Scan station code...'}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -10710,7 +10702,7 @@ const DefectHospital = () => {
                   }}>
                     <div>
                       <span style={{ fontSize: '13px', fontWeight: '600', color: t.success }}>
-                        ✓ {handoffSelectedStation.code}
+                        {handoffSelectedStation.code}
                       </span>
                       <span style={{ fontSize: '12px', color: t.textMuted, marginLeft: '8px' }}>
                         {handoffSelectedStation.name}
@@ -10735,7 +10727,7 @@ const DefectHospital = () => {
             {(handoffDestination === 'QUARANTINE' || handoffDestination === 'SCRAP') && (
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                  📍 {language === 'es' ? 'Location MRB (destino) *' : 'MRB Location (destination) *'}
+                  {language === 'es' ? 'Location MRB (destino) *' : 'MRB Location (destination) *'}
                 </label>
                 <select
                   value={selectedMrbLocation?.id || ''}
@@ -10762,13 +10754,13 @@ const DefectHospital = () => {
                 </select>
                 {mrbLocations.length === 0 && (
                   <p style={{ fontSize: '12px', color: t.warning, marginTop: '6px' }}>
-                    {language === 'es' ? '⚠️ No hay locations MRB configuradas' : '⚠️ No MRB locations configured'}
+                    {language === 'es' ? 'No hay locations MRB configuradas' : 'No MRB locations configured'}
                   </p>
                 )}
 
                 {/* Campaña MRB (opcional) */}
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px', marginTop: '16px' }}>
-                  🏷️ {language === 'es' ? 'Campaña MRB (opcional)' : 'MRB Campaign (optional)'}
+                  {language === 'es' ? 'Campaña MRB (opcional)' : 'MRB Campaign (optional)'}
                 </label>
                 <select
                   value={selectedMrbCampaign?.id || ''}
@@ -10920,13 +10912,13 @@ const DefectHospital = () => {
             overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: t.primary }}>
-              {language === 'es' ? '📦 Crear Paquete de Transferencia a MRB' : '📦 Create Transfer Package to MRB'}
+              {language === 'es' ? 'Crear Paquete de Transferencia a MRB' : 'Create Transfer Package to MRB'}
             </h3>
 
             {/* Resumen de partes a enviar */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>
-                {language === 'es' ? '📋 Resumen de Partes a Enviar' : '📋 Parts Summary'}
+                {language === 'es' ? 'Resumen de Partes a Enviar' : 'Parts Summary'}
               </label>
               <div style={{
                 backgroundColor: t.bgPanel,
@@ -10977,7 +10969,7 @@ const DefectHospital = () => {
             {/* Ubicación MRB destino (obligatorio) */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                {language === 'es' ? '📍 Ubicación MRB Destino *' : '📍 MRB Destination Location *'}
+                {language === 'es' ? 'Ubicación MRB Destino *' : 'MRB Destination Location *'}
               </label>
               <select
                 value={packageDestinationLocationId || ''}
@@ -11009,7 +11001,7 @@ const DefectHospital = () => {
             {/* Minutos de alerta */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                {language === 'es' ? '⏰ Alerta si no se recibe en (minutos)' : '⏰ Alert if not received in (minutes)'}
+                {language === 'es' ? 'Alerta si no se recibe en (minutos)' : 'Alert if not received in (minutes)'}
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
@@ -11037,7 +11029,7 @@ const DefectHospital = () => {
             {/* Notas */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                {language === 'es' ? '📝 Notas (opcional)' : '📝 Notes (optional)'}
+                {language === 'es' ? 'Notas (opcional)' : 'Notes (optional)'}
               </label>
               <textarea
                 value={packageNotes}
@@ -11094,7 +11086,7 @@ const DefectHospital = () => {
               >
                 {creatingPackage
                   ? (language === 'es' ? 'Creando...' : 'Creating...')
-                  : (language === 'es' ? '📦 Crear Paquete' : '📦 Create Package')}
+                  : (language === 'es' ? 'Crear Paquete' : 'Create Package')}
               </button>
             </div>
           </div>
@@ -11125,7 +11117,7 @@ const DefectHospital = () => {
             overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: t.warning }}>
-              📦 {language === 'es' ? 'Paquetes desde MRB' : 'Packages from MRB'}
+              {language === 'es' ? 'Paquetes desde MRB' : 'Packages from MRB'}
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: t.textMuted }}>
               {language === 'es'
@@ -11339,11 +11331,11 @@ const DefectHospital = () => {
             border: `1px solid ${t.border}`
           }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: t.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {mrbAction === 'returnToRepair' && <>🔧 {language === 'es' ? 'Regresar a Reparación' : 'Return to Repair'}</>}
-              {mrbAction === 'toScrap' && <>🗑️ {language === 'es' ? 'Enviar a Scrap' : 'Send to Scrap'}</>}
-              {mrbAction === 'releaseWithDeviation' && <>📋 {language === 'es' ? 'Liberar con Desviación' : 'Release with Deviation'}</>}
-              {mrbAction === 'confirmScrap' && <>✓ {language === 'es' ? 'Confirmar Scrap' : 'Confirm Scrap'}</>}
-              {mrbAction === 'returnToQuarantine' && <>↩️ {language === 'es' ? 'Regresar a Cuarentena' : 'Return to Quarantine'}</>}
+              {mrbAction === 'returnToRepair' && <>{language === 'es' ? 'Regresar a Reparación' : 'Return to Repair'}</>}
+              {mrbAction === 'toScrap' && <> {language === 'es' ? 'Enviar a Scrap' : 'Send to Scrap'}</>}
+              {mrbAction === 'releaseWithDeviation' && <>{language === 'es' ? 'Liberar con Desviación' : 'Release with Deviation'}</>}
+              {mrbAction === 'confirmScrap' && <>{language === 'es' ? 'Confirmar Scrap' : 'Confirm Scrap'}</>}
+              {mrbAction === 'returnToQuarantine' && <>{language === 'es' ? 'Regresar a Cuarentena' : 'Return to Quarantine'}</>}
             </h3>
 
             <p style={{ color: t.textMuted, fontSize: '14px', marginBottom: '20px' }}>
@@ -11469,7 +11461,7 @@ const DefectHospital = () => {
                           fontSize: '12px'
                         }}>
                           <div style={{ fontWeight: '600', color: t.accent, marginBottom: '4px' }}>
-                            ✓ {selectedDeviation.referenceNumber || `DEV-${selectedDeviation.id}`}
+                            {selectedDeviation.referenceNumber || `DEV-${selectedDeviation.id}`}
                           </div>
                           <div style={{ color: t.text }}>{selectedDeviation.description || selectedDeviation.title}</div>
                         </div>
@@ -11520,7 +11512,7 @@ const DefectHospital = () => {
                 marginBottom: '20px'
               }}>
                 <p style={{ margin: 0, color: t.errorFg, fontSize: '13px', fontWeight: '500' }}>
-                  ⚠️ {mrbAction === 'confirmScrap'
+                  {mrbAction === 'confirmScrap'
                     ? (language === 'es' ? 'Esta acción es IRREVERSIBLE. El scrap quedará confirmado como disposición final.' : 'This action is IRREVERSIBLE. Scrap will be confirmed as final disposition.')
                     : (language === 'es' ? 'Los defectos serán marcados para scrap.' : 'Defects will be marked for scrap.')
                   }
