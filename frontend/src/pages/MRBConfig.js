@@ -119,7 +119,7 @@ const MRBConfig = () => {
       background: 'none', border: 'none', cursor: 'pointer',
       color: t.textMuted, fontSize: '20px', padding: '4px 8px'
     },
-    title: { fontSize: '22px', fontWeight: 700, color: t.text, margin: 0 },
+    title: { fontSize: '22px', fontWeight: 600, color: t.text, margin: 0 },
     tabs: { display: 'flex', gap: '4px', borderBottom: `2px solid ${t.border}`, marginBottom: '24px' },
     tab: (active) => ({
       padding: '10px 20px', border: 'none', cursor: 'pointer', fontWeight: 600,
@@ -181,7 +181,7 @@ const MRBConfig = () => {
         </div>
       </div>
 
-      {error && <div style={styles.alert('error')}>{error} <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>✕</button></div>}
+      {error && <div style={styles.alert('error')}>{error} <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>✕</button></div>}
       {success && <div style={styles.alert('success')}>{success}</div>}
 
       <div style={styles.tabs}>
