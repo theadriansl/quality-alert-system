@@ -26,7 +26,7 @@ const UnregisteredRow = ({ item, rowKey, edit, selected, t, onEditChange, onTogg
       </td>
       <td style={{ padding: '5px 8px', color: t.text, fontSize: '12px' }}>{fmtShiftDate(item.inspectionDate)}</td>
       <td style={{ padding: '5px 8px', fontSize: '12px' }}>
-        <span style={{ fontFamily: 'monospace', fontWeight: '700', color: t.accent, marginRight: '6px' }}>{item.campaignNumber}</span>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600', color: t.accent, marginRight: '6px' }}>{item.campaignNumber}</span>
         <span style={{ color: t.textMuted, fontSize: '11px' }}>{item.title}</span>
       </td>
       <td style={{ padding: '5px 8px', color: t.text, fontSize: '12px' }}>
@@ -36,8 +36,8 @@ const UnregisteredRow = ({ item, rowKey, edit, selected, t, onEditChange, onTogg
         {editing
           ? <input type="number" min="0.5" max="24" step="0.5" value={edit.hrs} autoFocus
               onChange={e => onEditChange(rowKey, { hrs: parseFloat(e.target.value) || 0 })}
-              style={{ width: '64px', padding: '4px', textAlign: 'center', border: `1px solid ${t.accent}`, borderRadius: '4px', backgroundColor: t.bgPanel, color: t.text, fontSize: '13px', fontWeight: '700' }} />
-          : <span style={{ fontWeight: '700', color: t.text }}>{edit.hrs} hrs</span>
+              style={{ width: '64px', padding: '4px', textAlign: 'center', border: `1px solid ${t.accent}`, borderRadius: '4px', backgroundColor: t.bgPanel, color: t.text, fontSize: '13px', fontWeight: '600' }} />
+          : <span style={{ fontWeight: '600', color: t.text }}>{edit.hrs} hrs</span>
         }
       </td>
       <td style={{ padding: '5px 8px', textAlign: 'center', fontSize: '12px' }}>
@@ -54,13 +54,13 @@ const UnregisteredRow = ({ item, rowKey, edit, selected, t, onEditChange, onTogg
           </div>
         ) : <span style={{ color: t.textMuted }}>{edit.insp} insp · {edit.sup} sup</span>}
       </td>
-      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '700', color: '#C77700', fontSize: '12px' }}>
+      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: '#C77700', fontSize: '12px' }}>
         ${cost.toFixed(2)}
       </td>
       <td style={{ padding: '5px 8px', textAlign: 'center' }}>
         {editing ? (
           <button onClick={() => setEditing(false)}
-            style={{ padding: '4px 10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '700' }}>
+            style={{ padding: '4px 10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
             ✓ Ok
           </button>
         ) : (
@@ -492,7 +492,7 @@ const MRBCampaigns = () => {
     title: {
       color: currentTheme.text,
       fontSize: '24px',
-      fontWeight: '700',
+      fontWeight: '600',
       display: 'flex',
       alignItems: 'center',
       gap: '12px'
@@ -558,7 +558,7 @@ const MRBCampaigns = () => {
       fontSize: '14px'
     },
     qarNumber: {
-      fontFamily: 'monospace',
+      fontFamily: "'IBM Plex Mono', monospace",
       fontWeight: '600',
       color: currentTheme.accent
     },
@@ -647,7 +647,7 @@ const MRBCampaigns = () => {
                 onClick={handleBulkRegister}
                 disabled={bulkRegistering || selectedKeys.size === 0}
                 style={{
-                  padding: '9px 20px', fontSize: '13px', fontWeight: '700',
+                  padding: '9px 20px', fontSize: '13px', fontWeight: '600',
                   backgroundColor: bulkRegistering || selectedKeys.size === 0 ? '#6b7280' : '#7c3aed',
                   color: 'white', border: 'none', borderRadius: '8px',
                   cursor: bulkRegistering || selectedKeys.size === 0 ? 'not-allowed' : 'pointer'
@@ -674,7 +674,7 @@ const MRBCampaigns = () => {
                         style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: currentTheme.accent }} />
                     </th>
                     {[L.date, L.campaign, L.shift, L.hoursWorked, L.resources, L.cost, ''].map(h => (
-                      <th key={h} style={{ padding: '10px 8px', textAlign: [L.date, L.campaign, L.shift].includes(h) ? 'left' : 'center', color: currentTheme.textDim, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                      <th key={h} style={{ padding: '10px 8px', textAlign: [L.date, L.campaign, L.shift].includes(h) ? 'left' : 'center', color: currentTheme.textDim, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -730,7 +730,7 @@ const MRBCampaigns = () => {
                 {label}
               </span>
             </div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: filterStatus === key ? 'white' : '#F4F6F8' }}>
+            <div style={{ fontSize: '28px', fontWeight: '600', color: filterStatus === key ? 'white' : '#F4F6F8' }}>
               {filteredStatusCounts[key]}
             </div>
           </div>
