@@ -45,8 +45,8 @@ const PersonnelRow = ({ row, campaignId, token, theme: t, onSaved, savingPersonn
       <td style={{ padding: '5px 8px', textAlign: 'center' }}>
         {editing
           ? <input type="number" min="0.5" max="24" step="0.5" value={hrs} onChange={e => setHrs(parseFloat(e.target.value) || 0)} autoFocus
-              style={{ width: '64px', padding: '4px', textAlign: 'center', border: `1px solid ${t.accent}`, borderRadius: '4px', backgroundColor: t.bgInput, color: t.text, fontSize: '13px', fontWeight: '700' }} />
-          : <span style={{ fontWeight: hrs > 0 ? '700' : '400', color: hrs > 0 ? t.text : '#f59e0b' }}>{hrs > 0 ? `${hrs} hrs` : '— sin registrar'}</span>
+              style={{ width: '64px', padding: '4px', textAlign: 'center', border: `1px solid ${t.accent}`, borderRadius: '4px', backgroundColor: t.bgInput, color: t.text, fontSize: '13px', fontWeight: '600' }} />
+          : <span style={{ fontWeight: hrs > 0 ? '600' : '400', color: hrs > 0 ? t.text : '#f59e0b' }}>{hrs > 0 ? `${hrs} hrs` : '— sin registrar'}</span>
         }
       </td>
       <td style={{ padding: '5px 8px', textAlign: 'center', fontSize: '12px' }}>
@@ -61,10 +61,10 @@ const PersonnelRow = ({ row, campaignId, token, theme: t, onSaved, savingPersonn
           </div>
         ) : <span style={{ color: t.textMuted }}>{insp} insp · {sup} sup</span>}
       </td>
-      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '700', color: hrs > 0 ? '#C77700' : t.textMuted }}>{hrs > 0 ? `$${cost.toFixed(2)}` : '—'}</td>
+      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: hrs > 0 ? '#C77700' : t.textMuted }}>{hrs > 0 ? `$${cost.toFixed(2)}` : '—'}</td>
       <td style={{ padding: '5px 8px', textAlign: 'center' }}>
         {editing
-          ? <button onClick={handleSave} disabled={savingPersonnel} style={{ padding: '4px 10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '700' }}>✓ Guardar</button>
+          ? <button onClick={handleSave} disabled={savingPersonnel} style={{ padding: '4px 10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>✓ Guardar</button>
           : <button onClick={() => setEditing(true)} style={{ padding: '4px 8px', backgroundColor: t.bgInput, color: t.accent, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>✎ Hrs</button>
         }
       </td>
@@ -1215,12 +1215,12 @@ const MRBCampaignDetail = () => {
       fontSize: '14px',
       opacity: 0.9,
       marginBottom: '8px',
-      fontFamily: 'monospace',
+      fontFamily: "'IBM Plex Mono', monospace",
       letterSpacing: '1px'
     },
     headerTitle: {
       fontSize: '20px',
-      fontWeight: '700',
+      fontWeight: '600',
       margin: '0 0 12px 0',
       display: 'flex',
       alignItems: 'center',
@@ -1592,7 +1592,7 @@ const MRBCampaignDetail = () => {
           {mrbCase.sourceType && (
             <div style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <span style={{ fontSize: '11px', color: t.textDim, textTransform: 'uppercase', fontWeight: '600' }}>Origen:</span>
-              <span style={{ fontFamily: 'monospace', fontWeight: '700', color: t.accent, fontSize: '14px' }}>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600', color: t.accent, fontSize: '14px' }}>
                 {mrbCase.sourceQarFolio || mrbCase.source8dFolio || '-'}
               </span>
               <span style={{ fontSize: '12px', color: t.textDim }}>({mrbCase.sourceType})</span>
@@ -1707,13 +1707,13 @@ const MRBCampaignDetail = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: attachments.length > 0 ? '14px' : 0 }}>
                 <div>
                   <div style={{ backgroundColor: '#B00020', padding: '4px 10px', borderRadius: '6px 6px 0 0' }}>
-                    <span style={{ color: 'white', fontWeight: '700', fontSize: '11px' }}>NOK — Defecto</span>
+                    <span style={{ color: 'white', fontWeight: '600', fontSize: '11px' }}>NOK — Defecto</span>
                   </div>
                   <img src={`${API_URL}${mrbCase.photoNokPath}`} alt="NOK" style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '0 0 6px 6px', display: 'block' }} onClick={() => window.open(`${API_URL}${mrbCase.photoNokPath}`, '_blank')} />
                 </div>
                 <div>
                   <div style={{ backgroundColor: '#22c55e', padding: '4px 10px', borderRadius: '6px 6px 0 0' }}>
-                    <span style={{ color: 'white', fontWeight: '700', fontSize: '11px' }}>OK — Aceptable</span>
+                    <span style={{ color: 'white', fontWeight: '600', fontSize: '11px' }}>OK — Aceptable</span>
                   </div>
                   <img src={`${API_URL}${mrbCase.photoOkPath}`} alt="OK" style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '0 0 6px 6px', display: 'block' }} onClick={() => window.open(`${API_URL}${mrbCase.photoOkPath}`, '_blank')} />
                 </div>
@@ -1756,7 +1756,7 @@ const MRBCampaignDetail = () => {
               <button
                 onClick={() => { if (window.confirm('¿Publicar esta campaña MRB? Se notificará a los destinatarios.')) handleSaveDraft(true); }}
                 disabled={submitting}
-                style={{ flex: 2, padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: submitting ? 0.7 : 1 }}
+                style={{ flex: 2, padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: submitting ? 0.7 : 1 }}
               >
                 <Send size={18} />
                 {submitting ? L.publishing : L.publishCampaign}
@@ -1856,20 +1856,20 @@ const MRBCampaignDetail = () => {
                       {/* Main numbers */}
                       <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: qTotal > 0 ? '14px' : '0' }}>
                         <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b' }}>{qTotal || '—'}</div>
+                          <div style={{ fontSize: '32px', fontWeight: '600', color: '#f59e0b' }}>{qTotal || '—'}</div>
                           <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>En Planta</div>
                         </div>
                         {qTotal > 0 && <>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '32px', fontWeight: '700', color: '#22c55e' }}>{qInsp}</div>
+                            <div style={{ fontSize: '32px', fontWeight: '600', color: '#22c55e' }}>{qInsp}</div>
                             <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>Inspeccionado</div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '32px', fontWeight: '700', color: qRest > 0 ? '#B00020' : '#22c55e' }}>{qRest}</div>
+                            <div style={{ fontSize: '32px', fontWeight: '600', color: qRest > 0 ? '#B00020' : '#22c55e' }}>{qRest}</div>
                             <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>Restante</div>
                           </div>
                           <div style={{ flex: 1, minWidth: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600' }}>
                               <span style={{ color: t.textMuted }}>% Avance</span>
                               <span style={{ color: qPct >= 100 ? '#22c55e' : t.accent }}>{qPct.toFixed(1)}%</span>
                             </div>
@@ -1915,20 +1915,20 @@ const MRBCampaignDetail = () => {
                                 type="number" min="0"
                                 value={f.val}
                                 onChange={e => f.set(parseInt(e.target.value) || 0)}
-                                style={{ width: '90px', padding: '8px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '15px', fontWeight: '700', textAlign: 'center' }}
+                                style={{ width: '90px', padding: '8px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '15px', fontWeight: '600', textAlign: 'center' }}
                               />
                             </div>
                           ))}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '700', textTransform: 'uppercase' }}>Total</label>
-                            <div style={{ width: '90px', padding: '8px', backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', fontSize: '15px', fontWeight: '700', textAlign: 'center', color: '#92400e' }}>
+                            <label style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '600', textTransform: 'uppercase' }}>Total</label>
+                            <div style={{ width: '90px', padding: '8px', backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', fontSize: '15px', fontWeight: '600', textAlign: 'center', color: '#92400e' }}>
                               {qWarehouse + qProcess + qTransit + qCustomer}
                             </div>
                           </div>
                           <button
                             onClick={() => handleSaveQuarantine(false)}
                             disabled={savingQuarantine}
-                            style={{ padding: '8px 16px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-end' }}
+                            style={{ padding: '8px 16px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-end' }}
                           >
                             <Save size={14} /> {savingQuarantine ? L.saving : L.save}
                           </button>
@@ -1954,7 +1954,7 @@ const MRBCampaignDetail = () => {
                       { label: L.yield,  value: mrbCase.qtyInspected > 0 ? `${((mrbCase.qtyOk / mrbCase.qtyInspected) * 100).toFixed(1)}%` : '—', color: t.text },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ textAlign: 'center', minWidth: '60px' }}>
-                        <div style={{ fontSize: '26px', fontWeight: '700', color }}>{value}</div>
+                        <div style={{ fontSize: '26px', fontWeight: '600', color }}>{value}</div>
                         <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>{label}</div>
                       </div>
                     ))}
@@ -1983,7 +1983,7 @@ const MRBCampaignDetail = () => {
                       {/* Shift header */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>{dateLabel}</span>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{dateLabel}</span>
                           {!row.shiftId ? (
                             // Sin turno — selector obligatorio
                             <select
@@ -2033,7 +2033,7 @@ const MRBCampaignDetail = () => {
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                          {totalNok > 0 && <span style={{ fontSize: '13px', color: '#B00020', fontWeight: '700' }}>{totalNok} NOK</span>}
+                          {totalNok > 0 && <span style={{ fontSize: '13px', color: '#B00020', fontWeight: '600' }}>{totalNok} NOK</span>}
                           {rework > 0 && <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: '600' }}>⟳ {rework} Rework</span>}
                           {scrap > 0 && <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: '600' }}>✕ {scrap} Scrap</span>}
                           {ret > 0 && <span style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: '600' }}>↩ {ret} Dev.</span>}
@@ -2138,7 +2138,7 @@ const MRBCampaignDetail = () => {
               {mrbCase.lotNumber && (
                 <div style={styles.infoItem}>
                   <div style={styles.infoLabel}>No. de Lote / Batch</div>
-                  <div style={{ ...styles.infoValue, fontFamily: 'monospace', letterSpacing: '1px' }}>{mrbCase.lotNumber}</div>
+                  <div style={{ ...styles.infoValue, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '1px' }}>{mrbCase.lotNumber}</div>
                 </div>
               )}
               {(() => {
@@ -2172,8 +2172,8 @@ const MRBCampaignDetail = () => {
               <div style={styles.infoItem}>
                 <div style={styles.infoLabel}>Qty OK / NOK</div>
                 <div style={{ ...styles.infoValue, display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#22c55e', fontWeight: '700' }}>{mrbCase.qtyOk ?? 0} OK</span>
-                  <span style={{ color: '#B00020', fontWeight: '700' }}>{mrbCase.qtyNok ?? 0} NOK</span>
+                  <span style={{ color: '#22c55e', fontWeight: '600' }}>{mrbCase.qtyOk ?? 0} OK</span>
+                  <span style={{ color: '#B00020', fontWeight: '600' }}>{mrbCase.qtyNok ?? 0} NOK</span>
                 </div>
               </div>
               {/* Affected Serials Section */}
@@ -2272,14 +2272,14 @@ const MRBCampaignDetail = () => {
                   {/* Scrap cost by part */}
                   {costSummary.scrap?.length > 0 && (
                     <div>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#B00020', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#B00020', textTransform: 'uppercase', marginBottom: '6px' }}>
                         Costo de Scrap — ${costSummary.totals.scrap.toFixed(2)} total
                       </div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
                           <tr style={{ borderBottom: `2px solid ${t.border}` }}>
                             {[L.part, L.qtyScrap, L.unitCost, L.total].map(h => (
-                              <th key={h} style={{ padding: '4px 8px', textAlign: h === 'Parte' ? 'left' : 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>{h}</th>
+                              <th key={h} style={{ padding: '4px 8px', textAlign: h === 'Parte' ? 'left' : 'center', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -2287,9 +2287,9 @@ const MRBCampaignDetail = () => {
                           {costSummary.scrap.map((r, i) => (
                             <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                               <td style={{ padding: '5px 8px', color: t.text, fontWeight: '500' }}>{r.partNumber}{r.partName ? ` — ${r.partName}` : ''}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'center', color: '#B00020', fontWeight: '700' }}>{r.qtyScrap}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'center', color: '#B00020', fontWeight: '600' }}>{r.qtyScrap}</td>
                               <td style={{ padding: '5px 8px', textAlign: 'center', color: t.textMuted }}>${r.unitCost.toFixed(2)}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '700', color: '#B00020' }}>${r.totalCost.toFixed(2)}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>${r.totalCost.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2299,7 +2299,7 @@ const MRBCampaignDetail = () => {
 
                   {/* Personnel cost by shift/day */}
                   <div>
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#C77700', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#C77700', textTransform: 'uppercase', marginBottom: '6px' }}>
                       Costo de Personal — ${costSummary.totals.personnel.toFixed(2)} total
                       <span style={{ fontSize: '10px', fontWeight: '400', color: t.textMuted, marginLeft: '8px' }}>
                         Insp. ${parseFloat(mrbCase.inspectorUnitCost || 0).toFixed(2)}/hr · Sup. ${parseFloat(mrbCase.supervisorUnitCost || 0).toFixed(2)}/hr
@@ -2310,7 +2310,7 @@ const MRBCampaignDetail = () => {
                         <thead>
                           <tr style={{ borderBottom: `2px solid ${t.border}` }}>
                             {[L.date, L.shift, L.hoursWorked, L.resources, L.cost, ''].map(h => (
-                              <th key={h} style={{ padding: '4px 8px', textAlign: h === 'Fecha' || h === 'Turno' ? 'left' : 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>{h}</th>
+                              <th key={h} style={{ padding: '4px 8px', textAlign: h === 'Fecha' || h === 'Turno' ? 'left' : 'center', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -2330,7 +2330,7 @@ const MRBCampaignDetail = () => {
 
                   {/* Grand total */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px', borderTop: `2px solid ${t.border}` }}>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: t.text }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>
                       Costo Total Campaña: <span style={{ color: '#B00020', fontSize: '18px' }}>${costSummary.totals.grand.toFixed(2)}</span>
                     </span>
                   </div>
@@ -2474,9 +2474,9 @@ const MRBCampaignDetail = () => {
                     </div>
                     <div style={{
                       fontSize: '16px',
-                      fontWeight: '700',
+                      fontWeight: '600',
                       color: mrbCase.sourceType === 'QAR' ? '#C77700' : t.accent,
-                      fontFamily: 'monospace'
+                      fontFamily: "'IBM Plex Mono', monospace"
                     }}>
                       {mrbCase.sourceQarFolio || mrbCase.source8dFolio || '-'}
                     </div>
@@ -2620,8 +2620,8 @@ const MRBCampaignDetail = () => {
                   <tbody>
                     {paretoRows.map((row, i) => (
                       <tr key={row.defectName} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel }}>
-                        <td style={{ ...styles.td, fontWeight: i === 0 ? '700' : '400' }}>{row.defectName}</td>
-                        <td style={{ ...styles.td, textAlign: 'center', fontWeight: '700', color: '#B00020' }}>{row.qty}</td>
+                        <td style={{ ...styles.td, fontWeight: i === 0 ? '600' : '400' }}>{row.defectName}</td>
+                        <td style={{ ...styles.td, textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{row.qty}</td>
                         <td style={{ ...styles.td, textAlign: 'center', color: t.textMuted }}>
                           {totalQty > 0 ? ((row.qty / totalQty) * 100).toFixed(1) : 0}%
                         </td>
@@ -2669,7 +2669,7 @@ const MRBCampaignDetail = () => {
                   <div style={{ color: t.textDim, fontSize: '12px', marginTop: '2px' }}>No ha sido notificado a los destinatarios. Publica la campaña cuando estés listo.</div>
                 </div>
                 <button
-                  style={{ padding: '10px 20px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '10px 20px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   disabled={submitting}
                   onClick={async () => {
                     if (!window.confirm('¿Publicar esta campaña MRB? Se notificará a los destinatarios.')) return;
@@ -2799,7 +2799,7 @@ const MRBCampaignDetail = () => {
                 </p>
                 {requiresEarlyCloseReason && (
                   <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#C7770015', border: '1px solid #C77700', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#C77700', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#C77700', marginBottom: '8px' }}>
                       ⚠ Inventario incompleto — se requiere motivo de cierre anticipado
                     </div>
                     <textarea
@@ -3074,7 +3074,7 @@ const MRBCampaignDetail = () => {
                     }}>
                       <div style={{ backgroundColor: '#B00020', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <X size={14} color="white" />
-                        <span style={{ color: 'white', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>NOK — Condición de Defecto</span>
+                        <span style={{ color: 'white', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>NOK — Condición de Defecto</span>
                       </div>
                       {mrbCase.photoNokPath ? (
                         <img
@@ -3097,7 +3097,7 @@ const MRBCampaignDetail = () => {
                     }}>
                       <div style={{ backgroundColor: '#22c55e', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Check size={14} color="white" />
-                        <span style={{ color: 'white', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>OK — Condición Aceptable</span>
+                        <span style={{ color: 'white', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>OK — Condición Aceptable</span>
                       </div>
                       {mrbCase.photoOkPath ? (
                         <img
@@ -3218,21 +3218,21 @@ const MRBCampaignDetail = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div style={{ ...styles.card, borderLeft: '4px solid #0072CE', padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Total Seriales</div>
-                <div style={{ fontSize: '28px', fontWeight: '800', color: '#0072CE' }}>{affectedSerialsSummary.total}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: '#0072CE' }}>{affectedSerialsSummary.total}</div>
               </div>
               <div style={{ ...styles.card, borderLeft: '4px solid #16a34a', padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Inspeccionados</div>
-                <div style={{ fontSize: '28px', fontWeight: '800', color: '#16a34a' }}>{affectedSerialsSummary.inspected}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: '#16a34a' }}>{affectedSerialsSummary.inspected}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.inspected / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
               </div>
               <div style={{ ...styles.card, borderLeft: '4px solid #f59e0b', padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Pendientes</div>
-                <div style={{ fontSize: '28px', fontWeight: '800', color: '#f59e0b' }}>{affectedSerialsSummary.pending}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: '#f59e0b' }}>{affectedSerialsSummary.pending}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.pending / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
               </div>
               <div style={{ ...styles.card, borderLeft: '4px solid #8b5cf6', padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>OK</div>
-                <div style={{ fontSize: '28px', fontWeight: '800', color: '#8b5cf6' }}>{affectedSerials.filter(s => s.inspectionResult === 'OK').length}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: '#8b5cf6' }}>{affectedSerials.filter(s => s.inspectionResult === 'OK').length}</div>
               </div>
             </div>
 
@@ -3266,23 +3266,23 @@ const MRBCampaignDetail = () => {
                       <thead>
                         <tr>
                           {/* Columnas STICKY: Serial, Parte, Fecha */}
-                          <th style={{ position: 'sticky', left: 0, zIndex: 20, padding: '8px 10px', textAlign: 'left', fontWeight: '700', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '130px' }}>Serial</th>
-                          <th style={{ position: 'sticky', left: '130px', zIndex: 20, padding: '8px 10px', textAlign: 'left', fontWeight: '700', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '80px' }}>Parte</th>
-                          <th style={{ position: 'sticky', left: '210px', zIndex: 20, padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `2px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '65px' }}>Fecha</th>
+                          <th style={{ position: 'sticky', left: 0, zIndex: 20, padding: '8px 10px', textAlign: 'left', fontWeight: '600', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '130px' }}>Serial</th>
+                          <th style={{ position: 'sticky', left: '130px', zIndex: 20, padding: '8px 10px', textAlign: 'left', fontWeight: '600', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '80px' }}>Parte</th>
+                          <th style={{ position: 'sticky', left: '210px', zIndex: 20, padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: t.textMuted, fontSize: '10px', textTransform: 'uppercase', borderBottom: `2px solid ${t.border}`, borderRight: `2px solid ${t.border}`, backgroundColor: t.bgCard, minWidth: '65px' }}>Fecha</th>
                           {/* Columnas de rondas (scroll horizontal) */}
                           {Array.from({ length: maxInspectionRound }, (_, i) => {
                             const roundNum = i + 1;
                             const comment = roundComments[roundNum] || '';
                             const shortComment = comment.length > 15 ? comment.substring(0, 15) + '…' : comment;
                             return (
-                              <th key={`round-${roundNum}`} style={{ padding: '4px 6px', textAlign: 'center', fontWeight: '700', color: '#2563eb', fontSize: '10px', backgroundColor: '#eff6ff', minWidth: '140px', borderBottom: `2px solid ${t.border}` }} title={comment}>
+                              <th key={`round-${roundNum}`} style={{ padding: '4px 6px', textAlign: 'center', fontWeight: '600', color: '#2563eb', fontSize: '10px', backgroundColor: '#eff6ff', minWidth: '140px', borderBottom: `2px solid ${t.border}` }} title={comment}>
                                 <div>R{roundNum}</div>
                                 <div style={{ fontSize: '8px', color: '#666', fontWeight: '400', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px', margin: '0 auto' }}>{shortComment || '—'}</div>
                               </th>
                             );
                           })}
                           {maxInspectionRound === 0 && (
-                            <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: t.textMuted, fontSize: '10px', borderBottom: `2px solid ${t.border}` }}>Sin inspecciones</th>
+                            <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: t.textMuted, fontSize: '10px', borderBottom: `2px solid ${t.border}` }}>Sin inspecciones</th>
                           )}
                         </tr>
                       </thead>
@@ -3296,7 +3296,7 @@ const MRBCampaignDetail = () => {
                             const rowBg = idx % 2 === 0 ? t.bgCard : t.bgPanel;
                             return (
                               <tr key={serial.id}>
-                                <td style={{ position: 'sticky', left: 0, zIndex: 10, padding: '6px 10px', fontWeight: '600', fontFamily: 'monospace', fontSize: '11px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>
+                                <td style={{ position: 'sticky', left: 0, zIndex: 10, padding: '6px 10px', fontWeight: '600', fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>
                                   {serial.serialNumber}
                                   {serial.inspected
                                     ? <span style={{ color: '#16a34a', marginLeft: '4px' }}>✓</span>
@@ -3319,7 +3319,7 @@ const MRBCampaignDetail = () => {
                                   const inspectorShort = roundData.inspectorName ? roundData.inspectorName.split(' ')[0].substring(0, 6) : '';
                                   return (
                                     <td key={`r-${roundNum}`} style={{ padding: '4px', textAlign: 'center', backgroundColor: bgColor, borderBottom: `1px solid ${t.border}` }}>
-                                      <span style={{ color: textColor, fontSize: '10px', fontWeight: '700' }}>{roundData.result}</span>
+                                      <span style={{ color: textColor, fontSize: '10px', fontWeight: '600' }}>{roundData.result}</span>
                                       <span style={{ fontSize: '9px', color: '#555', marginLeft: '3px' }}>{inspectorShort}</span>
                                       <span style={{ fontSize: '8px', color: '#888', marginLeft: '2px' }}>{dateStr}</span>
                                     </td>
@@ -3336,7 +3336,7 @@ const MRBCampaignDetail = () => {
                               {normales.map((s, i) => renderRow(s, i))}
                               {adicionales.length > 0 && (
                                 <tr>
-                                  <td colSpan={3 + Math.max(maxInspectionRound, 1)} style={{ padding: '8px 10px', backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '11px', fontWeight: '700', textAlign: 'center', borderBottom: `2px solid #3b82f6` }}>
+                                  <td colSpan={3 + Math.max(maxInspectionRound, 1)} style={{ padding: '8px 10px', backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '11px', fontWeight: '600', textAlign: 'center', borderBottom: `2px solid #3b82f6` }}>
                                     — Adicionales ({adicionales.length}) —
                                   </td>
                                 </tr>
@@ -3385,7 +3385,7 @@ const MRBCampaignDetail = () => {
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: t.text }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: t.text }}>
                 Configurar Defectos de Campaña
               </h3>
               <button
@@ -3653,7 +3653,7 @@ const MRBCampaignDetail = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: '700', color: t.accent, fontFamily: 'monospace', fontSize: '14px' }}>{source.folio}</span>
+                          <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '14px' }}>{source.folio}</span>
                           <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: source.status === 'completed' ? '#22c55e33' : '#C7770033', color: source.status === 'completed' ? '#22c55e' : '#C77700' }}>{source.status}</span>
                           {source.mrbCampaigns && source.mrbCampaigns.map((mc, mi) => {
                             const mrbColor = mc.status === 'CERRADA' ? { bg: '#22c55e22', color: '#16a34a' } : mc.status === 'BORRADOR' ? { bg: '#6b728022', color: '#6b7280' } : { bg: '#f59e0b22', color: '#b45309' };
@@ -3673,7 +3673,7 @@ const MRBCampaignDetail = () => {
             {/* Adopt panel — when selecting a 8D source (linking or changing) */}
             {selectedNewSource && (selectedNewSource.sourceType === '8D' || isLinking8d) && (
               <div style={{ borderTop: `2px solid ${t.accent}40`, padding: '16px 20px', backgroundColor: `${t.accent}06` }}>
-                <div style={{ fontWeight: '700', fontSize: '13px', color: t.text, marginBottom: '10px' }}>
+                <div style={{ fontWeight: '600', fontSize: '13px', color: t.text, marginBottom: '10px' }}>
                   Adoptar datos de <span style={{ color: t.accent }}>{selectedNewSource.folio}</span>:
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: '14px' }}>
@@ -3695,7 +3695,7 @@ const MRBCampaignDetail = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button onClick={() => setShowSourceModal(false)} style={{ padding: '10px 16px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
-                  <button onClick={handleChangeSource} disabled={submitting} style={{ padding: '10px 20px', backgroundColor: '#0072CE', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: submitting ? 0.7 : 1 }}>
+                  <button onClick={handleChangeSource} disabled={submitting} style={{ padding: '10px 20px', backgroundColor: '#0072CE', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: submitting ? 0.7 : 1 }}>
                     ✓ {submitting ? 'Vinculando...' : 'Adoptar seleccionados'}
                   </button>
                 </div>
@@ -3778,7 +3778,7 @@ const MRBCampaignDetail = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    <div style={{ fontWeight: '700', color: t.text, fontFamily: 'monospace' }}>{part.partNumber}</div>
+                    <div style={{ fontWeight: '600', color: t.text, fontFamily: "'IBM Plex Mono', monospace" }}>{part.partNumber}</div>
                     {part.partName && <div style={{ fontSize: '12px', color: t.textDim }}>{part.partName}</div>}
                   </div>
                 ))
@@ -3957,7 +3957,7 @@ const MRBCampaignDetail = () => {
                           value={searchSerialFrom}
                           onChange={(e) => setSearchSerialFrom(e.target.value)}
                           placeholder="SN-001000"
-                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px', fontFamily: 'monospace', width: '150px' }}
+                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px', fontFamily: "'IBM Plex Mono', monospace", width: '150px' }}
                         />
                       </div>
                       <span style={{ color: t.textDim, marginTop: '16px' }}>→</span>
@@ -3968,7 +3968,7 @@ const MRBCampaignDetail = () => {
                           value={searchSerialTo}
                           onChange={(e) => setSearchSerialTo(e.target.value)}
                           placeholder="SN-001500"
-                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px', fontFamily: 'monospace', width: '150px' }}
+                          style={{ padding: '8px 12px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontSize: '13px', fontFamily: "'IBM Plex Mono', monospace", width: '150px' }}
                         />
                       </div>
                     </div>
@@ -4005,7 +4005,7 @@ const MRBCampaignDetail = () => {
                               }
                             }}
                           />
-                          <span style={{ fontFamily: 'monospace', fontWeight: '600' }}>{part.partNumber}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600' }}>{part.partNumber}</span>
                           {part.partName && <span style={{ color: t.textDim }}>— {part.partName}</span>}
                         </label>
                       ))}
@@ -4079,9 +4079,9 @@ const MRBCampaignDetail = () => {
                                   style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                                 />
                               </th>
-                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Serial</th>
-                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Parte</th>
-                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Fecha Registro</th>
+                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>Serial</th>
+                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>Parte</th>
+                              <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>Fecha Registro</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -4111,7 +4111,7 @@ const MRBCampaignDetail = () => {
                                     style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                                   />
                                 </td>
-                                <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '600', color: t.text }}>{s.serialNumber}</td>
+                                <td style={{ padding: '6px 8px', fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600', color: t.text }}>{s.serialNumber}</td>
                                 <td style={{ padding: '6px 8px', color: t.textDim }}>{s.partNumber}</td>
                                 <td style={{ padding: '6px 8px', color: t.textDim }}>{s.registeredAt ? new Date(s.registeredAt).toLocaleString('es-MX') : '-'}</td>
                               </tr>
@@ -4156,7 +4156,7 @@ const MRBCampaignDetail = () => {
                           borderRadius: '6px',
                           color: t.text,
                           fontSize: '13px',
-                          fontFamily: 'monospace'
+                          fontFamily: "'IBM Plex Mono', monospace"
                         }}
                       />
                       <select
@@ -4266,16 +4266,16 @@ const MRBCampaignDetail = () => {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                          <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Serial</th>
-                          <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Parte</th>
-                          <th style={{ padding: '8px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}>Estado</th>
-                          <th style={{ padding: '8px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '10px', textTransform: 'uppercase' }}></th>
+                          <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>Serial</th>
+                          <th style={{ padding: '8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>Parte</th>
+                          <th style={{ padding: '8px', textAlign: 'center', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}>Estado</th>
+                          <th style={{ padding: '8px', textAlign: 'center', color: t.textMuted, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase' }}></th>
                         </tr>
                       </thead>
                       <tbody>
                         {affectedSerials.map(serial => (
                           <tr key={serial.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                            <td style={{ padding: '8px', color: t.text, fontFamily: 'monospace', fontWeight: '600' }}>{serial.serialNumber}</td>
+                            <td style={{ padding: '8px', color: t.text, fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600' }}>{serial.serialNumber}</td>
                             <td style={{ padding: '8px', color: t.textDim }}>{serial.partNumber || '-'}</td>
                             <td style={{ padding: '8px', textAlign: 'center' }}>
                               {serial.inspected ? (
@@ -4283,7 +4283,7 @@ const MRBCampaignDetail = () => {
                                   padding: '2px 8px',
                                   borderRadius: '4px',
                                   fontSize: '10px',
-                                  fontWeight: '700',
+                                  fontWeight: '600',
                                   backgroundColor: serial.inspectionResult === 'OK' ? '#22c55e22' : serial.inspectionResult === 'NOK' ? '#B0002022' : '#f59e0b22',
                                   color: serial.inspectionResult === 'OK' ? '#16a34a' : serial.inspectionResult === 'NOK' ? '#B00020' : '#b45309'
                                 }}>
