@@ -122,18 +122,18 @@ const TabCarga = ({ kpis }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-        <KpiTile label="Carga Promedio" value={`${carga.userLoad.length > 0 ? fmt1(carga.userLoad.reduce((s,u)=>s+u.utilization,0)/carga.userLoad.length) : 0}%`} color={clr(carga.userLoad.length>0?carga.userLoad.reduce((s,u)=>s+u.utilization,0)/carga.userLoad.length:0)} icon="📊" />
-        <KpiTile label="Cap. Disponible" value={fmt1(carga.totalAvailableHrs)} unit="hrs" color={t.accent} icon="⏳" />
-        <KpiTile label="Horas Asignadas" value={fmt1(carga.totalAssignedHrs)} unit="hrs" color="#8b5cf6" icon="📋" />
-        <KpiTile label="Desbalance" value={`${fmt1(carga.loadImbalance)}%`} color={carga.loadImbalance > 50 ? '#ef4444' : carga.loadImbalance > 25 ? '#C77700' : '#2E7D32'} icon="⚖️" sub="(máx - mín)" />
-        <KpiTile label="Subutilización" value={`${carga.underutilizedPercent}%`} color={carga.underutilizedPercent > 30 ? '#C77700' : '#2E7D32'} icon="😴" sub={`${carga.underutilizedCount} personas <70%`} />
+        <KpiTile label="Carga Promedio" value={`${carga.userLoad.length > 0 ? fmt1(carga.userLoad.reduce((s,u)=>s+u.utilization,0)/carga.userLoad.length) : 0}%`} color={clr(carga.userLoad.length>0?carga.userLoad.reduce((s,u)=>s+u.utilization,0)/carga.userLoad.length:0)} />
+        <KpiTile label="Cap. Disponible" value={fmt1(carga.totalAvailableHrs)} unit="hrs" color={t.accent}  />
+        <KpiTile label="Horas Asignadas" value={fmt1(carga.totalAssignedHrs)} unit="hrs" color="#8b5cf6" />
+        <KpiTile label="Desbalance" value={`${fmt1(carga.loadImbalance)}%`} color={carga.loadImbalance > 50 ? '#ef4444' : carga.loadImbalance > 25 ? '#C77700' : '#2E7D32'}  sub="(máx - mín)" />
+        <KpiTile label="Subutilización" value={`${carga.underutilizedPercent}%`} color={carga.underutilizedPercent > 30 ? '#C77700' : '#2E7D32'}  sub={`${carga.underutilizedCount} personas <70%`} />
       </div>
 
       {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         {/* Utilization per person */}
         <Card>
-          <SectionTitle icon="👤" label="Utilización por Persona (%)" />
+          <SectionTitle label="Utilización por Persona (%)" />
           <ResponsiveContainer width="100%" height={Math.max(280, barData.length * 28)}>
             <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 40 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -159,7 +159,7 @@ const TabCarga = ({ kpis }) => {
 
         {/* Hours breakdown per person */}
         <Card>
-          <SectionTitle icon="🕐" label="Horas: Disponible vs Asignadas" />
+          <SectionTitle label="Horas: Disponible vs Asignadas" />
           <ResponsiveContainer width="100%" height={Math.max(280, sorted.length * 28)}>
             <BarChart data={sorted.map(u => ({
               name: u.first_name,
@@ -180,7 +180,7 @@ const TabCarga = ({ kpis }) => {
 
       {/* Detail table */}
       <Card>
-        <SectionTitle icon="📋" label="Detalle por Persona" />
+        <SectionTitle label="Detalle por Persona" />
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
@@ -234,21 +234,20 @@ const TabEjecucion = ({ kpis }) => {
           color={clr(ejecucion.compliancePercent)} icon="✅" sub="Real vs Estimado" />
         <KpiTile label="Desviación Est." value={`${ejecucion.estimationDeviation > 0 ? '+' : ''}${ejecucion.estimationDeviation}%`}
           color={Math.abs(ejecucion.estimationDeviation) < 10 ? '#2E7D32' : Math.abs(ejecucion.estimationDeviation) < 25 ? '#C77700' : '#ef4444'}
-          icon="📐" sub="(real - est) / est" />
+           sub="(real - est) / est" />
         <KpiTile label="Productividad" value={`${ejecucion.productivity}x`}
-          color={prodGood ? '#2E7D32' : '#ef4444'} icon="⚡"
-          sub={prodGood ? 'Más rápido de lo estimado' : 'Más lento de lo estimado'} />
+          color={prodGood ? '#2E7D32' : '#ef4444'}           sub={prodGood ? 'Más rápido de lo estimado' : 'Más lento de lo estimado'} />
         <KpiTile label="Lead Time Prom." value={`${ejecucion.avgLeadTimeDays}`} unit="días"
           color={ejecucion.avgLeadTimeDays < 7 ? '#2E7D32' : ejecucion.avgLeadTimeDays < 21 ? '#C77700' : '#ef4444'}
-          icon="📅" sub="Promedio tareas completadas" />
+           sub="Promedio tareas completadas" />
         <KpiTile label="Throughput" value={ejecucion.throughput} unit="tareas"
-          color="#8b5cf6" icon="🏁" sub="Completadas en el periodo" />
+          color="#8b5cf6"  sub="Completadas en el periodo" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         {/* Compliance visual */}
         <Card>
-          <SectionTitle icon="📊" label="Horas: Estimadas vs Reales" />
+          <SectionTitle label="Horas: Estimadas vs Reales" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
             {/* Bar comparison */}
             {[
@@ -297,7 +296,7 @@ const TabEjecucion = ({ kpis }) => {
 
         {/* Productivity gauge */}
         <Card>
-          <SectionTitle icon="⚡" label="Índice de Productividad" />
+          <SectionTitle label="Índice de Productividad" />
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -357,22 +356,22 @@ const TabActividades = ({ kpis }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
         <KpiTile label="Avance Promedio" value={`${fmt1(actividades.avgProgress)}%`}
-          color={clr(actividades.avgProgress)} icon="📈" />
+          color={clr(actividades.avgProgress)}  />
         <KpiTile label="% Completadas" value={`${actividades.completedPercent}%`}
           color={clr(actividades.completedPercent)} icon="✅" sub={`${actividades.completedCount} tareas`} />
         <KpiTile label="% Pendientes" value={`${actividades.pendingPercent}%`}
-          color={actividades.pendingPercent > 50 ? '#C77700' : '#2E7D32'} icon="⏳" sub={`${actividades.pendingCount} tareas`} />
+          color={actividades.pendingPercent > 50 ? '#C77700' : '#2E7D32'}  sub={`${actividades.pendingCount} tareas`} />
         <KpiTile label="% No Planeadas" value={`${actividades.unplannedPercent}%`}
           color={actividades.unplannedPercent > 20 ? '#ef4444' : actividades.unplannedPercent > 10 ? '#C77700' : '#2E7D32'}
-          icon="⚡" sub="Actividades sorpresa" />
+          sub="Actividades sorpresa" />
         <KpiTile label="WIP" value={`${actividades.wipPercent}%`}
-          color={t.accent} icon="🔄" sub={`${actividades.inProgressCount} activas`} />
+          color={t.accent} sub={`${actividades.inProgressCount} activas`} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         {/* Pie chart status */}
         <Card>
-          <SectionTitle icon="🥧" label="Distribución por Estado" />
+          <SectionTitle label="Distribución por Estado" />
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} innerRadius={45}
@@ -397,7 +396,7 @@ const TabActividades = ({ kpis }) => {
 
         {/* % Bars */}
         <Card>
-          <SectionTitle icon="📊" label="Indicadores de Flujo (%)" />
+          <SectionTitle label="Indicadores de Flujo (%)" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '8px' }}>
             {typeData.map(item => (
               <div key={item.name}>
@@ -435,43 +434,37 @@ const TabRiesgo = ({ kpis }) => {
     {
       label: 'Personas Sobrecargadas',
       value: riesgo.overloadedCount,
-      icon: '🔥',
-      color: riesgo.overloadedCount > 0 ? '#ef4444' : '#2E7D32',
+            color: riesgo.overloadedCount > 0 ? '#ef4444' : '#2E7D32',
       desc: 'Con utilización > 110%'
     },
     {
       label: 'Tareas Críticas Retrasadas',
       value: riesgo.criticalDelayedCount,
-      icon: '🚨',
-      color: riesgo.criticalDelayedCount > 0 ? '#ef4444' : '#2E7D32',
+            color: riesgo.criticalDelayedCount > 0 ? '#ef4444' : '#2E7D32',
       desc: 'Prioridad Alta/Crítica vencidas'
     },
     {
       label: 'Tareas Retrasadas',
       value: riesgo.delayedCount,
-      icon: '⏰',
-      color: riesgo.delayedCount > 0 ? '#C77700' : '#2E7D32',
+            color: riesgo.delayedCount > 0 ? '#C77700' : '#2E7D32',
       desc: 'Fecha fin pasada, no completadas'
     },
     {
       label: 'Tareas Bloqueadas',
       value: riesgo.blockedCount,
-      icon: '🚫',
-      color: riesgo.blockedCount > 0 ? '#C77700' : '#2E7D32',
+            color: riesgo.blockedCount > 0 ? '#C77700' : '#2E7D32',
       desc: 'Estado: Bloqueado'
     },
     {
       label: '% Trabajo en Riesgo',
       value: `${riesgo.atRiskPercent}%`,
-      icon: '⚠️',
-      color: riesgo.atRiskPercent > 20 ? '#ef4444' : riesgo.atRiskPercent > 10 ? '#C77700' : '#2E7D32',
+            color: riesgo.atRiskPercent > 20 ? '#ef4444' : riesgo.atRiskPercent > 10 ? '#C77700' : '#2E7D32',
       desc: 'Retrasadas + Bloqueadas'
     },
     {
       label: 'Desviación >20%',
       value: `${riesgo.bigDeviationPercent}%`,
-      icon: '📐',
-      color: riesgo.bigDeviationPercent > 30 ? '#ef4444' : riesgo.bigDeviationPercent > 15 ? '#C77700' : '#2E7D32',
+            color: riesgo.bigDeviationPercent > 30 ? '#ef4444' : riesgo.bigDeviationPercent > 15 ? '#C77700' : '#2E7D32',
       desc: 'Tareas con estimación muy imprecisa'
     }
   ];
@@ -522,20 +515,18 @@ const TabRiesgo = ({ kpis }) => {
 
       {/* Risk recommendations */}
       <Card>
-        <SectionTitle icon="💡" label="Recomendaciones" />
+        <SectionTitle label="Recomendaciones" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {riesgo.overloadedCount > 0 && (
             <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#fee2e2', borderRadius: '8px' }}>
-              <span>🔥</span>
-              <span style={{ fontSize: '13px', color: '#B00020' }}>
+                            <span style={{ fontSize: '13px', color: '#B00020' }}>
                 <strong>{riesgo.overloadedCount} persona(s)</strong> están sobrecargadas (&gt;110%). Considera redistribuir actividades o revisar capacidad.
               </span>
             </div>
           )}
           {riesgo.criticalDelayedCount > 0 && (
             <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#fee2e2', borderRadius: '8px' }}>
-              <span>🚨</span>
-              <span style={{ fontSize: '13px', color: '#B00020' }}>
+                            <span style={{ fontSize: '13px', color: '#B00020' }}>
                 <strong>{riesgo.criticalDelayedCount} tarea(s) críticas</strong> están retrasadas. Requieren atención inmediata.
               </span>
             </div>
@@ -550,8 +541,7 @@ const TabRiesgo = ({ kpis }) => {
           )}
           {riesgo.bigDeviationPercent > 20 && (
             <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-              <span>📐</span>
-              <span style={{ fontSize: '13px', color: '#C77700' }}>
+                            <span style={{ fontSize: '13px', color: '#C77700' }}>
                 El <strong>{riesgo.bigDeviationPercent}%</strong> de las actividades tiene desviación &gt;20% en horas. Revisa la calidad de las estimaciones.
               </span>
             </div>
@@ -592,7 +582,7 @@ const TabProyectos = ({ kpis }) => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         {/* KPI distribution */}
         <Card>
-          <SectionTitle icon="🎯" label="Horas por KPI" />
+          <SectionTitle label="Horas por KPI" />
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={kpiBarData} margin={{ left: 0, right: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -609,7 +599,7 @@ const TabProyectos = ({ kpis }) => {
 
         {/* Department efficiency */}
         <Card>
-          <SectionTitle icon="🏭" label="Eficiencia por Departamento" />
+          <SectionTitle label="Eficiencia por Departamento" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
             {proyectos.departmentEfficiency.slice(0, 6).map(d => (
               <div key={d.department}>
@@ -645,7 +635,7 @@ const TabProyectos = ({ kpis }) => {
 
       {/* KPI detail table */}
       <Card>
-        <SectionTitle icon="📊" label="Detalle por KPI" />
+        <SectionTitle label="Detalle por KPI" />
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead>
             <tr style={{ backgroundColor: t.bgPanel }}>
@@ -685,7 +675,7 @@ const TabProyectos = ({ kpis }) => {
       {/* Project progress */}
       {projBarData.length > 0 && (
         <Card>
-          <SectionTitle icon="📁" label="Avance por Proyecto (%)" />
+          <SectionTitle label="Avance por Proyecto (%)" />
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={projBarData} margin={{ left: 0, right: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -712,33 +702,33 @@ const TabProyectos = ({ kpis }) => {
 // ─── Mi Dashboard: catálogo + renderer (Workload) ─────────────────────────────
 const WORKLOAD_CATALOG = [
   // KPIs
-  { id: 'kpi-util',       cat: 'KPIs', label: 'Utilización Prom.',   size: 'sm', icon: '📊' },
-  { id: 'kpi-sobrecarga', cat: 'KPIs', label: '% Sobrecargados',     size: 'sm', icon: '🔥' },
-  { id: 'kpi-planeado',   cat: 'KPIs', label: 'Planeado vs Dispon.', size: 'sm', icon: '📋' },
-  { id: 'kpi-real-plan',  cat: 'KPIs', label: 'Real vs Planeado',    size: 'sm', icon: '⚡' },
-  { id: 'kpi-retrasadas', cat: 'KPIs', label: '% Retrasadas',        size: 'sm', icon: '⏰' },
-  { id: 'kpi-cumplimiento',cat:'KPIs', label: 'Cumplimiento',        size: 'sm', icon: '✅' },
-  { id: 'kpi-productividad',cat:'KPIs',label: 'Productividad',       size: 'sm', icon: '⚡' },
-  { id: 'kpi-leadtime',   cat: 'KPIs', label: 'Lead Time',           size: 'sm', icon: '📅' },
-  { id: 'kpi-throughput', cat: 'KPIs', label: 'Throughput',          size: 'sm', icon: '🏁' },
-  { id: 'kpi-avance',     cat: 'KPIs', label: 'Avance Prom.',        size: 'sm', icon: '📈' },
-  { id: 'kpi-riesgo',     cat: 'KPIs', label: 'Índice de Riesgo',    size: 'sm', icon: '🚨' },
+  { id: 'kpi-util',       cat: 'KPIs', label: 'Utilización Prom.',   size: 'sm' },
+  { id: 'kpi-sobrecarga', cat: 'KPIs', label: '% Sobrecargados',     size: 'sm' },
+  { id: 'kpi-planeado',   cat: 'KPIs', label: 'Planeado vs Dispon.', size: 'sm' },
+  { id: 'kpi-real-plan',  cat: 'KPIs', label: 'Real vs Planeado',    size: 'sm' },
+  { id: 'kpi-retrasadas', cat: 'KPIs', label: '% Retrasadas',        size: 'sm' },
+  { id: 'kpi-cumplimiento',cat:'KPIs', label: 'Cumplimiento',        size: 'sm' },
+  { id: 'kpi-productividad',cat:'KPIs',label: 'Productividad',       size: 'sm' },
+  { id: 'kpi-leadtime',   cat: 'KPIs', label: 'Lead Time',           size: 'sm' },
+  { id: 'kpi-throughput', cat: 'KPIs', label: 'Throughput',          size: 'sm' },
+  { id: 'kpi-avance',     cat: 'KPIs', label: 'Avance Prom.',        size: 'sm' },
+  { id: 'kpi-riesgo',     cat: 'KPIs', label: 'Índice de Riesgo',    size: 'sm' },
   // Carga
-  { id: 'chart-util-bar', cat: 'Carga', label: 'Utilización por Persona', size: 'lg', icon: '👤' },
-  { id: 'chart-horas',    cat: 'Carga', label: 'Horas Disponible vs Asignadas', size: 'lg', icon: '🕐' },
+  { id: 'chart-util-bar', cat: 'Carga', label: 'Utilización por Persona', size: 'lg' },
+  { id: 'chart-horas',    cat: 'Carga', label: 'Horas Disponible vs Asignadas', size: 'lg' },
   // Ejecución
-  { id: 'chart-est-real', cat: 'Ejecución', label: 'Estimadas vs Reales', size: 'md', icon: '📐' },
-  { id: 'chart-productividad', cat: 'Ejecución', label: 'Productividad',  size: 'md', icon: '⚡' },
+  { id: 'chart-est-real', cat: 'Ejecución', label: 'Estimadas vs Reales', size: 'md' },
+  { id: 'chart-productividad', cat: 'Ejecución', label: 'Productividad',  size: 'md' },
   // Actividades
-  { id: 'chart-act-pie',  cat: 'Actividades', label: 'Distribución Actividades', size: 'md', icon: '🥧' },
-  { id: 'chart-flujo',    cat: 'Actividades', label: 'Indicadores de Flujo',     size: 'md', icon: '📊' },
+  { id: 'chart-act-pie',  cat: 'Actividades', label: 'Distribución Actividades', size: 'md' },
+  { id: 'chart-flujo',    cat: 'Actividades', label: 'Indicadores de Flujo',     size: 'md' },
   // Riesgo
-  { id: 'riesgo-gauge',   cat: 'Riesgo', label: 'Índice de Riesgo',      size: 'md', icon: '🎯' },
-  { id: 'riesgo-items',   cat: 'Riesgo', label: 'Alertas de Riesgo',     size: 'lg', icon: '⚠️' },
-  { id: 'riesgo-recomend',cat: 'Riesgo', label: 'Recomendaciones',       size: 'lg', icon: '💡' },
+  { id: 'riesgo-gauge',   cat: 'Riesgo', label: 'Índice de Riesgo',      size: 'md' },
+  { id: 'riesgo-items',   cat: 'Riesgo', label: 'Alertas de Riesgo',     size: 'lg' },
+  { id: 'riesgo-recomend',cat: 'Riesgo', label: 'Recomendaciones',       size: 'lg' },
   // Proyectos
-  { id: 'chart-kpi-hrs',  cat: 'Proyectos', label: 'Horas por KPI',      size: 'lg', icon: '🎯' },
-  { id: 'chart-dept-eff', cat: 'Proyectos', label: 'Eficiencia por Depto.', size: 'md', icon: '🏭' },
+  { id: 'chart-kpi-hrs',  cat: 'Proyectos', label: 'Horas por KPI',      size: 'lg' },
+  { id: 'chart-dept-eff', cat: 'Proyectos', label: 'Eficiencia por Depto.', size: 'md' },
 ];
 
 const WORKLOAD_DEFAULT = [
@@ -760,27 +750,27 @@ const renderWorkloadWidget = (id, kpis, t) => {
 
   // ── KPIs ──
   if (id === 'kpi-util')
-    return <KpiTile label="Utilización Prom." value={`${topBar.avgUtilization ?? 0}%`} color={clr(topBar.avgUtilization ?? 0)} icon="📊" />;
+    return <KpiTile label="Utilización Prom." value={`${topBar.avgUtilization ?? 0}%`} color={clr(topBar.avgUtilization ?? 0)} />;
   if (id === 'kpi-sobrecarga')
-    return <KpiTile label="% Sobrecargados" value={`${topBar.overloadedPercent ?? 0}%`} color={(topBar.overloadedPercent ?? 0) > 30 ? '#ef4444' : (topBar.overloadedPercent ?? 0) > 0 ? '#C77700' : '#2E7D32'} icon="🔥" sub="> 110% capacidad" />;
+    return <KpiTile label="% Sobrecargados" value={`${topBar.overloadedPercent ?? 0}%`} color={(topBar.overloadedPercent ?? 0) > 30 ? '#ef4444' : (topBar.overloadedPercent ?? 0) > 0 ? '#C77700' : '#2E7D32'} sub="> 110% capacidad" />;
   if (id === 'kpi-planeado')
-    return <KpiTile label="Planeado vs Dispon." value={`${topBar.plannedVsAvailable ?? 0}%`} color={clr(topBar.plannedVsAvailable ?? 0, { low: 60, high: 100 })} icon="📋" />;
+    return <KpiTile label="Planeado vs Dispon." value={`${topBar.plannedVsAvailable ?? 0}%`} color={clr(topBar.plannedVsAvailable ?? 0, { low: 60, high: 100 })} />;
   if (id === 'kpi-real-plan')
-    return <KpiTile label="Real vs Planeado" value={`${topBar.realVsPlanned ?? 0}%`} color={Math.abs((topBar.realVsPlanned ?? 100) - 100) < 15 ? '#2E7D32' : Math.abs((topBar.realVsPlanned ?? 100) - 100) < 30 ? '#C77700' : '#ef4444'} icon="⚡" />;
+    return <KpiTile label="Real vs Planeado" value={`${topBar.realVsPlanned ?? 0}%`} color={Math.abs((topBar.realVsPlanned ?? 100) - 100) < 15 ? '#2E7D32' : Math.abs((topBar.realVsPlanned ?? 100) - 100) < 30 ? '#C77700' : '#ef4444'} />;
   if (id === 'kpi-retrasadas')
     return <KpiTile label="% Retrasadas" value={`${topBar.delayedPercent ?? 0}%`} color={(topBar.delayedPercent ?? 0) > 20 ? '#ef4444' : (topBar.delayedPercent ?? 0) > 10 ? '#C77700' : '#2E7D32'} icon="⏰" sub="Fecha vencida" />;
   if (id === 'kpi-cumplimiento')
     return <KpiTile label="Cumplimiento" value={`${ejecucion.compliancePercent ?? 0}%`} color={clr(ejecucion.compliancePercent ?? 0)} icon="✅" />;
   if (id === 'kpi-productividad')
-    return <KpiTile label="Productividad" value={`${ejecucion.productivity ?? 0}x`} color={(ejecucion.productivity ?? 0) >= 1 ? '#2E7D32' : '#ef4444'} icon="⚡" sub="est / real" />;
+    return <KpiTile label="Productividad" value={`${ejecucion.productivity ?? 0}x`} color={(ejecucion.productivity ?? 0) >= 1 ? '#2E7D32' : '#ef4444'} sub="est / real" />;
   if (id === 'kpi-leadtime')
-    return <KpiTile label="Lead Time Prom." value={ejecucion.avgLeadTimeDays ?? 0} unit="días" color={(ejecucion.avgLeadTimeDays ?? 0) < 7 ? '#2E7D32' : (ejecucion.avgLeadTimeDays ?? 0) < 21 ? '#C77700' : '#ef4444'} icon="📅" />;
+    return <KpiTile label="Lead Time Prom." value={ejecucion.avgLeadTimeDays ?? 0} unit="días" color={(ejecucion.avgLeadTimeDays ?? 0) < 7 ? '#2E7D32' : (ejecucion.avgLeadTimeDays ?? 0) < 21 ? '#C77700' : '#ef4444'}  />;
   if (id === 'kpi-throughput')
-    return <KpiTile label="Throughput" value={ejecucion.throughput ?? 0} unit="tareas" color="#8b5cf6" icon="🏁" sub="Completadas en periodo" />;
+    return <KpiTile label="Throughput" value={ejecucion.throughput ?? 0} unit="tareas" color="#8b5cf6"  sub="Completadas en periodo" />;
   if (id === 'kpi-avance')
-    return <KpiTile label="Avance Prom." value={`${fmt1(actividades.avgProgress ?? 0)}%`} color={clr(actividades.avgProgress ?? 0)} icon="📈" />;
+    return <KpiTile label="Avance Prom." value={`${fmt1(actividades.avgProgress ?? 0)}%`} color={clr(actividades.avgProgress ?? 0)}  />;
   if (id === 'kpi-riesgo')
-    return <KpiTile label="Índice de Riesgo" value={riesgo.riskIndex ?? 0} color={riskColor(riesgo.riskIndex ?? 0)} icon="🚨" sub={(riesgo.riskIndex ?? 0) >= 60 ? '🔴 Alto' : (riesgo.riskIndex ?? 0) >= 35 ? '🟡 Medio' : '🟢 Bajo'} />;
+    return <KpiTile label="Índice de Riesgo" value={riesgo.riskIndex ?? 0} color={riskColor(riesgo.riskIndex ?? 0)}  sub={(riesgo.riskIndex ?? 0) >= 60 ? '🔴 Alto' : (riesgo.riskIndex ?? 0) >= 35 ? '🟡 Medio' : '🟢 Bajo'} />;
 
   // ── Carga ──
   if (id === 'chart-util-bar') {
@@ -788,7 +778,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
     const barData = sorted.map(u => ({ name: u.first_name, utilización: parseFloat(u.utilization.toFixed(1)) }));
     const chartHeight = Math.max(200, barData.length * 28);
     return (
-      <WLCardWrapper title="👤 Utilización por Persona (%)">
+      <WLCardWrapper title="Utilización por Persona (%)">
         <ResponsiveContainer width="100%" height={chartHeight}>
           <BarChart data={barData} layout="vertical" margin={{ left: 5, right: 40 }}>
             <XAxis type="number" tickFormatter={v => `${v}%`} fontSize={10} />
@@ -808,7 +798,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
     const data = sorted.map(u => ({ name: u.first_name, Disponibles: parseFloat(u.hoursAvailable.toFixed(1)), Asignadas: parseFloat(u.hoursAssigned.toFixed(1)) }));
     const chartHeight = Math.max(200, data.length * 28);
     return (
-      <WLCardWrapper title="🕐 Horas: Disponible vs Asignadas">
+      <WLCardWrapper title="Horas: Disponible vs Asignadas">
         <ResponsiveContainer width="100%" height={chartHeight}>
           <BarChart data={data} layout="vertical" margin={{ left: 5, right: 20 }}>
             <XAxis type="number" fontSize={10} />
@@ -829,7 +819,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
     const sumReal = Math.round((ejecucion.compliancePercent || 0) / 100 * sumEst * 10) / 10;
     const maxVal = Math.max(sumEst, sumReal, 1);
     return (
-      <WLCardWrapper title="📐 Estimadas vs Reales (hrs)">
+      <WLCardWrapper title="Estimadas vs Reales (hrs)">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '8px' }}>
           {[
             { label: 'Horas Estimadas', value: sumEst, color: '#0072CE' },
@@ -857,7 +847,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
     const prod = ejecucion.productivity ?? 0;
     const prodGood = prod >= 1;
     return (
-      <WLCardWrapper title="⚡ Índice de Productividad">
+      <WLCardWrapper title="Índice de Productividad">
         <div style={{ textAlign: 'center', padding: '12px 0' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100px', height: '100px', borderRadius: '50%', border: `8px solid ${prodGood ? '#2E7D32' : '#ef4444'}`, backgroundColor: prodGood ? '#dcfce7' : '#fee2e2' }}>
             <div>
@@ -882,7 +872,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
       { name: 'Canceladas', value: actividades.cancelledCount ?? 0, color: '#9ca3af' },
     ].filter(d => d.value > 0);
     return (
-      <WLCardWrapper title="🥧 Distribución por Estado">
+      <WLCardWrapper title="Distribución por Estado">
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
             <Pie data={pieData} cx="50%" cy="50%" outerRadius={70} innerRadius={35}
@@ -913,7 +903,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
       { label: 'No Planeadas', value: actividades.unplannedPercent ?? 0, color: '#ef4444' },
     ];
     return (
-      <WLCardWrapper title="📊 Indicadores de Flujo (%)">
+      <WLCardWrapper title="Indicadores de Flujo (%)">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
           {items.map(item => (
             <div key={item.label}>
@@ -934,7 +924,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
   // ── Riesgo ──
   if (id === 'riesgo-gauge') {
     return (
-      <WLCardWrapper title="🎯 Índice de Riesgo Operativo">
+      <WLCardWrapper title="Índice de Riesgo Operativo">
         <RiskGauge value={riesgo.riskIndex ?? 0} />
       </WLCardWrapper>
     );
@@ -942,15 +932,15 @@ const renderWorkloadWidget = (id, kpis, t) => {
 
   if (id === 'riesgo-items') {
     const items = [
-      { label: 'Sobrecargados', value: riesgo.overloadedCount ?? 0, icon: '🔥', color: (riesgo.overloadedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: '> 110% capacidad' },
-      { label: 'Tareas Críticas Retrasadas', value: riesgo.criticalDelayedCount ?? 0, icon: '🚨', color: (riesgo.criticalDelayedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: 'Alta/Crítica vencidas' },
+      { label: 'Sobrecargados', value: riesgo.overloadedCount ?? 0, color: (riesgo.overloadedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: '> 110% capacidad' },
+      { label: 'Tareas Críticas Retrasadas', value: riesgo.criticalDelayedCount ?? 0, color: (riesgo.criticalDelayedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: 'Alta/Crítica vencidas' },
       { label: 'Retrasadas', value: riesgo.delayedCount ?? 0, icon: '⏰', color: (riesgo.delayedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Fecha vencida' },
-      { label: 'Bloqueadas', value: riesgo.blockedCount ?? 0, icon: '🚫', color: (riesgo.blockedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Estado: Bloqueado' },
-      { label: '% En Riesgo', value: `${riesgo.atRiskPercent ?? 0}%`, icon: '⚠️', color: (riesgo.atRiskPercent ?? 0) > 20 ? '#ef4444' : (riesgo.atRiskPercent ?? 0) > 10 ? '#C77700' : '#2E7D32', desc: 'Retrasadas + Bloqueadas' },
-      { label: 'Desviación >20%', value: `${riesgo.bigDeviationPercent ?? 0}%`, icon: '📐', color: (riesgo.bigDeviationPercent ?? 0) > 30 ? '#ef4444' : (riesgo.bigDeviationPercent ?? 0) > 15 ? '#C77700' : '#2E7D32', desc: 'Estimación imprecisa' },
+      { label: 'Bloqueadas', value: riesgo.blockedCount ?? 0, color: (riesgo.blockedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Estado: Bloqueado' },
+      { label: '% En Riesgo', value: `${riesgo.atRiskPercent ?? 0}%`, color: (riesgo.atRiskPercent ?? 0) > 20 ? '#ef4444' : (riesgo.atRiskPercent ?? 0) > 10 ? '#C77700' : '#2E7D32', desc: 'Retrasadas + Bloqueadas' },
+      { label: 'Desviación >20%', value: `${riesgo.bigDeviationPercent ?? 0}%`, color: (riesgo.bigDeviationPercent ?? 0) > 30 ? '#ef4444' : (riesgo.bigDeviationPercent ?? 0) > 15 ? '#C77700' : '#2E7D32', desc: 'Estimación imprecisa' },
     ];
     return (
-      <WLCardWrapper title="⚠️ Alertas de Riesgo">
+      <WLCardWrapper title="Alertas de Riesgo">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
           {items.map(item => (
             <div key={item.label} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${t.border}`, borderLeft: `4px solid ${item.color}` }}>
@@ -967,13 +957,13 @@ const renderWorkloadWidget = (id, kpis, t) => {
 
   if (id === 'riesgo-recomend') {
     const recs = [];
-    if ((riesgo.overloadedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', icon: '🔥', msg: `${riesgo.overloadedCount} persona(s) sobrecargadas (>110%). Redistribuye actividades.` });
-    if ((riesgo.criticalDelayedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', icon: '🚨', msg: `${riesgo.criticalDelayedCount} tarea(s) críticas retrasadas. Atención inmediata.` });
+    if ((riesgo.overloadedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', msg: `${riesgo.overloadedCount} persona(s) sobrecargadas (>110%). Redistribuye actividades.` });
+    if ((riesgo.criticalDelayedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', msg: `${riesgo.criticalDelayedCount} tarea(s) críticas retrasadas. Atención inmediata.` });
     if ((riesgo.delayedCount ?? 0) > 0) recs.push({ bg: '#fef3c7', color: '#C77700', icon: '⏰', msg: `${riesgo.delayedCount} actividad(es) con fecha vencida. Actualiza avance.` });
-    if ((riesgo.bigDeviationPercent ?? 0) > 20) recs.push({ bg: '#fef3c7', color: '#C77700', icon: '📐', msg: `${riesgo.bigDeviationPercent}% de actividades con desviación >20%. Revisa estimaciones.` });
+    if ((riesgo.bigDeviationPercent ?? 0) > 20) recs.push({ bg: '#fef3c7', color: '#C77700', msg: `${riesgo.bigDeviationPercent}% de actividades con desviación >20%. Revisa estimaciones.` });
     if (recs.length === 0) recs.push({ bg: '#dcfce7', color: '#2E7D32', icon: '✅', msg: 'El equipo opera dentro de parámetros normales. Sin alertas.' });
     return (
-      <WLCardWrapper title="💡 Recomendaciones">
+      <WLCardWrapper title="Recomendaciones">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {recs.map((r, i) => (
             <div key={i} style={{ display: 'flex', gap: '8px', padding: '10px 12px', borderRadius: '8px', backgroundColor: r.bg }}>
@@ -994,7 +984,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
       Reales: parseFloat((k.actual || 0).toFixed(1)),
     }));
     return (
-      <WLCardWrapper title="🎯 Horas por KPI">
+      <WLCardWrapper title="Horas por KPI">
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={kpiBarData} margin={{ left: 0, right: 20 }}>
             <XAxis dataKey="name" fontSize={10} />
@@ -1012,7 +1002,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
   if (id === 'chart-dept-eff') {
     const depts = (proyectos.departmentEfficiency || []).slice(0, 6);
     return (
-      <WLCardWrapper title="🏭 Eficiencia por Departamento">
+      <WLCardWrapper title="Eficiencia por Departamento">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
           {depts.map(d => (
             <div key={d.department}>
@@ -1088,12 +1078,12 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
   const topBar = kpis?.topBar;
 
   const TABS = [
-    { id: 'carga', label: '👥 Carga', component: TabCarga },
-    { id: 'ejecucion', label: '⏱️ Ejecución', component: TabEjecucion },
-    { id: 'actividades', label: '📊 Actividades', component: TabActividades },
-    { id: 'riesgo', label: '🚨 Riesgo', component: TabRiesgo },
-    { id: 'proyectos', label: '📁 Proyectos / KPI', component: TabProyectos },
-    { id: 'personalizado', label: '⚙️ Mi Dashboard' },
+    { id: 'carga', label: 'Carga', component: TabCarga },
+    { id: 'ejecucion', label: 'Ejecución', component: TabEjecucion },
+    { id: 'actividades', label: 'Actividades', component: TabActividades },
+    { id: 'riesgo', label: 'Riesgo', component: TabRiesgo },
+    { id: 'proyectos', label: 'Proyectos / KPI', component: TabProyectos },
+    { id: 'personalizado', label: 'Mi Dashboard' },
   ];
 
   const ActiveTabComponent = TABS.find(tab => tab.id === activeTab)?.component;
@@ -1106,7 +1096,7 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
         borderRadius: '10px', padding: '12px 18px',
         display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap'
       }}>
-        <span style={{ fontWeight: '600', color: t.text, fontSize: '14px' }}>📅 Periodo</span>
+        <span style={{ fontWeight: '600', color: t.text, fontSize: '14px' }}>Periodo</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
             style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, color: t.text, fontSize: '13px' }} />
@@ -1128,7 +1118,7 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
       {/* Top Bar KPIs */}
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+          <div style={{ fontSize: '14px', marginBottom: '8px', color: t.textMuted }}>...</div>
           Calculando KPIs...
         </div>
       ) : topBar && (
@@ -1138,36 +1128,31 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
               label="Utilización Promedio" size="lg"
               value={`${topBar.avgUtilization}%`}
               color={clr(topBar.avgUtilization)}
-              icon="📊"
-              sub={topBar.avgUtilization > 110 ? '⚠️ Equipo sobrecargado' : topBar.avgUtilization < 70 ? '😴 Capacidad sin usar' : '✅ Utilización óptima'}
+                            sub={topBar.avgUtilization > 110 ? '⚠️ Equipo sobrecargado' : topBar.avgUtilization < 70 ? 'Capacidad sin usar' : '✅ Utilización óptima'}
             />
             <KpiTile
               label="% Personas Sobrecargadas" size="lg"
               value={`${topBar.overloadedPercent}%`}
               color={topBar.overloadedPercent > 30 ? '#ef4444' : topBar.overloadedPercent > 0 ? '#C77700' : '#2E7D32'}
-              icon="🔥"
-              sub="> 110% de capacidad"
+                            sub="> 110% de capacidad"
             />
             <KpiTile
               label="Planeado vs Disponible" size="lg"
               value={`${topBar.plannedVsAvailable}%`}
               color={clr(topBar.plannedVsAvailable, { low: 60, high: 100 })}
-              icon="📋"
-              sub="Hrs estimadas / hrs capacidad"
+                            sub="Hrs estimadas / hrs capacidad"
             />
             <KpiTile
               label="Real vs Planeado" size="lg"
               value={`${topBar.realVsPlanned}%`}
               color={Math.abs(topBar.realVsPlanned - 100) < 15 ? '#2E7D32' : Math.abs(topBar.realVsPlanned - 100) < 30 ? '#C77700' : '#ef4444'}
-              icon="⚡"
-              sub="Hrs reales / hrs estimadas"
+                            sub="Hrs reales / hrs estimadas"
             />
             <KpiTile
               label="% Tareas Retrasadas" size="lg"
               value={`${topBar.delayedPercent}%`}
               color={topBar.delayedPercent > 20 ? '#ef4444' : topBar.delayedPercent > 10 ? '#C77700' : '#2E7D32'}
-              icon="⏰"
-              sub="Con fecha vencida"
+                            sub="Con fecha vencida"
             />
           </div>
 
