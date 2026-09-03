@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-09-02
+> Última actualización: 2026-09-02 (sesión interrumpida, continuar tokenización)
 
 ---
 
@@ -82,6 +82,9 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ MRBDashboard.js cerrado: Fase 1 (tokenización C.*, hex, fontWeight) + Fase 2 (98 emojis removidos) | 02-Sep |
+| ✅ DefectHospital.js Fase 2: 60+ emojis removidos de botones, modales, indicadores | 02-Sep |
+| ✅ ECR módulo limpieza emoji: 10 archivos (ApprovalPanel, Timeline, Closure, Workflow, etc.) | 02-Sep |
 | ✅ Fix [object Object] en aprobaciones 8D (D3MFG, D5, D6, D7) - extracción ID de objetos | 02-Sep |
 | ✅ 8DConsultation rediseño visual (header 56px, filas 44px, tokens, sin emojis) | 02-Sep |
 | ✅ Dark mode form inputs 8D (todos los componentes + PartsInventoryTable) | 02-Sep |
@@ -576,3 +579,50 @@ D3MFG.js: 32 literales
 ---
 
 > Para marcar como completado: cambiar ⏳ por ✅ y mover a sección Completados
+
+---
+
+## Notas Sesión 02-Sep-2026 (v3 - continuación)
+
+### ✅ COMPLETADO HOY:
+
+| Archivo | Fase 1 (Whitelist) | Fase 2 (Emojis) | Commits |
+|---------|-------------------|-----------------|---------|
+| MRBDashboard.js | ✅ `1749f4b` | ✅ `cb27c21` (98 emojis) | Cerrado |
+| DefectHospital.js | ✅ `58ad806` | ✅ `967c477` (60+ emojis) | Cerrado |
+| ECR (10 archivos) | — | ✅ `4644dc3` (limpieza emoji) | Cerrado |
+
+**Detalle ECR emoji cleanup:**
+- ECRApprovalPanel, ECRApprovalTimeline, ECRChangeRequest, ECRClosure
+- ECRImpactAnalysis, ECRTeamTab, ECRValidationPlan
+- ECRDashboard, ECRDashboardAdvanced, ECRWorkflow
+
+---
+
+### CONTINUAR EN PRÓXIMA SESIÓN:
+
+**Dashboards pendientes (mismo checklist Fase 1 + Fase 2):**
+
+| # | Dashboard | Líneas | Hex | fontWeight | Emojis |
+|---|-----------|--------|-----|------------|--------|
+| 1 | **HospitalDashboard.js** | 2305 | 26 | 29 | 5 |
+| 2 | WorkloadDashboard.js | ? | ? | ? | ? |
+| 3 | AuditDashboard.js | ? | ? | ? | ? |
+| 4 | SkillsDashboard.js | ? | ? | ? | ? |
+| 5 | WIDashboard.js | ? | ? | ? | ? |
+| 6 | CustomDashboard.js | ? | ? | ? | ? |
+
+**HospitalDashboard.js diagnóstico inicial:**
+- `COLORS` constante (líneas 37-44): verde/amarillo/rojo/azul/púrpura/gris/cyan/naranja
+- `#ffffff` y `#fff` en múltiples lugares → `'white'` o tokens
+- Colores de error hardcodeados (#fef2f2, #fecaca, #991b1b, #b91c1c) → tokens error
+- 29 instancias fontWeight 700/800/900/bold → 600
+
+### Archivos de reglas:
+- `REGLAS_DISENO.md` - Marco general (whitelist, tokens, verificación 6 puntos)
+- `REGLAS_DASHBOARD.md` - Checklist específico dashboards
+
+### Estado repo al pausar:
+- Branch: master (5 commits ahead of origin)
+- Commits locales: 1749f4b, cb27c21, 58ad806, 967c477, 4644dc3
+- Archivos untracked: REGLAS_DISENO.md, REGLAS_DASHBOARD.md
