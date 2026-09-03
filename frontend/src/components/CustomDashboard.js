@@ -154,7 +154,7 @@ const CustomDashboard = ({ storageKey, catalog, defaultWidgets, renderWidget, da
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '10px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>⚙️ Mi Dashboard personalizado</span>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Mi Dashboard personalizado</span>
           <span style={{ fontSize: '11px', color: t.textMuted }}>
             {selected.length} widget{selected.length !== 1 ? 's' : ''}
             {!editMode && selected.length > 0 && <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>}
@@ -168,16 +168,16 @@ const CustomDashboard = ({ storageKey, catalog, defaultWidgets, renderWidget, da
           </>}
           <button onClick={() => setEditMode(e => !e)}
             style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', cursor: 'pointer', border: editMode ? `2px solid ${BLUE}` : `1px solid ${t.border}`, backgroundColor: editMode ? BLUE + '18' : t.bgPanel, color: editMode ? BLUE : t.text }}
-          >{editMode ? '✓ Listo' : '✏️ Personalizar'}</button>
+          >{editMode ? '✓ Listo' : 'Personalizar'}</button>
         </div>
       </div>
 
       {/* Grid */}
       {selected.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '10px' }}>📊</div>
+          <div style={{ fontSize: '14px', marginBottom: '10px', color: t.textMuted }}>—</div>
           <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>Tu dashboard está vacío</div>
-          <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '6px' }}>Haz clic en <strong>✏️ Personalizar</strong> para agregar widgets</div>
+          <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '6px' }}>Haz clic en <strong>Personalizar</strong> para agregar widgets</div>
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
