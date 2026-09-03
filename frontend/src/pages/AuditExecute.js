@@ -379,7 +379,7 @@ const AuditExecute = () => {
     },
     title: {
       fontSize: '18px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -527,7 +527,7 @@ const AuditExecute = () => {
       color: 'white',
       borderRadius: '50%',
       fontSize: '10px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     riskBadge: {
       display: 'inline-block',
@@ -560,7 +560,7 @@ const AuditExecute = () => {
       border: 'none',
       color: 'white',
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -614,7 +614,7 @@ const AuditExecute = () => {
       color: 'white',
       borderRadius: '4px',
       fontSize: '10px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     button: {
       padding: '10px 16px',

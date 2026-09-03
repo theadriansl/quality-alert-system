@@ -243,7 +243,7 @@ const AuditRequests = () => {
     },
     title: {
       fontSize: '24px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -456,7 +456,7 @@ const AuditRequests = () => {
               {/* Header Row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '700', color: t.accent }}>
+                  <span style={{ fontSize: '18px', fontWeight: '600', color: t.accent }}>
                      {request.reportId || `${request.sourceType}-${request.sourceId}`}
                   </span>
                   <span style={{ color: t.border }}>|</span>
@@ -602,7 +602,7 @@ const AuditRequests = () => {
             <div style={styles.modalHeader}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: t.accent }}>
+                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: t.accent }}>
                      {reportInfo?.reportId || `8D-${selectedRequest?.sourceId}`}
                   </h2>
                   <span style={{ color: t.textMuted, fontSize: '18px' }}>|</span>
@@ -805,7 +805,7 @@ const AuditRequests = () => {
                               <span style={{
                                 padding: '4px 10px',
                                 borderRadius: '12px',
-                                fontWeight: '700',
+                                fontWeight: '600',
                                 fontSize: '13px',
                                 backgroundColor: (item.auditRound || 1) > 1 ? `${t.warning}20` : t.bgPanel,
                                 color: (item.auditRound || 1) > 1 ? t.warning : t.text
@@ -918,7 +918,7 @@ const AuditRequests = () => {
                       border: `2px solid ${t.success}`
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontWeight: '700', fontSize: '16px', color: t.success }}>
+                        <span style={{ fontWeight: '600', fontSize: '16px', color: t.success }}>
                           {L.currentRound}: {historyData.currentRound.auditRound || 1}
                         </span>
                         {historyData.currentRound.auditorJudgment && (

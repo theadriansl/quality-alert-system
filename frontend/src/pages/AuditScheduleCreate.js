@@ -472,7 +472,7 @@ const AuditScheduleCreate = () => {
     },
     title: {
       fontSize: '24px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -988,7 +988,7 @@ const AuditScheduleCreate = () => {
           {selectedEcr ? (
             <div style={styles.ecrSelected}>
               <div>
-                <div style={{ fontWeight: '700', color: t.accent }}>{selectedEcr.ecrNumber}</div>
+                <div style={{ fontWeight: '600', color: t.accent }}>{selectedEcr.ecrNumber}</div>
                 <div style={{ fontSize: '13px', color: t.text, marginTop: '2px' }}>{selectedEcr.title}</div>
               </div>
               <button
@@ -1020,7 +1020,7 @@ const AuditScheduleCreate = () => {
           {selected8D ? (
             <div style={styles.ecrSelected}>
               <div>
-                <div style={{ fontWeight: '700', color: t.error }}>{selected8D.reportNumber}</div>
+                <div style={{ fontWeight: '600', color: t.error }}>{selected8D.reportNumber}</div>
                 <div style={{ fontSize: '13px', color: t.text, marginTop: '2px' }}>{selected8D.title}</div>
               </div>
               <button
@@ -1112,7 +1112,7 @@ const AuditScheduleCreate = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: '700', color: t.accent, fontSize: '15px' }}>{ecr.ecrNumber}</span>
+                          <span style={{ fontWeight: '600', color: t.accent, fontSize: '15px' }}>{ecr.ecrNumber}</span>
                           <span style={{
                             fontSize: '10px',
                             padding: '2px 6px',
@@ -1213,7 +1213,7 @@ const AuditScheduleCreate = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: '700', color: t.error, fontSize: '15px' }}>{report.reportNumber}</span>
+                          <span style={{ fontWeight: '600', color: t.error, fontSize: '15px' }}>{report.reportNumber}</span>
                           <span style={{
                             fontSize: '10px',
                             padding: '2px 6px',

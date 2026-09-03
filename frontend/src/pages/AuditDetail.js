@@ -107,7 +107,7 @@ const AuditDetail = () => {
     },
     title: {
       fontSize: '24px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -187,7 +187,7 @@ const AuditDetail = () => {
     },
     summaryValue: {
       fontSize: '28px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     summaryLabel: {
       fontSize: '11px',
@@ -196,7 +196,7 @@ const AuditDetail = () => {
     },
     score: {
       fontSize: '48px',
-      fontWeight: '700',
+      fontWeight: '600',
       textAlign: 'center',
       padding: '24px'
     },

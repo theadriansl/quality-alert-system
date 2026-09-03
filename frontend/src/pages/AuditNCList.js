@@ -94,7 +94,7 @@ const AuditNCList = () => {
     },
     title: {
       fontSize: '24px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -195,7 +195,7 @@ const AuditNCList = () => {
     },
     summaryValue: {
       fontSize: '32px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     summaryLabel: {
       fontSize: '12px',

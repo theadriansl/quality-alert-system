@@ -350,7 +350,7 @@ const AuditDashboard = () => {
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <td style={styles.td}>
-                          <span style={{ fontFamily: 'monospace', color: COLORS.primary, fontWeight: '500' }}>{audit.auditId || audit.id}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: COLORS.primary, fontWeight: '500' }}>{audit.auditId || audit.id}</span>
                         </td>
                         <td style={styles.td}>{audit.programName || 'N/A'}</td>
                         <td style={styles.td}>{audit.area || 'N/A'}</td>
@@ -394,7 +394,7 @@ const AuditDashboard = () => {
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <td style={styles.td}>
-                          <span style={{ fontFamily: 'monospace', color: COLORS.primary, fontWeight: '500' }}>{nc.ncId || nc.id}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: COLORS.primary, fontWeight: '500' }}>{nc.ncId || nc.id}</span>
                         </td>
                         <td style={{ ...styles.td, maxWidth: '250px' }}>
                           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nc.description || (language === 'es' ? 'Sin descripción' : 'No description')}</div>
@@ -483,7 +483,7 @@ const AuditDashboard = () => {
                               </span>
                             </td>
                             <td style={styles.td}>
-                              <span style={{ fontFamily: 'monospace', fontWeight: '500', color: COLORS.primary }}>
+                              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: '500', color: COLORS.primary }}>
                                 {req.reportId || req.sourceNumber}
                               </span>
                             </td>
