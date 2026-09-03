@@ -73,7 +73,7 @@ const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
           <thead>
             <tr style={{ borderBottom: `2px solid ${t.border}` }}>
               {[L.hour, L.serial, L.type, L.minutes, L.comment, L.inspector, ''].map(h => (
-                <th key={h} style={{ padding: '6px 10px', textAlign: h === L.minutes ? 'center' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
+                <th key={h} style={{ padding: '6px 10px', textAlign: h === L.minutes ? 'center' : 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -82,17 +82,17 @@ const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
               const isEditing = editingId === row.id;
               return (
                 <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
-                  <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: t.textMuted, whiteSpace: 'nowrap' }}>{fmtTime(row.createdAt)}</td>
+                  <td style={{ padding: '8px 10px', fontFamily: "'IBM Plex Mono', monospace", color: t.textMuted, whiteSpace: 'nowrap' }}>{fmtTime(row.createdAt)}</td>
                   <td style={{ padding: '8px 10px', color: t.text }}>{row.lotNumber || '—'}</td>
                   <td style={{ padding: '8px 10px' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', backgroundColor: row.sourceType === 'NOK' ? '#fee2e2' : '#d1fae5', color: row.sourceType === 'NOK' ? '#991b1b' : '#065f46' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '600', backgroundColor: row.sourceType === 'NOK' ? '#fee2e2' : '#d1fae5', color: row.sourceType === 'NOK' ? '#991b1b' : '#065f46' }}>
                       {row.sourceType}
                     </span>
                   </td>
                   <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                     {isEditing
                       ? <input type="number" value={editMin} onChange={e => setEditMin(e.target.value)} min="0" style={{ width: '70px', padding: '4px 6px', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgInput, color: t.text, fontSize: '13px', textAlign: 'center' }} />
-                      : <span style={{ fontWeight: '700', color: '#f59e0b' }}>{row.downtimeMinutes}</span>}
+                      : <span style={{ fontWeight: '600', color: '#f59e0b' }}>{row.downtimeMinutes}</span>}
                   </td>
                   <td style={{ padding: '8px 10px', color: t.text, maxWidth: '220px' }}>
                     {isEditing
@@ -103,13 +103,13 @@ const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
                   <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
                     {isEditing ? (
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button onClick={() => saveEdit(row)} disabled={saving} style={{ padding: '3px 10px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>✓</button>
+                        <button onClick={() => saveEdit(row)} disabled={saving} style={{ padding: '3px 10px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✓</button>
                         <button onClick={cancelEdit} style={{ padding: '3px 10px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✕</button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button onClick={() => startEdit(row)} style={{ padding: '3px 10px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✏</button>
-                        <button onClick={() => deleteEntry(row)} style={{ padding: '3px 10px', backgroundColor: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>✕</button>
+                        <button onClick={() => deleteEntry(row)} style={{ padding: '3px 10px', backgroundColor: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✕</button>
                       </div>
                     )}
                   </td>
@@ -119,8 +119,8 @@ const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
           </tbody>
           <tfoot>
             <tr style={{ borderTop: `2px solid ${t.border}` }}>
-              <td colSpan={3} style={{ padding: '8px 10px', fontWeight: '700', color: t.text, fontSize: '12px' }}>Total</td>
-              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: '#f59e0b' }}>{total} min</td>
+              <td colSpan={3} style={{ padding: '8px 10px', fontWeight: '600', color: t.text, fontSize: '12px' }}>Total</td>
+              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: '#f59e0b' }}>{total} min</td>
               <td colSpan={3} />
             </tr>
           </tfoot>
@@ -136,7 +136,7 @@ const Section = ({ title, children, defaultOpen = true, sectionId }) => {
   return (
     <div style={{ marginBottom: '16px', border: `1px solid ${t.border}`, borderRadius: '10px', overflow: 'hidden' }} className="report-section" {...(sectionId ? { 'data-pdf-entry-section': '1' } : {})}>
       <div data-pdf-section-header="1" onClick={() => setOpen(v => !v)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', backgroundColor: t.bgPanel, cursor: 'pointer', userSelect: 'none' }}>
-        <span style={{ fontWeight: '700', fontSize: '13px', color: t.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</span>
+        <span style={{ fontWeight: '600', fontSize: '13px', color: t.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</span>
         {open ? <ChevronUp size={16} color={t.textMuted} /> : <ChevronDown size={16} color={t.textMuted} />}
       </div>
       {open && <div style={{ padding: '14px 16px', backgroundColor: t.bgCard }}>{children}</div>}
@@ -347,9 +347,9 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
           {/* ── TOP BAR ── */}
           <div className="report-no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: `1px solid ${t.border}`, flexShrink: 0, backgroundColor: t.bg, borderRadius: '14px 14px 0 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontWeight: '700', fontSize: '15px', color: t.text }}>Reporte de Turno</span>
+              <span style={{ fontWeight: '600', fontSize: '15px', color: t.text }}>Reporte de Turno</span>
               <span style={{ padding: '3px 10px', backgroundColor: `${t.accent}20`, color: t.accent, borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>{shiftLabel}</span>
-              {isToday && <span style={{ padding: '3px 8px', backgroundColor: '#d1fae5', color: '#065f46', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>● EN CURSO</span>}
+              {isToday && <span style={{ padding: '3px 8px', backgroundColor: '#d1fae5', color: '#065f46', borderRadius: '6px', fontSize: '11px', fontWeight: '600' }}>● EN CURSO</span>}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {lastRefresh && <span style={{ fontSize: '11px', color: t.textMuted }}>Actualizado {lastRefresh.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
@@ -380,7 +380,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   { label: L.generated, value: data?.generatedAt ? fmtTime(data.generatedAt) : '—' },
                 ].map(f => (
                   <div key={f.label}>
-                    <div style={{ fontSize: '10px', color: t.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>{f.label}</div>
+                    <div style={{ fontSize: '10px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>{f.label}</div>
                     <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{f.value || '—'}</div>
                   </div>
                 ))}
@@ -399,7 +399,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   { label: L.downtime, value: kpis.downtimeMin > 0 ? `${kpis.downtimeMin} min` : '—', color: kpis.downtimeMin > 0 ? '#f59e0b' : t.textMuted },
                 ].map(k => (
                   <div key={k.label} style={{ textAlign: 'center', minWidth: '70px' }}>
-                    <div style={{ fontSize: '28px', fontWeight: '700', color: k.color }}>{k.value ?? '—'}</div>
+                    <div style={{ fontSize: '28px', fontWeight: '600', color: k.color }}>{k.value ?? '—'}</div>
                     <div style={{ fontSize: '10px', color: t.textMuted, textTransform: 'uppercase', fontWeight: '600' }}>{k.label}</div>
                   </div>
                 ))}
@@ -416,12 +416,12 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                     { label: L.remaining, value: Math.max(0, avance.qtyEnPlanta - avance.qtyInspected), color: avance.qtyEnPlanta - avance.qtyInspected > 0 ? '#B00020' : '#16a34a' },
                   ].map(a => (
                     <div key={a.label} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '28px', fontWeight: '700', color: a.color }}>{a.value}</div>
+                      <div style={{ fontSize: '28px', fontWeight: '600', color: a.color }}>{a.value}</div>
                       <div style={{ fontSize: '10px', color: t.textMuted, textTransform: 'uppercase', fontWeight: '600' }}>{a.label}</div>
                     </div>
                   ))}
                   <div style={{ flex: 1, minWidth: '200px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
                       <span style={{ color: t.textMuted }}>% Avance campaña</span>
                       <span style={{ color: avancePct >= 100 ? '#16a34a' : t.accent }}>{avancePct.toFixed(1)}%</span>
                     </div>
@@ -442,7 +442,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${t.border}` }}>
                       {[L.defect, L.qty, L.nokPct, L.accumPct, L.bar].map(h => (
-                        <th key={h} style={{ padding: '6px 10px', textAlign: h === L.qty || h === L.nokPct || h === L.accumPct ? 'center' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
+                        <th key={h} style={{ padding: '6px 10px', textAlign: h === L.qty || h === L.nokPct || h === L.accumPct ? 'center' : 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -450,7 +450,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                     {pareto.map((row, i) => (
                       <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                         <td style={{ padding: '8px 10px', fontWeight: i === 0 ? '700' : '400', color: t.text }}>{row.defectName}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: '#B00020' }}>{row.qty}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{row.qty}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.text }}>{row.pctNok}%</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.textMuted }}>{row.pctCumulative}%</td>
                         <td style={{ padding: '8px 10px', width: '120px' }}>
@@ -481,8 +481,8 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                     const style = DISP_COLORS[d.code] || { bg: t.bgPanel, color: t.text };
                     return (
                       <div key={d.code} style={{ padding: '10px 16px', backgroundColor: style.bg, borderRadius: '8px', textAlign: 'center', minWidth: '90px' }}>
-                        <div style={{ fontSize: '22px', fontWeight: '700', color: style.color }}>{d.qty}</div>
-                        <div style={{ fontSize: '10px', fontWeight: '700', color: style.color, textTransform: 'uppercase' }}>{d.name || d.code}</div>
+                        <div style={{ fontSize: '22px', fontWeight: '600', color: style.color }}>{d.qty}</div>
+                        <div style={{ fontSize: '10px', fontWeight: '600', color: style.color, textTransform: 'uppercase' }}>{d.name || d.code}</div>
                         <div style={{ fontSize: '11px', color: style.color, opacity: 0.8 }}>{d.pct}%</div>
                       </div>
                     );
@@ -498,7 +498,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${t.border}` }}>
                       {[L.inspector, L.ok, L.nok, L.insp, L.yieldPct, L.detectionPct].map(h => (
-                        <th key={h} style={{ padding: '6px 10px', textAlign: h === L.inspector ? 'left' : 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
+                        <th key={h} style={{ padding: '6px 10px', textAlign: h === L.inspector ? 'left' : 'center', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -540,21 +540,21 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                     <thead>
                       <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                        <th style={{ padding: '6px 10px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Defecto</th>
+                        <th style={{ padding: '6px 10px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Defecto</th>
                         {dispCodes.map(dc => (
-                          <th key={dc} style={{ padding: '6px 8px', textAlign: 'center', color: (DISP_COLORS[dc] || {}).color || t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>
+                          <th key={dc} style={{ padding: '6px 8px', textAlign: 'center', color: (DISP_COLORS[dc] || {}).color || t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>
                             {dispNames[dc]}
                           </th>
                         ))}
-                        <th style={{ padding: '6px 8px', textAlign: 'center', color: '#B00020', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Total</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'center', color: '#B00020', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {/* OK row */}
                       <tr style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: '#d1fae520' }}>
-                        <td style={{ padding: '7px 10px', fontWeight: '700', color: '#16a34a' }}>✓ OK</td>
+                        <td style={{ padding: '7px 10px', fontWeight: '600', color: '#16a34a' }}>✓ OK</td>
                         {dispCodes.map(dc => <td key={dc} style={{ padding: '7px 8px', textAlign: 'center', color: t.textMuted }}>—</td>)}
-                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '700', color: '#16a34a' }}>{kpis.qtyOk}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: '#16a34a' }}>{kpis.qtyOk}</td>
                       </tr>
                       {defectRows.map(([defectName, vals], i) => (
                         <tr key={defectName} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel }}>
@@ -565,26 +565,26 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                             return (
                               <td key={dc} style={{ padding: '7px 8px', textAlign: 'center' }}>
                                 {qty > 0
-                                  ? <span style={{ padding: '2px 8px', backgroundColor: dStyle.bg || t.bgPanel, color: dStyle.color || t.text, borderRadius: '10px', fontWeight: '700', fontSize: '12px' }}>{qty}</span>
+                                  ? <span style={{ padding: '2px 8px', backgroundColor: dStyle.bg || t.bgPanel, color: dStyle.color || t.text, borderRadius: '10px', fontWeight: '600', fontSize: '12px' }}>{qty}</span>
                                   : <span style={{ color: t.border }}>—</span>
                                 }
                               </td>
                             );
                           })}
-                          <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '700', color: '#B00020' }}>{vals.total}</td>
+                          <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{vals.total}</td>
                         </tr>
                       ))}
                       {/* Totals row */}
                       <tr style={{ borderTop: `2px solid ${t.border}`, backgroundColor: t.bgPanel }}>
-                        <td style={{ padding: '7px 10px', fontWeight: '700', color: t.text, textTransform: 'uppercase', fontSize: '11px' }}>Total NOK</td>
+                        <td style={{ padding: '7px 10px', fontWeight: '600', color: t.text, textTransform: 'uppercase', fontSize: '11px' }}>Total NOK</td>
                         {dispCodes.map(dc => {
                           const colTotal = defectRows.reduce((s, [, v]) => s + (v[dc] || 0), 0);
                           const dStyle = DISP_COLORS[dc] || {};
                           return (
-                            <td key={dc} style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '700', color: dStyle.color || t.text }}>{colTotal || '—'}</td>
+                            <td key={dc} style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: dStyle.color || t.text }}>{colTotal || '—'}</td>
                           );
                         })}
-                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '700', color: '#B00020' }}>{totalNok}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{totalNok}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -643,12 +643,12 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   {entries.map((e, i) => {
                     const dispStyle = DISP_COLORS[e.dispositionCode] || { bg: t.bgPanel, color: t.text };
                     const fields = [
-                      { label: L.hour,        value: <span style={{ fontFamily: 'monospace', color: t.accent, fontWeight: '700' }}>{fmtTime(e.createdAt)}</span> },
-                      { label: L.serial,      value: <span style={{ fontWeight: '700', color: t.text }}>{e.lotNumber || '—'}</span> },
+                      { label: L.hour,        value: <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: t.accent, fontWeight: '600' }}>{fmtTime(e.createdAt)}</span> },
+                      { label: L.serial,      value: <span style={{ fontWeight: '600', color: t.text }}>{e.lotNumber || '—'}</span> },
                       { label: L.part,       value: e.partNumber || '—' },
-                      { label: L.defect,     value: <span style={{ fontWeight: '700', color: '#B00020' }}>{e.defectName || '—'}</span> },
+                      { label: L.defect,     value: <span style={{ fontWeight: '600', color: '#B00020' }}>{e.defectName || '—'}</span> },
                       { label: L.disposition, value: e.dispositionCode
-                          ? <span style={{ padding: '2px 10px', backgroundColor: dispStyle.bg, color: dispStyle.color, borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>{e.dispositionName || e.dispositionCode}</span>
+                          ? <span style={{ padding: '2px 10px', backgroundColor: dispStyle.bg, color: dispStyle.color, borderRadius: '10px', fontSize: '11px', fontWeight: '600' }}>{e.dispositionName || e.dispositionCode}</span>
                           : '—'
                       },
                       { label: L.inspector,   value: e.inspector || '—' },
@@ -664,7 +664,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                         <div style={{ flex: '1 1 0', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                           {fields.map(f => (
                             <div key={f.label} style={{ display: 'flex', gap: '8px', alignItems: 'baseline', fontSize: '12px' }}>
-                              <span style={{ width: '84px', flexShrink: 0, fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: t.textMuted }}>{f.label}</span>
+                              <span style={{ width: '84px', flexShrink: 0, fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', color: t.textMuted }}>{f.label}</span>
                               <span style={{ color: t.text }}>{f.value}</span>
                             </div>
                           ))}
@@ -706,8 +706,8 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {okSerials.map((e, i) => (
                     <div key={e.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '8px 12px', backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel, borderRadius: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'monospace', color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.inspectedAt)}</span>
-                      <span style={{ fontWeight: '700', color: '#2E7D32', minWidth: '140px' }}>{e.serialNumber}</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.inspectedAt)}</span>
+                      <span style={{ fontWeight: '600', color: '#2E7D32', minWidth: '140px' }}>{e.serialNumber}</span>
                       {e.partNumber && <span style={{ color: t.textDim }}>{e.partNumber}</span>}
                       <span style={{ marginLeft: 'auto', color: t.textMuted }}>{e.inspector}</span>
                     </div>
@@ -722,8 +722,8 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {okEntries.map((e, i) => (
                     <div key={e.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '8px 12px', backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel, borderRadius: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'monospace', color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.createdAt)}</span>
-                      <span style={{ fontWeight: '700', color: '#2E7D32', minWidth: '120px' }}>{e.lotNumber || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>Sin serial</span>}</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.createdAt)}</span>
+                      <span style={{ fontWeight: '600', color: '#2E7D32', minWidth: '120px' }}>{e.lotNumber || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>Sin serial</span>}</span>
                       <span style={{ color: t.text }}>Qty: {e.quantity}</span>
                       {e.partNumber && <span style={{ color: t.textDim }}>{e.partNumber}</span>}
                       <span style={{ marginLeft: 'auto', color: t.textMuted }}>{e.inspector}</span>
