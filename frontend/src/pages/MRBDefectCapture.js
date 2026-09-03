@@ -1615,7 +1615,7 @@ const MRBDefectCapture = () => {
           msg += ` | ${data.skipped} omitidos (parte no en campaña)`;
         }
         if (data.wrongPartCount > 0) {
-          msg += ` | ⚠️ ${data.wrongPartCount} rechazados (serial no corresponde a la parte)`;
+          msg += ` | ${data.wrongPartCount} rechazados (serial no corresponde a la parte)`;
           // Mostrar ejemplos en consola para debug
           if (data.wrongPartSerials?.length > 0) {
             console.warn('Seriales rechazados por parte incorrecta:', data.wrongPartSerials);
@@ -2006,7 +2006,7 @@ const MRBDefectCapture = () => {
               {affectedStatus && Object.keys(affectedStatus).length > 0 && Object.values(affectedStatus).some(s => s === 'OUT_OF_LIST') && (
                 <div style={{ marginTop: '8px', padding: '10px', backgroundColor: t.warningBg, borderRadius: '6px', border: `1px solid ${t.warning}` }}>
                   <div style={{ fontSize: '11px', fontWeight: '600', color: t.warningFg, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    ⚠️ FUERA DE CAMPAÑA
+                    <AlertTriangle size={14} /> FUERA DE CAMPAÑA
                   </div>
                   <div style={{ fontSize: '10px', color: t.warningFg, marginTop: '2px' }}>
                     {(() => {
@@ -2041,7 +2041,7 @@ const MRBDefectCapture = () => {
               {affectedStatus && Object.keys(affectedStatus).length > 0 && Object.values(affectedStatus).every(s => s === 'IN_LIST') && (
                 <div style={{ marginTop: '8px', padding: '8px 10px', backgroundColor: t.successBg, borderRadius: '6px', border: `1px solid ${t.successBorder}` }}>
                   <div style={{ fontSize: '11px', fontWeight: '600', color: t.successFg, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    ✅ EN TODAS LAS CAMPAÑAS
+                    <CheckCircle size={14} /> EN TODAS LAS CAMPAÑAS
                   </div>
                   <div style={{ fontSize: '10px', color: t.successFg, marginTop: '2px' }}>
                     Serial está en la lista de afectados de todas las campañas seleccionadas.
@@ -2066,10 +2066,10 @@ const MRBDefectCapture = () => {
                   }`
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>
-                      {productionInfo.inspectionStatus === 'OK' ? '✅' :
-                       productionInfo.inspectionStatus === 'DEFECTIVE' ? '⚠️' :
-                       productionInfo.inspectionStatus === 'SCRAPPED' ? '🗑️' : '—'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      {productionInfo.inspectionStatus === 'OK' ? <CheckCircle size={16} color={t.success} /> :
+                       productionInfo.inspectionStatus === 'DEFECTIVE' ? <AlertTriangle size={16} color={t.warning} /> :
+                       productionInfo.inspectionStatus === 'SCRAPPED' ? <Trash2 size={16} color={t.textMuted} /> : '—'}
                     </span>
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: '600', color:
@@ -2307,7 +2307,7 @@ const MRBDefectCapture = () => {
                     return (
                       <label
                         key={camp.campaignId}
-                        title={`${camp.title}${isOutOfList ? ' ⚠️ Serial no está en lista de afectados' : ''}`}
+                        title={`${camp.title}${isOutOfList ? ' - Serial no está en lista de afectados' : ''}`}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px',
                           backgroundColor: isSelected ? (hasDefects ? t.errorBg : t.successBg) : t.bgInput,
@@ -2328,7 +2328,7 @@ const MRBDefectCapture = () => {
                           style={{ width: '14px', height: '14px', accentColor: hasDefects ? '#ef4444' : '#22c55e' }}
                         />
                         <span style={{ color: t.text }}>{camp.campaignNumber}</span>
-                        {isOutOfList && <span style={{ fontSize: '10px' }}>⚠️</span>}
+                        {isOutOfList && <AlertTriangle size={12} color={t.warning} />}
                         {isSelected && (
                           <span style={{
                             width: '14px', height: '14px', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3651,7 +3651,7 @@ const MRBDefectCapture = () => {
                           <span style={{ color: t.errorFg, fontWeight: '600' }}>{nokCount} NOK</span>
                         )}
                         {nokCount > 0 && !modalDispositionId && (
-                          <span style={{ color: t.warningFg, fontSize: '11px' }}>⚠️ Falta disposición</span>
+                          <span style={{ color: t.warningFg, fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><AlertTriangle size={12} /> Falta disposición</span>
                         )}
                       </div>
                       <button

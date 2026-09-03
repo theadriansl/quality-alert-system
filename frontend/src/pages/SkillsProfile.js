@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, Tooltip, Legend,
   LineChart, Line, XAxis, YAxis, CartesianGrid
 } from 'recharts';
+import { Paperclip } from 'lucide-react';
 import { useTheme, ThemeSelector } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getUserProfile, getEvaluation, getHistoryPivot, getScoreDetail, getEvidenceDownloadUrl } from '../services/skillsService';
@@ -896,7 +897,7 @@ const SkillsProfile = () => {
                                 minWidth: '40px'
                               }}>
                                 <span style={{ fontWeight: '600', color: scoreColor, fontSize: '14px' }}>{ev.score}</span>
-                                {ev.hasEvidence && <span style={{ fontSize: '9px', color: t.textMuted }}>📎</span>}
+                                {ev.hasEvidence && <Paperclip size={12} color={t.textMuted} style={{ marginTop: '2px' }} />}
                                 {ev.trainingType && (
                                   <span style={{ fontSize: '8px', color: t.textMuted }}>
                                     {ev.trainingType === 'INTERNAL' ? 'INT' : 'EXT'}
@@ -954,7 +955,7 @@ const SkillsProfile = () => {
                 <span><span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.green + '40', borderRadius: '3px', marginRight: '4px' }}></span> {L.meetsTarget}</span>
                 <span><span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.orange + '40', borderRadius: '3px', marginRight: '4px' }}></span> {L.nearTarget}</span>
                 <span><span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.red + '40', borderRadius: '3px', marginRight: '4px' }}></span> {L.needsImprovement}</span>
-                <span>📎 = {L.evidenceAttached}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Paperclip size={12} color={t.textMuted} /> = {L.evidenceAttached}</span>
                 <span>{L.internalExternal}</span>
               </div>
               </>
@@ -1069,7 +1070,7 @@ const SkillsProfile = () => {
                   fontWeight: '500'
                 }}
               >
-                📎 {L.downloadEvidence} ({scoreModal.evidenceFilename || 'archivo'})
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Paperclip size={14} /> {L.downloadEvidence} ({scoreModal.evidenceFilename || 'archivo'})</span>
               </button>
             )}
           </div>

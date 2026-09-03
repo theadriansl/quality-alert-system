@@ -9,6 +9,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip
 } from 'recharts';
+import { Paperclip } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import workInstructionsService from '../services/workInstructionsService';
@@ -413,7 +414,7 @@ const WIOperatorProfile = () => {
                                 }}>
                                   <span style={{ fontWeight: '600', color: levelColor, fontSize: '14px' }}>{levelCode}</span>
                                   <span style={{ fontSize: '9px', color: t.textMuted }}>{cert.level}</span>
-                                  {cert.hasEvidence && <span style={{ fontSize: '9px' }}>📎</span>}
+                                  {cert.hasEvidence && <Paperclip size={12} color={t.textMuted} style={{ marginTop: '2px' }} />}
                                 </div>
                               ) : (
                                 <span style={{ color: t.textMuted }}>—</span>
@@ -472,7 +473,7 @@ const WIOperatorProfile = () => {
                   <span><span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.levelL + '40', borderRadius: '3px', marginRight: '4px' }}></span> L = Bajo Supervisión (2)</span>
                   <span><span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.levelU + '40', borderRadius: '3px', marginRight: '4px' }}></span> U = Libre (3)</span>
                   <span><span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: COLORS.levelO + '40', borderRadius: '3px', marginRight: '4px' }}></span> O = Instructor (4)</span>
-                  <span>📎 = Evidencia</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Paperclip size={12} color={t.textMuted} /> = Evidencia</span>
                 </div>
               </>
             ) : (
@@ -557,7 +558,7 @@ const WIOperatorProfile = () => {
               {detailModal.cert.hasEvidence && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${t.border}` }}>
                   <span style={{ color: t.textMuted }}>Evidencia:</span>
-                  <span style={{ color: COLORS.green }}>📎 Adjunta</span>
+                  <span style={{ color: COLORS.green, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Paperclip size={12} /> Adjunta</span>
                 </div>
               )}
             </div>
