@@ -72,7 +72,13 @@ const MRB_STORAGE_KEY = 'mrb-custom-dashboard-v1';
 
 // C palette removed — use theme tokens (t.accent, t.success, t.error, t.warning, t.textMuted)
 
-const SEV_COLORS = { Crítico: '#ef4444', ALTA: '#f97316', MEDIA: '#f59e0b', BAJA: '#16a34a' };
+// Severity colors - theme-aware (matches QARDashboardComponent pattern)
+const getSevColors = (t) => ({
+  'Crítico': t.error,
+  'ALTA':    t.warning,
+  'MEDIA':   t.warning,  // same as ALTA for visual consistency
+  'BAJA':    t.success
+});
 
 const KpiTile = ({ label, value, sub, color }) => {
   const { theme: t } = useTheme();
@@ -430,7 +436,8 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   if (id === 'chart-sev-pie') {
-    const sevData = (df.bySeverity || []).map((r, i) => ({ name: r.severity, value: r.qty_nok || 0, fill: SEV_COLORS[r.severity] || DEPT_PALETTE[i] }));
+    const sevColors = getSevColors(t);
+    const sevData = (df.bySeverity || []).map((r, i) => ({ name: r.severity, value: r.qty_nok || 0, fill: sevColors[r.severity] || DEPT_PALETTE[i] }));
     return (
       <div>
         <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>NOK por Severidad</div>

@@ -551,15 +551,15 @@ const RepairStation = () => {
   // ============================================================================
   const getStatusInfo = (status) => {
     const map = {
-      'OPEN': { label: language === 'es' ? 'Pendiente' : 'Pending', color: '#ef4444', bg: '#fef2f2', icon: '🔴' },
-      'IN_REPAIR': { label: language === 'es' ? 'En Reparación' : 'In Repair', color: '#f59e0b', bg: '#fffbeb', icon: '🟡' },
-      'REPAIRED': { label: language === 'es' ? 'Reparado' : 'Repaired', color: '#3b82f6', bg: '#eff6ff', icon: '🔵' },
-      'RELEASED': { label: language === 'es' ? 'Liberado' : 'Released', color: '#22c55e', bg: '#f0fdf4', icon: '🟢' },
-      'CLOSED': { label: language === 'es' ? 'Liberado' : 'Released', color: '#22c55e', bg: '#f0fdf4', icon: '🟢' },
-      'QUARANTINE': { label: 'Cuarentena', color: '#6b7280', bg: '#f3f4f6', icon: '⚪' },
-      'SCRAPPED': { label: 'Scrap', color: '#1f2937', bg: '#e5e7eb', icon: '⚫' }
+      'OPEN': { label: language === 'es' ? 'Pendiente' : 'Pending', color: t.error, bg: t.errorBg, icon: '🔴' },
+      'IN_REPAIR': { label: language === 'es' ? 'En Reparación' : 'In Repair', color: t.warning, bg: t.warningBg, icon: '🟡' },
+      'REPAIRED': { label: language === 'es' ? 'Reparado' : 'Repaired', color: t.accent, bg: t.accentBg, icon: '🔵' },
+      'RELEASED': { label: language === 'es' ? 'Liberado' : 'Released', color: t.success, bg: t.successBg, icon: '🟢' },
+      'CLOSED': { label: language === 'es' ? 'Liberado' : 'Released', color: t.success, bg: t.successBg, icon: '🟢' },
+      'QUARANTINE': { label: 'Cuarentena', color: t.textMuted, bg: t.bgPanel, icon: '⚪' },
+      'SCRAPPED': { label: 'Scrap', color: t.text, bg: t.bgPanel, icon: '⚫' }
     };
-    return map[status] || { label: status, color: '#6b7280', bg: '#f3f4f6', icon: '⚪' };
+    return map[status] || { label: status, color: t.textMuted, bg: t.bgPanel, icon: '⚪' };
   };
 
   const getTimeAgo = (date) => {

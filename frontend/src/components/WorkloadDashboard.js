@@ -171,8 +171,8 @@ const TabCarga = ({ kpis }) => {
               <YAxis type="category" dataKey="name" fontSize={11} stroke={t.textMuted} width={70} interval={0} />
               <Tooltip contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px' }} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="Disponibles" fill="#e5e7eb" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="Asignadas" fill="#0072CE" radius={[0, 6, 6, 0]} />
+              <Bar dataKey="Disponibles" fill={t.border} radius={[0, 0, 0, 0]} />
+              <Bar dataKey="Asignadas" fill={t.accent} radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -591,8 +591,8 @@ const TabProyectos = ({ kpis }) => {
               <Tooltip contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px' }}
                 formatter={(v, n) => [`${v} hrs`, n]} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="Estimadas" fill="#0072CE" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Reales" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Estimadas" fill={t.accent} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Reales" fill={t.primary} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -805,8 +805,8 @@ const renderWorkloadWidget = (id, kpis, t) => {
             <YAxis type="category" dataKey="name" fontSize={10} width={70} interval={0} />
             <Tooltip />
             <Legend wrapperStyle={{ fontSize: '11px' }} />
-            <Bar dataKey="Disponibles" fill="#e5e7eb" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="Asignadas" fill="#0072CE" radius={[0, 6, 6, 0]} />
+            <Bar dataKey="Disponibles" fill={t.border} radius={[0, 0, 0, 0]} />
+            <Bar dataKey="Asignadas" fill={t.accent} radius={[0, 6, 6, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </WLCardWrapper>
@@ -991,8 +991,8 @@ const renderWorkloadWidget = (id, kpis, t) => {
             <YAxis fontSize={10} />
             <Tooltip formatter={(v, n) => [`${v} hrs`, n]} />
             <Legend wrapperStyle={{ fontSize: '11px' }} />
-            <Bar dataKey="Estimadas" fill="#0072CE" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Reales" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Estimadas" fill={t.accent} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Reales" fill={t.primary} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </WLCardWrapper>
