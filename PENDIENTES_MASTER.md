@@ -665,6 +665,27 @@ D3MFG.js: 32 literales
 | WorkloadDashboard.js | KpiTile local → wrapper (borderAccent='top'), emojis ⏰✅ eliminados |
 | QARDashboardComponent.js | SectionTitle estandarizado 10.5px/600 (micro-title) |
 
+**Bloque C - fontWeight 700 → 600:** `f1750a1`
+| Archivo | Instancias |
+|---------|------------|
+| QARDashboardComponent.js | 37 |
+| WIOperatorProfile.js | 13 |
+
+**Bloque D - Emojis decorativos eliminados:** `f1750a1`
+| Archivo | Emojis removidos |
+|---------|------------------|
+| MRBTransferPackages.js | 👁️📤📦📍📝 (14) |
+| MRBDefectCapture.js | 📋📍📄📊 (15+) |
+| MRBBuffer.js | 📦🔄📋 (3) |
+| MRBCreate, MRBCampaignDetail, MRBInventory, MRBShiftReport | 🔄📧📦📄 |
+| 8DWorkflow.js | 📁📋📄 |
+| SkillsConfig.js | 🗑️ → ✕ |
+| SkillsEvaluate.js, WorkloadManager.js | 💾📅 |
+
+**Preservados:** 📎 (evidencia), ✅⚠️🗑️🔴🟡🟢 (indicadores estado)
+
+**Bloque E - borderRadius (pendiente):** 2480 instancias en 134 archivos, requiere sesión dedicada
+
 ### ✅ MRBCampaignDetail.js CERRADO (sesión 03-Sep cont.)
 
 | Fase | Cambios | Commit |
