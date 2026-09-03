@@ -1259,7 +1259,7 @@ const MRBDashboard = () => {
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px', marginBottom: '20px' }}>
           <KPI label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} t={t} />
-          <KPI label="PPM" value={s.ppm != null ? fmtN(s.ppm) : '—'} color="t.error" t={t} />
+          <KPI label="PPM" value={s.ppm != null ? fmtN(s.ppm) : '—'} color={t.error} t={t} />
           <KPI label={L.totalCost} value={fmt$(s.totalCost || 0)} color={t.accent} t={t} />
           <KPI label="Backlog" value={s.backlog} sub={`${s.total || 0} ${L.total}`} color={t.warning} t={t} />
           <KPI label={language === 'es' ? 'Cerradas' : 'Closed'} value={s.closed} sub={`${s.totalInsp ? fmtN(s.totalInsp) : 0} ${L.pcsInspected}`} color={t.success} t={t} />
@@ -1287,7 +1287,7 @@ const MRBDashboard = () => {
                 <YAxis tick={{ fontSize: 10, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
                 <Tooltip {...tt} formatter={v => fmt$(v)} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="scrap" name="Scrap" stackId="b" fill="t.error" />
+                <Bar dataKey="scrap" name="Scrap" stackId="b" fill={t.error} />
                 <Bar dataKey="labor" name={language === 'es' ? 'Mano de obra' : 'Labor'} stackId="b" fill={t.warning} radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -1466,7 +1466,7 @@ const MRBDashboard = () => {
                 <YAxis tick={{ fontSize: 10, fill: t.textMuted }} />
                 <Tooltip {...tt} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Line type="monotone" dataKey="scrap" stroke="t.error" strokeWidth={2} dot={{ r: 3 }} name="Scrap" />
+                <Line type="monotone" dataKey="scrap" stroke={t.error} strokeWidth={2} dot={{ r: 3 }} name="Scrap" />
                 <Line type="monotone" dataKey="rework" stroke={t.warning} strokeWidth={2} dot={{ r: 3 }} name="Rework" />
               </LineChart>
             </ResponsiveContainer>
@@ -1522,7 +1522,7 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label={L.scrapCost} value={fmt$(c.scrapCost || 0)} color="t.error" t={t} />
+          <KPI label={L.scrapCost} value={fmt$(c.scrapCost || 0)} color={t.error} t={t} />
           <KPI label={L.laborCost} value={fmt$(c.laborCost || 0)} color={t.warning} t={t} />
           <KPI label={L.totalCost} value={fmt$(c.totalCost || 0)} color={t.accent} t={t} />
         </div>
@@ -1536,7 +1536,7 @@ const MRBDashboard = () => {
                 <YAxis tick={{ fontSize: 10, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
                 <Tooltip {...tt} formatter={v => fmt$(v)} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="scrap" name="Scrap" stackId="c" fill="t.error" />
+                <Bar dataKey="scrap" name="Scrap" stackId="c" fill={t.error} />
                 <Bar dataKey="labor" name={language === 'es' ? 'Mano de obra' : 'Labor'} stackId="c" fill={t.warning} radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -1549,7 +1549,7 @@ const MRBDashboard = () => {
                 <XAxis type="number" tick={{ fontSize: 10, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
                 <YAxis type="category" dataKey="dept" tick={{ fontSize: 10, fill: t.textMuted }} width={56} />
                 <Tooltip {...tt} formatter={v => fmt$(v)} />
-                <Bar dataKey="scrap_cost" name="Scrap" stackId="d" fill="t.error" />
+                <Bar dataKey="scrap_cost" name="Scrap" stackId="d" fill={t.error} />
                 <Bar dataKey="labor_cost" name="M.O." stackId="d" fill={t.warning} radius={[0,4,4,0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -1584,7 +1584,7 @@ const MRBDashboard = () => {
                 <XAxis type="number" tick={{ fontSize: 10, fill: t.textMuted }} />
                 <YAxis type="category" dataKey="defect" tick={{ fontSize: 10, fill: t.textMuted }} width={76} />
                 <Tooltip {...tt} />
-                <Bar dataKey="qty" name={language === 'es' ? 'Piezas NOK' : 'NOK Pieces'} fill="t.error" radius={[0,4,4,0]} />
+                <Bar dataKey="qty" name={language === 'es' ? 'Piezas NOK' : 'NOK Pieces'} fill={t.error} radius={[0,4,4,0]} />
               </BarChart>
             </ResponsiveContainer>
           </SectionCard>
@@ -1627,7 +1627,7 @@ const MRBDashboard = () => {
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
           <KPI label={L.pcsPerHour} value={o.piecesPerHour ?? '—'} sub={`${fmtN(o.inspectorHours)} ${language === 'es' ? 'hrs inspector' : 'inspector hrs'}`} color={t.accent} t={t} />
-          <KPI label={L.defectsPerHour} value={o.defectsPerHour ?? '—'} color="t.error" t={t} />
+          <KPI label={L.defectsPerHour} value={o.defectsPerHour ?? '—'} color={t.error} t={t} />
           <KPI label={L.totalDowntime} value={o.totalDowntime ? `${fmtN(o.totalDowntime)} min` : '0 min'} color={t.warning} t={t} />
           <KPI label={L.inspectorHours} value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} t={t} />
         </div>
