@@ -456,7 +456,7 @@ const SkillsConfig = () => {
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => openEditCategory(cat)} style={{ padding: '4px 8px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>✏️</button>
-                        <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: '4px 8px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>🗑️</button>
+                        <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: '4px 8px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
                       </div>
                     </div>
                     <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: t.textMuted }}>{cat.description || L.noDescription}</p>
@@ -519,7 +519,7 @@ const SkillsConfig = () => {
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'right' }}>
                           <button onClick={() => openEditSkill(skill)} style={{ padding: '4px 8px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer', marginRight: '4px' }}>✏️</button>
-                          <button onClick={() => handleDeleteSkill(skill.id)} style={{ padding: '4px 8px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
+                          <button onClick={() => handleDeleteSkill(skill.id)} style={{ padding: '4px 8px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer' }}>✕</button>
                         </td>
                       </tr>
                     ))}

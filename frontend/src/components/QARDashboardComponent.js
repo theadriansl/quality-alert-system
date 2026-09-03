@@ -120,7 +120,7 @@ const SevBadge = ({ sev }) => {
       padding: '2px 8px',
       borderRadius: '10px',
       fontSize: '10px',
-      fontWeight: '700',
+      fontWeight: '600',
       backgroundColor: color + '22',
       color,
       border: `1px solid ${color}44`,
@@ -138,7 +138,7 @@ const StatusBadge = ({ status }) => {
       padding: '2px 8px',
       borderRadius: '10px',
       fontSize: '10px',
-      fontWeight: '700',
+      fontWeight: '600',
       backgroundColor: color + '22',
       color,
     }}>{status}</span>
@@ -362,7 +362,7 @@ const SlaConfigModal = ({ slaConfig, onClose, onSaved }) => {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>Configuración SLA</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>Configuración SLA</div>
             <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>Tiempos máximos por severidad (horas)</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: t.textMuted, lineHeight: 1 }}>✕</button>
@@ -381,7 +381,7 @@ const SlaConfigModal = ({ slaConfig, onClose, onSaved }) => {
             {rows.map((r, i) => (
               <tr key={r.severity_id} style={{ borderBottom: `1px solid ${t.border}` }}>
                 <td style={{ padding: '10px 12px' }}>
-                  <span style={{ fontWeight: '700', color: SEV_COLORS[r.severity_name] || C.blue }}>{r.severity_name}</span>
+                  <span style={{ fontWeight: '600', color: SEV_COLORS[r.severity_name] || C.blue }}>{r.severity_name}</span>
                 </td>
                 <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                   <input
@@ -479,7 +479,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
           {/* Respuesta */}
           <div>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
               Respuesta
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -510,7 +510,7 @@ const TabTiempo = ({ data, onEditSLA }) => {
           </div>
           {/* Cierre */}
           <div>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
               Cierre
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -558,11 +558,11 @@ const TabTiempo = ({ data, onEditSLA }) => {
               borderRadius: '6px',
               borderLeft: `3px solid ${SEV_COLORS[sc.severity_name] || C.blue}`,
             }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: SEV_COLORS[sc.severity_name] || C.blue }}>{sc.severity_name}</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: SEV_COLORS[sc.severity_name] || C.blue }}>{sc.severity_name}</div>
               <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '6px' }}>Respuesta</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>{sc.response_hours}h</div>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>{sc.response_hours}h</div>
               <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '4px' }}>Cierre</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>{sc.closure_hours}h</div>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>{sc.closure_hours}h</div>
             </div>
           ))}
         </div>
@@ -588,7 +588,7 @@ const TabCalidad = ({ data }) => {
       <div style={{ marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: t.text, marginBottom: '4px' }}>
           <span>{label}</span>
-          <span style={{ fontWeight: '700', color }}>{value} <span style={{ color: t.textMuted, fontWeight: '400' }}>({pct}%)</span></span>
+          <span style={{ fontWeight: '600', color }}>{value} <span style={{ color: t.textMuted, fontWeight: '400' }}>({pct}%)</span></span>
         </div>
         <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${pct}%`, backgroundColor: color, borderRadius: '4px', transition: 'width 0.6s' }} />
@@ -755,7 +755,7 @@ const TabOperacion = ({ data }) => {
               {(data.byDept || []).map((r, i) => (
                 <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                   <td style={{ padding: '8px 10px', color: t.text, fontWeight: '500' }}>{r.department}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: t.text }}>{r.total}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: t.text }}>{r.total}</td>
                   <td style={{ padding: '8px 10px', textAlign: 'center', color: C.orange }}>{r.emitidos + r.respondidos}</td>
                   <td style={{ padding: '8px 10px', textAlign: 'center', color: C.green }}>{r.cerrados}</td>
                   <td style={{ padding: '8px 10px', textAlign: 'center', color: r.altaSev > 0 ? C.red : t.textMuted }}>{r.altaSev}</td>
@@ -797,7 +797,7 @@ const TabOperacion = ({ data }) => {
               {(data.byResponsable || []).map((r, i) => (
                 <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                   <td style={{ padding: '6px 10px', color: t.text, fontWeight: '500' }}>{r.name}</td>
-                  <td style={{ padding: '6px 10px', textAlign: 'center', fontWeight: '700', color: t.text }}>{r.total}</td>
+                  <td style={{ padding: '6px 10px', textAlign: 'center', fontWeight: '600', color: t.text }}>{r.total}</td>
                   <td style={{ padding: '6px 10px', textAlign: 'center', color: C.orange }}>{r.activos}</td>
                   <td style={{ padding: '6px 10px', textAlign: 'center', color: C.green }}>{r.cerrados}</td>
                   <td style={{ padding: '6px 10px', textAlign: 'center', color: r.vencidas > 0 ? C.red : t.textMuted, fontWeight: r.vencidas > 0 ? '700' : '400' }}>{r.vencidas}</td>
@@ -862,7 +862,7 @@ const TabCliente = ({ data }) => {
                 return (
                   <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                     <td style={{ padding: '8px 10px', color: t.text, fontWeight: '500', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.client}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', color: t.text }}>{r.total}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: t.text }}>{r.total}</td>
                     <td style={{ padding: '8px 10px', textAlign: 'center', color: C.green }}>{r.cerrados}</td>
                     <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                       <span style={{ color: pctCierre >= 70 ? C.green : pctCierre >= 40 ? C.orange : C.red, fontWeight: '600' }}>{pctCierre}%</span>
@@ -930,7 +930,7 @@ const TabRiesgo = ({ data }) => {
   const AlertCard = ({ title, items, emptyMsg, color, renderItem }) => (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text }}>{title}</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>{title}</div>
         <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: color + '22', border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, color }}>{items.length}</div>
       </div>
       {items.length === 0 ? (
@@ -1064,7 +1064,7 @@ const QARTable = ({ data }) => {
   return (
     <div style={{ marginTop: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <div style={{ fontSize: '14px', fontWeight: '700', color: t.text }}>Listado de QARs ({filtered.length})</div>
+        <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>Listado de QARs ({filtered.length})</div>
       </div>
 
       {/* Filters */}
@@ -1127,7 +1127,7 @@ const QARTable = ({ data }) => {
                   <td style={{ padding: '8px 10px', color: r.closedAt ? C.green : t.textMuted, whiteSpace: 'nowrap' }}>{formatDate(r.closedAt)}</td>
                   <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
                     {overdue ? (
-                      <span style={{ color: C.red, fontWeight: '700', fontSize: '10px' }}>VENCIDA</span>
+                      <span style={{ color: C.red, fontWeight: '600', fontSize: '10px' }}>VENCIDA</span>
                     ) : r.status === 'CERRADO' ? (
                       <span style={{ color: C.green, fontSize: '10px' }}>OK</span>
                     ) : r.slaResponse ? (
@@ -1239,7 +1239,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const volData = (data.volByMonth || []).map(r => ({ ...r, month: formatMonth(r.month) }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Tendencia mensual</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Tendencia mensual</div>
         <ResponsiveContainer width="100%" height={180}>
           <ComposedChart data={volData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1259,7 +1259,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const pieStatus = (data.byStatus || []).map(r => ({ name: r.status, value: r.count, fill: STATUS_COLORS[r.status] || C.gray }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>Por Estado</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>Por Estado</div>
         <ResponsiveContainer width="100%" height={160}>
           <PieChart>
             <Pie data={pieStatus} dataKey="value" cx="50%" cy="50%" outerRadius={58} label={({ name, value }) => `${name}: ${value}`} labelLine={false} fontSize={9}>
@@ -1283,7 +1283,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const pieSev = (data.bySeverity || []).map(r => ({ name: r.severity, value: r.count, fill: SEV_COLORS[r.severity] || C.gray }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>Por Severidad</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>Por Severidad</div>
         <ResponsiveContainer width="100%" height={160}>
           <PieChart>
             <Pie data={pieSev} dataKey="value" cx="50%" cy="50%" outerRadius={58} label={({ name, value }) => `${name}: ${value}`} labelLine={false} fontSize={9}>
@@ -1307,7 +1307,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const total = (data.byTrigger || []).reduce((s, r) => s + r.count, 0);
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Tipo de Disparo</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Tipo de Disparo</div>
         {(data.byTrigger || []).map((r, i) => {
           const pct = total > 0 ? Math.round((r.count / total) * 100) : 0;
           const color = r.trigger === 'threshold' ? C.red : C.blue;
@@ -1334,7 +1334,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>QARs por Departamento</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>QARs por Departamento</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={deptData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1358,7 +1358,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Carga por Responsable</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Carga por Responsable</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={respData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1381,7 +1381,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>QARs por Cliente</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>QARs por Cliente</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={clientData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1403,7 +1403,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>SLA Compliance por Severidad</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>SLA Compliance por Severidad</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={slaData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -1444,7 +1444,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const vencidas = (data.riskItems || []).filter(r => r.overdueResponse);
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
           Vencidas sin Respuesta <span style={{ color: C.red }}>({vencidas.length})</span>
         </div>
         {vencidas.length === 0 ? (
@@ -1472,7 +1472,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     const alta = (data.riskItems || []).filter(r => HIGH_SEVERITY_VALUES.includes(r.severity) && ACTIVE_STATUS_VALUES.includes(r.status));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
           Alta Sev. Activas <span style={{ color: C.orange }}>({alta.length})</span>
         </div>
         {alta.length === 0 ? (
@@ -1500,7 +1500,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
   if (id === 'quality-val') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Estado de Validación</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Estado de Validación</div>
         {[
           { label: 'Aprobadas',    value: q.validatedApproved, color: C.green },
           { label: 'Rechazadas',   value: q.validatedRejected, color: C.red },
@@ -1523,14 +1523,14 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     ];
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>Completitud de Documentación</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>Completitud de Documentación</div>
         {bars.map((r, i) => {
           const pct = Math.round((r.value / total) * 100);
           return (
             <div key={i} style={{ marginBottom: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: t.text, marginBottom: '4px' }}>
                 <span>{r.label}</span>
-                <span style={{ color: r.color, fontWeight: '700' }}>{r.value} ({pct}%)</span>
+                <span style={{ color: r.color, fontWeight: '600' }}>{r.value} ({pct}%)</span>
               </div>
               <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, backgroundColor: r.color, borderRadius: '4px' }} />
@@ -1546,7 +1546,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: t.text }}>Config. SLA Vigente</div>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>Config. SLA Vigente</div>
           {onEditSLA && (
             <button onClick={onEditSLA} style={{ padding: '4px 10px', fontSize: '11px', fontWeight: '600', color: 'white', backgroundColor: C.blue, border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
               Editar
@@ -1556,7 +1556,7 @@ const WidgetRenderer = ({ id, data, onEditSLA }) => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
           {(data.slaConfig || []).map((sc, i) => (
             <div key={i} style={{ padding: '10px', backgroundColor: t.bgPanel, borderRadius: '6px', borderLeft: `3px solid ${SEV_COLORS[sc.severity_name] || C.blue}` }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: SEV_COLORS[sc.severity_name] || C.blue }}>{sc.severity_name}</div>
+              <div style={{ fontSize: '11px', fontWeight: '600', color: SEV_COLORS[sc.severity_name] || C.blue }}>{sc.severity_name}</div>
               <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '4px' }}>Resp: <strong>{sc.response_hours}h</strong></div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>Cierre: <strong>{sc.closure_hours}h</strong></div>
             </div>
@@ -1683,7 +1683,7 @@ const DragGhost = ({ id, data }) => {
       minWidth: isKpi ? '180px' : '280px',
       transform: 'rotate(2deg)',
     }}>
-      <div style={{ fontSize: '11px', fontWeight: '700', color: C.blue, marginBottom: '4px' }}>
+      <div style={{ fontSize: '11px', fontWeight: '600', color: C.blue, marginBottom: '4px' }}>
         {meta?.icon} {meta?.label}
       </div>
       <div style={{ fontSize: '10px', color: t.textMuted }}>Arrastrando…</div>
@@ -1738,7 +1738,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '10px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>Mi Dashboard personalizado</div>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Mi Dashboard personalizado</div>
           <div style={{ fontSize: '11px', color: t.textMuted }}>
             {selected.length} widget{selected.length !== 1 ? 's' : ''} activo{selected.length !== 1 ? 's' : ''}
             {!editMode && selected.length > 0 && <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>}
@@ -1784,7 +1784,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
           <div style={{ backgroundColor: t.bgCard, borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '92%', maxHeight: '82vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: t.text }}>{pendingWidget ? `Tamaño — ${pendingWidget.label}` : 'Widgets del Dashboard'}</h2>
+                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: t.text }}>{pendingWidget ? `Tamaño — ${pendingWidget.label}` : 'Widgets del Dashboard'}</h2>
                 {pendingWidget && <button onClick={() => setPendingWidget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.blue, fontSize: '12px', padding: 0, marginTop: '4px' }}>← Volver al catálogo</button>}
               </div>
               <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, fontSize: '20px', lineHeight: 1 }}>✕</button>
@@ -1794,7 +1794,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
                 <p style={{ margin: '0 0 16px', fontSize: '12px', color: t.textMuted }}>{selected.length} activo{selected.length !== 1 ? 's' : ''} — click en activo para quitar, en inactivo para agregar con tamaño</p>
                 {cats.map(cat => (
                   <div key={cat} style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingBottom: '4px', borderBottom: `1px solid ${t.border}` }}>{cat}</div>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingBottom: '4px', borderBottom: `1px solid ${t.border}` }}>{cat}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {WIDGET_CATALOG.filter(w => w.cat === cat).map(item => {
                         const active = selected.some(s => s.id === item.id);
@@ -1822,7 +1822,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
                         <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
                           {[1,2,3,4].map(i => <div key={i} style={{ height: '10px', flex: 1, borderRadius: '3px', backgroundColor: i <= sz.cols ? C.blue : t.border }} />)}
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>{sz.label}</div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{sz.label}</div>
                         <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>{sz.desc}</div>
                         {isRec && <div style={{ fontSize: '10px', color: C.blue, fontWeight: '600', marginTop: '4px' }}>Recomendado</div>}
                       </button>
@@ -1912,7 +1912,7 @@ const TabResumen = ({ data }) => {
               {byDept.map((d, i) => (
                 <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel + '44' }}>
                   <td style={{ padding: '7px 8px', color: t.text, borderBottom: `1px solid ${t.border}` }}>{d.department}</td>
-                  <td style={{ padding: '7px 8px', color: t.text, borderBottom: `1px solid ${t.border}`, fontWeight: '700' }}>{d.total}</td>
+                  <td style={{ padding: '7px 8px', color: t.text, borderBottom: `1px solid ${t.border}`, fontWeight: '600' }}>{d.total}</td>
                   <td style={{ padding: '7px 8px', color: C.green, borderBottom: `1px solid ${t.border}` }}>{d.cerrados}</td>
                   <td style={{ padding: '7px 8px', color: d.altaSev > 0 ? C.red : t.textMuted, borderBottom: `1px solid ${t.border}` }}>{d.altaSev}</td>
                   <td style={{ padding: '7px 8px', color: t.textMuted, borderBottom: `1px solid ${t.border}` }}>{formatHours(d.avgResponseH)}</td>

@@ -2256,7 +2256,7 @@ const EightDWorkflow = () => {
                 onMouseLeave={(e) => !isCapturingPDF && (e.target.style.opacity = '1')}
                 title="Exportar PDF completo"
               >
-                {isCapturingPDF ? `⏳ ${captureProgress}` : '📄 PDF'}
+                {isCapturingPDF ? `${captureProgress}` : 'PDF'}
               </button>
             )}
           </div>
@@ -2415,7 +2415,6 @@ const EightDWorkflow = () => {
           alignItems: 'center',
           gap: '12px'
         }}>
-          <span style={{ fontSize: '20px' }}>📁</span>
           <div>
             <strong style={{ color: t.warningFg }}>DOCUMENTO ARCHIVADO (Solo Lectura)</strong>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: t.warningFg }}>
@@ -2437,7 +2436,6 @@ const EightDWorkflow = () => {
           alignItems: 'center',
           gap: '8px'
         }}>
-          <span>📋</span>
           <span style={{ color: t.text }}>
             Esta es una revisión. Ver documento anterior:{' '}
             <a

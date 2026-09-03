@@ -156,7 +156,7 @@ const MRBBuffer = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
-            📦 Buffer MRB
+            Buffer MRB
           </h1>
           <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>
             Material en QUARANTINE pendiente de asignación a campaña
@@ -193,7 +193,7 @@ const MRBBuffer = () => {
               fontSize: '13px'
             }}
           >
-            🔄 Actualizar
+            Actualizar
           </button>
         </div>
       </div>
@@ -286,7 +286,7 @@ const MRBBuffer = () => {
               fontSize: '12px'
             }}
           >
-            📋 Asignar a Campaña
+            Asignar a Campaña
           </button>
           <button
             onClick={() => setSelectedIds([])}

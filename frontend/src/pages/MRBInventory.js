@@ -428,7 +428,7 @@ const MRBInventory = () => {
               gap: '6px'
             }}
           >
-            📦 Crear Paquete Salida ({selectedSerials.size})
+            Crear Paquete Salida ({selectedSerials.size})
           </button>
         )}
         <div style={{ marginLeft: 'auto', fontSize: '13px', color: t.textMuted, alignSelf: 'center' }}>
@@ -598,7 +598,7 @@ const MRBInventory = () => {
             width: '500px', maxWidth: '90vw', boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
           }}>
             <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: t.text }}>
-              📦 Paquete de Salida MRB - {activeTab}
+              Paquete de Salida MRB - {activeTab}
             </h2>
 
             <div style={{ marginBottom: '16px' }}>

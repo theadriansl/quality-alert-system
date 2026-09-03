@@ -601,7 +601,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 {tallies.map(ts => (
                   <a key={ts.id} href={`${API_URL}${ts.filePath}`} target="_blank" rel="noreferrer"
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', color: '#92400e', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}>
-                    📄 {ts.filename}
+                    {ts.filename}
                   </a>
                 ))}
                 {/* Subir tally sheet retroactivo */}

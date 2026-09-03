@@ -936,7 +936,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                             fontSize: '12px'
                           }}
                         >
-                          👁️ {language === 'es' ? 'Ver' : 'View'}
+                          {language === 'es' ? 'Ver' : 'View'}
                         </button>
                         <button
                           onClick={() => openReceiveModal(pkg)}
@@ -1248,7 +1248,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                 opacity: selectedRework.size > 0 ? 1 : 0.6
               }}
             >
-              📤 {language === 'es' ? 'Crear Paquete a Hospital' : 'Create Package to Hospital'}
+              {language === 'es' ? 'Crear Paquete a Hospital' : 'Create Package to Hospital'}
             </button>
           </div>
 
@@ -1410,7 +1410,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                   cursor: 'pointer', fontWeight: '600', fontSize: '13px'
                 }}
               >
-                📦 Crear Paquete Salida a Buffer
+                Crear Paquete Salida a Buffer
               </button>
             </div>
           )}
@@ -1440,7 +1440,6 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
           {/* OK Serials Table */}
           {okSerials.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px', backgroundColor: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}` }}>
-              <div style={{ fontSize: '24px', marginBottom: '16px', color: t.textMuted }}>📦</div>
               <div style={{ fontSize: '16px', color: t.text, fontWeight: '600' }}>
                 No hay seriales OK listos para salir
               </div>
@@ -1684,7 +1683,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: t.text }}>
-              📦 {packageDetails.package?.packageNumber}
+              {packageDetails.package?.packageNumber}
             </h3>
 
             <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px' }}>
@@ -1990,7 +1989,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#f59e0b' }}>
-              📤 {language === 'es' ? 'Crear Paquete a Hospital' : 'Create Package to Hospital'}
+              {language === 'es' ? 'Crear Paquete a Hospital' : 'Create Package to Hospital'}
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: t.textMuted }}>
               {language === 'es'
@@ -2001,7 +2000,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             {/* Ubicación destino Hospital (REQUERIDO) */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                📍 {language === 'es' ? 'Ubicación destino en Hospital *' : 'Destination location in Hospital *'}
+                {language === 'es' ? 'Ubicación destino en Hospital *' : 'Destination location in Hospital *'}
               </label>
               <select
                 value={sendDestinationLocationId || ''}
@@ -2059,7 +2058,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             {/* Notas */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                {language === 'es' ? '📝 Notas (opcional)' : '📝 Notes (optional)'}
+                {language === 'es' ? 'Notas (opcional)' : 'Notes (optional)'}
               </label>
               <textarea
                 value={sendNotes}
@@ -2109,7 +2108,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               >
                 {sending
                   ? (language === 'es' ? 'Creando...' : 'Creating...')
-                  : (language === 'es' ? '📤 Crear Paquete' : '📤 Create Package')}
+                  : (language === 'es' ? 'Crear Paquete' : 'Create Package')}
               </button>
             </div>
           </div>
@@ -2129,7 +2128,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             width: '500px', maxWidth: '90vw', boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
           }} onClick={e => e.stopPropagation()}>
             <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: t.text }}>
-              📦 Salida OK a Buffer Hospital
+              Salida OK a Buffer Hospital
             </h2>
 
             <div style={{ marginBottom: '16px' }}>
@@ -2159,7 +2158,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                📍 Ubicación de destino (Buffer) *
+                Ubicación de destino (Buffer) *
               </label>
               <select
                 value={exitOkLocationId || ''}
@@ -2179,7 +2178,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
-                📝 Notas (opcional)
+                Notas (opcional)
               </label>
               <textarea
                 value={exitOkNotes}
@@ -2217,7 +2216,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                   opacity: (exitingOk || !exitOkLocationId) ? 0.6 : 1
                 }}
               >
-                {exitingOk ? 'Procesando...' : `📦 Crear Paquete (${selectedOkSerials.size})`}
+                {exitingOk ? 'Procesando...' : `Crear Paquete (${selectedOkSerials.size})`}
               </button>
             </div>
           </div>

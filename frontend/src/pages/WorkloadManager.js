@@ -4150,7 +4150,7 @@ const WorkloadManager = () => {
 
             {/* Week selector legacy (personal summary) */}
             <div style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px' }}>
-              <span style={{ fontWeight: '600', color: t.text }}>📅 Mi Semana:</span>
+              <span style={{ fontWeight: '600', color: t.text }}>Mi Semana:</span>
               <input
                 type="date"
                 value={weekStart}

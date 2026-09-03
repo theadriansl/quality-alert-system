@@ -185,13 +185,13 @@ const WIOperatorProfile = () => {
               {operator.photoPath ? (
                 <img src={`${API_URL}${operator.photoPath}`} alt={operator.firstName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '700', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '600', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
                   {operator.firstName?.charAt(0)}{operator.lastName?.charAt(0)}
                 </div>
               )}
             </div>
 
-            <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: t.text }}>
+            <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '600', color: t.text }}>
               {operator.firstName} {operator.lastName}
             </h2>
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '12px' }}>
@@ -217,7 +217,7 @@ const WIOperatorProfile = () => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 6px auto'
                 }}>
-                  <span style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelI }}>{summary.levelI || 0}</span>
+                  <span style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelI }}>{summary.levelI || 0}</span>
                 </div>
                 <div style={{ fontSize: '10px', color: t.textMuted }}>I</div>
               </div>
@@ -228,7 +228,7 @@ const WIOperatorProfile = () => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 6px auto'
                 }}>
-                  <span style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelL }}>{summary.levelL || 0}</span>
+                  <span style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelL }}>{summary.levelL || 0}</span>
                 </div>
                 <div style={{ fontSize: '10px', color: t.textMuted }}>L</div>
               </div>
@@ -239,7 +239,7 @@ const WIOperatorProfile = () => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 6px auto'
                 }}>
-                  <span style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelU }}>{summary.levelU || 0}</span>
+                  <span style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelU }}>{summary.levelU || 0}</span>
                 </div>
                 <div style={{ fontSize: '10px', color: t.textMuted }}>U</div>
               </div>
@@ -250,7 +250,7 @@ const WIOperatorProfile = () => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 6px auto'
                 }}>
-                  <span style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelO }}>{summary.levelO || 0}</span>
+                  <span style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelO }}>{summary.levelO || 0}</span>
                 </div>
                 <div style={{ fontSize: '10px', color: t.textMuted }}>O</div>
               </div>
@@ -293,7 +293,7 @@ const WIOperatorProfile = () => {
                     width: '28px', height: '28px', borderRadius: '6px',
                     backgroundColor: info.color + '20', border: `2px solid ${info.color}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: '700', color: info.color, fontSize: '14px'
+                    fontWeight: '600', color: info.color, fontSize: '14px'
                   }}>
                     {info.code}
                   </div>
@@ -360,7 +360,7 @@ const WIOperatorProfile = () => {
                           {new Date(d.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' })}
                         </th>
                       ))}
-                      <th style={{ padding: '8px 6px', textAlign: 'center', color: t.text, minWidth: '80px', backgroundColor: COLORS.blue + '10', fontWeight: '700' }}>
+                      <th style={{ padding: '8px 6px', textAlign: 'center', color: t.text, minWidth: '80px', backgroundColor: COLORS.blue + '10', fontWeight: '600' }}>
                         ACTUAL
                       </th>
                     </tr>
@@ -411,7 +411,7 @@ const WIOperatorProfile = () => {
                                   border: `1px solid ${levelColor}40`,
                                   minWidth: '40px'
                                 }}>
-                                  <span style={{ fontWeight: '700', color: levelColor, fontSize: '14px' }}>{levelCode}</span>
+                                  <span style={{ fontWeight: '600', color: levelColor, fontSize: '14px' }}>{levelCode}</span>
                                   <span style={{ fontSize: '9px', color: t.textMuted }}>{cert.level}</span>
                                   {cert.hasEvidence && <span style={{ fontSize: '9px' }}>📎</span>}
                                 </div>
@@ -434,7 +434,7 @@ const WIOperatorProfile = () => {
                               border: `2px solid ${getLevelColor(wi.currentLevel)}`,
                               minWidth: '50px'
                             }}>
-                              <span style={{ fontWeight: '700', color: getLevelColor(wi.currentLevel), fontSize: '18px' }}>
+                              <span style={{ fontWeight: '600', color: getLevelColor(wi.currentLevel), fontSize: '18px' }}>
                                 {wi.currentLevelCode}
                               </span>
                               <span style={{ fontSize: '10px', color: t.textMuted }}>Nivel {wi.currentLevel}</span>
@@ -451,14 +451,14 @@ const WIOperatorProfile = () => {
                   </tbody>
                   <tfoot>
                     <tr style={{ borderTop: `2px solid ${t.border}`, backgroundColor: t.bgPanel }}>
-                      <td style={{ padding: '10px', fontWeight: '700', color: t.text, position: 'sticky', left: 0, backgroundColor: t.bgPanel }}>
+                      <td style={{ padding: '10px', fontWeight: '600', color: t.text, position: 'sticky', left: 0, backgroundColor: t.bgPanel }}>
                         PROMEDIO NIVEL
                       </td>
                       {[...dates].reverse().map(d => (
                         <td key={d.historyId} style={{ padding: '8px', textAlign: 'center', color: t.textMuted }}>—</td>
                       ))}
                       <td style={{ padding: '8px', textAlign: 'center', backgroundColor: COLORS.blue + '15' }}>
-                        <span style={{ fontWeight: '700', fontSize: '18px', color: COLORS.blue }}>
+                        <span style={{ fontWeight: '600', fontSize: '18px', color: COLORS.blue }}>
                           {summary.avgLevel.toFixed(2)}
                         </span>
                       </td>
@@ -522,7 +522,7 @@ const WIOperatorProfile = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div style={{ padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{
-                  fontSize: '32px', fontWeight: '700',
+                  fontSize: '32px', fontWeight: '600',
                   color: getLevelColor(detailModal.cert.level)
                 }}>
                   {getLevelCode(detailModal.cert.level)}

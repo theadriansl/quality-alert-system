@@ -1537,7 +1537,7 @@ const MRBCreate = () => {
                   }}
                   style={{ padding: '5px 12px', backgroundColor: '#ede9fe', color: '#7c3aed', border: '1px solid #c4b5fd', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                 >
-                  🔄 Sincronizar desde 8D
+                  Sincronizar desde 8D
                 </button>
               )}
             </div>

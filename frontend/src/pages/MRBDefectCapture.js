@@ -1401,7 +1401,7 @@ const MRBDefectCapture = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            comment: `📋 Turno registrado: ${selectedShift?.name || selectedShift?.code} — ${inspTotal} inspeccionadas (${okTotal} OK / ${nokTotal} NOK) por ${currentUser?.firstName || currentUser?.name || 'Inspector'}${turnNotes.trim() ? ` — Nota: ${turnNotes.trim()}` : ''}`,
+            comment: `Turno registrado: ${selectedShift?.name || selectedShift?.code} — ${inspTotal} inspeccionadas (${okTotal} OK / ${nokTotal} NOK) por ${currentUser?.firstName || currentUser?.name || 'Inspector'}${turnNotes.trim() ? ` — Nota: ${turnNotes.trim()}` : ''}`,
             commentType: 'system'
           })
         });
@@ -1757,7 +1757,7 @@ const MRBDefectCapture = () => {
           onClick={() => setShowLocationModal(true)}
           title="Click para cambiar ubicación MRB"
         >
-          📍 {selectedMrbLocation ? selectedMrbLocation.code : '⚠ Sin ubicación'}
+          {selectedMrbLocation ? selectedMrbLocation.code : '⚠ Sin ubicación'}
         </div>
 
         {/* Selector Estación MRB (inspección) */}
@@ -1868,7 +1868,7 @@ const MRBDefectCapture = () => {
           value={c?.id || ''}
           onChange={e => selectCampaign(campaigns.find(x => x.id === parseInt(e.target.value)) || null)}
         >
-          <option value="">📋 {L.selectCampaignPlaceholder}</option>
+          <option value="">{L.selectCampaignPlaceholder}</option>
           {campaigns.map(camp => (
             <option key={camp.id} value={camp.id}>{camp.folio} — {camp.title} [{camp.clientName}]</option>
           ))}
@@ -2069,7 +2069,7 @@ const MRBDefectCapture = () => {
                     <span style={{ fontSize: '16px' }}>
                       {productionInfo.inspectionStatus === 'OK' ? '✅' :
                        productionInfo.inspectionStatus === 'DEFECTIVE' ? '⚠️' :
-                       productionInfo.inspectionStatus === 'SCRAPPED' ? '🗑️' : '📋'}
+                       productionInfo.inspectionStatus === 'SCRAPPED' ? '🗑️' : '—'}
                     </span>
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: '600', color:
@@ -2621,7 +2621,7 @@ const MRBDefectCapture = () => {
                 {visibleTallies.map((ts, i) => (
                   <div key={ts.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0', backgroundColor: t.warningBg, border: `1px solid ${t.warning}`, borderRadius: '6px', overflow: 'hidden' }}>
                     <a href={`${API_URL}${ts.filePath}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', color: t.warningFg, fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}>
-                      📄 {ts.filename}
+                      {ts.filename}
                       {ts.shiftName && <span style={{ fontSize: '10px', opacity: 0.7 }}>({ts.shiftName})</span>}
                       {ts.inspectionDate && <span style={{ fontSize: '10px', opacity: 0.7 }}>{String(ts.inspectionDate).substring(0, 10)}</span>}
                     </a>
@@ -2709,7 +2709,7 @@ const MRBDefectCapture = () => {
             >
               {importFile ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: t.successFg }}>📄 {importFile.name}</span>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: t.successFg }}>{importFile.name}</span>
                   <button onClick={() => setImportFile(null)} style={{ padding: '4px 8px', backgroundColor: t.errorBg, border: 'none', borderRadius: '4px', color: t.errorFg, cursor: 'pointer', fontSize: '12px' }}>✕ Quitar</button>
                 </div>
               ) : (
@@ -2768,7 +2768,7 @@ const MRBDefectCapture = () => {
             <textarea style={{ flex: 1, minWidth: '200px', padding: '10px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '13px', minHeight: '56px', resize: 'vertical' }} placeholder="Notas del turno (opcional)..." value={turnNotes} onChange={e => setTurnNotes(e.target.value)} />
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 18px', backgroundColor: uploadingTally ? t.bgInput : t.warningBg, border: `2px solid ${t.warning}`, borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: t.warningFg, cursor: uploadingTally ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
-                📄 {uploadingTally ? 'Subiendo...' : 'Subir Tally Sheet'}
+                {uploadingTally ? 'Subiendo...' : 'Subir Tally Sheet'}
                 <input type="file" multiple onChange={e => { handleUploadFile(e.target.files, 'tally_sheet'); e.target.value = ''; }} style={{ display: 'none' }} disabled={uploadingTally} />
               </label>
               <button onClick={handleGuardarAvance} disabled={submitting || (!totalOk && !totalNok)}
@@ -2928,7 +2928,7 @@ const MRBDefectCapture = () => {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                       body: JSON.stringify({
-                        comment: `📋 Turno registrado (retroactivo): ${pendingShift.shiftName} — ${pendingShift.date} — ${pendingShiftHours}h — Nota: ${pendingShiftNote.trim()}`,
+                        comment: `Turno registrado (retroactivo): ${pendingShift.shiftName} — ${pendingShift.date} — ${pendingShiftHours}h — Nota: ${pendingShiftNote.trim()}`,
                         commentType: 'system'
                       })
                     });
@@ -2951,7 +2951,7 @@ const MRBDefectCapture = () => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
           <div style={{ backgroundColor: t.bgCard, borderRadius: '12px', padding: '28px', maxWidth: '560px', width: '95%', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
             <div style={{ fontSize: '20px', fontWeight: '600', color: t.text, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              📊 Preview de Importación
+              Preview de Importación
             </div>
 
             {/* Resumen */}
@@ -3374,7 +3374,6 @@ const MRBDefectCapture = () => {
             maxWidth: '500px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
           }}>
             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px' }}>📍</div>
               <h2 style={{ color: t.text, fontSize: '20px', fontWeight: '600', margin: 0 }}>
                 Selecciona Ubicación MRB
               </h2>
@@ -3508,7 +3507,7 @@ const MRBDefectCapture = () => {
                         }}>
                           <div>
                             <span style={{ fontWeight: '600', color: t.text, fontSize: '14px' }}>
-                              📋 {campData.campaignNumber}
+                              {campData.campaignNumber}
                             </span>
                             <span style={{ fontSize: '12px', color: t.textMuted, marginLeft: '8px' }}>
                               {campData.title}

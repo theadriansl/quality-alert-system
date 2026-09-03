@@ -344,7 +344,7 @@ const SkillsEvaluate = () => {
             disabled={saving || selectedSkills.size === 0}
             style={{ padding: '10px 20px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, cursor: 'pointer', opacity: selectedSkills.size === 0 ? 0.5 : 1 }}
           >
-            💾 {L.saveDraft}
+            {L.saveDraft}
           </button>
           <button
             onClick={() => handleSave(true)}
