@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-09-02 (sesión interrumpida, continuar tokenización)
+> Última actualización: 2026-09-03
 
 ---
 
@@ -82,6 +82,7 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ **Tokenización 6 Dashboards**: HospitalDashboard, AuditDashboard, SkillsDashboard, WIDashboard, WorkloadDashboard, CustomDashboard | 03-Sep |
 | ✅ MRBDashboard.js cerrado: Fase 1 (tokenización C.*, hex, fontWeight) + Fase 2 (98 emojis removidos) | 02-Sep |
 | ✅ DefectHospital.js Fase 2: 60+ emojis removidos de botones, modales, indicadores | 02-Sep |
 | ✅ ECR módulo limpieza emoji: 10 archivos (ApprovalPanel, Timeline, Closure, Workflow, etc.) | 02-Sep |
@@ -599,30 +600,47 @@ D3MFG.js: 32 literales
 
 ---
 
-### CONTINUAR EN PRÓXIMA SESIÓN:
+---
 
-**Dashboards pendientes (mismo checklist Fase 1 + Fase 2):**
+## Notas Sesión 03-Sep-2026
 
-| # | Dashboard | Líneas | Hex | fontWeight | Emojis |
-|---|-----------|--------|-----|------------|--------|
-| 1 | **HospitalDashboard.js** | 2305 | 26 | 29 | 5 |
-| 2 | WorkloadDashboard.js | ? | ? | ? | ? |
-| 3 | AuditDashboard.js | ? | ? | ? | ? |
-| 4 | SkillsDashboard.js | ? | ? | ? | ? |
-| 5 | WIDashboard.js | ? | ? | ? | ? |
-| 6 | CustomDashboard.js | ? | ? | ? | ? |
+### ✅ COMPLETADO HOY: Tokenización 6 Dashboards
 
-**HospitalDashboard.js diagnóstico inicial:**
-- `COLORS` constante (líneas 37-44): verde/amarillo/rojo/azul/púrpura/gris/cyan/naranja
-- `#ffffff` y `#fff` en múltiples lugares → `'white'` o tokens
-- Colores de error hardcodeados (#fef2f2, #fecaca, #991b1b, #b91c1c) → tokens error
-- 29 instancias fontWeight 700/800/900/bold → 600
+| Dashboard | Fase 1 | Fase 2 | Commits |
+|-----------|--------|--------|---------|
+| HospitalDashboard.js | ✅ fontWeight + hex | ✅ 4 emojis | `24771f7`, `014ca7a` |
+| AuditDashboard.js | ✅ fontWeight + hex | — (0 emojis) | `da2a026` |
+| SkillsDashboard.js | ✅ fontWeight + hex | — (0 emojis) | `0824362` |
+| WIDashboard.js | ✅ fontWeight + hex | — (0 emojis) | `0b64414` |
+| WorkloadDashboard.js | ✅ fontWeight | ✅ ~100 emojis | `18be11d`, `90692e2` |
+| CustomDashboard.js | ✅ fontWeight | ✅ 4 emojis | `0dc4c08`, `55b51ff` |
 
-### Archivos de reglas:
-- `REGLAS_DISENO.md` - Marco general (whitelist, tokens, verificación 6 puntos)
-- `REGLAS_DASHBOARD.md` - Checklist específico dashboards
+**Total: 10 commits**
 
-### Estado repo al pausar:
-- Branch: master (5 commits ahead of origin)
-- Commits locales: 1749f4b, cb27c21, 58ad806, 967c477, 4644dc3
-- Archivos untracked: REGLAS_DISENO.md, REGLAS_DASHBOARD.md
+### Regla emojis aplicada:
+- **PRESERVAR**: ✅🔴🟡🟢✓ (indicadores estado en tiempo real)
+- **REMOVER**: 📊🔥📋⚡🏁📅📈🚨👤🕐📐🥧💡⚠️⚙️ (etiquetas decorativas)
+
+### DATA colors preservados:
+- HospitalDashboard: COLORS constante (gráficas), #ffffff (PDF export)
+- AuditDashboard: DEFAULT_COLORS fallback, COLORS.gray scale
+- SkillsDashboard: COLORS constante (KPIs)
+- WIDashboard: COLORS constante (niveles ILUO)
+- WorkloadDashboard: Colores semáforo KPIs (#ef4444/#C77700/#2E7D32)
+- CustomDashboard: BLUE/RED constantes (UI accent)
+
+### Estado Dashboards CERRADOS:
+- [x] HospitalDashboard.js
+- [x] AuditDashboard.js
+- [x] SkillsDashboard.js
+- [x] WIDashboard.js
+- [x] WorkloadDashboard.js
+- [x] CustomDashboard.js
+- [x] MRBDashboard.js (02-Sep)
+- [x] ECRDashboardAdvanced.js (31-Ago)
+
+### PENDIENTE para próxima sesión:
+- Testing formal Auditorías
+- Testing Reportes/Dashboard
+- Skills/Training certificaciones ILUO
+- Work Instructions versionamiento
