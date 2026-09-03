@@ -466,7 +466,7 @@ const StationConfigTab = ({ theme: t }) => {
     removeChip: {
       cursor: 'pointer',
       color: t.error,
-      fontWeight: 'bold'
+      fontWeight: '600'
     },
     emptyState: {
       textAlign: 'center',

@@ -180,7 +180,7 @@ const WebhookKeysManager = ({ theme: t }) => {
   const styles = {
     container: { padding: '20px' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-    title: { fontSize: '20px', fontWeight: 'bold', color: t.text },
+    title: { fontSize: '20px', fontWeight: '600', color: t.text },
     tabs: { display: 'flex', gap: '8px', marginBottom: '20px' },
     tab: {
       padding: '8px 16px',
@@ -336,7 +336,7 @@ const WebhookKeysManager = ({ theme: t }) => {
               <div key={key.id} style={styles.keyCard}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '16px', color: t.text }}>
+                    <div style={{ fontWeight: '600', fontSize: '16px', color: t.text }}>
                       {key.systemName}
                       <span style={{
                         ...styles.badge,

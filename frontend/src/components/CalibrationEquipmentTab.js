@@ -357,7 +357,7 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
       textAlign: 'center',
       minWidth: '100px'
     },
-    statValue: { fontSize: '24px', fontWeight: '700', color: t.text },
+    statValue: { fontSize: '24px', fontWeight: '600', color: t.text },
     statLabel: { fontSize: '12px', color: t.textMuted, marginTop: '4px' },
     filters: {
       display: 'flex',

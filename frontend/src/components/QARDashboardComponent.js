@@ -69,7 +69,7 @@ const TabBar = ({ tabs, active, onSelect }) => {
           style={{
             padding: '9px 16px',
             fontSize: 12,
-            fontWeight: active === tab.id ? 700 : 500,
+            fontWeight: active === tab.id ? 600 : 500,
             color: active === tab.id ? t.text : t.textMuted,
             backgroundColor: 'transparent',
             border: 'none',
@@ -800,7 +800,7 @@ const TabOperacion = ({ data }) => {
                   <td style={{ padding: '6px 10px', textAlign: 'center', fontWeight: '600', color: t.text }}>{r.total}</td>
                   <td style={{ padding: '6px 10px', textAlign: 'center', color: C.orange }}>{r.activos}</td>
                   <td style={{ padding: '6px 10px', textAlign: 'center', color: C.green }}>{r.cerrados}</td>
-                  <td style={{ padding: '6px 10px', textAlign: 'center', color: r.vencidas > 0 ? C.red : t.textMuted, fontWeight: r.vencidas > 0 ? '700' : '400' }}>{r.vencidas}</td>
+                  <td style={{ padding: '6px 10px', textAlign: 'center', color: r.vencidas > 0 ? C.red : t.textMuted, fontWeight: r.vencidas > 0 ? '600' : '400' }}>{r.vencidas}</td>
                   <td style={{ padding: '6px 10px', textAlign: 'center', color: t.textMuted }}>{formatHours(r.avgResponseH)}</td>
                 </tr>
               ))}
@@ -1651,7 +1651,7 @@ const SortableWidget = ({ id, size, data, editMode, onRemove, onEditSLA }) => {
             position: 'absolute', top: '6px', right: '6px', zIndex: 5,
             width: '18px', height: '18px', borderRadius: '50%',
             backgroundColor: C.red, border: 'none',
-            color: 'white', fontSize: '10px', fontWeight: '900',
+            color: 'white', fontSize: '10px', fontWeight: '600',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
             lineHeight: 1,
           }}
@@ -1799,7 +1799,7 @@ const TabPersonalizado = ({ data, onEditSLA }) => {
                       {WIDGET_CATALOG.filter(w => w.cat === cat).map(item => {
                         const active = selected.some(s => s.id === item.id);
                         return (
-                          <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? C.blue : t.border}`, backgroundColor: active ? C.blue + '18' : t.bgPanel, color: active ? C.blue : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '700' : '500' }}>
+                          <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? C.blue : t.border}`, backgroundColor: active ? C.blue + '18' : t.bgPanel, color: active ? C.blue : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '600' : '500' }}>
                             <span>{item.label}</span>{active && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: C.blue, marginLeft: 4 }} />}
                           </button>
                         );

@@ -120,7 +120,7 @@ const HomeNotifications = () => {
     return (
       <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, padding: '20px 16px', height: 'fit-content' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: t.text, letterSpacing: 0.3 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: 0.3 }}>
             {labels.title}
           </span>
         </div>
@@ -137,9 +137,9 @@ const HomeNotifications = () => {
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: t.text, letterSpacing: 0.3 }}>{labels.title}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: 0.3 }}>{labels.title}</span>
             {visibleItems.length > 0 && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
                 {visibleItems.length}
               </span>
             )}
@@ -217,7 +217,7 @@ const HomeNotifications = () => {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                     <span style={{
-                      fontSize: 9, fontWeight: 700, color: '#fff',
+                      fontSize: 9, fontWeight: 600, color: '#fff',
                       background: config.color, padding: '1px 5px', borderRadius: 3
                     }}>
                       {config.label}

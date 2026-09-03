@@ -245,7 +245,7 @@ const WorkInstructionDetail = () => {
     return (
       <span style={{
         backgroundColor: s.bg, color: 'white', padding: '4px 12px',
-        borderRadius: '4px', fontSize: '13px', fontWeight: 'bold',
+        borderRadius: '4px', fontSize: '13px', fontWeight: '600',
         display: 'inline-flex', alignItems: 'center', gap: '6px'
       }}>
         {s.label} <span style={{ fontWeight: 'normal', fontSize: '11px' }}>({level})</span>
@@ -806,7 +806,7 @@ const WorkInstructionDetail = () => {
                   <div key={step.id} style={{ backgroundColor: t.bgPanel, borderRadius: '8px', padding: '15px', border: `1px solid ${t.border}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ backgroundColor: t.primary, color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>
+                        <span style={{ backgroundColor: t.primary, color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '14px' }}>
                           {index + 1}
                         </span>
                         {getStepTypeBadge(step.stepType)}
@@ -869,19 +869,19 @@ const WorkInstructionDetail = () => {
             {/* ILUO Legend - I(1), L(2), U(3), O(4) de menor a mayor */}
             <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>I</span>
+                <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: '600' }}>I</span>
                 <span style={{ color: t.textMuted, fontSize: '13px' }}>Observador (1)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ backgroundColor: '#f59e0b', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>L</span>
+                <span style={{ backgroundColor: '#f59e0b', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: '600' }}>L</span>
                 <span style={{ color: t.textMuted, fontSize: '13px' }}>Bajo Supervisión (2)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ backgroundColor: '#22c55e', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>U</span>
+                <span style={{ backgroundColor: '#22c55e', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: '600' }}>U</span>
                 <span style={{ color: t.textMuted, fontSize: '13px' }}>Libre (3)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ backgroundColor: '#0ea5e9', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: 'bold' }}>O</span>
+                <span style={{ backgroundColor: '#0ea5e9', color: 'white', padding: '4px 10px', borderRadius: '4px', fontWeight: '600' }}>O</span>
                 <span style={{ color: t.textMuted, fontSize: '13px' }}>Instructor (4)</span>
               </div>
             </div>
@@ -1118,7 +1118,7 @@ const WorkInstructionDetail = () => {
                   <div key={rev.id} style={{ backgroundColor: t.bgPanel, padding: '15px', borderRadius: '8px', border: `1px solid ${t.border}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <span style={{ backgroundColor: t.primary, color: 'white', padding: '2px 10px', borderRadius: '4px', fontWeight: 'bold', marginRight: '10px' }}>
+                        <span style={{ backgroundColor: t.primary, color: 'white', padding: '2px 10px', borderRadius: '4px', fontWeight: '600', marginRight: '10px' }}>
                           Rev. {rev.revisionNumber}
                         </span>
                         <span style={{ color: t.textMuted }}>{rev.changeSummary || 'Sin descripcion'}</span>

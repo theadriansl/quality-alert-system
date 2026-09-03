@@ -459,7 +459,7 @@ const ProductionTab = ({ theme: t }) => {
   const styles = {
     container: { padding: '20px' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
-    title: { fontSize: '24px', fontWeight: 'bold', color: t.text },
+    title: { fontSize: '24px', fontWeight: '600', color: t.text },
     tabs: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
     tab: {
       padding: '8px 16px',
@@ -486,7 +486,7 @@ const ProductionTab = ({ theme: t }) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontWeight: 'bold'
+      fontWeight: '600'
     },
     card: {
       backgroundColor: t.bgPanel,
@@ -512,7 +512,7 @@ const ProductionTab = ({ theme: t }) => {
       padding: '16px',
       textAlign: 'center'
     },
-    statValue: { fontSize: '32px', fontWeight: 'bold', color: t.text },
+    statValue: { fontSize: '32px', fontWeight: '600', color: t.text },
     statLabel: { fontSize: '14px', color: t.textSecondary, marginTop: '4px' },
     progressBar: {
       height: '8px',
@@ -1207,7 +1207,7 @@ const ProductionTab = ({ theme: t }) => {
             unmatchedParts.map((item, i) => (
               <div key={i} style={styles.unmatchedCard}>
                 <div>
-                  <div style={{ fontWeight: 'bold', color: t.text, fontSize: '16px' }}>
+                  <div style={{ fontWeight: '600', color: t.text, fontSize: '16px' }}>
                     {item.partNumberRaw}
                   </div>
                   <div style={{ color: t.textSecondary, fontSize: '13px', marginTop: '4px' }}>
@@ -1248,15 +1248,15 @@ const ProductionTab = ({ theme: t }) => {
             {/* Resumen */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
               <div style={{ background: t.cardBg, padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: t.text }}>{previewModal.preview.total}</div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: t.text }}>{previewModal.preview.total}</div>
                 <div style={{ fontSize: '12px', color: t.textSecondary }}>Total en CSV</div>
               </div>
               <div style={{ background: '#dcfce7', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#166534' }}>{previewModal.preview.newCount}</div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: '#166534' }}>{previewModal.preview.newCount}</div>
                 <div style={{ fontSize: '12px', color: '#166534' }}>Nuevos</div>
               </div>
               <div style={{ background: previewModal.preview.duplicateCount > 0 ? '#fef3c7' : '#f3f4f6', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: previewModal.preview.duplicateCount > 0 ? '#92400e' : '#6b7280' }}>{previewModal.preview.duplicateCount}</div>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: previewModal.preview.duplicateCount > 0 ? '#92400e' : '#6b7280' }}>{previewModal.preview.duplicateCount}</div>
                 <div style={{ fontSize: '12px', color: previewModal.preview.duplicateCount > 0 ? '#92400e' : '#6b7280' }}>Ya existen</div>
               </div>
             </div>
@@ -1264,7 +1264,7 @@ const ProductionTab = ({ theme: t }) => {
             {/* Warning de duplicados */}
             {previewModal.preview.duplicateCount > 0 && (
               <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: 'bold', color: '#92400e', marginBottom: '8px' }}>
+                <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
                   ⚠️ {previewModal.preview.duplicateCount} serial(es) ya existen y serán omitidos
                 </div>
 
@@ -1309,7 +1309,7 @@ const ProductionTab = ({ theme: t }) => {
             {/* Warning de partes no configuradas */}
             {previewModal.preview.unmatchedCount > 0 && (
               <div style={{ background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: 'bold', color: '#991b1b', marginBottom: '4px' }}>
+                <div style={{ fontWeight: '600', color: '#991b1b', marginBottom: '4px' }}>
                   ⚠️ {previewModal.preview.unmatchedCount} parte(s) no configurada(s)
                 </div>
                 <div style={{ fontSize: '13px', color: '#991b1b' }}>

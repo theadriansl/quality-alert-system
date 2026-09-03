@@ -64,7 +64,7 @@ const HomeReminders = () => {
     return (
       <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, padding: '20px 16px', height: 'fit-content' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: t.text, letterSpacing: 0.3 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: 0.3 }}>
             {language === 'es' ? 'MI WORKLOAD' : 'MY WORKLOAD'}
           </span>
           <span
@@ -108,9 +108,9 @@ const HomeReminders = () => {
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: t.text, letterSpacing: 0.3 }}>{labels.title}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: 0.3 }}>{labels.title}</span>
             {totalPending > 0 && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
                 {totalPending}
               </span>
             )}

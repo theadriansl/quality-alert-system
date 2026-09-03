@@ -109,7 +109,7 @@ const RepairModal = ({
     },
     title: {
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       display: 'flex',
       alignItems: 'center',

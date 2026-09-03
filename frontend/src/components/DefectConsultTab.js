@@ -316,7 +316,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
     },
     title: {
       fontSize: '18px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       display: 'flex',
       alignItems: 'center',
@@ -888,7 +888,7 @@ export const DefectCounter = ({ serial, clientId, onClick, theme }) => {
     },
     scrapped: {
       color: '#ef4444',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     quarantine: {
       color: hasScrapped ? '#fdba74' : '#f97316'

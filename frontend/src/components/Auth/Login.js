@@ -103,7 +103,7 @@ const Login = () => {
       alignItems: 'center',
       justifyContent: 'center',
       color: 'white',
-      fontWeight: '700',
+      fontWeight: '600',
       fontSize: '16px',
       margin: '0 auto 24px'
     },

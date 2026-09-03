@@ -113,7 +113,7 @@ const CalibrationCostsTab = ({ theme: t }) => {
       backgroundColor: t.bgCard,
       border: `1px solid ${t.border}`
     },
-    statValue: { fontSize: '28px', fontWeight: '700', color: t.text },
+    statValue: { fontSize: '28px', fontWeight: '600', color: t.text },
     statLabel: { fontSize: '13px', color: t.textMuted, marginTop: '4px' },
     section: {
       marginBottom: '24px'
