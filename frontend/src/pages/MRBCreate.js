@@ -1031,7 +1031,7 @@ const MRBCreate = () => {
       border: 'none',
       borderRadius: '8px',
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -1144,7 +1144,7 @@ const MRBCreate = () => {
               onClick={() => { setSourceType('8D'); setSelectedSource(null); setSelectedClientId(null); setSelectedProjectId(null); setSelectedPartIds([]); setCurrentStep(2); }}
             >
               <Package size={48} color="#0072CE" style={{ marginBottom: '12px' }} />
-              <div style={{ fontSize: '20px', fontWeight: '700', color: t.accent, marginBottom: '8px' }}>Vincular 8D</div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: t.accent, marginBottom: '8px' }}>Vincular 8D</div>
               <div style={{ color: t.textDim, fontSize: '13px' }}>Eight Disciplines Report</div>
               <div style={{ color: t.textDim, fontSize: '12px', marginTop: '8px' }}>El 8D ya existe — hereda datos automáticamente</div>
             </div>
@@ -1164,7 +1164,7 @@ const MRBCreate = () => {
               }}
             >
               <AlertTriangle size={48} color="#C77700" style={{ marginBottom: '12px' }} />
-              <div style={{ fontSize: '20px', fontWeight: '700', color: '#C77700', marginBottom: '8px' }}>Incoming Inspection</div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: '#C77700', marginBottom: '8px' }}>Incoming Inspection</div>
               <div style={{ color: t.textDim, fontSize: '13px' }}>Campaña MRB Incoming</div>
               <div style={{ color: t.textDim, fontSize: '12px', marginTop: '8px' }}>Sin 8D aún — datos manuales, vincular después</div>
             </div>
@@ -1217,7 +1217,7 @@ const MRBCreate = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: '700', color: t.accent, fontFamily: 'monospace', fontSize: '14px' }}>
+                        <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '14px' }}>
                           {source.folio}
                         </span>
                         <span style={{
@@ -1411,7 +1411,7 @@ const MRBCreate = () => {
                         return (
                           <label key={part.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', backgroundColor: selected ? `${t.accent}15` : 'transparent', border: `1px solid ${selected ? t.accent : 'transparent'}` }}>
                             <input type="checkbox" checked={selected} onChange={() => togglePartSelection(part)} style={{ width: '15px', height: '15px', flexShrink: 0 }} />
-                            <span style={{ fontWeight: '600', color: t.accent, fontFamily: 'monospace', fontSize: '13px' }}>{part.partNumber}</span>
+                            <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px' }}>{part.partNumber}</span>
                             {part.partName && <span style={{ color: t.textMuted, fontSize: '12px' }}>{part.partName}</span>}
                           </label>
                         );
@@ -1468,7 +1468,7 @@ const MRBCreate = () => {
                     return (
                       <label key={defect.defectTypeId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', backgroundColor: selected ? '#fef3c7' : 'transparent', border: `1px solid ${selected ? '#f59e0b' : 'transparent'}` }}>
                         <input type="checkbox" checked={selected} onChange={() => toggleDefectSelection(defect.defectTypeId)} style={{ width: '15px', height: '15px', flexShrink: 0 }} />
-                        <span style={{ fontWeight: '600', color: '#f59e0b', fontFamily: 'monospace', fontSize: '12px', minWidth: '50px' }}>{defect.code}</span>
+                        <span style={{ fontWeight: '600', color: '#f59e0b', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', minWidth: '50px' }}>{defect.code}</span>
                         <span style={{ color: t.text, fontSize: '12px' }}>{defect.displayName || defect.name}</span>
                         {defect.categoryName && <span style={{ color: t.textMuted, fontSize: '11px', marginLeft: 'auto' }}>{defect.categoryName}</span>}
                       </label>
@@ -1796,7 +1796,7 @@ const MRBCreate = () => {
             <div style={styles.photoGrid}>
               {/* NOK */}
               <div style={{ position: 'relative' }}>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#B00020', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#B00020', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   NOK — Condición de Defecto
                 </div>
                 <label style={{ ...styles.photoBox, ...styles.photoBoxNok }}>
@@ -1823,7 +1823,7 @@ const MRBCreate = () => {
               </div>
               {/* OK */}
               <div style={{ position: 'relative' }}>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#2E7D32', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#2E7D32', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   OK — Condición Aceptable
                 </div>
                 <label style={{ ...styles.photoBox, ...styles.photoBoxOk }}>
@@ -2005,7 +2005,7 @@ const MRBCreate = () => {
           <div style={{ backgroundColor: t.bgCard, borderRadius: '14px', width: '100%', maxWidth: '680px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
             {/* Header */}
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontWeight: '700', fontSize: '15px', color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontWeight: '600', fontSize: '15px', color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Package size={18} color="#0072CE" />
                 Vincular 8D a esta campaña
               </div>
@@ -2062,7 +2062,7 @@ const MRBCreate = () => {
                   style={{ padding: '12px 14px', borderRadius: '8px', marginBottom: '6px', cursor: 'pointer', border: `2px solid ${pendingAdoptSource?.id === src.id ? t.accent : t.border}`, backgroundColor: pendingAdoptSource?.id === src.id ? `${t.accent}12` : t.bgPanel }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: '700', color: t.accent, fontFamily: 'monospace', fontSize: '13px' }}>{src.folio}</span>
+                    <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px' }}>{src.folio}</span>
                     <span style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#C7770022', color: '#C77700' }}>{src.status}</span>
                     {src.mrbCampaigns?.map((mc, mi) => (
                       <span key={mi} style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: mc.status === 'CERRADA' ? '#22c55e22' : '#f59e0b22', color: mc.status === 'CERRADA' ? '#16a34a' : '#b45309' }}>
@@ -2079,7 +2079,7 @@ const MRBCreate = () => {
             {/* Adoption panel — fixed at bottom, visible as soon as a row is selected */}
             {pendingAdoptSource && (
               <div style={{ borderTop: `2px solid ${t.accent}40`, padding: '16px 24px', backgroundColor: `${t.accent}06` }}>
-                <div style={{ fontWeight: '700', fontSize: '13px', color: t.text, marginBottom: '10px' }}>
+                <div style={{ fontWeight: '600', fontSize: '13px', color: t.text, marginBottom: '10px' }}>
                   Adoptar datos de <span style={{ color: t.accent }}>{pendingAdoptSource.folio}</span>:
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: '14px' }}>
@@ -2209,7 +2209,7 @@ const MRBCreate = () => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
               <AlertTriangle size={24} color="#C77700" />
-              <h3 style={{ margin: 0, color: t.text, fontSize: '16px', fontWeight: '700' }}>
+              <h3 style={{ margin: 0, color: t.text, fontSize: '16px', fontWeight: '600' }}>
                 Ya existe una campaña vinculada
               </h3>
             </div>
@@ -2224,7 +2224,7 @@ const MRBCreate = () => {
                   marginBottom: '8px', border: `1px solid ${t.border}`
                 }}>
                   <div>
-                    <div style={{ fontFamily: 'monospace', fontWeight: '700', color: t.accent, fontSize: '13px' }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600', color: t.accent, fontSize: '13px' }}>
                       {c.campaignNumber}
                     </div>
                     <div style={{ fontSize: '12px', color: t.textDim, marginTop: '2px' }}>{c.title}</div>
