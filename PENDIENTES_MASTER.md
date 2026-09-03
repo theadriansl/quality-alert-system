@@ -639,6 +639,14 @@ D3MFG.js: 32 literales
 - [x] MRBDashboard.js (02-Sep)
 - [x] ECRDashboardAdvanced.js (31-Ago)
 
+### ✅ MRBDashboard.js FIX (sesión 03-Sep cont.)
+
+| Fix | Descripción | Commit |
+|-----|-------------|--------|
+| JSX expressions | 8 bugs: `"t.error"` (string) → `{t.error}` (JSX) en KPIs y Bars | `6d4d8e3` |
+
+**Verificación:** 32 KPIs con tokens correctos, 0 string literals
+
 ### ✅ MRBCampaignDetail.js CERRADO (sesión 03-Sep cont.)
 
 | Fase | Cambios | Commit |
