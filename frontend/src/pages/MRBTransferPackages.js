@@ -790,25 +790,25 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
                 {language === 'es' ? 'Total Pendientes' : 'Total Pending'}
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: t.text }}>{pendingPackages.length}</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: t.text }}>{pendingPackages.length}</div>
             </div>
             <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #16a34a' }}>
               <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
                 {language === 'es' ? 'Con Campaña' : 'With Campaign'}
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#16a34a' }}>{withCampaign.length}</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#16a34a' }}>{withCampaign.length}</div>
             </div>
             <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #f59e0b' }}>
               <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
                 {language === 'es' ? 'Sin Campaña' : 'No Campaign'}
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>{withoutCampaign.length}</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#f59e0b' }}>{withoutCampaign.length}</div>
             </div>
             <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #dc2626' }}>
               <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
                 {language === 'es' ? 'Con Alerta' : 'With Alert'}
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#dc2626' }}>{alertCount}</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#dc2626' }}>{alertCount}</div>
             </div>
           </div>
 
@@ -875,7 +875,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                 {(subTab === 'withCampaign' ? withCampaign : withoutCampaign).map(pkg => (
                   <tr key={pkg.id} style={{ borderTop: `1px solid ${t.border}`, backgroundColor: pkg.alertTriggered ? '#fef2f220' : 'transparent' }}>
                     <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: '700', color: t.primary }}>{pkg.packageNumber}</div>
+                      <div style={{ fontWeight: '600', color: t.primary }}>{pkg.packageNumber}</div>
                       <div style={{ fontSize: '11px', color: t.textMuted }}>
                         {new Date(pkg.createdAt).toLocaleString('es-MX')}
                       </div>
@@ -907,7 +907,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         padding: '4px 10px',
                         borderRadius: '12px',
                         fontSize: '12px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         backgroundColor: pkg.alertTriggered ? '#dc262620' : '#3b82f620',
                         color: pkg.alertTriggered ? '#dc2626' : '#3b82f6'
                       }}>
@@ -1045,7 +1045,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                           onClick={() => toggleAllForCampaign(camp.id, campaignMatrix.parts)}
                           title={camp.title}
                         >
-                          <div style={{ fontSize: '11px', fontWeight: '700' }}>{camp.campaignNumber}</div>
+                          <div style={{ fontSize: '11px', fontWeight: '600' }}>{camp.campaignNumber}</div>
                           <div style={{ fontSize: '9px', color: t.textMuted, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {camp.partNumber || 'General'}
                           </div>
@@ -1112,7 +1112,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         {/* Expanded serials */}
                         {expandedParts.has(part.partId) && part.serials.map(serial => (
                           <tr key={serial.serialNumber} style={{ borderTop: `1px solid ${t.border}` }}>
-                            <td style={{ padding: '8px 12px 8px 32px', color: t.textMuted, fontFamily: 'monospace', fontSize: '11px', position: 'sticky', left: 0, backgroundColor: t.bgCard, zIndex: 1 }}>
+                            <td style={{ padding: '8px 12px 8px 32px', color: t.textMuted, fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', position: 'sticky', left: 0, backgroundColor: t.bgCard, zIndex: 1 }}>
                               {serial.serialNumber}
                             </td>
                             {campaignMatrix.campaigns.map(camp => {
@@ -1190,7 +1190,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         <div style={{ fontWeight: '600', color: t.text }}>{item.partNumber}</div>
                         <div style={{ fontSize: '11px', color: t.textMuted }}>{item.partName}</div>
                       </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '700', color: t.primary }}>{item.quantity}</td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600', color: t.primary }}>{item.quantity}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1244,7 +1244,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                 color: '#fff',
                 cursor: selectedRework.size > 0 ? 'pointer' : 'not-allowed',
                 fontSize: '14px',
-                fontWeight: '700',
+                fontWeight: '600',
                 opacity: selectedRework.size > 0 ? 1 : 0.6
               }}
             >
@@ -1278,7 +1278,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                   justifyContent: 'space-between'
                 }}>
                   <div>
-                    <span style={{ fontWeight: '700', color: '#7c3aed', marginRight: '8px' }}>
+                    <span style={{ fontWeight: '600', color: '#7c3aed', marginRight: '8px' }}>
                       {campaign.campaignNumber || 'Sin Campaña'}
                     </span>
                     <span style={{ fontSize: '13px', color: t.textMuted }}>
@@ -1351,7 +1351,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                           />
                         </td>
                         <td style={{ padding: '10px 16px' }}>
-                          <span style={{ fontFamily: 'monospace', fontWeight: '600', color: t.primary }}>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: '600', color: t.primary }}>
                             {defect.serialNumber || defect.lotNumber || '-'}
                           </span>
                         </td>
@@ -1421,19 +1421,19 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
                 Seriales OK en MRB
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#0072CE' }}>{okSerials.length}</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#0072CE' }}>{okSerials.length}</div>
             </div>
             <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #16a34a' }}>
               <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
                 Seleccionados
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#16a34a' }}>{selectedOkSerials.size}</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#16a34a' }}>{selectedOkSerials.size}</div>
             </div>
             <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: '4px solid #7c3aed' }}>
               <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
                 Ubicaciones Buffer
               </div>
-              <div style={{ fontSize: '28px', fontWeight: '700', color: '#7c3aed' }}>{bufferLocations.length}</div>
+              <div style={{ fontSize: '28px', fontWeight: '600', color: '#7c3aed' }}>{bufferLocations.length}</div>
             </div>
           </div>
 
@@ -1596,7 +1596,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         padding: '4px 8px',
                         borderRadius: '4px',
                         fontSize: '10px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         textTransform: 'uppercase',
                         backgroundColor: pkg.direction === 'incoming' ? '#dc262620' : '#3b82f620',
                         color: pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6',
@@ -1626,7 +1626,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         <div style={{ fontSize: '10px', color: t.textMuted, textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Target' : 'Target'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>
                           {formatMinutes(targetMinutes)}
                         </div>
                       </div>
@@ -1634,7 +1634,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         <div style={{ fontSize: '10px', color: '#f59e0b', textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Transcurrido' : 'Elapsed'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#f59e0b' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#f59e0b' }}>
                           {formatMinutes(elapsed)}
                         </div>
                       </div>
@@ -1642,7 +1642,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
                         <div style={{ fontSize: '10px', color: '#dc2626', textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Excedido' : 'Exceeded'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#dc2626' }}>
                           +{formatMinutes(exceeded)}
                         </div>
                       </div>
@@ -1717,7 +1717,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
               <tbody>
                 {packageDetails.items?.map(item => (
                   <tr key={item.id} style={{ borderTop: `1px solid ${t.border}` }}>
-                    <td style={{ padding: '8px', fontFamily: 'monospace', color: t.primary }}>{item.serialNumber || '-'}</td>
+                    <td style={{ padding: '8px', fontFamily: "'IBM Plex Mono', monospace", color: t.primary }}>{item.serialNumber || '-'}</td>
                     <td style={{ padding: '8px' }}>{item.partNumber}</td>
                     <td style={{ padding: '8px' }}>{item.defectSummary || '-'}</td>
                     <td style={{ padding: '8px', textAlign: 'center' }}>
@@ -2128,7 +2128,7 @@ const MRBTransferPackages = ({ embedded = false, onPackageReceived = null }) => 
             backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px',
             width: '500px', maxWidth: '90vw', boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
           }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700', color: t.text }}>
+            <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: t.text }}>
               📦 Salida OK a Buffer Hospital
             </h2>
 
