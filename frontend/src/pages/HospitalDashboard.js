@@ -2188,7 +2188,7 @@ const HospitalDashboard = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    <span>🔧</span> Estacion de Reparacion
+                    Estacion de Reparacion
                     {adminRepairStation && <span style={{ color: t.success }}>✓</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflow: 'auto' }}>
@@ -2229,7 +2229,7 @@ const HospitalDashboard = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    <span>✅</span> Estacion de Liberacion
+                    Estacion de Liberacion
                     {adminReleaseStation && <span style={{ color: t.success }}>✓</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflow: 'auto' }}>
