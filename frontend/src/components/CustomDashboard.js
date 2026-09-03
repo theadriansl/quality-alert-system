@@ -76,7 +76,7 @@ const SortableWidget = ({ item, catalog, renderWidget, data, editMode, onRemove 
       >⠿</div>
       {editMode && (
         <button onClick={() => onRemove(item.id)}
-          style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 5, width: '18px', height: '18px', borderRadius: '50%', backgroundColor: RED, border: 'none', color: 'white', fontSize: '10px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 5, width: '18px', height: '18px', borderRadius: '50%', backgroundColor: RED, border: 'none', color: 'white', fontSize: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >✕</button>
       )}
       <div style={{ paddingLeft: isKpi ? '20px' : '0' }}>
@@ -92,7 +92,7 @@ const DragGhost = ({ id, catalog }) => {
   const meta = catalog.find(w => w.id === id);
   return (
     <div style={{ backgroundColor: t.bgCard, border: `2px solid ${BLUE}`, borderRadius: '8px', padding: '12px 16px', boxShadow: `0 16px 40px ${BLUE}44`, opacity: 0.95, minWidth: '200px', transform: 'rotate(2deg)' }}>
-      <div style={{ fontSize: '11px', fontWeight: '700', color: BLUE, marginBottom: '4px' }}>{meta?.icon} {meta?.label}</div>
+      <div style={{ fontSize: '11px', fontWeight: '600', color: BLUE, marginBottom: '4px' }}>{meta?.icon} {meta?.label}</div>
       <div style={{ fontSize: '10px', color: t.textMuted }}>Arrastrando…</div>
     </div>
   );
@@ -154,7 +154,7 @@ const CustomDashboard = ({ storageKey, catalog, defaultWidgets, renderWidget, da
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '10px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>⚙️ Mi Dashboard personalizado</span>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>⚙️ Mi Dashboard personalizado</span>
           <span style={{ fontSize: '11px', color: t.textMuted }}>
             {selected.length} widget{selected.length !== 1 ? 's' : ''}
             {!editMode && selected.length > 0 && <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>}
@@ -202,7 +202,7 @@ const CustomDashboard = ({ storageKey, catalog, defaultWidgets, renderWidget, da
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: t.text }}>
+                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: t.text }}>
                   {pendingWidget ? `Tamaño — ${pendingWidget.label}` : 'Widgets del Dashboard'}
                 </h2>
                 {pendingWidget && (
@@ -220,16 +220,16 @@ const CustomDashboard = ({ storageKey, catalog, defaultWidgets, renderWidget, da
                 </p>
                 {cats.map(cat => (
                   <div key={cat} style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingBottom: '4px', borderBottom: `1px solid ${t.border}` }}>{cat}</div>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingBottom: '4px', borderBottom: `1px solid ${t.border}` }}>{cat}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {catalog.filter(w => w.cat === cat).map(item => {
                         const active = selected.some(s => s.id === item.id);
                         return (
                           <button key={item.id} onClick={() => toggleWidget(item)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? BLUE : t.border}`, backgroundColor: active ? BLUE + '18' : t.bgPanel, color: active ? BLUE : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '700' : '500', transition: 'all 0.15s' }}>
+                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? BLUE : t.border}`, backgroundColor: active ? BLUE + '18' : t.bgPanel, color: active ? BLUE : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '600' : '500', transition: 'all 0.15s' }}>
                             <span style={{ fontSize: '14px' }}>{item.icon}</span>
                             <span>{item.label}</span>
-                            {active && <span style={{ fontSize: '11px', fontWeight: '900' }}>✓</span>}
+                            {active && <span style={{ fontSize: '11px', fontWeight: '600' }}>✓</span>}
                           </button>
                         );
                       })}
@@ -256,7 +256,7 @@ const CustomDashboard = ({ storageKey, catalog, defaultWidgets, renderWidget, da
                             <div key={i} style={{ height: '10px', flex: 1, borderRadius: '3px', backgroundColor: i <= sz.cols ? BLUE : t.border }} />
                           ))}
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>{sz.label}</div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{sz.label}</div>
                         <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>{sz.desc}</div>
                         {isRecommended && <div style={{ fontSize: '10px', color: BLUE, fontWeight: '600', marginTop: '4px' }}>Recomendado</div>}
                       </button>
