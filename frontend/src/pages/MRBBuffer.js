@@ -155,7 +155,7 @@ const MRBBuffer = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
             📦 Buffer MRB
           </h1>
           <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>
@@ -228,7 +228,7 @@ const MRBBuffer = () => {
             <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
               {s.departmentName || 'Sin Asignar'}
             </div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: t.text }}>{fmtN(s.totalCount)}</div>
+            <div style={{ fontSize: '24px', fontWeight: '600', color: t.text }}>{fmtN(s.totalCount)}</div>
             <div style={{ fontSize: '11px', color: t.textMuted }}>
               {fmt$(s.totalCost)} · Prom: {s.avgHoursWaiting ? Number(s.avgHoursWaiting).toFixed(1) : '0'}h
             </div>
@@ -254,7 +254,7 @@ const MRBBuffer = () => {
         >
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted }}>VER TODOS</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: t.text }}>{fmtN(buffer.length)}</div>
+            <div style={{ fontSize: '24px', fontWeight: '600', color: t.text }}>{fmtN(buffer.length)}</div>
           </div>
         </div>
       </div>
@@ -317,14 +317,14 @@ const MRBBuffer = () => {
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Serial</th>
-              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Parte</th>
-              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Defecto</th>
-              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Ubicación</th>
-              <th style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Horas</th>
-              <th style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Aging</th>
-              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Área Resp.</th>
-              <th style={{ padding: '12px', textAlign: 'right', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>Costo</th>
+              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Serial</th>
+              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Parte</th>
+              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Defecto</th>
+              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Ubicación</th>
+              <th style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Horas</th>
+              <th style={{ padding: '12px', textAlign: 'center', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Aging</th>
+              <th style={{ padding: '12px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Área Resp.</th>
+              <th style={{ padding: '12px', textAlign: 'right', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Costo</th>
             </tr>
           </thead>
           <tbody>
