@@ -647,6 +647,24 @@ D3MFG.js: 32 literales
 
 **Verificación:** 32 KPIs con tokens correctos, 0 string literals
 
+### ✅ Auditoría Horizontal + Normalización (sesión 03-Sep cont.)
+
+**Bloque A - Bugs funcionales (dark mode roto):** `8e3fd08`
+| Archivo | Fix | Descripción |
+|---------|-----|-------------|
+| MRBDashboard.js | SEV_COLORS | hex → `getSevColors(t)` con tokens tema |
+| WorkloadDashboard.js | 8× fill="#" | <Bar> → `t.border/t.accent/t.primary` |
+| RepairStation.js | getStatusInfo | badges hex → `t.error/warning/accent/success` |
+
+**Bloque B - SharedComponents adoption:** `c43a1e8`
+| Archivo | Cambio |
+|---------|--------|
+| SharedComponents.js | KpiTile extendido: `borderAccent`, `accentColor`, `size` props |
+| MRBDashboard.js | KPI/KpiTile local → `MrbKpi` wrapper (borderAccent='left') |
+| HospitalDashboard.js | KPI local → wrapper (borderAccent='left', size='lg') |
+| WorkloadDashboard.js | KpiTile local → wrapper (borderAccent='top'), emojis ⏰✅ eliminados |
+| QARDashboardComponent.js | SectionTitle estandarizado 10.5px/600 (micro-title) |
+
 ### ✅ MRBCampaignDetail.js CERRADO (sesión 03-Sep cont.)
 
 | Fase | Cambios | Commit |
