@@ -37,14 +37,14 @@ const getPresets = (lang) => [
 const KPI = ({ label, value, sub, color, t }) => (
   <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '16px', borderLeft: `4px solid ${color || t.accent}` }}>
     <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{label}</div>
-    <div style={{ fontSize: '26px', fontWeight: '700', color: color || t.text }}>{value ?? '—'}</div>
+    <div style={{ fontSize: '26px', fontWeight: '600', color: color || t.text }}>{value ?? '—'}</div>
     {sub && <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>{sub}</div>}
   </div>
 );
 
 const SectionCard = ({ title, children, t }) => (
   <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '20px', marginBottom: '20px' }}>
-    <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>{title}</div>
+    <div style={{ fontSize: '13px', fontWeight: '600', color: t.text, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>{title}</div>
     {children}
   </div>
 );
@@ -53,7 +53,7 @@ const DeptTable = ({ rows, cols, t }) => (
   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
     <thead>
       <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-        {cols.map(c => <th key={c.key} style={{ padding: '6px 10px', textAlign: c.right ? 'right' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{c.label}</th>)}
+        {cols.map(c => <th key={c.key} style={{ padding: '6px 10px', textAlign: c.right ? 'right' : 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>{c.label}</th>)}
       </tr>
     </thead>
     <tbody>
@@ -70,7 +70,7 @@ const DeptTable = ({ rows, cols, t }) => (
 
 const MRB_STORAGE_KEY = 'mrb-custom-dashboard-v1';
 
-const C = { blue:'#0072CE', green:'#16a34a', red:'#ef4444', orange:'#f59e0b', purple:'#8b5cf6', gray:'#6b7280' };
+// C palette removed — use theme tokens (t.accent, t.success, t.error, t.warning, t.textMuted)
 
 const SEV_COLORS = { Crítico: '#ef4444', ALTA: '#f97316', MEDIA: '#f59e0b', BAJA: '#16a34a' };
 
@@ -79,7 +79,7 @@ const KpiTile = ({ label, value, sub, color, icon }) => {
   return (
     <div style={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '14px 16px', borderLeft: `4px solid ${color}` }}>
       <div style={{ fontSize: '10px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{icon} {label}</div>
-      <div style={{ fontSize: '22px', fontWeight: '800', color }}>{value ?? '—'}</div>
+      <div style={{ fontSize: '22px', fontWeight: '600', color }}>{value ?? '—'}</div>
       {sub && <div style={{ fontSize: '10px', color: t.textMuted, marginTop: '2px' }}>{sub}</div>}
     </div>
   );
@@ -149,11 +149,11 @@ const MrbWidgetRenderer = ({ id, data }) => {
   const tm = data?.timing      || {};
 
   // ── 📊 Resumen ──────────────────────────────────────────────────────────────
-  if (id === 'kpi-yield')       return <KpiTile label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} sub="calidad de inspección" color={parseFloat(s.yieldPct) >= 95 ? C.green : C.orange} icon="✅" />;
-  if (id === 'kpi-ppm')         return <KpiTile label="PPM" value={s.ppm != null ? Number(s.ppm).toLocaleString('es-MX') : '—'} color={C.red} icon="🔴" />;
-  if (id === 'kpi-costo-total') return <KpiTile label="Costo Total" value={fmt$(s.totalCost || 0)} color={C.purple} icon="💰" />;
-  if (id === 'kpi-backlog')     return <KpiTile label="Backlog" value={s.backlog ?? '—'} sub={`${s.total || 0} totales`} color={C.orange} icon="⏳" />;
-  if (id === 'kpi-cerradas')    return <KpiTile label="Cerradas" value={s.closed ?? '—'} sub={`${s.totalInsp ? Number(s.totalInsp).toLocaleString('es-MX') : 0} pzas insp.`} color={C.green} icon="📦" />;
+  if (id === 'kpi-yield')       return <KpiTile label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} sub="calidad de inspección" color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} icon="✅" />;
+  if (id === 'kpi-ppm')         return <KpiTile label="PPM" value={s.ppm != null ? Number(s.ppm).toLocaleString('es-MX') : '—'} color={t.error} icon="🔴" />;
+  if (id === 'kpi-costo-total') return <KpiTile label="Costo Total" value={fmt$(s.totalCost || 0)} color={t.accent} icon="💰" />;
+  if (id === 'kpi-backlog')     return <KpiTile label="Backlog" value={s.backlog ?? '—'} sub={`${s.total || 0} totales`} color={t.warning} icon="⏳" />;
+  if (id === 'kpi-cerradas')    return <KpiTile label="Cerradas" value={s.closed ?? '—'} sub={`${s.totalInsp ? Number(s.totalInsp).toLocaleString('es-MX') : 0} pzas insp.`} color={t.success} icon="📦" />;
 
   if (id === 'chart-camp-mes') {
     const { data: mdData, depts: mdDepts } = (() => {
@@ -163,7 +163,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
     })();
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📊 Campañas por Mes / Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📊 Campañas por Mes / Depto</div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={mdData}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -181,7 +181,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-costo-mes-r') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📈 Costo por Mes</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📈 Costo por Mes</div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={s.costByMonth || []}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -189,8 +189,8 @@ const MrbWidgetRenderer = ({ id, data }) => {
             <YAxis tick={{ fontSize: 9, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
             <Tooltip formatter={v => fmt$(v)} />
             <Legend wrapperStyle={{ fontSize: 10 }} />
-            <Bar dataKey="scrap" name="Scrap" stackId="a" fill={C.red} />
-            <Bar dataKey="labor" name="M.O." stackId="a" fill={C.orange} radius={[4,4,0,0]} />
+            <Bar dataKey="scrap" name="Scrap" stackId="a" fill={t.error} />
+            <Bar dataKey="labor" name="M.O." stackId="a" fill={t.warning} radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -200,18 +200,18 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-dept-res') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🏭 Contribución por Departamento</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Contribución por Departamento</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
-            {['Departamento','Backlog','Cerradas','Total','Costo'].map(h => <th key={h} style={{ padding: '6px 8px', textAlign: h === 'Departamento' ? 'left' : 'right', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>{h}</th>)}
+            {['Departamento','Backlog','Cerradas','Total','Costo'].map(h => <th key={h} style={{ padding: '6px 8px', textAlign: h === 'Departamento' ? 'left' : 'right', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>{h}</th>)}
           </tr></thead>
           <tbody>{(s.byDept || []).map((r, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
               <td style={{ padding: '6px 8px', color: t.text }}>{r.dept}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700', color: r.backlog > 0 ? C.orange : t.text }}>{r.backlog}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600', color: r.backlog > 0 ? t.warning : t.text }}>{r.backlog}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right', color: t.text }}>{r.closed}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right', color: t.text }}>{r.total}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: C.purple }}>{fmt$(r.total_cost || 0)}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: t.accent }}>{fmt$(r.total_cost || 0)}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -223,13 +223,13 @@ const MrbWidgetRenderer = ({ id, data }) => {
     const open = data?.openCampaigns || [];
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>🔴 Campañas Abiertas ({open.length})</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>🔴 Campañas Abiertas ({open.length})</div>
         {open.length === 0
           ? <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '12px' }}>✓ Sin campañas abiertas</div>
           : <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '200px', overflowY: 'auto' }}>
               {open.map((camp, i) => (
                 <div key={i} onClick={() => navigate(`/mrb-campaign/${camp.id}`)}
-                  style={{ padding: '7px 10px', backgroundColor: t.bgPanel, borderRadius: '5px', borderLeft: `3px solid ${C.orange}`, cursor: 'pointer' }}
+                  style={{ padding: '7px 10px', backgroundColor: t.bgPanel, borderRadius: '5px', borderLeft: `3px solid ${t.warning}`, cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
                   onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                 >
@@ -243,23 +243,23 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── 🔄 Material ─────────────────────────────────────────────────────────────
-  if (id === 'kpi-scrap')     return <KpiTile label="Scrap" value={Number(d.scrap || 0).toLocaleString('es-MX')} sub="piezas" color={C.red} icon="🗑" />;
-  if (id === 'kpi-rework')    return <KpiTile label="Rework" value={Number(d.rework || 0).toLocaleString('es-MX')} sub="piezas" color={C.orange} icon="🔧" />;
-  if (id === 'kpi-use-as-is') return <KpiTile label="Use As-Is" value={Number(d.use_as_is || 0).toLocaleString('es-MX')} sub="piezas" color={C.green} icon="✔" />;
-  if (id === 'kpi-return')    return <KpiTile label="Return" value={Number(d.return_sup || 0).toLocaleString('es-MX')} sub="piezas" color={C.purple} icon="↩" />;
-  if (id === 'kpi-hold')      return <KpiTile label="Hold" value={Number(d.hold || 0).toLocaleString('es-MX')} sub="piezas" color={C.gray} icon="🔒" />;
+  if (id === 'kpi-scrap')     return <KpiTile label="Scrap" value={Number(d.scrap || 0).toLocaleString('es-MX')} sub="piezas" color={t.error} icon="🗑" />;
+  if (id === 'kpi-rework')    return <KpiTile label="Rework" value={Number(d.rework || 0).toLocaleString('es-MX')} sub="piezas" color={t.warning} icon="🔧" />;
+  if (id === 'kpi-use-as-is') return <KpiTile label="Use As-Is" value={Number(d.use_as_is || 0).toLocaleString('es-MX')} sub="piezas" color={t.success} icon="✔" />;
+  if (id === 'kpi-return')    return <KpiTile label="Return" value={Number(d.return_sup || 0).toLocaleString('es-MX')} sub="piezas" color={t.accent} icon="↩" />;
+  if (id === 'kpi-hold')      return <KpiTile label="Hold" value={Number(d.hold || 0).toLocaleString('es-MX')} sub="piezas" color={t.textMuted} icon="🔒" />;
 
   if (id === 'chart-disp-pie') {
     const pieData = [
-      { name: 'Scrap',     value: d.scrap      || 0, fill: C.red    },
-      { name: 'Rework',    value: d.rework     || 0, fill: C.orange },
-      { name: 'Use As-Is', value: d.use_as_is  || 0, fill: C.green  },
-      { name: 'Return',    value: d.return_sup || 0, fill: C.purple },
-      { name: 'Hold',      value: d.hold       || 0, fill: C.gray   },
+      { name: 'Scrap',     value: d.scrap      || 0, fill: t.error    },
+      { name: 'Rework',    value: d.rework     || 0, fill: t.warning },
+      { name: 'Use As-Is', value: d.use_as_is  || 0, fill: t.success  },
+      { name: 'Return',    value: d.return_sup || 0, fill: t.accent },
+      { name: 'Hold',      value: d.hold       || 0, fill: t.textMuted   },
     ].filter(x => x.value > 0);
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>🥧 Distribución Disposición</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>🥧 Distribución Disposición</div>
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
             <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={72} label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={9}>
@@ -275,7 +275,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-disp-mes') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📈 Scrap / Rework por Mes</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📈 Scrap / Rework por Mes</div>
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={d.byMonth || []}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -283,8 +283,8 @@ const MrbWidgetRenderer = ({ id, data }) => {
             <YAxis tick={{ fontSize: 9, fill: t.textMuted }} />
             <Tooltip />
             <Legend wrapperStyle={{ fontSize: 10 }} />
-            <Line type="monotone" dataKey="scrap" stroke={C.red} strokeWidth={2} dot={{ r: 3 }} name="Scrap" />
-            <Line type="monotone" dataKey="rework" stroke={C.orange} strokeWidth={2} dot={{ r: 3 }} name="Rework" />
+            <Line type="monotone" dataKey="scrap" stroke={t.error} strokeWidth={2} dot={{ r: 3 }} name="Scrap" />
+            <Line type="monotone" dataKey="rework" stroke={t.warning} strokeWidth={2} dot={{ r: 3 }} name="Rework" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -294,16 +294,16 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-disp-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🏭 Disposición por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Disposición por Depto</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
-            {['Depto','Scrap','Rework','Use As-Is','Return','Hold'].map(h => <th key={h} style={{ padding: '5px 8px', textAlign: h === 'Depto' ? 'left' : 'right', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>{h}</th>)}
+            {['Depto','Scrap','Rework','Use As-Is','Return','Hold'].map(h => <th key={h} style={{ padding: '5px 8px', textAlign: h === 'Depto' ? 'left' : 'right', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>{h}</th>)}
           </tr></thead>
           <tbody>{(d.byDept || []).map((r, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
               <td style={{ padding: '5px 8px', color: t.text }}>{r.dept}</td>
-              <td style={{ padding: '5px 8px', textAlign: 'right', color: C.red, fontWeight: '700' }}>{r.scrap}</td>
-              <td style={{ padding: '5px 8px', textAlign: 'right', color: C.orange }}>{r.rework}</td>
+              <td style={{ padding: '5px 8px', textAlign: 'right', color: t.error, fontWeight: '600' }}>{r.scrap}</td>
+              <td style={{ padding: '5px 8px', textAlign: 'right', color: t.warning }}>{r.rework}</td>
               <td style={{ padding: '5px 8px', textAlign: 'right', color: t.text }}>{r.use_as_is}</td>
               <td style={{ padding: '5px 8px', textAlign: 'right', color: t.text }}>{r.return_sup}</td>
               <td style={{ padding: '5px 8px', textAlign: 'right', color: t.text }}>{r.hold}</td>
@@ -315,28 +315,28 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── ⏱ Tiempo & Flujo ────────────────────────────────────────────────────────
-  if (id === 'kpi-avg-resp')  return <KpiTile label="Avg Respuesta" value={tm.avg_response_days != null ? `${tm.avg_response_days} días` : '—'} color={C.blue} icon="📨" />;
-  if (id === 'kpi-avg-cierre') return <KpiTile label="Avg Cierre" value={tm.avg_close_days != null ? `${tm.avg_close_days} días` : '—'} color={C.green} icon="📦" />;
-  if (id === 'kpi-lead')      return <KpiTile label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} días` : '—'} color={C.purple} icon="⏱" />;
-  if (id === 'kpi-aging14')   return <KpiTile label=">14 días abiertas" value={tm.aging_14 ?? '—'} color={tm.aging_14 > 0 ? C.orange : C.green} icon="⚠️" />;
-  if (id === 'kpi-aging30')   return <KpiTile label=">30 días abiertas" value={tm.aging_30 ?? '—'} color={tm.aging_30 > 0 ? C.red : C.green} icon="🔴" />;
+  if (id === 'kpi-avg-resp')  return <KpiTile label="Avg Respuesta" value={tm.avg_response_days != null ? `${tm.avg_response_days} días` : '—'} color={t.accent} icon="📨" />;
+  if (id === 'kpi-avg-cierre') return <KpiTile label="Avg Cierre" value={tm.avg_close_days != null ? `${tm.avg_close_days} días` : '—'} color={t.success} icon="📦" />;
+  if (id === 'kpi-lead')      return <KpiTile label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} días` : '—'} color={t.accent} icon="⏱" />;
+  if (id === 'kpi-aging14')   return <KpiTile label=">14 días abiertas" value={tm.aging_14 ?? '—'} color={tm.aging_14 > 0 ? t.warning : t.success} icon="⚠️" />;
+  if (id === 'kpi-aging30')   return <KpiTile label=">30 días abiertas" value={tm.aging_30 ?? '—'} color={tm.aging_30 > 0 ? t.error : t.success} icon="🔴" />;
 
   if (id === 'tabla-aging') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📋 Aging de Campañas</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📋 Aging de Campañas</div>
         <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
-              {['Folio','Título','Depto','Estado','Días'].map(h => <th key={h} style={{ padding: '5px 8px', textAlign: h === 'Días' ? 'right' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>{h}</th>)}
+              {['Folio','Título','Depto','Estado','Días'].map(h => <th key={h} style={{ padding: '5px 8px', textAlign: h === 'Días' ? 'right' : 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>{h}</th>)}
             </tr></thead>
             <tbody>{(tm.aging || []).map((r, i) => (
               <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
-                <td style={{ padding: '5px 8px', color: t.accent, fontFamily: 'monospace', fontSize: '11px' }}>{r.campaign_number}</td>
+                <td style={{ padding: '5px 8px', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px' }}>{r.campaign_number}</td>
                 <td style={{ padding: '5px 8px', color: t.text, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</td>
                 <td style={{ padding: '5px 8px', color: t.textMuted }}>{r.dept}</td>
                 <td style={{ padding: '5px 8px', color: t.text }}>{r.status}</td>
-                <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '700', color: r.age_days >= 30 ? C.red : r.age_days >= 14 ? C.orange : t.text }}>{r.age_days}</td>
+                <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '600', color: r.age_days >= 30 ? t.error : r.age_days >= 14 ? t.warning : t.text }}>{r.age_days}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -346,14 +346,14 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── 💰 Costo & Impacto ───────────────────────────────────────────────────────
-  if (id === 'kpi-scrap-cost') return <KpiTile label="Scrap Cost" value={fmt$(c.scrapCost || 0)} color={C.red} icon="🗑" />;
-  if (id === 'kpi-labor-cost') return <KpiTile label="Mano de Obra" value={fmt$(c.laborCost || 0)} color={C.orange} icon="👷" />;
-  if (id === 'kpi-total-cost') return <KpiTile label="Costo Total" value={fmt$(c.totalCost || 0)} color={C.purple} icon="💰" />;
+  if (id === 'kpi-scrap-cost') return <KpiTile label="Scrap Cost" value={fmt$(c.scrapCost || 0)} color={t.error} icon="🗑" />;
+  if (id === 'kpi-labor-cost') return <KpiTile label="Mano de Obra" value={fmt$(c.laborCost || 0)} color={t.warning} icon="👷" />;
+  if (id === 'kpi-total-cost') return <KpiTile label="Costo Total" value={fmt$(c.totalCost || 0)} color={t.accent} icon="💰" />;
 
   if (id === 'chart-costo-mes') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📈 Costo por Mes</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📈 Costo por Mes</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={s.costByMonth || []}>
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
@@ -361,8 +361,8 @@ const MrbWidgetRenderer = ({ id, data }) => {
             <YAxis tick={{ fontSize: 9, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
             <Tooltip formatter={v => fmt$(v)} />
             <Legend wrapperStyle={{ fontSize: 10 }} />
-            <Bar dataKey="scrap" name="Scrap" stackId="a" fill={C.red} />
-            <Bar dataKey="labor" name="M.O." stackId="a" fill={C.orange} radius={[4,4,0,0]} />
+            <Bar dataKey="scrap" name="Scrap" stackId="a" fill={t.error} />
+            <Bar dataKey="labor" name="M.O." stackId="a" fill={t.warning} radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -372,15 +372,15 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-costo-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🏭 Costo por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Costo por Depto</div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={c.byDept || []} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
             <XAxis type="number" tick={{ fontSize: 9, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
             <YAxis type="category" dataKey="dept" tick={{ fontSize: 9, fill: t.textMuted }} width={56} />
             <Tooltip formatter={v => fmt$(v)} />
-            <Bar dataKey="scrap_cost" name="Scrap" stackId="a" fill={C.red} />
-            <Bar dataKey="labor_cost" name="M.O." stackId="a" fill={C.orange} radius={[0,4,4,0]} />
+            <Bar dataKey="scrap_cost" name="Scrap" stackId="a" fill={t.error} />
+            <Bar dataKey="labor_cost" name="M.O." stackId="a" fill={t.warning} radius={[0,4,4,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -390,19 +390,19 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-top-costo') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📋 Top Campañas por Costo</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📋 Top Campañas por Costo</div>
         <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
-              {['Folio','Título','Scrap','M.O.','Total'].map(h => <th key={h} style={{ padding: '5px 8px', textAlign: ['Scrap','M.O.','Total'].includes(h) ? 'right' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>{h}</th>)}
+              {['Folio','Título','Scrap','M.O.','Total'].map(h => <th key={h} style={{ padding: '5px 8px', textAlign: ['Scrap','M.O.','Total'].includes(h) ? 'right' : 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>{h}</th>)}
             </tr></thead>
             <tbody>{(c.byCampaign || []).map((r, i) => (
               <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
-                <td style={{ padding: '5px 8px', color: t.accent, fontFamily: 'monospace', fontSize: '11px' }}>{r.campaign_number}</td>
+                <td style={{ padding: '5px 8px', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px' }}>{r.campaign_number}</td>
                 <td style={{ padding: '5px 8px', color: t.text, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</td>
-                <td style={{ padding: '5px 8px', textAlign: 'right', color: C.red }}>{fmt$(r.scrap_cost || 0)}</td>
-                <td style={{ padding: '5px 8px', textAlign: 'right', color: C.orange }}>{fmt$(r.labor_cost || 0)}</td>
-                <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '700', color: C.purple }}>{fmt$(r.total_cost || 0)}</td>
+                <td style={{ padding: '5px 8px', textAlign: 'right', color: t.error }}>{fmt$(r.scrap_cost || 0)}</td>
+                <td style={{ padding: '5px 8px', textAlign: 'right', color: t.warning }}>{fmt$(r.labor_cost || 0)}</td>
+                <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '600', color: t.accent }}>{fmt$(r.total_cost || 0)}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -415,14 +415,14 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-top-defectos') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🧩 Top Defectos</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🧩 Top Defectos</div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={(df.top || []).slice(0, 8)} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
             <XAxis type="number" tick={{ fontSize: 9, fill: t.textMuted }} />
             <YAxis type="category" dataKey="defect" tick={{ fontSize: 9, fill: t.textMuted }} width={80} />
             <Tooltip />
-            <Bar dataKey="qty" name="Piezas NOK" fill={C.red} radius={[0,4,4,0]} />
+            <Bar dataKey="qty" name="Piezas NOK" fill={t.error} radius={[0,4,4,0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -433,7 +433,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
     const sevData = (df.bySeverity || []).map((r, i) => ({ name: r.severity, value: r.qty_nok || 0, fill: SEV_COLORS[r.severity] || DEPT_PALETTE[i] }));
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>🥧 NOK por Severidad</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>🥧 NOK por Severidad</div>
         <ResponsiveContainer width="100%" height={180}>
           <PieChart>
             <Pie data={sevData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={72} label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={9}>
@@ -449,16 +449,16 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-by-stage') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📋 NOK por Etapa</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📋 NOK por Etapa</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
-            <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>Etapa</th>
-            <th style={{ padding: '5px 8px', textAlign: 'right', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>Piezas NOK</th>
+            <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Etapa</th>
+            <th style={{ padding: '5px 8px', textAlign: 'right', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Piezas NOK</th>
           </tr></thead>
           <tbody>{(df.byStage || []).map((r, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
               <td style={{ padding: '5px 8px', color: t.text }}>{r.stage}</td>
-              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '700', color: C.red }}>{r.qty}</td>
+              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '600', color: t.error }}>{r.qty}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -469,16 +469,16 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'tabla-nok-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🏭 NOK por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 NOK por Depto</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
-            <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>Departamento</th>
-            <th style={{ padding: '5px 8px', textAlign: 'right', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>Piezas NOK</th>
+            <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Departamento</th>
+            <th style={{ padding: '5px 8px', textAlign: 'right', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Piezas NOK</th>
           </tr></thead>
           <tbody>{(df.byDept || []).map((r, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
               <td style={{ padding: '5px 8px', color: t.text }}>{r.dept}</td>
-              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '700', color: r.qty > 0 ? C.red : t.text }}>{r.qty}</td>
+              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '600', color: r.qty > 0 ? t.error : t.text }}>{r.qty}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -487,15 +487,15 @@ const MrbWidgetRenderer = ({ id, data }) => {
   }
 
   // ── 🏭 Operación ─────────────────────────────────────────────────────────────
-  if (id === 'kpi-pph')          return <KpiTile label="Piezas / Hora" value={o.piecesPerHour ?? '—'} sub={`${Number(o.inspectorHours || 0).toFixed(1)} hrs inspector`} color={C.blue} icon="⚡" />;
-  if (id === 'kpi-dph')          return <KpiTile label="Defectos / Hora" value={o.defectsPerHour ?? '—'} color={C.red} icon="🔴" />;
-  if (id === 'kpi-downtime')     return <KpiTile label="Downtime Total" value={o.totalDowntime ? `${Number(o.totalDowntime).toLocaleString('es-MX')} min` : '0 min'} color={C.orange} icon="⏱" />;
-  if (id === 'kpi-hrs-inspector') return <KpiTile label="Horas Inspector" value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={C.purple} icon="👷" />;
+  if (id === 'kpi-pph')          return <KpiTile label="Piezas / Hora" value={o.piecesPerHour ?? '—'} sub={`${Number(o.inspectorHours || 0).toFixed(1)} hrs inspector`} color={t.accent} icon="⚡" />;
+  if (id === 'kpi-dph')          return <KpiTile label="Defectos / Hora" value={o.defectsPerHour ?? '—'} color={t.error} icon="🔴" />;
+  if (id === 'kpi-downtime')     return <KpiTile label="Downtime Total" value={o.totalDowntime ? `${Number(o.totalDowntime).toLocaleString('es-MX')} min` : '0 min'} color={t.warning} icon="⏱" />;
+  if (id === 'kpi-hrs-inspector') return <KpiTile label="Horas Inspector" value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} icon="👷" />;
 
   if (id === 'chart-downtime') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>📊 Downtime por Turno</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>📊 Downtime por Turno</div>
         {(o.byShift || []).length === 0
           ? <div style={{ fontSize: '11px', color: t.textMuted, textAlign: 'center', padding: '20px' }}>Sin registros</div>
           : <ResponsiveContainer width="100%" height={180}>
@@ -504,7 +504,7 @@ const MrbWidgetRenderer = ({ id, data }) => {
                 <XAxis dataKey="shift" tick={{ fontSize: 10, fill: t.textMuted }} />
                 <YAxis tick={{ fontSize: 10, fill: t.textMuted }} />
                 <Tooltip />
-                <Bar dataKey="minutes" name="Minutos" fill={C.orange} radius={[4,4,0,0]} />
+                <Bar dataKey="minutes" name="Minutos" fill={t.warning} radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>}
       </div>
@@ -514,16 +514,16 @@ const MrbWidgetRenderer = ({ id, data }) => {
   if (id === 'chart-down-dept') {
     return (
       <div>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: t.text, marginBottom: '10px' }}>🏭 Downtime por Depto</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginBottom: '10px' }}>🏭 Downtime por Depto</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead><tr style={{ borderBottom: `2px solid ${t.border}` }}>
-            <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>Departamento</th>
-            <th style={{ padding: '5px 8px', textAlign: 'right', color: t.textMuted, fontWeight: '700', fontSize: '10px' }}>Minutos</th>
+            <th style={{ padding: '5px 8px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Departamento</th>
+            <th style={{ padding: '5px 8px', textAlign: 'right', color: t.textMuted, fontWeight: '600', fontSize: '10px' }}>Minutos</th>
           </tr></thead>
           <tbody>{(o.byDept || []).map((r, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
               <td style={{ padding: '5px 8px', color: t.text }}>{r.dept}</td>
-              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '700', color: r.minutes > 0 ? C.orange : t.text }}>{r.minutes}</td>
+              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: '600', color: r.minutes > 0 ? t.warning : t.text }}>{r.minutes}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -554,23 +554,23 @@ const MrbSortableWidget = ({ item, data, editMode, onRemove }) => {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = {
     gridColumn: `span ${SIZE_COLS[item.size] || 1}`,
-    backgroundColor: t.bgCard, border: `1px solid ${isDragging ? C.blue : t.border}`,
+    backgroundColor: t.bgCard, border: `1px solid ${isDragging ? t.accent : t.border}`,
     borderRadius: '8px', padding: isKpi ? '0' : '14px', position: 'relative',
     minHeight: isKpi ? 'auto' : '120px',
     transform: CSS.Transform.toString(transform), transition,
     opacity: isDragging ? 0.4 : 1,
-    boxShadow: isDragging ? `0 8px 24px ${C.blue}33` : 'none',
+    boxShadow: isDragging ? `0 8px 24px ${t.accent}33` : 'none',
     zIndex: isDragging ? 10 : 'auto',
   };
   return (
     <div ref={setNodeRef} style={style}>
       <div ref={setActivatorNodeRef} {...listeners} {...attributes} title="Arrastrar"
-        style={{ position: 'absolute', top: isKpi ? '50%' : '8px', left: '6px', transform: isKpi ? 'translateY(-50%)' : 'none', zIndex: 5, cursor: 'grab', color: editMode ? C.blue : t.border, fontSize: '14px', padding: '2px', borderRadius: '3px', userSelect: 'none', opacity: editMode ? 1 : 0.35 }}
-        onMouseEnter={e => { e.currentTarget.style.color = C.blue; e.currentTarget.style.opacity = '1'; }}
-        onMouseLeave={e => { e.currentTarget.style.color = editMode ? C.blue : t.border; e.currentTarget.style.opacity = editMode ? '1' : '0.35'; }}
+        style={{ position: 'absolute', top: isKpi ? '50%' : '8px', left: '6px', transform: isKpi ? 'translateY(-50%)' : 'none', zIndex: 5, cursor: 'grab', color: editMode ? t.accent : t.border, fontSize: '14px', padding: '2px', borderRadius: '3px', userSelect: 'none', opacity: editMode ? 1 : 0.35 }}
+        onMouseEnter={e => { e.currentTarget.style.color = t.accent; e.currentTarget.style.opacity = '1'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = editMode ? t.accent : t.border; e.currentTarget.style.opacity = editMode ? '1' : '0.35'; }}
       >⠿</div>
       {editMode && (
-        <button onClick={() => onRemove(item.id)} style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 5, width: '18px', height: '18px', borderRadius: '50%', backgroundColor: C.red, border: 'none', color: 'white', fontSize: '10px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        <button onClick={() => onRemove(item.id)} style={{ position: 'absolute', top: '6px', right: '6px', zIndex: 5, width: '18px', height: '18px', borderRadius: '50%', backgroundColor: t.error, border: 'none', color: 'white', fontSize: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
       )}
       <div style={{ paddingLeft: isKpi ? '20px' : '0' }}>
         <MrbWidgetRenderer id={item.id} data={data} />
@@ -583,8 +583,8 @@ const MrbDragGhost = ({ id }) => {
   const { theme: t } = useTheme();
   const meta = MRB_WIDGET_CATALOG.find(w => w.id === id);
   return (
-    <div style={{ backgroundColor: t.bgCard, border: `2px solid ${C.blue}`, borderRadius: '8px', padding: '14px', boxShadow: `0 16px 40px ${C.blue}44`, opacity: 0.95, minWidth: '200px', transform: 'rotate(2deg)' }}>
-      <div style={{ fontSize: '11px', fontWeight: '700', color: C.blue }}>{meta?.icon} {meta?.label}</div>
+    <div style={{ backgroundColor: t.bgCard, border: `2px solid ${t.accent}`, borderRadius: '8px', padding: '14px', boxShadow: `0 16px 40px ${t.accent}44`, opacity: 0.95, minWidth: '200px', transform: 'rotate(2deg)' }}>
+      <div style={{ fontSize: '11px', fontWeight: '600', color: t.accent }}>{meta?.icon} {meta?.label}</div>
       <div style={{ fontSize: '10px', color: t.textMuted }}>Arrastrando…</div>
     </div>
   );
@@ -636,7 +636,7 @@ const MrbTabPersonalizado = ({ data }) => {
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '10px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>⚙️ Mi Dashboard MRB</div>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>⚙️ Mi Dashboard MRB</div>
           <div style={{ fontSize: '11px', color: t.textMuted }}>
             {selected.length} widget{selected.length !== 1 ? 's' : ''} activo{selected.length !== 1 ? 's' : ''}
             {!editMode && selected.length > 0 && <span style={{ marginLeft: '6px', color: t.border }}>· arrastra ⠿ para reordenar</span>}
@@ -644,11 +644,11 @@ const MrbTabPersonalizado = ({ data }) => {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           {editMode && <>
-            <button onClick={() => setShowModal(true)} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${C.blue}`, backgroundColor: C.blue + '12', color: C.blue, cursor: 'pointer', fontWeight: '600' }}>＋ Widgets</button>
+            <button onClick={() => setShowModal(true)} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${t.accent}`, backgroundColor: t.accent + '12', color: t.accent, cursor: 'pointer', fontWeight: '600' }}>＋ Widgets</button>
             <button onClick={reset}    style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, color: t.textMuted, cursor: 'pointer' }}>Restablecer</button>
-            <button onClick={clearAll} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${C.red}44`, backgroundColor: C.red + '12', color: C.red, cursor: 'pointer' }}>Limpiar todo</button>
+            <button onClick={clearAll} style={{ padding: '5px 12px', fontSize: '11px', borderRadius: '5px', border: `1px solid ${t.error}44`, backgroundColor: t.error + '12', color: t.error, cursor: 'pointer' }}>Limpiar todo</button>
           </>}
-          <button onClick={() => setEditMode(e => !e)} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: editMode ? `2px solid ${C.blue}` : `1px solid ${t.border}`, backgroundColor: editMode ? C.blue + '18' : t.bgPanel, color: editMode ? C.blue : t.text, cursor: 'pointer' }}>
+          <button onClick={() => setEditMode(e => !e)} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: editMode ? `2px solid ${t.accent}` : `1px solid ${t.border}`, backgroundColor: editMode ? t.accent + '18' : t.bgPanel, color: editMode ? t.accent : t.text, cursor: 'pointer' }}>
             {editMode ? '✓ Listo' : '✏️ Personalizar'}
           </button>
         </div>
@@ -678,8 +678,8 @@ const MrbTabPersonalizado = ({ data }) => {
           <div style={{ backgroundColor: t.bgCard, borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '92%', maxHeight: '82vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: t.text }}>{pendingWidget ? `Tamaño — ${pendingWidget.label}` : 'Widgets del Dashboard'}</h2>
-                {pendingWidget && <button onClick={() => setPendingWidget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.blue, fontSize: '12px', padding: 0, marginTop: '4px' }}>← Volver al catálogo</button>}
+                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: t.text }}>{pendingWidget ? `Tamaño — ${pendingWidget.label}` : 'Widgets del Dashboard'}</h2>
+                {pendingWidget && <button onClick={() => setPendingWidget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.accent, fontSize: '12px', padding: 0, marginTop: '4px' }}>← Volver al catálogo</button>}
               </div>
               <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, fontSize: '20px', lineHeight: 1 }}>✕</button>
             </div>
@@ -688,13 +688,13 @@ const MrbTabPersonalizado = ({ data }) => {
                 <p style={{ margin: '0 0 16px', fontSize: '12px', color: t.textMuted }}>{selected.length} activo{selected.length !== 1 ? 's' : ''} — click en activo para quitar, en inactivo para agregar con tamaño</p>
                 {cats.map(cat => (
                   <div key={cat} style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingBottom: '4px', borderBottom: `1px solid ${t.border}` }}>{cat}</div>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', paddingBottom: '4px', borderBottom: `1px solid ${t.border}` }}>{cat}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {MRB_WIDGET_CATALOG.filter(w => w.cat === cat).map(item => {
                         const active = selected.some(s => s.id === item.id);
                         return (
-                          <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? C.blue : t.border}`, backgroundColor: active ? C.blue + '18' : t.bgPanel, color: active ? C.blue : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '700' : '500' }}>
-                            <span style={{ fontSize: '14px' }}>{item.icon}</span><span>{item.label}</span>{active && <span style={{ fontSize: '11px', fontWeight: '900' }}>✓</span>}
+                          <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? t.accent : t.border}`, backgroundColor: active ? t.accent + '18' : t.bgPanel, color: active ? t.accent : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '700' : '500' }}>
+                            <span style={{ fontSize: '14px' }}>{item.icon}</span><span>{item.label}</span>{active && <span style={{ fontSize: '11px', fontWeight: '600' }}>✓</span>}
                           </button>
                         );
                       })}
@@ -710,15 +710,15 @@ const MrbTabPersonalizado = ({ data }) => {
                   {WIDGET_SIZES.map(sz => {
                     const isRec = sz.key === (pendingWidget.size || 'sm');
                     return (
-                      <button key={sz.key} onClick={() => addWithSize(sz.key)} style={{ padding: '18px 16px', borderRadius: '10px', border: `2px solid ${isRec ? C.blue : t.border}`, backgroundColor: isRec ? C.blue + '15' : t.bgPanel, cursor: 'pointer', textAlign: 'left' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.backgroundColor = C.blue + '15'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = isRec ? C.blue : t.border; e.currentTarget.style.backgroundColor = isRec ? C.blue + '15' : t.bgPanel; }}>
+                      <button key={sz.key} onClick={() => addWithSize(sz.key)} style={{ padding: '18px 16px', borderRadius: '10px', border: `2px solid ${isRec ? t.accent : t.border}`, backgroundColor: isRec ? t.accent + '15' : t.bgPanel, cursor: 'pointer', textAlign: 'left' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = t.accent; e.currentTarget.style.backgroundColor = t.accent + '15'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = isRec ? t.accent : t.border; e.currentTarget.style.backgroundColor = isRec ? t.accent + '15' : t.bgPanel; }}>
                         <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-                          {[1,2,3,4].map(i => <div key={i} style={{ height: '10px', flex: 1, borderRadius: '3px', backgroundColor: i <= sz.cols ? C.blue : t.border }} />)}
+                          {[1,2,3,4].map(i => <div key={i} style={{ height: '10px', flex: 1, borderRadius: '3px', backgroundColor: i <= sz.cols ? t.accent : t.border }} />)}
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: t.text }}>{sz.label}</div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{sz.label}</div>
                         <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>{sz.desc}</div>
-                        {isRec && <div style={{ fontSize: '10px', color: C.blue, fontWeight: '600', marginTop: '4px' }}>Recomendado</div>}
+                        {isRec && <div style={{ fontSize: '10px', color: t.accent, fontWeight: '600', marginTop: '4px' }}>Recomendado</div>}
                       </button>
                     );
                   })}
@@ -1029,7 +1029,7 @@ const MRBDashboard = () => {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: 'white'
       });
 
       const imgData = canvas.toDataURL('image/png');
@@ -1258,11 +1258,11 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} color={parseFloat(s.yieldPct) >= 95 ? '#16a34a' : '#f59e0b'} t={t} />
-          <KPI label="PPM" value={s.ppm != null ? fmtN(s.ppm) : '—'} color="#ef4444" t={t} />
-          <KPI label={L.totalCost} value={fmt$(s.totalCost || 0)} color="#8b5cf6" t={t} />
-          <KPI label="Backlog" value={s.backlog} sub={`${s.total || 0} ${L.total}`} color="#f59e0b" t={t} />
-          <KPI label={language === 'es' ? 'Cerradas' : 'Closed'} value={s.closed} sub={`${s.totalInsp ? fmtN(s.totalInsp) : 0} ${L.pcsInspected}`} color="#16a34a" t={t} />
+          <KPI label="Yield" value={s.yieldPct != null ? `${s.yieldPct}%` : '—'} color={parseFloat(s.yieldPct) >= 95 ? t.success : t.warning} t={t} />
+          <KPI label="PPM" value={s.ppm != null ? fmtN(s.ppm) : '—'} color="t.error" t={t} />
+          <KPI label={L.totalCost} value={fmt$(s.totalCost || 0)} color={t.accent} t={t} />
+          <KPI label="Backlog" value={s.backlog} sub={`${s.total || 0} ${L.total}`} color={t.warning} t={t} />
+          <KPI label={language === 'es' ? 'Cerradas' : 'Closed'} value={s.closed} sub={`${s.totalInsp ? fmtN(s.totalInsp) : 0} ${L.pcsInspected}`} color={t.success} t={t} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
@@ -1287,8 +1287,8 @@ const MRBDashboard = () => {
                 <YAxis tick={{ fontSize: 10, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
                 <Tooltip {...tt} formatter={v => fmt$(v)} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="scrap" name="Scrap" stackId="b" fill="#ef4444" />
-                <Bar dataKey="labor" name={language === 'es' ? 'Mano de obra' : 'Labor'} stackId="b" fill="#f59e0b" radius={[4,4,0,0]} />
+                <Bar dataKey="scrap" name="Scrap" stackId="b" fill="t.error" />
+                <Bar dataKey="labor" name={language === 'es' ? 'Mano de obra' : 'Labor'} stackId="b" fill={t.warning} radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </SectionCard>
@@ -1297,7 +1297,7 @@ const MRBDashboard = () => {
         <SectionCard title={L.deptContribution} t={t}>
           <DeptTable rows={s.byDept || []} t={t} cols={[
             { key: 'dept',       label: L.department },
-            { key: 'backlog',    label: 'Backlog',  right: true, bold: true, color: r => r.backlog > 0 ? '#f59e0b' : t.text },
+            { key: 'backlog',    label: 'Backlog',  right: true, bold: true, color: r => r.backlog > 0 ? t.warning : t.text },
             { key: 'closed',     label: language === 'es' ? 'Cerradas' : 'Closed', right: true },
             { key: 'total',      label: 'Total',    right: true },
             { key: 'total_cost', label: L.cost,    right: true, fmt: v => fmt$(v || 0) },
@@ -1319,13 +1319,13 @@ const MRBDashboard = () => {
                 const yield_ = insp > 0 ? ((ok / insp) * 100).toFixed(1) : null;
                 const agingRow = (data?.timing?.aging || []).find(a => a.id === c.id);
                 const ageDays  = agingRow?.age_days;
-                const ageColor = ageDays >= 30 ? '#ef4444' : ageDays >= 14 ? '#f59e0b' : t.textMuted;
+                const ageColor = ageDays >= 30 ? t.error : ageDays >= 14 ? t.warning : t.textMuted;
                 const DISP = [
-                  { label: 'REWORK',   val: c.qtyRework  || c.qty_rework  || 0, color: '#f59e0b' },
-                  { label: 'SCRAP',    val: c.qtyScrap   || c.qty_scrap   || 0, color: '#ef4444' },
-                  { label: 'RETURN',   val: c.qtyReturn  || c.qty_return  || 0, color: '#8b5cf6' },
-                  { label: 'HOLD',     val: c.qtyHold    || c.qty_hold    || 0, color: '#6b7280' },
-                  { label: 'USAR C/ES',val: c.qtyUseAsIs || c.qty_use_as_is || 0, color: '#16a34a' },
+                  { label: 'REWORK',   val: c.qtyRework  || c.qty_rework  || 0, color: t.warning },
+                  { label: 'SCRAP',    val: c.qtyScrap   || c.qty_scrap   || 0, color: t.error },
+                  { label: 'RETURN',   val: c.qtyReturn  || c.qty_return  || 0, color: t.accent },
+                  { label: 'HOLD',     val: c.qtyHold    || c.qty_hold    || 0, color: t.textMuted },
+                  { label: 'USAR C/ES',val: c.qtyUseAsIs || c.qty_use_as_is || 0, color: t.success },
                 ];
                 return (
                   <div key={c.id} onClick={() => navigate(`/mrb-campaign/${c.id}`)} style={{ backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '16px 20px', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
@@ -1334,11 +1334,11 @@ const MRBDashboard = () => {
 
                     {/* Header row */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: '700', color: t.accent, fontFamily: 'monospace', fontSize: '14px' }}>{c.folio || c.campaignNumber || c.campaign_number}</span>
+                      <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '14px' }}>{c.folio || c.campaignNumber || c.campaign_number}</span>
                       <span style={{ fontWeight: '600', color: t.text, fontSize: '13px', flex: 1 }}>{c.title}</span>
-                      {c.severity_color && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', backgroundColor: c.severity_color, color: '#fff' }}>{c.severityName || c.severity_name}</span>}
-                      <span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', backgroundColor: c.status === 'ABIERTA' ? '#fef3c7' : '#dbeafe', color: c.status === 'ABIERTA' ? '#92400e' : '#1e40af' }}>{c.status}</span>
-                      {ageDays != null && <span style={{ fontSize: '11px', fontWeight: '700', color: ageColor }}>{ageDays} {L.days}</span>}
+                      {c.severity_color && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', backgroundColor: c.severity_color, color: 'white' }}>{c.severityName || c.severity_name}</span>}
+                      <span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '600', backgroundColor: c.status === 'ABIERTA' ? t.warningBg : t.accentBg, color: c.status === 'ABIERTA' ? t.warningFg : t.accentFg }}>{c.status}</span>
+                      {ageDays != null && <span style={{ fontSize: '11px', fontWeight: '600', color: ageColor }}>{ageDays} {L.days}</span>}
                     </div>
 
                     {/* 3 columnas iguales: defectos | costo | avance */}
@@ -1355,13 +1355,13 @@ const MRBDashboard = () => {
                             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                               {DISP.map(d => (
                                 <div key={d.label} style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '24px', fontWeight: '700', color: d.val > 0 ? d.color : t.textDim, lineHeight: 1 }}>{fmtN(d.val)}</div>
+                                  <div style={{ fontSize: '24px', fontWeight: '600', color: d.val > 0 ? d.color : t.textDim, lineHeight: 1 }}>{fmtN(d.val)}</div>
                                   <div style={{ fontSize: '9px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginTop: '3px' }}>{d.label}</div>
                                 </div>
                               ))}
                               {yield_ && (
                                 <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '24px', fontWeight: '700', color: parseFloat(yield_) >= 95 ? '#16a34a' : '#f59e0b', lineHeight: 1 }}>{yield_}%</div>
+                                  <div style={{ fontSize: '24px', fontWeight: '600', color: parseFloat(yield_) >= 95 ? t.success : t.warning, lineHeight: 1 }}>{yield_}%</div>
                                   <div style={{ fontSize: '9px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginTop: '3px' }}>YIELD</div>
                                 </div>
                               )}
@@ -1370,15 +1370,15 @@ const MRBDashboard = () => {
 
                           {/* Col 2 — costos */}
                           <div style={{ ...col, borderRight: `1px solid ${t.border}` }}>
-                            <div style={{ fontSize: '10px', fontWeight: '700', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Costo Acumulado</div>
+                            <div style={{ fontSize: '10px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Costo Acumulado</div>
                             <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
                               {[
-                                { label: 'Scrap',    val: scrap,         color: '#ef4444' },
-                                { label: 'Personal', val: labor,         color: '#f59e0b' },
-                                { label: 'Total',    val: scrap + labor, color: '#8b5cf6' },
+                                { label: 'Scrap',    val: scrap,         color: t.error },
+                                { label: 'Personal', val: labor,         color: t.warning },
+                                { label: 'Total',    val: scrap + labor, color: t.accent },
                               ].map(({ label, val, color }, i) => (
                                 <div key={label}>
-                                  <div style={{ fontSize: i === 2 ? '28px' : '22px', fontWeight: '700', color, lineHeight: 1 }}>{fmt$(val)}</div>
+                                  <div style={{ fontSize: i === 2 ? '28px' : '22px', fontWeight: '600', color, lineHeight: 1 }}>{fmt$(val)}</div>
                                   <div style={{ fontSize: '9px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
                                 </div>
                               ))}
@@ -1389,22 +1389,22 @@ const MRBDashboard = () => {
                           <div style={{ ...col, paddingRight: 0 }}>
                             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                               {[
-                                { label: 'EN PLANTA',     val: fmtN(total),    color: '#f59e0b' },
-                                { label: 'INSPECCIONADO', val: fmtN(insp),     color: '#16a34a' },
-                                { label: 'RESTANTE',      val: fmtN(restante), color: '#ef4444' },
+                                { label: 'EN PLANTA',     val: fmtN(total),    color: t.warning },
+                                { label: 'INSPECCIONADO', val: fmtN(insp),     color: t.success },
+                                { label: 'RESTANTE',      val: fmtN(restante), color: t.error },
                               ].map(({ label, val, color }) => (
                                 <div key={label}>
-                                  <div style={{ fontSize: '20px', fontWeight: '700', color, lineHeight: 1 }}>{val}</div>
+                                  <div style={{ fontSize: '20px', fontWeight: '600', color, lineHeight: 1 }}>{val}</div>
                                   <div style={{ fontSize: '9px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
                                 </div>
                               ))}
                             </div>
                             <div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: t.textMuted, marginBottom: '4px' }}>
-                                <span>% Avance</span><span style={{ fontWeight: '700', color: '#f59e0b' }}>{pct}%</span>
+                                <span>% Avance</span><span style={{ fontWeight: '600', color: t.warning }}>{pct}%</span>
                               </div>
                               <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
-                                <div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#f59e0b', borderRadius: '4px' }} />
+                                <div style={{ width: `${pct}%`, height: '100%', backgroundColor: t.warning, borderRadius: '4px' }} />
                               </div>
                             </div>
                           </div>
@@ -1426,11 +1426,11 @@ const MRBDashboard = () => {
   const renderDisposicion = () => {
     const d = data?.disposition || {};
     const pieData = [
-      { name: 'Scrap',      value: d.scrap     || 0, color: '#ef4444' },
-      { name: 'Rework',     value: d.rework    || 0, color: '#f59e0b' },
-      { name: 'Use As-Is',  value: d.use_as_is || 0, color: '#16a34a' },
-      { name: 'Return',     value: d.return_sup|| 0, color: '#8b5cf6' },
-      { name: 'Hold',       value: d.hold      || 0, color: '#6b7280' },
+      { name: 'Scrap',      value: d.scrap     || 0, color: t.error },
+      { name: 'Rework',     value: d.rework    || 0, color: t.warning },
+      { name: 'Use As-Is',  value: d.use_as_is || 0, color: t.success },
+      { name: 'Return',     value: d.return_sup|| 0, color: t.accent },
+      { name: 'Hold',       value: d.hold      || 0, color: t.textMuted },
     ].filter(p => p.value > 0);
     const total = pieData.reduce((s, p) => s + p.value, 0);
 
@@ -1438,11 +1438,11 @@ const MRBDashboard = () => {
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px', marginBottom: '20px' }}>
           {[
-            { label: 'Scrap',     val: d.scrap,      color: '#ef4444' },
-            { label: 'Rework',    val: d.rework,     color: '#f59e0b' },
-            { label: 'Use As-Is', val: d.use_as_is,  color: '#16a34a' },
-            { label: 'Return',    val: d.return_sup, color: '#8b5cf6' },
-            { label: 'Hold',      val: d.hold,       color: '#6b7280' },
+            { label: 'Scrap',     val: d.scrap,      color: t.error },
+            { label: 'Rework',    val: d.rework,     color: t.warning },
+            { label: 'Use As-Is', val: d.use_as_is,  color: t.success },
+            { label: 'Return',    val: d.return_sup, color: t.accent },
+            { label: 'Hold',      val: d.hold,       color: t.textMuted },
           ].map(k => <KPI key={k.label} label={k.label} value={fmtN(k.val)} sub={total > 0 ? `${(((k.val||0)/total)*100).toFixed(1)}%` : undefined} color={k.color} t={t} />)}
         </div>
 
@@ -1466,8 +1466,8 @@ const MRBDashboard = () => {
                 <YAxis tick={{ fontSize: 10, fill: t.textMuted }} />
                 <Tooltip {...tt} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Line type="monotone" dataKey="scrap" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} name="Scrap" />
-                <Line type="monotone" dataKey="rework" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} name="Rework" />
+                <Line type="monotone" dataKey="scrap" stroke="t.error" strokeWidth={2} dot={{ r: 3 }} name="Scrap" />
+                <Line type="monotone" dataKey="rework" stroke={t.warning} strokeWidth={2} dot={{ r: 3 }} name="Rework" />
               </LineChart>
             </ResponsiveContainer>
           </SectionCard>
@@ -1476,8 +1476,8 @@ const MRBDashboard = () => {
         <SectionCard title={L.dispositionByDept} t={t}>
           <DeptTable rows={d.byDept || []} t={t} cols={[
             { key: 'dept',      label: L.department },
-            { key: 'scrap',     label: 'Scrap',     right: true, bold: true, color: r => r.scrap > 0 ? '#ef4444' : t.text },
-            { key: 'rework',    label: 'Rework',    right: true, color: r => r.rework > 0 ? '#f59e0b' : t.text },
+            { key: 'scrap',     label: 'Scrap',     right: true, bold: true, color: r => r.scrap > 0 ? t.error : t.text },
+            { key: 'rework',    label: 'Rework',    right: true, color: r => r.rework > 0 ? t.warning : t.text },
             { key: 'use_as_is', label: 'Use As-Is', right: true },
             { key: 'return_sup',label: 'Return',    right: true },
             { key: 'hold',      label: 'Hold',      right: true },
@@ -1493,11 +1493,11 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label={language === 'es' ? 'Avg Respuesta' : 'Avg Response'} value={tm.avg_response_days != null ? `${tm.avg_response_days} ${L.days}` : '—'} color="#0072CE" t={t} />
-          <KPI label={language === 'es' ? 'Avg Cierre' : 'Avg Close'} value={tm.avg_close_days != null ? `${tm.avg_close_days} ${L.days}` : '—'} color="#16a34a" t={t} />
-          <KPI label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} ${L.days}` : '—'} color="#8b5cf6" t={t} />
-          <KPI label={language === 'es' ? '> 14 días abiertas' : '> 14 days open'} value={tm.aging_14} color={tm.aging_14 > 0 ? '#f59e0b' : '#16a34a'} t={t} />
-          <KPI label={language === 'es' ? '> 30 días abiertas' : '> 30 days open'} value={tm.aging_30} color={tm.aging_30 > 0 ? '#ef4444' : '#16a34a'} t={t} />
+          <KPI label={language === 'es' ? 'Avg Respuesta' : 'Avg Response'} value={tm.avg_response_days != null ? `${tm.avg_response_days} ${L.days}` : '—'} color={t.accent} t={t} />
+          <KPI label={language === 'es' ? 'Avg Cierre' : 'Avg Close'} value={tm.avg_close_days != null ? `${tm.avg_close_days} ${L.days}` : '—'} color={t.success} t={t} />
+          <KPI label="Lead Time" value={tm.avg_lead_days != null ? `${tm.avg_lead_days} ${L.days}` : '—'} color={t.accent} t={t} />
+          <KPI label={language === 'es' ? '> 14 días abiertas' : '> 14 days open'} value={tm.aging_14} color={tm.aging_14 > 0 ? t.warning : t.success} t={t} />
+          <KPI label={language === 'es' ? '> 30 días abiertas' : '> 30 days open'} value={tm.aging_30} color={tm.aging_30 > 0 ? t.error : t.success} t={t} />
         </div>
 
         <SectionCard title={L.campaignAging} t={t}>
@@ -1508,7 +1508,7 @@ const MRBDashboard = () => {
                 { key: 'title',           label: language === 'es' ? 'Título' : 'Title' },
                 { key: 'dept',            label: L.department },
                 { key: 'status',          label: L.status },
-                { key: 'age_days',        label: L.daysOpen, right: true, bold: true, color: r => r.age_days >= 30 ? '#ef4444' : r.age_days >= 14 ? '#f59e0b' : t.text },
+                { key: 'age_days',        label: L.daysOpen, right: true, bold: true, color: r => r.age_days >= 30 ? t.error : r.age_days >= 14 ? t.warning : t.text },
               ]} />}
         </SectionCard>
       </>
@@ -1522,9 +1522,9 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label={L.scrapCost} value={fmt$(c.scrapCost || 0)} color="#ef4444" t={t} />
-          <KPI label={L.laborCost} value={fmt$(c.laborCost || 0)} color="#f59e0b" t={t} />
-          <KPI label={L.totalCost} value={fmt$(c.totalCost || 0)} color="#8b5cf6" t={t} />
+          <KPI label={L.scrapCost} value={fmt$(c.scrapCost || 0)} color="t.error" t={t} />
+          <KPI label={L.laborCost} value={fmt$(c.laborCost || 0)} color={t.warning} t={t} />
+          <KPI label={L.totalCost} value={fmt$(c.totalCost || 0)} color={t.accent} t={t} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
@@ -1536,8 +1536,8 @@ const MRBDashboard = () => {
                 <YAxis tick={{ fontSize: 10, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
                 <Tooltip {...tt} formatter={v => fmt$(v)} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="scrap" name="Scrap" stackId="c" fill="#ef4444" />
-                <Bar dataKey="labor" name={language === 'es' ? 'Mano de obra' : 'Labor'} stackId="c" fill="#f59e0b" radius={[4,4,0,0]} />
+                <Bar dataKey="scrap" name="Scrap" stackId="c" fill="t.error" />
+                <Bar dataKey="labor" name={language === 'es' ? 'Mano de obra' : 'Labor'} stackId="c" fill={t.warning} radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </SectionCard>
@@ -1549,8 +1549,8 @@ const MRBDashboard = () => {
                 <XAxis type="number" tick={{ fontSize: 10, fill: t.textMuted }} tickFormatter={v => fmt$(v)} />
                 <YAxis type="category" dataKey="dept" tick={{ fontSize: 10, fill: t.textMuted }} width={56} />
                 <Tooltip {...tt} formatter={v => fmt$(v)} />
-                <Bar dataKey="scrap_cost" name="Scrap" stackId="d" fill="#ef4444" />
-                <Bar dataKey="labor_cost" name="M.O." stackId="d" fill="#f59e0b" radius={[0,4,4,0]} />
+                <Bar dataKey="scrap_cost" name="Scrap" stackId="d" fill="t.error" />
+                <Bar dataKey="labor_cost" name="M.O." stackId="d" fill={t.warning} radius={[0,4,4,0]} />
               </BarChart>
             </ResponsiveContainer>
           </SectionCard>
@@ -1563,7 +1563,7 @@ const MRBDashboard = () => {
             { key: 'dept',            label: language === 'es' ? 'Depto' : 'Dept' },
             { key: 'scrap_cost',      label: 'Scrap',  right: true, fmt: v => fmt$(v || 0) },
             { key: 'labor_cost',      label: 'M.O.',   right: true, fmt: v => fmt$(v || 0) },
-            { key: 'total_cost',      label: 'Total',  right: true, bold: true, fmt: v => fmt$(v || 0), color: () => '#8b5cf6' },
+            { key: 'total_cost',      label: 'Total',  right: true, bold: true, fmt: v => fmt$(v || 0), color: () => t.accent },
           ]} />
         </SectionCard>
       </>
@@ -1584,7 +1584,7 @@ const MRBDashboard = () => {
                 <XAxis type="number" tick={{ fontSize: 10, fill: t.textMuted }} />
                 <YAxis type="category" dataKey="defect" tick={{ fontSize: 10, fill: t.textMuted }} width={76} />
                 <Tooltip {...tt} />
-                <Bar dataKey="qty" name={language === 'es' ? 'Piezas NOK' : 'NOK Pieces'} fill="#ef4444" radius={[0,4,4,0]} />
+                <Bar dataKey="qty" name={language === 'es' ? 'Piezas NOK' : 'NOK Pieces'} fill="t.error" radius={[0,4,4,0]} />
               </BarChart>
             </ResponsiveContainer>
           </SectionCard>
@@ -1605,14 +1605,14 @@ const MRBDashboard = () => {
           <SectionCard title={L.nokByStage} t={t}>
             <DeptTable rows={d.byStage || []} t={t} cols={[
               { key: 'stage', label: L.stage },
-              { key: 'qty',   label: language === 'es' ? 'Piezas NOK' : 'NOK Pieces', right: true, bold: true, color: () => '#ef4444' },
+              { key: 'qty',   label: language === 'es' ? 'Piezas NOK' : 'NOK Pieces', right: true, bold: true, color: () => t.error },
             ]} />
           </SectionCard>
 
           <SectionCard title={L.nokByDept} t={t}>
             <DeptTable rows={d.byDept || []} t={t} cols={[
               { key: 'dept', label: L.department },
-              { key: 'qty',  label: language === 'es' ? 'Piezas NOK' : 'NOK Pieces', right: true, bold: true, color: r => r.qty > 0 ? '#ef4444' : t.text },
+              { key: 'qty',  label: language === 'es' ? 'Piezas NOK' : 'NOK Pieces', right: true, bold: true, color: r => r.qty > 0 ? t.error : t.text },
             ]} />
           </SectionCard>
         </div>
@@ -1626,10 +1626,10 @@ const MRBDashboard = () => {
     return (
       <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-          <KPI label={L.pcsPerHour} value={o.piecesPerHour ?? '—'} sub={`${fmtN(o.inspectorHours)} ${language === 'es' ? 'hrs inspector' : 'inspector hrs'}`} color="#0072CE" t={t} />
-          <KPI label={L.defectsPerHour} value={o.defectsPerHour ?? '—'} color="#ef4444" t={t} />
-          <KPI label={L.totalDowntime} value={o.totalDowntime ? `${fmtN(o.totalDowntime)} min` : '0 min'} color="#f59e0b" t={t} />
-          <KPI label={L.inspectorHours} value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color="#8b5cf6" t={t} />
+          <KPI label={L.pcsPerHour} value={o.piecesPerHour ?? '—'} sub={`${fmtN(o.inspectorHours)} ${language === 'es' ? 'hrs inspector' : 'inspector hrs'}`} color={t.accent} t={t} />
+          <KPI label={L.defectsPerHour} value={o.defectsPerHour ?? '—'} color="t.error" t={t} />
+          <KPI label={L.totalDowntime} value={o.totalDowntime ? `${fmtN(o.totalDowntime)} min` : '0 min'} color={t.warning} t={t} />
+          <KPI label={L.inspectorHours} value={o.inspectorHours ? `${parseFloat(o.inspectorHours).toFixed(1)} h` : '—'} color={t.accent} t={t} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -1642,7 +1642,7 @@ const MRBDashboard = () => {
                     <XAxis dataKey="shift" tick={{ fontSize: 11, fill: t.textMuted }} />
                     <YAxis tick={{ fontSize: 11, fill: t.textMuted }} />
                     <Tooltip {...tt} />
-                    <Bar dataKey="minutes" name={language === 'es' ? 'Minutos' : 'Minutes'} fill="#f59e0b" radius={[4,4,0,0]} />
+                    <Bar dataKey="minutes" name={language === 'es' ? 'Minutos' : 'Minutes'} fill={t.warning} radius={[4,4,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>}
           </SectionCard>
@@ -1650,7 +1650,7 @@ const MRBDashboard = () => {
           <SectionCard title={L.downtimeByDept} t={t}>
             <DeptTable rows={o.byDept || []} t={t} cols={[
               { key: 'dept',    label: L.department },
-              { key: 'minutes', label: language === 'es' ? 'Minutos' : 'Minutes', right: true, bold: true, color: r => r.minutes > 0 ? '#f59e0b' : t.text },
+              { key: 'minutes', label: language === 'es' ? 'Minutos' : 'Minutes', right: true, bold: true, color: r => r.minutes > 0 ? t.warning : t.text },
             ]} />
           </SectionCard>
         </div>
@@ -1661,7 +1661,7 @@ const MRBDashboard = () => {
               <thead>
                 <tr style={{ borderBottom: `2px solid ${t.border}` }}>
                   {[['Fecha / Hora', false], ['Campaña', false], ['Turno', false], ['Serial', false], ['Tipo', false], ['Min', true], ['Comentario', false]].map(([label, right]) => (
-                    <th key={label} style={{ padding: '6px 10px', textAlign: right ? 'right' : 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase' }}>{label}</th>
+                    <th key={label} style={{ padding: '6px 10px', textAlign: right ? 'right' : 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>{label}</th>
                   ))}
                 </tr>
               </thead>
@@ -1673,13 +1673,13 @@ const MRBDashboard = () => {
                       {' '}
                       <span style={{ fontWeight: '600' }}>{new Date(r.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
                     </td>
-                    <td style={{ padding: '8px 10px', fontWeight: '700', color: t.accent, fontFamily: 'monospace', fontSize: '12px' }}>{r.campaign_number}</td>
+                    <td style={{ padding: '8px 10px', fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px' }}>{r.campaign_number}</td>
                     <td style={{ padding: '8px 10px', color: t.textMuted, fontSize: '12px' }}>{r.shift || '—'}</td>
-                    <td style={{ padding: '8px 10px', color: t.text, fontFamily: 'monospace', fontSize: '12px' }}>{r.lot_number || '—'}</td>
+                    <td style={{ padding: '8px 10px', color: t.text, fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px' }}>{r.lot_number || '—'}</td>
                     <td style={{ padding: '8px 10px' }}>
-                      <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', backgroundColor: r.source_type === 'NOK' ? '#fee2e2' : '#d1fae5', color: r.source_type === 'NOK' ? '#ef4444' : '#16a34a' }}>{r.source_type}</span>
+                      <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: r.source_type === 'NOK' ? t.errorBg : t.successBg, color: r.source_type === 'NOK' ? t.error : t.success }}>{r.source_type}</span>
                     </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', color: '#f59e0b' }}>{r.downtime_minutes}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', color: t.warning }}>{r.downtime_minutes}</td>
                     <td style={{ padding: '8px 10px', color: t.text }}>{r.notes}</td>
                   </tr>
                 ))}
@@ -1712,9 +1712,9 @@ const MRBDashboard = () => {
       <header style={{ backgroundColor: t.bgCard, borderBottom: `1px solid ${t.border}`, padding: '14px 24px', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '38px', height: '38px', backgroundColor: t.primary, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '13px' }}>MRB</div>
+            <div style={{ width: '38px', height: '38px', backgroundColor: t.primary, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '600', fontSize: '13px' }}>MRB</div>
             <div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>MRB Dashboard</div>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>MRB Dashboard</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>Material Review Board</div>
             </div>
           </div>
@@ -1723,15 +1723,15 @@ const MRBDashboard = () => {
             <button onClick={() => navigate('/')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgPanel, color: t.text, cursor: 'pointer' }}>Módulos</button>
             <button onClick={() => navigate('/mrb-campaigns')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.accent}`, borderRadius: '6px', backgroundColor: 'transparent', color: t.accent, cursor: 'pointer' }}>Campaigns</button>
             <button onClick={() => navigate('/mrb-capture')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: t.accent, color: '#fff', cursor: 'pointer' }}>Inspección</button>
-            <button onClick={() => navigate('/mrb-buffer')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid #f59e0b`, borderRadius: '6px', backgroundColor: 'transparent', color: '#f59e0b', cursor: 'pointer' }}>Buffer</button>
-            <button onClick={() => navigate('/mrb-packages')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid #16a34a`, borderRadius: '6px', backgroundColor: 'transparent', color: '#16a34a', cursor: 'pointer' }}>Paquetes</button>
-            <button onClick={() => navigate('/mrb-inventory')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid #0072CE`, borderRadius: '6px', backgroundColor: 'transparent', color: '#0072CE', cursor: 'pointer' }}>Inventario</button>
+            <button onClick={() => navigate('/mrb-buffer')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.warning}`, borderRadius: '6px', backgroundColor: 'transparent', color: t.warning, cursor: 'pointer' }}>Buffer</button>
+            <button onClick={() => navigate('/mrb-packages')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.success}`, borderRadius: '6px', backgroundColor: 'transparent', color: t.success, cursor: 'pointer' }}>Paquetes</button>
+            <button onClick={() => navigate('/mrb-inventory')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.accent}`, borderRadius: '6px', backgroundColor: 'transparent', color: t.accent, cursor: 'pointer' }}>Inventario</button>
             {isUserAdmin() && <button onClick={() => navigate('/mrb-config')} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: `1px solid ${t.border}`, borderRadius: '6px', backgroundColor: t.bgPanel, color: t.text, cursor: 'pointer' }}>Configuración</button>}
             {/* Exportar a PDF */}
             <button
               onClick={exportToPDF}
               disabled={loading || exporting}
-              style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: '#dc2626', color: '#fff', cursor: (loading || exporting) ? 'not-allowed' : 'pointer', opacity: (loading || exporting) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '5px' }}
+              style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: t.error, color: '#fff', cursor: (loading || exporting) ? 'not-allowed' : 'pointer', opacity: (loading || exporting) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '5px' }}
               title={language === 'es' ? 'Exportar dashboard a PDF' : 'Export dashboard to PDF'}
             >
               <span>📄</span> PDF
@@ -1740,7 +1740,7 @@ const MRBDashboard = () => {
             <button
               onClick={exportToExcel}
               disabled={loading || exportingExcel}
-              style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: '#16a34a', color: '#fff', cursor: (loading || exportingExcel) ? 'not-allowed' : 'pointer', opacity: (loading || exportingExcel) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '5px' }}
+              style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '600', border: 'none', borderRadius: '6px', backgroundColor: t.success, color: '#fff', cursor: (loading || exportingExcel) ? 'not-allowed' : 'pointer', opacity: (loading || exportingExcel) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '5px' }}
               title={language === 'es' ? 'Exportar datos a Excel' : 'Export data to Excel'}
             >
               <span>📊</span> {exportingExcel ? '...' : 'Excel'}
