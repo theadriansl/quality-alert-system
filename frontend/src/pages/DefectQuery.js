@@ -899,7 +899,7 @@ const DefectQuery = () => {
                   }}
                 />
                 <Legend />
-                <ReferenceLine yAxisId="right" y={80} stroke="#ef4444" strokeDasharray="6 3" strokeWidth={2} label={{ value: '80%', position: 'right', fill: '#ef4444', fontSize: 12, fontWeight: 700 }} />
+                <ReferenceLine yAxisId="right" y={80} stroke="#ef4444" strokeDasharray="6 3" strokeWidth={2} label={{ value: '80%', position: 'right', fill: '#ef4444', fontSize: 12, fontWeight: 600 }} />
                 <Bar yAxisId="left" dataKey="count" name="Cantidad" barSize={40}>
                   {getParetoData().map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

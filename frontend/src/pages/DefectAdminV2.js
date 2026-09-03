@@ -737,7 +737,7 @@ const DefectAdminV2 = () => {
   const styles = {
     container: { minHeight: '100vh', backgroundColor: t.bg, padding: '20px' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-    title: { fontSize: '24px', fontWeight: '700', color: t.text, margin: 0 },
+    title: { fontSize: '24px', fontWeight: '600', color: t.text, margin: 0 },
     filterBar: {
       display: 'flex', gap: '16px', marginBottom: '20px', padding: '16px',
       backgroundColor: t.bgCard, borderRadius: '12px', border: `1px solid ${t.border}`,

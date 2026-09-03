@@ -91,7 +91,7 @@ const LessonsLearned = () => {
     },
     title: {
       fontSize: '32px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       marginBottom: '8px'
     },
@@ -114,7 +114,7 @@ const LessonsLearned = () => {
     },
     statValue: {
       fontSize: '32px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.accent,
       marginBottom: '4px'
     },
@@ -176,7 +176,7 @@ const LessonsLearned = () => {
     },
     reportId: {
       fontSize: '18px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.accent,
       marginBottom: '4px'
     },

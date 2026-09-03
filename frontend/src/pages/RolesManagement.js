@@ -245,7 +245,7 @@ const RolesManagement = () => {
     },
     title: {
       fontSize: '24px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -380,7 +380,7 @@ const RolesManagement = () => {
     },
     detailTitle: {
       fontSize: '22px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       marginBottom: '8px'
     },
@@ -1009,7 +1009,7 @@ const RolesManagement = () => {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Nombre del rol"
-                      style={{ ...styles.input, fontSize: '22px', fontWeight: '700', marginBottom: '8px' }}
+                      style={{ ...styles.input, fontSize: '22px', fontWeight: '600', marginBottom: '8px' }}
                     />
                   ) : (
                     <div style={styles.detailTitle}>

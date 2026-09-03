@@ -46,7 +46,7 @@ const DepartmentsManagement = () => {
     },
     title: {
       fontSize: '28px',
-      fontWeight: '700',
+      fontWeight: '600',
       margin: '0',
       color: t.text
     },
@@ -84,7 +84,7 @@ const DepartmentsManagement = () => {
     },
     statValue: {
       fontSize: '28px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.accent
     },
     statLabel: {

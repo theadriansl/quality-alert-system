@@ -383,7 +383,7 @@ const QARList = () => {
     <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: 24 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ color: t.text, fontSize: 24, fontWeight: 700, margin: 0 }}>
+        <h1 style={{ color: t.text, fontSize: 24, fontWeight: 600, margin: 0 }}>
           Quality Alert Reports (QAR)
         </h1>
         <div style={{ display: 'flex', gap: 10 }}>

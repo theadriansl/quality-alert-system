@@ -114,7 +114,7 @@ const OrgChart = ({ users, hierarchyLevels, onEditUser }) => {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '12px',
-              fontWeight: '700',
+              fontWeight: '600',
               flexShrink: 0
             }}>
               {user.firstName?.[0]}{user.lastName?.[0]}
@@ -1268,7 +1268,7 @@ const FeedbackFormModal = ({ feedback, users, fiscalYear, fiscalQuarter, onClose
               <span style={{ fontSize: '14px', color: t.textMuted }}>Puntuación General: </span>
               <span style={{
                 fontSize: '24px',
-                fontWeight: '700',
+                fontWeight: '600',
                 color: formData.overallScore >= 80 ? t.success :
                        formData.overallScore >= 60 ? t.warning : t.error
               }}>
@@ -2536,7 +2536,7 @@ const ExportActivitiesModal = ({ users, onClose }) => {
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ backgroundColor: t.bg, borderRadius: '12px', padding: '24px', width: '520px', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: t.text }}> Exportar Actividades</h2>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: t.text }}> Exportar Actividades</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: t.textMuted }}>×</button>
         </div>
 
@@ -3953,7 +3953,7 @@ const WorkloadManager = () => {
     },
     title: {
       fontSize: '20px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -4167,7 +4167,7 @@ const WorkloadManager = () => {
               {/* Hours Available */}
               <div style={{ ...styles.statCard, borderLeft: '4px solid ${t.textMuted}' }}>
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Disponibles</div>
-                <div style={{ fontSize: '32px', fontWeight: '700', color: t.text }}>
+                <div style={{ fontSize: '32px', fontWeight: '600', color: t.text }}>
                   {weeklySummary.hours_available}
                 </div>
                 <div style={{ fontSize: '12px', color: t.textMuted }}>hrs/semana</div>
@@ -4176,7 +4176,7 @@ const WorkloadManager = () => {
               {/* Hours Planned */}
               <div style={{ ...styles.statCard, borderLeft: '4px solid ${t.accent}' }}>
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Planeadas</div>
-                <div style={{ fontSize: '32px', fontWeight: '700', color: t.accent }}>
+                <div style={{ fontSize: '32px', fontWeight: '600', color: t.accent }}>
                   {weeklySummary.hours_planned.toFixed(1)}
                 </div>
                 <div style={{
@@ -4203,7 +4203,7 @@ const WorkloadManager = () => {
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Reales</div>
                 <div style={{
                   fontSize: '32px',
-                  fontWeight: '700',
+                  fontWeight: '600',
                   color: weeklySummary.hours_actual > weeklySummary.hours_available ? t.error : t.success
                 }}>
                   {weeklySummary.hours_actual.toFixed(1)}
@@ -4232,7 +4232,7 @@ const WorkloadManager = () => {
                 <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Utilización</div>
                 <div style={{
                   fontSize: '32px',
-                  fontWeight: '700',
+                  fontWeight: '600',
                   color: weeklySummary.utilization_percent > 100 ? t.error : t.accent
                 }}>
                   {weeklySummary.utilization_percent}%
@@ -4277,7 +4277,7 @@ const WorkloadManager = () => {
                         <span>{kpi.icon}</span>
                         <span style={{ fontWeight: '600', color: t.text }}>{kpi.name}</span>
                       </div>
-                      <div style={{ fontSize: '24px', fontWeight: '700', color: kpi.color }}>
+                      <div style={{ fontSize: '24px', fontWeight: '600', color: kpi.color }}>
                         {hours.toFixed(1)} hrs
                       </div>
                       <div style={{ fontSize: '12px', color: t.textMuted }}>{percent}% del total</div>
@@ -4306,7 +4306,7 @@ const WorkloadManager = () => {
                     }}>
                       <div style={{
                         fontSize: '28px',
-                        fontWeight: '700',
+                        fontWeight: '600',
                         color: isOnTrack ? t.success : t.error
                       }}>
                         {compliance.real}% / {compliance.expected}%
@@ -4321,18 +4321,18 @@ const WorkloadManager = () => {
                   );
                 })()}
                 <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.accent}15`, borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: t.accent }}>
+                  <div style={{ fontSize: '28px', fontWeight: '600', color: t.accent }}>
                     {weeklySummary.activities_completed} / {weeklySummary.activities_total}
                   </div>
                   <div style={{ fontSize: '13px', color: t.accent }}>Actividades</div>
                   <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Completadas / Total</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.warning}15`, borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: t.warning }}>{weeklySummary.activities_pending}</div>
+                  <div style={{ fontSize: '28px', fontWeight: '600', color: t.warning }}>{weeklySummary.activities_pending}</div>
                   <div style={{ fontSize: '13px', color: t.warning }}>Pendientes</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.error}15`, borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: t.error }}>{weeklySummary.activities_unplanned}</div>
+                  <div style={{ fontSize: '28px', fontWeight: '600', color: t.error }}>{weeklySummary.activities_unplanned}</div>
                   <div style={{ fontSize: '13px', color: t.error }}>No Planeadas</div>
                 </div>
               </div>
@@ -5815,7 +5815,7 @@ const WorkloadManager = () => {
                               {fb.overallScore > 0 && (
                                 <div style={{
                                   fontSize: '24px',
-                                  fontWeight: '700',
+                                  fontWeight: '600',
                                   color: fb.overallScore >= 80 ? t.success :
                                          fb.overallScore >= 60 ? t.warning : t.error
                                 }}>

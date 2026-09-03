@@ -270,11 +270,11 @@ const QARDashboard = () => {
               alignItems: 'center',
               justifyContent: 'center',
               color: 'white',
-              fontWeight: 800,
+              fontWeight: 600,
               fontSize: 12
             }}>QAR</div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: t.text }}>QAR Dashboard</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: t.text }}>QAR Dashboard</div>
               <div style={{ fontSize: 11, color: t.textMuted }}>Quality Alert Reports — Análisis & Seguimiento</div>
             </div>
           </div>
@@ -400,7 +400,7 @@ const QARDashboard = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
-                fontWeight: 700,
+                fontWeight: 600,
                 fontSize: 11
               }}>
                 {userName.split(' ').map(n => n[0]).join('').slice(0, 2)}

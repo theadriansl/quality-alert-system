@@ -349,7 +349,7 @@ const Dashboard = () => {
         <div style={{ maxWidth: '1800px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Left */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '38px', height: '38px', backgroundColor: t.accent, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '14px' }}>8D</div>
+            <div style={{ width: '38px', height: '38px', backgroundColor: t.accent, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600', fontSize: '14px' }}>8D</div>
             <div>
               <div style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>{tr('eightD.dashboard')}</div>
               <div style={{ fontSize: '11px', color: t.textMuted }}>{tr('eightD.problemSolvingAnalytics')}</div>

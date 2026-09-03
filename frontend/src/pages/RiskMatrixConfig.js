@@ -173,7 +173,7 @@ const RiskMatrixConfig = () => {
     },
     title: {
       fontSize: '28px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -206,7 +206,7 @@ const RiskMatrixConfig = () => {
     },
     disclaimerTitle: {
       fontSize: '18px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: '#92400e',
       margin: '0 0 12px 0'
     },
@@ -225,7 +225,7 @@ const RiskMatrixConfig = () => {
     },
     sectionTitle: {
       fontSize: '20px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: '0 0 8px 0'
     },
@@ -261,7 +261,7 @@ const RiskMatrixConfig = () => {
     },
     matrixHeaderLabel: {
       fontSize: '14px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       marginBottom: '4px'
     },
@@ -273,7 +273,7 @@ const RiskMatrixConfig = () => {
     matrixDataCell: {
       padding: '20px',
       color: 'white',
-      fontWeight: '700',
+      fontWeight: '600',
       fontSize: '14px',
       display: 'flex',
       alignItems: 'center',
@@ -330,7 +330,7 @@ const RiskMatrixConfig = () => {
     },
     suggestionTitle: {
       fontSize: '16px',
-      fontWeight: '700',
+      fontWeight: '600',
       margin: '0 0 16px 0'
     },
     suggestionList: {
@@ -370,7 +370,7 @@ const RiskMatrixConfig = () => {
       borderRadius: '4px',
       cursor: 'pointer',
       fontSize: '18px',
-      fontWeight: '700',
+      fontWeight: '600',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center'
@@ -394,7 +394,7 @@ const RiskMatrixConfig = () => {
     },
     instructionsTitle: {
       fontSize: '18px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: '0 0 16px 0'
     },
@@ -512,7 +512,7 @@ const RiskMatrixConfig = () => {
               <div style={{
                 ...styles.matrixHeaderCell,
                 fontSize: '13px',
-                fontWeight: '700',
+                fontWeight: '600',
                 color: t.textMuted,
                 display: 'flex',
                 alignItems: 'center',

@@ -3575,7 +3575,7 @@ const MRBDefectCapture = () => {
                                         border: result === 'OK' ? '2px solid #15803d' : `1px solid ${t.border}`,
                                         backgroundColor: result === 'OK' ? '#22c55e' : t.bgInput,
                                         color: result === 'OK' ? 'white' : t.text,
-                                        fontWeight: result === 'OK' ? '700' : '500', fontSize: '12px'
+                                        fontWeight: result === 'OK' ? '600' : '500', fontSize: '12px'
                                       }}
                                     >
                                       ✓ OK
@@ -3587,7 +3587,7 @@ const MRBDefectCapture = () => {
                                         border: result === 'NOK' ? `2px solid ${t.error}` : `1px solid ${t.border}`,
                                         backgroundColor: result === 'NOK' ? '#ef4444' : t.bgInput,
                                         color: result === 'NOK' ? 'white' : t.text,
-                                        fontWeight: result === 'NOK' ? '700' : '500', fontSize: '12px'
+                                        fontWeight: result === 'NOK' ? '600' : '500', fontSize: '12px'
                                       }}
                                     >
                                       ✕ NOK

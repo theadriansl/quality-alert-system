@@ -449,7 +449,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   <tbody>
                     {pareto.map((row, i) => (
                       <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
-                        <td style={{ padding: '8px 10px', fontWeight: i === 0 ? '700' : '400', color: t.text }}>{row.defectName}</td>
+                        <td style={{ padding: '8px 10px', fontWeight: i === 0 ? '600' : '400', color: t.text }}>{row.defectName}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{row.qty}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.text }}>{row.pctNok}%</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.textMuted }}>{row.pctCumulative}%</td>

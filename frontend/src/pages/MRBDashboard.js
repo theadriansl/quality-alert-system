@@ -54,7 +54,7 @@ const DeptTable = ({ rows, cols, t }) => (
     <tbody>
       {rows.map((row, i) => (
         <tr key={i} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
-          {cols.map(c => <td key={c.key} style={{ padding: '8px 10px', textAlign: c.right ? 'right' : 'left', fontWeight: c.bold ? '700' : '400', color: c.color ? c.color(row) : t.text }}>{c.fmt ? c.fmt(row[c.key], row) : row[c.key]}</td>)}
+          {cols.map(c => <td key={c.key} style={{ padding: '8px 10px', textAlign: c.right ? 'right' : 'left', fontWeight: c.bold ? '600' : '400', color: c.color ? c.color(row) : t.text }}>{c.fmt ? c.fmt(row[c.key], row) : row[c.key]}</td>)}
         </tr>
       ))}
     </tbody>
@@ -697,7 +697,7 @@ const MrbTabPersonalizado = ({ data }) => {
                       {MRB_WIDGET_CATALOG.filter(w => w.cat === cat).map(item => {
                         const active = selected.some(s => s.id === item.id);
                         return (
-                          <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? t.accent : t.border}`, backgroundColor: active ? t.accent + '18' : t.bgPanel, color: active ? t.accent : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '700' : '500' }}>
+                          <button key={item.id} onClick={() => toggleWidget(item)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${active ? t.accent : t.border}`, backgroundColor: active ? t.accent + '18' : t.bgPanel, color: active ? t.accent : t.text, cursor: 'pointer', fontSize: '12px', fontWeight: active ? '600' : '500' }}>
                             <span style={{ fontSize: '14px' }}>{item.icon}</span><span>{item.label}</span>{active && <span style={{ fontSize: '11px', fontWeight: '600' }}>✓</span>}
                           </button>
                         );

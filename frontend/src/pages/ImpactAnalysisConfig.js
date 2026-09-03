@@ -53,7 +53,7 @@ const ImpactAnalysisConfig = () => {
     },
     title: {
       fontSize: '28px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: '0 0 8px 0'
     },
@@ -342,7 +342,7 @@ const ImpactAnalysisConfig = () => {
       cursor: 'pointer',
       fontSize: '20px',
       lineHeight: '1',
-      fontWeight: 'bold'
+      fontWeight: '600'
     },
     hint: {
       fontSize: '13px',

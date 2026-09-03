@@ -408,7 +408,7 @@ const UnitTraceability = () => {
     },
     unitSerial: {
       fontSize: '28px',
-      fontWeight: '700',
+      fontWeight: '600',
       color: t.text,
       margin: 0
     },
@@ -457,7 +457,7 @@ const UnitTraceability = () => {
     },
     counterValue: {
       fontSize: '24px',
-      fontWeight: '700'
+      fontWeight: '600'
     },
     counterLabel: {
       fontSize: '12px',

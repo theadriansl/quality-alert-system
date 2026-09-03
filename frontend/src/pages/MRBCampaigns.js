@@ -619,7 +619,7 @@ const MRBCampaigns = () => {
           <button key={id} onClick={() => setActiveTab(id)} style={{
             padding: '10px 18px',
             fontSize: '13px',
-            fontWeight: activeTab === id ? '700' : '500',
+            fontWeight: activeTab === id ? '600' : '500',
             color: alert ? '#ef4444' : activeTab === id ? currentTheme.accent : currentTheme.textDim,
             backgroundColor: 'transparent',
             border: 'none',

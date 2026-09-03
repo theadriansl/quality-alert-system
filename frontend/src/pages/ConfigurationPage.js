@@ -1359,7 +1359,7 @@ const getStyles = (t) => ({
   navIndicator: {
     color: t.accent,
     fontSize: '18px',
-    fontWeight: 'bold'
+    fontWeight: '600'
   },
   sidebarFooter: {
     padding: '16px 20px',

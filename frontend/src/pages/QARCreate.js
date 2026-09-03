@@ -1590,7 +1590,7 @@ const QARCreate = () => {
                 <div style={{
                   fontFamily: "'IBM Plex Mono', monospace",
                   fontSize: 24,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   color: t.text,
                   padding: '12px 20px',
                   backgroundColor: t.bgPanel,
