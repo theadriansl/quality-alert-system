@@ -118,7 +118,7 @@ const WIDashboard = () => {
           <button onClick={() => navigate('/work-instructions')} style={{ padding: '8px 16px', backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, cursor: 'pointer' }}>
             ← Work Instructions
           </button>
-          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: t.text }}>
+          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: t.text }}>
             Dashboard ILUO
           </h1>
         </div>
@@ -133,7 +133,7 @@ const WIDashboard = () => {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <button onClick={loadData} style={{ padding: '8px 16px', backgroundColor: COLORS.blue, border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}>
+          <button onClick={loadData} style={{ padding: '8px 16px', backgroundColor: COLORS.blue, border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer' }}>
             Actualizar
           </button>
         </div>
@@ -143,13 +143,13 @@ const WIDashboard = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {/* Total WIs */}
         <div style={cardStyle}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: COLORS.blue }}>{summary?.totalWorkInstructions || 0}</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: COLORS.blue }}>{summary?.totalWorkInstructions || 0}</div>
           <div style={{ fontSize: '13px', color: t.textMuted }}>Work Instructions Activas</div>
         </div>
 
         {/* Total Certifications */}
         <div style={cardStyle}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: COLORS.green }}>{summary?.totalCertifications || 0}</div>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: COLORS.green }}>{summary?.totalCertifications || 0}</div>
           <div style={{ fontSize: '13px', color: t.textMuted }}>Certificaciones Totales</div>
         </div>
 
@@ -157,19 +157,19 @@ const WIDashboard = () => {
         <div style={cardStyle}>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: COLORS.levelI }}>{summary?.byLevel?.i || 0}</div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: COLORS.levelI }}>{summary?.byLevel?.i || 0}</div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>I</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: COLORS.levelL }}>{summary?.byLevel?.l || 0}</div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: COLORS.levelL }}>{summary?.byLevel?.l || 0}</div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>L</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: COLORS.levelU }}>{summary?.byLevel?.u || 0}</div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: COLORS.levelU }}>{summary?.byLevel?.u || 0}</div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>U</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: COLORS.levelO }}>{summary?.byLevel?.o || 0}</div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: COLORS.levelO }}>{summary?.byLevel?.o || 0}</div>
               <div style={{ fontSize: '10px', color: t.textMuted }}>O</div>
             </div>
           </div>
@@ -178,7 +178,7 @@ const WIDashboard = () => {
 
         {/* Expiring */}
         <div style={cardStyle}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: summary?.expiringSoon > 0 ? COLORS.orange : t.textMuted }}>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: summary?.expiringSoon > 0 ? COLORS.orange : t.textMuted }}>
             {summary?.expiringSoon || 0}
           </div>
           <div style={{ fontSize: '13px', color: t.textMuted }}>Por Vencer (30 dias)</div>
@@ -186,7 +186,7 @@ const WIDashboard = () => {
 
         {/* Expired */}
         <div style={cardStyle}>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: summary?.expired > 0 ? COLORS.red : t.textMuted }}>
+          <div style={{ fontSize: '32px', fontWeight: '600', color: summary?.expired > 0 ? COLORS.red : t.textMuted }}>
             {summary?.expired || 0}
           </div>
           <div style={{ fontSize: '13px', color: t.textMuted }}>Vencidas</div>
@@ -203,7 +203,7 @@ const WIDashboard = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
             <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: t.bgCard, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{coverage3x1Pct}%</span>
+              <span style={{ fontSize: '18px', fontWeight: '600', color: t.text }}>{coverage3x1Pct}%</span>
             </div>
           </div>
           <div>
@@ -225,7 +225,7 @@ const WIDashboard = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
             <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: t.bgCard, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>{coverage1x3Pct}%</span>
+              <span style={{ fontSize: '18px', fontWeight: '600', color: t.text }}>{coverage1x3Pct}%</span>
             </div>
           </div>
           <div>
@@ -259,7 +259,7 @@ const WIDashboard = () => {
               fontSize: '13px',
               fontWeight: '500',
               backgroundColor: activeTab === tab.id ? COLORS.blue : 'transparent',
-              color: activeTab === tab.id ? '#fff' : t.textMuted
+              color: activeTab === tab.id ? 'white' : t.textMuted
             }}
           >
             {tab.label}
@@ -279,19 +279,19 @@ const WIDashboard = () => {
             {/* Legend - ILUO: I(1), L(2), U(3), O(4) de menor a mayor */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', fontSize: '11px', flexWrap: 'wrap' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelI, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '11px' }}>I</span>
+                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelI, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600', fontSize: '11px' }}>I</span>
                 <span style={{ color: t.textMuted }}>Observador (1)</span>
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelL, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '11px' }}>L</span>
+                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelL, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600', fontSize: '11px' }}>L</span>
                 <span style={{ color: t.textMuted }}>Bajo Supervisión (2)</span>
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelU, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '11px' }}>U</span>
+                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelU, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600', fontSize: '11px' }}>U</span>
                 <span style={{ color: t.textMuted }}>Libre (3)</span>
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelO, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '11px' }}>O</span>
+                <span style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: COLORS.levelO, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600', fontSize: '11px' }}>O</span>
                 <span style={{ color: t.textMuted }}>Instructor (4)</span>
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -318,7 +318,7 @@ const WIDashboard = () => {
                         </span>
                       </th>
                     ))}
-                    <th style={{ padding: '8px', textAlign: 'center', color: t.text, backgroundColor: COLORS.blue + '10', fontWeight: '700', minWidth: '60px' }}>
+                    <th style={{ padding: '8px', textAlign: 'center', color: t.text, backgroundColor: COLORS.blue + '10', fontWeight: '600', minWidth: '60px' }}>
                       3x1
                     </th>
                   </tr>
@@ -355,7 +355,7 @@ const WIDashboard = () => {
                                   width: '28px', height: '28px', borderRadius: '4px',
                                   backgroundColor: levelColor,
                                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                  color: '#fff', fontWeight: '700', fontSize: '12px'
+                                  color: 'white', fontWeight: '600', fontSize: '12px'
                                 }}>
                                   {levelCode}
                                 </div>
@@ -386,7 +386,7 @@ const WIDashboard = () => {
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `2px solid ${t.border}`, backgroundColor: t.bgPanel }}>
-                    <td style={{ padding: '10px', fontWeight: '700', color: t.text, position: 'sticky', left: 0, backgroundColor: t.bgPanel }}>
+                    <td style={{ padding: '10px', fontWeight: '600', color: t.text, position: 'sticky', left: 0, backgroundColor: t.bgPanel }}>
                       Cobertura 1x3
                     </td>
                     {matrixData.operators.map(op => {
@@ -454,19 +454,19 @@ const WIDashboard = () => {
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ textAlign: 'center', flex: 1, padding: '6px', backgroundColor: COLORS.levelI + '15', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelI }}>{op.levelICount || 0}</div>
+                          <div style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelI }}>{op.levelICount || 0}</div>
                           <div style={{ fontSize: '9px', color: t.textMuted }}>I</div>
                         </div>
                         <div style={{ textAlign: 'center', flex: 1, padding: '6px', backgroundColor: COLORS.levelL + '15', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelL }}>{op.levelLCount || 0}</div>
+                          <div style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelL }}>{op.levelLCount || 0}</div>
                           <div style={{ fontSize: '9px', color: t.textMuted }}>L</div>
                         </div>
                         <div style={{ textAlign: 'center', flex: 1, padding: '6px', backgroundColor: COLORS.levelU + '15', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelU }}>{op.levelUCount || 0}</div>
+                          <div style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelU }}>{op.levelUCount || 0}</div>
                           <div style={{ fontSize: '9px', color: t.textMuted }}>U</div>
                         </div>
                         <div style={{ textAlign: 'center', flex: 1, padding: '6px', backgroundColor: COLORS.levelO + '15', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '16px', fontWeight: '700', color: COLORS.levelO }}>{op.levelOCount || 0}</div>
+                          <div style={{ fontSize: '16px', fontWeight: '600', color: COLORS.levelO }}>{op.levelOCount || 0}</div>
                           <div style={{ fontSize: '9px', color: t.textMuted }}>O</div>
                         </div>
                       </div>
@@ -600,7 +600,7 @@ const WIDashboard = () => {
                             width: '28px', height: '28px', borderRadius: '4px',
                             backgroundColor: getLevelColor(cert.level),
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff', fontWeight: '700', fontSize: '12px'
+                            color: 'white', fontWeight: '600', fontSize: '12px'
                           }}>
                             {getLevelCode(cert.level)}
                           </span>
