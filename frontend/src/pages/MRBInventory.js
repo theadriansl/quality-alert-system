@@ -294,7 +294,7 @@ const MRBInventory = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
             Inventario MRB
           </h1>
           <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>
@@ -347,28 +347,28 @@ const MRBInventory = () => {
           <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
             Paquetes
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '700', color: COLORS.blue }}>{summary.tabPaquetes || 0}</div>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: COLORS.blue }}>{summary.tabPaquetes || 0}</div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Pendientes de recibir</div>
         </div>
         <div onClick={() => setActiveTab('CUARENTENA')} style={getTabStyle('CUARENTENA', COLORS.yellow)}>
           <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
             Cuarentena
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '700', color: COLORS.yellow }}>{summary.tabCuarentena || 0}</div>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: COLORS.yellow }}>{summary.tabCuarentena || 0}</div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Pendientes / Hold</div>
         </div>
         <div onClick={() => setActiveTab('OK')} style={getTabStyle('OK', COLORS.green)}>
           <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
             OK
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '700', color: COLORS.green }}>{summary.tabOk || 0}</div>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: COLORS.green }}>{summary.tabOk || 0}</div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>OK / Retrabajo OK / Usar</div>
         </div>
         <div onClick={() => setActiveTab('SCRAP')} style={getTabStyle('SCRAP', COLORS.red)}>
           <div style={{ fontSize: '11px', fontWeight: '600', color: t.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
             Scrap
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '700', color: COLORS.red }}>{summary.tabScrap || 0}</div>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: COLORS.red }}>{summary.tabScrap || 0}</div>
           <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Disposición Scrap</div>
         </div>
       </div>
@@ -461,13 +461,13 @@ const MRBInventory = () => {
                     />
                   </th>
                 )}
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: (activeTab === 'OK' || activeTab === 'SCRAP') ? '40px' : 0, backgroundColor: t.bgPanel, zIndex: 2, minWidth: '180px', borderBottom: `2px solid ${t.border}` }}>Serial</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '180px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '200px', borderBottom: `2px solid ${t.border}` }}>Parte</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '380px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '120px', borderBottom: `2px solid ${t.border}` }}>Defecto</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '500px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '90px', borderBottom: `2px solid ${t.border}` }}>Ubicación</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '590px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '70px', borderBottom: `2px solid ${t.border}`, boxShadow: '2px 0 4px rgba(0,0,0,0.1)' }}>Tiempo</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: (activeTab === 'OK' || activeTab === 'SCRAP') ? '40px' : 0, backgroundColor: t.bgPanel, zIndex: 2, minWidth: '180px', borderBottom: `2px solid ${t.border}` }}>Serial</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '180px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '200px', borderBottom: `2px solid ${t.border}` }}>Parte</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '380px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '120px', borderBottom: `2px solid ${t.border}` }}>Defecto</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '500px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '90px', borderBottom: `2px solid ${t.border}` }}>Ubicación</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', position: 'sticky', left: '590px', backgroundColor: t.bgPanel, zIndex: 2, minWidth: '70px', borderBottom: `2px solid ${t.border}`, boxShadow: '2px 0 4px rgba(0,0,0,0.1)' }}>Tiempo</th>
                 {campaigns.map(c => (
-                  <th key={c.id} style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', minWidth: '100px', borderBottom: `2px solid ${t.border}`, whiteSpace: 'nowrap' }}>
+                  <th key={c.id} style={{ padding: '12px 16px', textAlign: 'center', color: t.textMuted, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', minWidth: '100px', borderBottom: `2px solid ${t.border}`, whiteSpace: 'nowrap' }}>
                     {c.campaignNumber}
                   </th>
                 ))}
@@ -597,7 +597,7 @@ const MRBInventory = () => {
             backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px',
             width: '500px', maxWidth: '90vw', boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
           }}>
-            <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700', color: t.text }}>
+            <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: t.text }}>
               📦 Paquete de Salida MRB - {activeTab}
             </h2>
 
