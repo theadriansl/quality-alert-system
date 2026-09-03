@@ -518,14 +518,14 @@ const SkillsProfile = () => {
               {user.photoPath ? (
                 <img src={`${API_URL}${user.photoPath}`} alt={user.firstName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '700', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '600', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
                   {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
                 </div>
               )}
             </div>
 
             {/* Name */}
-            <h1 style={{ margin: '0 0 4px 0', fontSize: '22px', fontWeight: '700', color: t.text }}>
+            <h1 style={{ margin: '0 0 4px 0', fontSize: '22px', fontWeight: '600', color: t.text }}>
               {user.firstName} {user.lastName}
             </h1>
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '12px' }}>
@@ -613,7 +613,7 @@ const SkillsProfile = () => {
                 {L.currentEvaluation}
               </h3>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '48px', fontWeight: '700', color: COLORS.blue }}>
+                <div style={{ fontSize: '48px', fontWeight: '600', color: COLORS.blue }}>
                   {historyPivot.currentAvgScore?.toFixed(2) || '—'}
                 </div>
                 <div style={{ fontSize: '12px', color: t.textMuted }}>{L.generalAverage}</div>
@@ -754,7 +754,7 @@ const SkillsProfile = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: cat.color || COLORS.blue }} />
                     <span style={{ fontWeight: '600', color: t.text }}>{cat.categoryName}</span>
-                    <span style={{ marginLeft: 'auto', fontSize: '14px', fontWeight: '700', color: cat.avgScore >= cat.avgTarget ? COLORS.green : COLORS.orange }}>
+                    <span style={{ marginLeft: 'auto', fontSize: '14px', fontWeight: '600', color: cat.avgScore >= cat.avgTarget ? COLORS.green : COLORS.orange }}>
                       {cat.avgScore} / {cat.avgTarget}
                     </span>
                   </div>
@@ -849,7 +849,7 @@ const SkillsProfile = () => {
                         {new Date(d.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' })}
                       </th>
                     ))}
-                    <th style={{ padding: '8px 6px', textAlign: 'center', color: t.text, minWidth: '80px', backgroundColor: COLORS.blue + '10', fontWeight: '700' }}>
+                    <th style={{ padding: '8px 6px', textAlign: 'center', color: t.text, minWidth: '80px', backgroundColor: COLORS.blue + '10', fontWeight: '600' }}>
                       {L.current}
                     </th>
                   </tr>
@@ -895,7 +895,7 @@ const SkillsProfile = () => {
                                 border: `1px solid ${scoreColor}40`,
                                 minWidth: '40px'
                               }}>
-                                <span style={{ fontWeight: '700', color: scoreColor, fontSize: '14px' }}>{ev.score}</span>
+                                <span style={{ fontWeight: '600', color: scoreColor, fontSize: '14px' }}>{ev.score}</span>
                                 {ev.hasEvidence && <span style={{ fontSize: '9px', color: t.textMuted }}>📎</span>}
                                 {ev.trainingType && (
                                   <span style={{ fontSize: '8px', color: t.textMuted }}>
@@ -922,7 +922,7 @@ const SkillsProfile = () => {
                             border: `2px solid ${skill.currentScore >= skill.currentTarget ? COLORS.green : COLORS.orange}`,
                             minWidth: '50px'
                           }}>
-                            <span style={{ fontWeight: '700', color: skill.currentScore >= skill.currentTarget ? COLORS.green : COLORS.orange, fontSize: '16px' }}>
+                            <span style={{ fontWeight: '600', color: skill.currentScore >= skill.currentTarget ? COLORS.green : COLORS.orange, fontSize: '16px' }}>
                               {skill.currentScore}
                             </span>
                             <span style={{ fontSize: '9px', color: t.textMuted }}>/{skill.currentTarget}</span>
@@ -936,14 +936,14 @@ const SkillsProfile = () => {
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `2px solid ${t.border}`, backgroundColor: t.bgPanel }}>
-                    <td style={{ padding: '10px', fontWeight: '700', color: t.text, position: 'sticky', left: 0, backgroundColor: t.bgPanel }}>
+                    <td style={{ padding: '10px', fontWeight: '600', color: t.text, position: 'sticky', left: 0, backgroundColor: t.bgPanel }}>
                       {L.generalAverageUpper}
                     </td>
                     {[...historyPivot.dates].reverse().map(d => (
                       <td key={d.evaluationId} style={{ padding: '8px', textAlign: 'center', color: t.textMuted }}>—</td>
                     ))}
                     <td style={{ padding: '8px', textAlign: 'center', backgroundColor: COLORS.blue + '15' }}>
-                      <span style={{ fontWeight: '700', fontSize: '18px', color: COLORS.blue }}>
+                      <span style={{ fontWeight: '600', fontSize: '18px', color: COLORS.blue }}>
                         {historyPivot.currentAvgScore?.toFixed(2) || '—'}
                       </span>
                     </td>
@@ -1009,13 +1009,13 @@ const SkillsProfile = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div style={{ padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: scoreModal.score >= scoreModal.target ? COLORS.green : COLORS.orange }}>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: scoreModal.score >= scoreModal.target ? COLORS.green : COLORS.orange }}>
                   {scoreModal.score}
                 </div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{L.rating}</div>
               </div>
               <div style={{ padding: '12px', backgroundColor: t.bgPanel, borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: t.text }}>{scoreModal.target}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: t.text }}>{scoreModal.target}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{L.objective}</div>
               </div>
             </div>

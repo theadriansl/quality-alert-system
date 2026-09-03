@@ -394,7 +394,7 @@ const SkillsConfig = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
             Configuración de Skills
           </h1>
           <p style={{ color: t.textMuted, marginTop: '4px' }}>
@@ -615,7 +615,7 @@ const SkillsConfig = () => {
                         minWidth: '150px'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: level.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700' }}>
+                          <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: level.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>
                             {level.levelValue}
                           </span>
                           <span style={{ fontWeight: '600', color: t.text }}>{level.label}</span>
@@ -665,7 +665,7 @@ const SkillsConfig = () => {
                   type="text"
                   value={categoryForm.color}
                   onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
-                  style={{ width: '100px', padding: '10px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontFamily: 'monospace' }}
+                  style={{ width: '100px', padding: '10px', backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text, fontFamily: "'IBM Plex Mono', monospace" }}
                   placeholder="#3b82f6"
                 />
                 <div style={{ width: '30px', height: '30px', borderRadius: '6px', backgroundColor: categoryForm.color }} />
@@ -804,7 +804,7 @@ const SkillsConfig = () => {
                                   width: '22px', height: '22px', borderRadius: '4px',
                                   backgroundColor: levelInfo.color,
                                   color: '#fff', display: 'inline-flex', alignItems: 'center',
-                                  justifyContent: 'center', fontWeight: '700', fontSize: '11px'
+                                  justifyContent: 'center', fontWeight: '600', fontSize: '11px'
                                 }}>
                                   {levelInfo.code}
                                 </span>

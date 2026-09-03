@@ -153,7 +153,7 @@ const WorkInstructionsList = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '11px',
-                fontWeight: '700'
+                fontWeight: '600'
               }}>
                 {expiringCount + expiredCount}
               </span>

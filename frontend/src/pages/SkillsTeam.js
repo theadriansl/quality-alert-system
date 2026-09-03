@@ -235,7 +235,7 @@ const SkillsTeam = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
             Mi Equipo
           </h1>
           <p style={{ margin: '4px 0 0 0', color: t.textMuted }}>
@@ -288,7 +288,7 @@ const SkillsTeam = () => {
                     {member.photoPath ? (
                       <img src={`${API_URL}${member.photoPath}`} alt={member.userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '700', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '600', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
                         {member.userName?.split(' ').map(n => n.charAt(0)).join('').slice(0,2)}
                       </div>
                     )}
@@ -308,7 +308,7 @@ const SkillsTeam = () => {
                     cursor: 'pointer',
                     fontSize: '10px',
                     color: '#fff',
-                    fontWeight: '700'
+                    fontWeight: '600'
                   }}>
                     +
                     <input
@@ -374,7 +374,7 @@ const SkillsTeam = () => {
                   {radarData[member.userId]?.currentAvgScore != null ? (
                     <div style={{
                       fontSize: '28px',
-                      fontWeight: '700',
+                      fontWeight: '600',
                       color: radarData[member.userId].currentAvgScore >= 3 ? COLORS.green :
                              radarData[member.userId].currentAvgScore >= 2 ? COLORS.orange : COLORS.red
                     }}>

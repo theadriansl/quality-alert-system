@@ -250,7 +250,7 @@ const WIPlantConfig = () => {
           >
             ← Volver
           </button>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>Configuracion de Plantas</h1>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>Configuracion de Plantas</h1>
         </div>
         <button
           onClick={() => openModal('plant')}
@@ -588,7 +588,7 @@ const WIPlantConfig = () => {
             width: '100%',
             maxWidth: '400px'
           }}>
-            <h2 style={{ margin: '0 0 16px', fontSize: '20px', fontWeight: '700', color: t.text }}>
+            <h2 style={{ margin: '0 0 16px', fontSize: '20px', fontWeight: '600', color: t.text }}>
               {modal.data?.id ? 'Editar' : 'Nueva'}{' '}
               {modal.type === 'plant' && 'Planta'}
               {modal.type === 'area' && 'Area'}

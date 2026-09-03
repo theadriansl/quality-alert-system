@@ -723,11 +723,11 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
           <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
             {/* Sección 1: Niveles de Acceso */}
             <div style={{ marginBottom: '24px' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
                 1. Nivel de Acceso (Clearance Level)
               </h4>
               <div style={{ padding: '12px', backgroundColor: t.warning + '20', borderRadius: '6px', marginBottom: '12px', border: `1px solid ${t.warning}` }}>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: t.warning, marginBottom: '6px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: t.warning, marginBottom: '6px' }}>
                   IMPORTANTE: Este nivel es principalmente ORGANIZATIVO
                 </div>
                 <div style={{ fontSize: '12px', color: t.text, lineHeight: '1.6' }}>
@@ -762,7 +762,7 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
 
             {/* Sección 2: Tipos de Acceso */}
             <div style={{ marginBottom: '24px' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
                 2. Tipo de Acceso por Módulo
               </h4>
               <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
@@ -800,19 +800,19 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
 
             {/* Sección 3: Ejemplos Prácticos */}
             <div style={{ marginBottom: '24px' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
                 3. Ejemplos de Configuración
               </h4>
 
               {/* Ejemplo 1: Auditor/Consultor */}
               <div style={{ backgroundColor: t.bgHover, padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
                   Auditor / Consultor (Solo consulta, sin captura)
                 </div>
                 <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
                   Usuario que puede ver defectos y reportes pero NO puede capturar nuevos defectos.
                 </p>
-                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: "'IBM Plex Mono', monospace" }}>
                   <div><strong>Nivel:</strong> 2 (Restringido)</div>
                   <div><strong>Hospital Dashboard:</strong> Parcial</div>
                   <div style={{ marginLeft: '16px', color: t.textMuted }}>
@@ -827,13 +827,13 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
 
               {/* Ejemplo 2: Inspector */}
               <div style={{ backgroundColor: t.bgHover, padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
                   Inspector (Captura completa)
                 </div>
                 <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
                   Usuario que captura defectos en línea de producción.
                 </p>
-                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: "'IBM Plex Mono', monospace" }}>
                   <div><strong>Nivel:</strong> 2 (Restringido)</div>
                   <div><strong>Hospital Dashboard:</strong> Completo</div>
                   <div style={{ marginTop: '8px', padding: '8px', backgroundColor: t.success + '20', borderRadius: '4px', color: t.success }}>
@@ -844,13 +844,13 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
 
               {/* Ejemplo 3: Supervisor */}
               <div style={{ backgroundColor: t.bgHover, padding: '16px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '8px' }}>
                   Supervisor de Calidad
                 </div>
                 <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '8px' }}>
                   Usuario que gestiona 8D, QAR y tiene acceso completo a calidad.
                 </p>
-                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: '12px', color: t.text, backgroundColor: t.bgCard, padding: '12px', borderRadius: '6px', fontFamily: "'IBM Plex Mono', monospace" }}>
                   <div><strong>Nivel:</strong> 3 (Confidencial)</div>
                   <div><strong>8D Problem Solving:</strong> Completo</div>
                   <div><strong>Quality Alert:</strong> Completo</div>
@@ -862,7 +862,7 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
 
             {/* Sección 4: Sistema de Dos Capas */}
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '12px', borderBottom: `2px solid ${t.accent}`, paddingBottom: '8px' }}>
                 4. Sistema de Dos Capas (Hospital de Defectos)
               </h4>
               <p style={{ fontSize: '12px', color: t.textMuted, marginBottom: '12px' }}>
@@ -962,7 +962,7 @@ const RolesTab = ({ showSuccess, showError, styles }) => {
             {[...new Set(modules.map(m => m.category))].map(category => (
               <div key={category} style={{ marginBottom: '16px' }}>
                 <div style={{
-                  fontSize: '11px', fontWeight: '700', textTransform: 'uppercase',
+                  fontSize: '11px', fontWeight: '600', textTransform: 'uppercase',
                   letterSpacing: '0.06em', color: t.textMuted,
                   marginBottom: '8px', paddingBottom: '4px',
                   borderBottom: `1px solid ${t.border}`
@@ -1306,7 +1306,7 @@ const getStyles = (t) => ({
   },
   sidebarTitle: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '600',
     margin: '0',
     color: t.primary
   },
@@ -1411,7 +1411,7 @@ const getStyles = (t) => ({
   },
   tabTitle: {
     fontSize: '28px',
-    fontWeight: '700',
+    fontWeight: '600',
     margin: '0',
     color: t.text
   },
@@ -1610,7 +1610,7 @@ const getStyles = (t) => ({
   },
   statValue: {
     fontSize: '28px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: t.accent
   },
   statLabel: {
@@ -1661,7 +1661,7 @@ const getStyles = (t) => ({
   deptCode: {
     fontSize: '11px',
     color: t.textDim,
-    fontFamily: 'monospace'
+    fontFamily: "'IBM Plex Mono', monospace"
   },
   deptStats: {
     display: 'flex',

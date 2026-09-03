@@ -324,7 +324,7 @@ const SkillsEvaluate = () => {
             {L.modules}
           </button>
           <div>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: t.text }}>
+            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: t.text }}>
               {L.registerTraining}
             </h1>
             {user && (
@@ -378,7 +378,7 @@ const SkillsEvaluate = () => {
             {user.photoPath ? (
               <img src={`${API_URL}${user.photoPath}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '700', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '600', color: t.textMuted, backgroundColor: COLORS.blue + '20' }}>
                 {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
               </div>
             )}
@@ -408,7 +408,7 @@ const SkillsEvaluate = () => {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             {levels.map(level => (
               <div key={level.levelValue} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: level.color + '15', borderRadius: '6px' }}>
-                <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: level.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700' }}>
+                <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: level.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>
                   {level.levelValue}
                 </span>
                 <div>
@@ -492,7 +492,7 @@ const SkillsEvaluate = () => {
                           minWidth: '70px'
                         }}>
                           <div style={{ fontSize: '10px', color: t.textMuted }}>{L.current}</div>
-                          <div style={{ fontSize: '16px', fontWeight: '700', color: currentScore != null ? (currentScore >= skill.targetLevel ? COLORS.green : COLORS.orange) : t.textMuted }}>
+                          <div style={{ fontSize: '16px', fontWeight: '600', color: currentScore != null ? (currentScore >= skill.targetLevel ? COLORS.green : COLORS.orange) : t.textMuted }}>
                             {currentScore != null ? currentScore : '—'}
                           </div>
                         </div>
@@ -529,7 +529,7 @@ const SkillsEvaluate = () => {
                                       backgroundColor: scoreData.score === level.levelValue ? level.color : t.bgCard,
                                       color: scoreData.score === level.levelValue ? '#fff' : t.text,
                                       cursor: 'pointer',
-                                      fontWeight: '700',
+                                      fontWeight: '600',
                                       fontSize: '14px'
                                     }}
                                   >
