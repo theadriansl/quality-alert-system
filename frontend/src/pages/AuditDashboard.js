@@ -50,7 +50,7 @@ const KPICard = ({ title, value, subtitle, color, theme }) => {
       <div style={{ fontSize: '11px', fontWeight: '500', color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '4px' }}>
         {title}
       </div>
-      <div style={{ fontSize: '24px', fontWeight: '700', color: color || t.text }}>{value}</div>
+      <div style={{ fontSize: '24px', fontWeight: '600', color: color || t.text }}>{value}</div>
       {subtitle && <div style={{ fontSize: '11px', color: t.textDim, marginTop: '4px' }}>{subtitle}</div>}
     </div>
   );
@@ -190,7 +190,7 @@ const AuditDashboard = () => {
     headerActions: { display: 'flex', alignItems: 'center', gap: '12px' },
     themeSelector: { display: 'flex', gap: '6px', alignItems: 'center', marginRight: '12px', paddingRight: '12px', borderRight: `1px solid ${t.border}` },
     themeButton: { width: '20px', height: '20px', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s ease' },
-    logo: { width: '40px', height: '40px', backgroundColor: t.primary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '12px' },
+    logo: { width: '40px', height: '40px', backgroundColor: t.primary, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '600', fontSize: '12px' },
     main: { maxWidth: '1600px', margin: '0 auto', padding: '24px' },
     btnPrimary: { padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: 'white', backgroundColor: t.primary, border: 'none', borderRadius: '4px', cursor: 'pointer' },
     btnSecondary: { padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: t.text, backgroundColor: t.bgPanel, border: `1px solid ${t.border}`, borderRadius: '4px', cursor: 'pointer' },
@@ -476,8 +476,8 @@ const AuditDashboard = () => {
                                 fontSize: '11px',
                                 fontWeight: '600',
                                 borderRadius: '4px',
-                                backgroundColor: req.sourceType === '8D' ? '#E3F2FD' : '#FFF3E0',
-                                color: req.sourceType === '8D' ? '#1565C0' : '#E65100'
+                                backgroundColor: req.sourceType === '8D' ? t.infoBg : t.warningBg,
+                                color: req.sourceType === '8D' ? t.info : t.warning
                               }}>
                                 {req.sourceType}
                               </span>
