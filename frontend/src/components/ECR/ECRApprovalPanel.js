@@ -155,10 +155,10 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
 
   const getChainStatusStyle = (status) => {
     switch (status) {
-      case 'approved': return { bg: t.successBg, border: t.success, color: t.successFg, icon: '✓', text: language === 'es' ? 'Aprobado' : 'Approved' };
-      case 'rejected': return { bg: t.errorBg, border: t.error, color: t.errorFg, icon: '↩', text: language === 'es' ? 'Devuelto' : 'Returned' };
-      case 'pending': return { bg: t.warningBg, border: t.warning, color: t.warningFg, icon: '⏳', text: language === 'es' ? 'Pendiente' : 'Pending' };
-      default: return { bg: t.bgPanel, border: t.border, color: t.textMuted, icon: '○', text: language === 'es' ? 'No iniciado' : 'Not started' };
+      case 'approved': return { bg: t.successBg, border: t.success, color: t.successFg, icon: '', text: language === 'es' ? 'Aprobado' : 'Approved' };
+      case 'rejected': return { bg: t.errorBg, border: t.error, color: t.errorFg, icon: '', text: language === 'es' ? 'Devuelto' : 'Returned' };
+      case 'pending': return { bg: t.warningBg, border: t.warning, color: t.warningFg, icon: '', text: language === 'es' ? 'Pendiente' : 'Pending' };
+      default: return { bg: t.bgPanel, border: t.border, color: t.textMuted, icon: '', text: language === 'es' ? 'No iniciado' : 'Not started' };
     }
   };
 
@@ -432,7 +432,7 @@ const ECRApprovalPanel = ({ ecrId, currentUser, onStatusChange, validationData, 
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>⚠️</div>
+            <div style={{ fontSize: '40px', marginBottom: '16px' }}></div>
             <h3 style={{
               fontSize: '18px',
               fontWeight: '600',

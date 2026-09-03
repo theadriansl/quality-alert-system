@@ -1268,7 +1268,7 @@ const ECRWorkflow = () => {
             }}
             title={language === 'es' ? 'Exportar PDF completo' : 'Export full PDF'}
           >
-            {isExportingPDF ? `⏳ ${pdfProgress}` : `📄 ${language === 'es' ? 'Exportar PDF' : 'Export PDF'}`}
+            {isExportingPDF ? pdfProgress : (language === 'es' ? 'Exportar PDF' : 'Export PDF')}
           </button>
         )}
       </div>
@@ -1291,7 +1291,7 @@ const ECRWorkflow = () => {
               }}
             >
               <span style={styles.stageIcon}>
-                {isStageCompleted(stage.id) ? '✓' : stage.icon}
+                {isStageCompleted(stage.id) ? '' : stage.icon}
               </span>
               <div style={styles.stageInfo}>
                 <div style={styles.stageLabel}>{stage.label}</div>
@@ -1312,7 +1312,7 @@ const ECRWorkflow = () => {
                 backgroundColor: showLog ? t.bgPanel : t.bgCard
               }}
             >
-              <span style={styles.stageIcon}>📋</span>
+              <span style={styles.stageIcon}></span>
               <div style={styles.stageInfo}>
                 <div style={styles.stageLabel}>Log</div>
                 <div style={styles.stageTitle}>Historial</div>
@@ -1549,12 +1549,12 @@ const ECRWorkflow = () => {
             <tbody>
               {workflowData.closureApprovalHistory.map((entry, index) => {
                 const actionStyles = {
-                  submitted: { bg: '#dbeafe', color: '#1e40af', label: '→ Enviado' },
-                  submitted_rejected: { bg: '#fef2f2', color: '#991b1b', label: '→ Enviado (No Adoptable)' },
-                  approved: { bg: '#d1fae5', color: '#166534', label: '✓ Firmado' },
-                  rejected: { bg: '#fee2e2', color: '#991b1b', label: '↩ Devuelto' },
-                  rejection_approved: { bg: '#7f1d1d', color: '#fecaca', label: '✓ Confirmado No Adoptable' },
-                  rejection_cancelled: { bg: '#fef3c7', color: '#92400e', label: '↩ No Adoptable Cancelado' }
+                  submitted: { bg: '#dbeafe', color: '#1e40af', label: 'Enviado' },
+                  submitted_rejected: { bg: '#fef2f2', color: '#991b1b', label: 'Enviado (No Adoptable)' },
+                  approved: { bg: '#d1fae5', color: '#166534', label: 'Firmado' },
+                  rejected: { bg: '#fee2e2', color: '#991b1b', label: 'Devuelto' },
+                  rejection_approved: { bg: '#7f1d1d', color: '#fecaca', label: 'Confirmado No Adoptable' },
+                  rejection_cancelled: { bg: '#fef3c7', color: '#92400e', label: 'No Adoptable Cancelado' }
                 };
                 const style = actionStyles[entry.action] || actionStyles.submitted;
                 return (

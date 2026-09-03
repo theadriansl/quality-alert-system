@@ -139,7 +139,7 @@ const ClosureApprovalModalContent = ({ t, closureApprovalLevel, closureType, rej
                 color: 'white'
               }}
             >
-              {isClosingAsRejected ? (language === 'es' ? '↩ Devolver - Considerar Adoptar' : '↩ Return - Consider Adopting') : (language === 'es' ? ' Rechazar' : ' Reject')}
+              {isClosingAsRejected ? (language === 'es' ? 'Devolver - Considerar Adoptar' : 'Return - Consider Adopting') : (language === 'es' ? 'Rechazar' : 'Reject')}
             </button>
             <button
               onClick={onClose}
@@ -821,10 +821,10 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
           const body = encodeURIComponent(
             `Estimado Auditor,\n\n` +
             `Se ha re-enviado un ítem de auditoría de cierre.\n\n` +
-            `📋 ECR: ${ecrNumber}\n` +
-            `📎 Ítem: ${item.name}\n` +
-            `🔄 Ronda: ${newRound}\n` +
-            `📝 Razón: ${reason}\n\n` +
+            `ECR: ${ecrNumber}\n` +
+            `Ítem: ${item.name}\n` +
+            `Ronda: ${newRound}\n` +
+            `Razón: ${reason}\n\n` +
             `Acceso directo: http://localhost:3000/ecr-workflow/${data.id}\n\n` +
             `Por favor ingrese al sistema y registre su juicio en ECR-4.\n\n` +
             `Sistema de Calidad`
@@ -2137,7 +2137,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
           alignItems: 'center',
           gap: '8px'
         }}>
-          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ fontSize: '18px' }}></span>
           <span style={{ color: t.warningFg, fontWeight: '500' }}>
             {tr('ecr.messages.readOnlyMode')}
           </span>
@@ -2727,7 +2727,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 const val = parseFloat(formData.cpPostChange);
                 const target = qualityTargets.cpTarget;
                 const color = val >= target ? '#166534' : val >= 1.0 ? '#92400e' : '#991b1b';
-                const label = val >= target ? (language === 'es' ? '✓ Capaz' : '✓ Capable') : val >= 1.0 ? (language === 'es' ? '⚠ Marginal' : '⚠ Marginal') : (language === 'es' ? '✗ No capaz' : '✗ Not capable');
+                const label = val >= target ? (language === 'es' ? 'Capaz' : 'Capable') : val >= 1.0 ? (language === 'es' ? 'Marginal' : 'Marginal') : (language === 'es' ? 'No capaz' : 'Not capable');
                 return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color }}>{label}</span>;
               })()}
             </label>
@@ -2753,7 +2753,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                 const val = parseFloat(formData.cpkPostChange);
                 const target = qualityTargets.cpkTarget;
                 const color = val >= target ? '#166534' : val >= 1.0 ? '#92400e' : '#991b1b';
-                const label = val >= target ? (language === 'es' ? '✓ Capaz' : '✓ Capable') : val >= 1.0 ? (language === 'es' ? '⚠ Marginal' : '⚠ Marginal') : (language === 'es' ? '✗ No capaz' : '✗ Not capable');
+                const label = val >= target ? (language === 'es' ? 'Capaz' : 'Capable') : val >= 1.0 ? (language === 'es' ? 'Marginal' : 'Marginal') : (language === 'es' ? 'No capaz' : 'Not capable');
                 return <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color }}>{label}</span>;
               })()}
             </label>
@@ -2814,7 +2814,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                   disabled={isLocked}
                   style={{ display: 'none' }}
                 />
-                {opt === 'OK' ? '✓ ' : opt === 'Condicional' ? '⚠ ' : '✗ '}{opt === 'Condicional' ? (language === 'es' ? 'Condicional' : 'Conditional') : opt}
+                {opt === 'Condicional' ? (language === 'es' ? 'Condicional' : 'Conditional') : opt}
               </label>
             ))}
           </div>
@@ -3074,7 +3074,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                           cursor: selectedAuditItems.size > 0 ? 'pointer' : 'not-allowed'
                         }}
                       >
-                        🗑 {language === 'es' ? 'Eliminar' : 'Delete'} ({selectedAuditItems.size})
+                        {language === 'es' ? 'Eliminar' : 'Delete'} ({selectedAuditItems.size})
                       </button>
                       <button
                         onClick={exitAuditSelectionMode}
@@ -3570,7 +3570,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                           style={{ padding: '3px 8px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', width: '80px' }}
                                           title={language === 'es' ? 'Revertir a pendiente (admin)' : 'Revert to pending (admin)'}
                                         >
-                                          ↩ {language === 'es' ? 'Revertir' : 'Revert'}
+                                          {language === 'es' ? 'Revertir' : 'Revert'}
                                         </button>
                                       )}
                                       {/* Duplicar / Eliminar: solo si no enviado y es líder */}
@@ -4295,7 +4295,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                             color: statusStyle.color,
                             marginTop: '2px'
                           }}>
-                            {isSigned ? `✓ ${statusStyle.text}` : statusStyle.text}
+                            {statusStyle.text}
                           </div>
                           {isSigned && signature.signedAt && (
                             <div style={{ fontSize: '10px', color: t.textDim }}>
@@ -4394,7 +4394,7 @@ const ECRClosure = ({ data, onDataUpdate, isLocked = false, isAdmin = false, onS
                                 cursor: 'pointer'
                               }}
                             >
-                              ↩ {language === 'es' ? 'Devolver - Reconsiderar Adopción' : 'Return - Reconsider Adoption'}
+                              {language === 'es' ? 'Devolver - Reconsiderar Adopción' : 'Return - Reconsider Adoption'}
                             </button>
                           </>
                         ) : (

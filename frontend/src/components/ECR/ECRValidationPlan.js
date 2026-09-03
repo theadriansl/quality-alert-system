@@ -1302,7 +1302,7 @@ const ECRValidationPlan = ({ data, onDataUpdate, onApprovalStatusChange, onSaveD
           alignItems: 'center',
           gap: '8px'
         }}>
-          <span style={{ fontSize: '18px' }}>🔒</span>
+          <span style={{ fontSize: '18px' }}></span>
           <span style={{ color: t.warningFg, fontWeight: '500' }}>
             {tr('ecr.messages.readOnlyMode')}
           </span>

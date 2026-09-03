@@ -802,7 +802,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
                               <button key={item.id} onClick={() => toggleCatalogWidget(item)}
                                 style={{ display:'flex', alignItems:'center', gap:'7px', padding:'8px 12px', borderRadius:'8px', border:`2px solid ${active ? t.accent : t.border}`, backgroundColor: active ? t.accent + '18' : t.bgPanel, color: active ? t.accent : t.text, cursor:'pointer', fontSize:'12px', fontWeight: active ? '600' : '500', transition:'all 0.15s' }}>
                                 <span>{item.title}</span>
-                                {active && <span style={{ fontSize:'11px', fontWeight:'900' }}>✓</span>}
+                                {active && <span style={{ fontSize:'11px', fontWeight:'600' }}></span>}
                               </button>
                             );
                           })}

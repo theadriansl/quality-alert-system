@@ -291,7 +291,7 @@ const ECRDashboard = () => {
     const events = ['ecr:created', 'ecr:approved'];
     const unsubscribes = events.map(event =>
       subscribe(event, (data) => {
-        console.log(`🔄 WebSocket [${event}]:`, data);
+        console.log(`WebSocket [${event}]:`, data);
         loadDashboardData();
         loadECRs();
       })
@@ -417,13 +417,13 @@ const ECRDashboard = () => {
           </select>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={styles.filterSelect}>
             <option value="">Todos los Estados</option>
-            <option value="draft">📝 Borrador</option>
-            <option value="submitted">📤 Enviado</option>
-            <option value="pending_approval">⏳ Pend. Aprobación</option>
-            <option value="approved">✅ Aprobado</option>
-            <option value="pending_closure">📋 Pend. Cierre</option>
-            <option value="closed">🔒 Cerrado</option>
-            <option value="closed_rejected">❌ No Adoptable</option>
+            <option value="draft">Borrador</option>
+            <option value="submitted">Enviado</option>
+            <option value="pending_approval">Pend. Aprobación</option>
+            <option value="approved">Aprobado</option>
+            <option value="pending_closure">Pend. Cierre</option>
+            <option value="closed">Cerrado</option>
+            <option value="closed_rejected">No Adoptable</option>
           </select>
           {loading && <span style={{ fontSize: '12px', color: COLORS.gray[400], alignSelf: 'center' }}>Cargando...</span>}
         </div>

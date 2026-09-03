@@ -438,8 +438,8 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
           alignItems: 'center',
           gap: '8px'
         }}>
-          <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ color: '#92400e', fontWeight: '500' }}>
+          <span style={{ fontSize: '18px' }}></span>
+          <span style={{ color: t.warningFg, fontWeight: '500' }}>
             {tr('ecr.messages.readOnlyMode')}
           </span>
         </div>
