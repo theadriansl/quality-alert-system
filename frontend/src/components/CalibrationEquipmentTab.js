@@ -298,15 +298,15 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
   };
 
   const getStatusBadge = (status, daysUntilDue) => {
-    const styles = {
-      OK: { bg: '#d1fae5', color: '#065f46' },
-      WARNING: { bg: '#fef3c7', color: '#92400e' },
-      EXPIRED: { bg: '#fecaca', color: '#991b1b' },
-      CALIBRATING: { bg: '#dbeafe', color: '#1e40af' },
-      OUT_OF_SERVICE: { bg: '#e5e7eb', color: '#374151' },
-      NO_DATE: { bg: '#f3f4f6', color: '#6b7280' }
+    const badgeStyles = {
+      OK: { bg: t.successBg || '#d1fae5', color: t.successFg || '#065f46' },
+      WARNING: { bg: t.warningBg || '#fef3c7', color: t.warningFg || '#92400e' },
+      EXPIRED: { bg: t.errorBg || '#fecaca', color: t.errorFg || '#991b1b' },
+      CALIBRATING: { bg: t.accentBg || '#dbeafe', color: t.accent || '#1e40af' },
+      OUT_OF_SERVICE: { bg: t.bgPanel, color: t.textMuted },
+      NO_DATE: { bg: t.bgPanel, color: t.textMuted }
     };
-    const style = styles[status] || styles.NO_DATE;
+    const style = badgeStyles[status] || badgeStyles.NO_DATE;
 
     const labels = {
       OK: 'Vigente',
@@ -385,7 +385,7 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
     },
     addButton: {
       padding: '10px 20px',
-      backgroundColor: t.success || '#10b981',
+      backgroundColor: t.success,
       color: 'white',
       border: 'none',
       borderRadius: '6px',
@@ -500,9 +500,9 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
       fontWeight: '500'
     },
     errorBanner: {
-      backgroundColor: '#fef2f2',
-      border: '1px solid #fecaca',
-      color: '#dc2626',
+      backgroundColor: t.errorBg || '#fef2f2',
+      border: `1px solid ${t.error || '#fecaca'}`,
+      color: t.error || '#dc2626',
       padding: '12px 16px',
       borderRadius: '6px',
       marginBottom: '16px',
@@ -533,16 +533,16 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
           <div style={styles.statValue}>{counts.total || 0}</div>
           <div style={styles.statLabel}>Total</div>
         </div>
-        <div style={{ ...styles.statCard, borderLeft: '3px solid #10b981' }}>
-          <div style={{ ...styles.statValue, color: '#10b981' }}>{counts.ok || 0}</div>
+        <div style={{ ...styles.statCard, borderLeft: `3px solid ${t.success}` }}>
+          <div style={{ ...styles.statValue, color: t.success }}>{counts.ok || 0}</div>
           <div style={styles.statLabel}>Vigentes</div>
         </div>
-        <div style={{ ...styles.statCard, borderLeft: '3px solid #f59e0b' }}>
-          <div style={{ ...styles.statValue, color: '#f59e0b' }}>{counts.warning || 0}</div>
+        <div style={{ ...styles.statCard, borderLeft: `3px solid ${t.warning}` }}>
+          <div style={{ ...styles.statValue, color: t.warning }}>{counts.warning || 0}</div>
           <div style={styles.statLabel}>Por Vencer</div>
         </div>
-        <div style={{ ...styles.statCard, borderLeft: '3px solid #ef4444' }}>
-          <div style={{ ...styles.statValue, color: '#ef4444' }}>{counts.expired || 0}</div>
+        <div style={{ ...styles.statCard, borderLeft: `3px solid ${t.error}` }}>
+          <div style={{ ...styles.statValue, color: t.error }}>{counts.expired || 0}</div>
           <div style={styles.statLabel}>Vencidos</div>
         </div>
       </div>
@@ -650,14 +650,14 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
                 </td>
                 <td style={styles.td}>
                   <button
-                    style={{ ...styles.actionBtn, backgroundColor: '#6366f1', color: 'white' }}
+                    style={{ ...styles.actionBtn, backgroundColor: t.info || '#6366f1', color: 'white' }}
                     onClick={() => openHistoryModal(eq)}
                     title="Ver Historial"
                   >
                     Historial
                   </button>
                   <button
-                    style={{ ...styles.actionBtn, backgroundColor: '#10b981', color: 'white' }}
+                    style={{ ...styles.actionBtn, backgroundColor: t.success, color: 'white' }}
                     onClick={() => openCalibrationModal(eq)}
                     title="Registrar Calibración"
                   >
@@ -670,7 +670,7 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
                     Editar
                   </button>
                   <button
-                    style={{ ...styles.actionBtn, backgroundColor: '#ef4444', color: 'white' }}
+                    style={{ ...styles.actionBtn, backgroundColor: t.error, color: 'white' }}
                     onClick={() => handleDelete(eq)}
                   >
                     Eliminar
@@ -1056,7 +1056,7 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
                 <button type="button" style={styles.cancelButton} onClick={() => setShowCalibrationModal(false)}>
                   Cancelar
                 </button>
-                <button type="submit" style={{ ...styles.saveButton, backgroundColor: '#10b981' }} disabled={loading}>
+                <button type="submit" style={{ ...styles.saveButton, backgroundColor: t.success }} disabled={loading}>
                   {loading ? 'Guardando...' : 'Registrar Calibración'}
                 </button>
               </div>
@@ -1109,9 +1109,9 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
                 <div>
                   <div style={{ fontSize: '12px', color: t.textMuted }}>Vencimiento</div>
                   <div style={{
-                    color: historyEquip.calibrationStatus === 'EXPIRED' ? '#dc2626'
-                         : historyEquip.calibrationStatus === 'WARNING' ? '#d97706'
-                         : '#059669',
+                    color: historyEquip.calibrationStatus === 'EXPIRED' ? t.error
+                         : historyEquip.calibrationStatus === 'WARNING' ? t.warning
+                         : t.success,
                     fontWeight: '600'
                   }}>
                     {historyEquip.calibrationDueDate
@@ -1179,12 +1179,12 @@ const CalibrationEquipmentTab = ({ theme: t }) => {
                               borderRadius: '10px',
                               fontSize: '11px',
                               fontWeight: '600',
-                              backgroundColor: hist.result === 'PASS' ? '#d1fae5'
-                                            : hist.result === 'ADJUSTED' ? '#fef3c7'
-                                            : '#fecaca',
-                              color: hist.result === 'PASS' ? '#065f46'
-                                   : hist.result === 'ADJUSTED' ? '#92400e'
-                                   : '#991b1b'
+                              backgroundColor: hist.result === 'PASS' ? (t.successBg || '#d1fae5')
+                                            : hist.result === 'ADJUSTED' ? (t.warningBg || '#fef3c7')
+                                            : (t.errorBg || '#fecaca'),
+                              color: hist.result === 'PASS' ? (t.successFg || '#065f46')
+                                   : hist.result === 'ADJUSTED' ? (t.warningFg || '#92400e')
+                                   : (t.errorFg || '#991b1b')
                             }}>
                               {hist.result === 'PASS' ? 'Aprobado'
                                : hist.result === 'ADJUSTED' ? 'Ajustado'
