@@ -782,8 +782,8 @@ const DefectAdminV2 = () => {
     btnDanger: { backgroundColor: t.error, color: 'white' },
     btnSmall: { padding: '4px 8px', fontSize: '11px' },
     alert: { padding: '12px 16px', borderRadius: '8px', marginBottom: '16px' },
-    alertError: { backgroundColor: '#fef2f2', color: t.error, border: '1px solid #fecaca' },
-    alertSuccess: { backgroundColor: '#f0fdf4', color: t.success, border: '1px solid #bbf7d0' },
+    alertError: { backgroundColor: t.errorBg, color: t.error, border: `1px solid ${t.error}` },
+    alertSuccess: { backgroundColor: t.successBg, color: t.success, border: `1px solid ${t.success}` },
     modal: {
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
@@ -997,7 +997,7 @@ const DefectAdminV2 = () => {
                         {configCount > 0 && (
                           <span style={{
                             fontSize: '10px', padding: '2px 6px', borderRadius: '10px',
-                            backgroundColor: '#2E7D32', color: 'white', fontWeight: '600'
+                            backgroundColor: t.success, color: 'white', fontWeight: '600'
                           }}>
                             {configCount}
                           </span>
@@ -1038,7 +1038,7 @@ const DefectAdminV2 = () => {
                         disabled={loading}
                         style={{
                           padding: '4px 12px', fontSize: '12px', border: 'none',
-                          borderRadius: '4px', backgroundColor: '#2E7D32', color: 'white',
+                          borderRadius: '4px', backgroundColor: t.success, color: 'white',
                           cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600'
                         }}
                       >
@@ -1123,7 +1123,7 @@ const DefectAdminV2 = () => {
                                 return (
                                   <td key={part.id} style={{
                                     padding: '6px 4px', textAlign: 'center',
-                                    backgroundColor: changed ? (isChecked ? '#dcfce7' : '#fee2e2') : 'transparent'
+                                    backgroundColor: changed ? (isChecked ? t.successBg : t.errorBg) : 'transparent'
                                   }}>
                                     <input
                                       type="checkbox"
@@ -1160,13 +1160,13 @@ const DefectAdminV2 = () => {
         }}>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <button
-              style={{ ...styles.btn, backgroundColor: '#374151', color: 'white' }}
+              style={{ ...styles.btn, backgroundColor: t.textMuted, color: 'white' }}
               onClick={() => openCategoryModal()}
             >
               + Categoria
             </button>
             <button
-              style={{ ...styles.btn, backgroundColor: '#0072CE', color: 'white' }}
+              style={{ ...styles.btn, backgroundColor: t.info, color: 'white' }}
               onClick={() => openDefectModal()}
             >
               + Defecto
@@ -1355,7 +1355,7 @@ const DefectAdminV2 = () => {
       {showDeleteModal && deleteTarget && (
         <div style={styles.modal} onClick={() => setShowDeleteModal(false)}>
           <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#B00020' }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: t.error }}>
               Confirmar Eliminacion
             </h3>
             <p style={{ marginBottom: '20px', color: t.text }}>

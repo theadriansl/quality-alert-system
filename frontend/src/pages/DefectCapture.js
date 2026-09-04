@@ -2380,7 +2380,7 @@ const DefectCapture = () => {
       {readOnly && (
         <div style={{
           backgroundColor: t.warningBg,
-          borderBottom: '2px solid #C77700',
+          borderBottom: `2px solid ${t.warning}`,
           padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',

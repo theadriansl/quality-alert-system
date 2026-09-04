@@ -297,8 +297,8 @@ const DefectQuery = () => {
 
   const renderSortIcon = (col) => {
     if (sortColumn !== col) return <ArrowUpDown size={12} style={{ opacity: 0.3, marginLeft: '4px' }} />;
-    if (sortDirection === 'asc') return <ArrowUp size={12} style={{ marginLeft: '4px', color: '#0072CE' }} />;
-    return <ArrowDown size={12} style={{ marginLeft: '4px', color: '#0072CE' }} />;
+    if (sortDirection === 'asc') return <ArrowUp size={12} style={{ marginLeft: '4px', color: t.info }} />;
+    return <ArrowDown size={12} style={{ marginLeft: '4px', color: t.info }} />;
   };
 
   const formatDate = (dateStr) => {
@@ -555,7 +555,7 @@ const DefectQuery = () => {
     },
     td: {
       padding: '10px 12px',
-      borderBottom: '1px solid #F4F6F8',
+      borderBottom: `1px solid ${t.border}`,
       color: t.text
     },
     trHover: {
@@ -609,7 +609,7 @@ const DefectQuery = () => {
       backgroundColor: t.bgCard,
       borderRadius: '8px',
       padding: '20px',
-      border: '1px solid #E6EAEE'
+      border: `1px solid ${t.border}`
     },
     chartTitle: {
       fontSize: '15px',
@@ -655,21 +655,21 @@ const DefectQuery = () => {
             {language === 'es' ? 'EN' : 'ES'}
           </button>
           <button
-            style={{ ...styles.btn, backgroundColor: '#0072CE', color: 'white' }}
+            style={{ ...styles.btn, backgroundColor: t.info, color: 'white' }}
             onClick={() => navigate('/defect-capture')}
           >
             <ClipboardList size={16} />
             Captura
           </button>
           <button
-            style={{ ...styles.btn, backgroundColor: '#8b5cf6', color: 'white' }}
+            style={{ ...styles.btn, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/defect-dashboard')}
           >
             <BarChart3 size={16} />
             Dashboard
           </button>
           <button
-            style={{ ...styles.btn, backgroundColor: '#6b7280', color: 'white' }}
+            style={{ ...styles.btn, backgroundColor: t.textMuted, color: 'white' }}
             onClick={() => navigate('/')}
           >
             <Home size={16} />
@@ -692,9 +692,9 @@ const DefectQuery = () => {
             fontSize: '14px',
             fontWeight: '600',
             border: 'none',
-            borderBottom: activeTab === 'defects' ? '3px solid #0072CE' : '3px solid transparent',
+            borderBottom: activeTab === 'defects' ? `3px solid ${t.info}` : '3px solid transparent',
             backgroundColor: activeTab === 'defects' ? t.bgCard : 'transparent',
-            color: activeTab === 'defects' ? '#0072CE' : t.textMuted,
+            color: activeTab === 'defects' ? t.info : t.textMuted,
             cursor: 'pointer',
             marginBottom: '-2px'
           }}
@@ -708,9 +708,9 @@ const DefectQuery = () => {
             fontSize: '14px',
             fontWeight: '600',
             border: 'none',
-            borderBottom: activeTab === 'inspections' ? '3px solid #10b981' : '3px solid transparent',
+            borderBottom: activeTab === 'inspections' ? `3px solid ${t.success}` : '3px solid transparent',
             backgroundColor: activeTab === 'inspections' ? t.bgCard : 'transparent',
-            color: activeTab === 'inspections' ? '#10b981' : t.textMuted,
+            color: activeTab === 'inspections' ? t.success : t.textMuted,
             cursor: 'pointer',
             marginBottom: '-2px'
           }}
@@ -807,7 +807,7 @@ const DefectQuery = () => {
           </div>
 
           <button
-            style={{ ...styles.btn, backgroundColor: '#ef4444', color: 'white', alignSelf: 'flex-end' }}
+            style={{ ...styles.btn, backgroundColor: t.error, color: 'white', alignSelf: 'flex-end' }}
             onClick={clearFilters}
           >
             <X size={14} />
@@ -827,7 +827,7 @@ const DefectQuery = () => {
         <button
           style={{
             ...styles.btn,
-            backgroundColor: total > 0 && !exporting ? '#2E7D32' : '#9ca3af',
+            backgroundColor: total > 0 && !exporting ? t.success : t.textMuted,
             color: 'white',
             cursor: total > 0 && !exporting ? 'pointer' : 'not-allowed',
             opacity: exporting ? 0.7 : 1
@@ -846,11 +846,11 @@ const DefectQuery = () => {
         <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Charts header */}
           <div style={{
-            backgroundColor: '#dbeafe',
+            backgroundColor: t.infoBg,
             padding: '8px 16px',
             borderRadius: '6px',
             fontSize: '13px',
-            color: '#0F3B5F',
+            color: t.primary,
             display: 'flex',
             alignItems: 'center',
             gap: '8px'
@@ -989,11 +989,11 @@ const DefectQuery = () => {
                   <tr
                     style={{
                       ...styles.trHover,
-                      backgroundColor: expandedRow === entry.id ? '#f0f9ff' : 'white'
+                      backgroundColor: expandedRow === entry.id ? t.infoBg : t.bgCard
                     }}
                     onClick={() => setExpandedRow(expandedRow === entry.id ? null : entry.id)}
                   >
-                    <td style={{ ...styles.td, fontWeight: '600', color: '#0072CE' }}>
+                    <td style={{ ...styles.td, fontWeight: '600', color: t.info }}>
                       {entry.entryNumber || `DEF-${String(entry.id).padStart(3, '0')}`}
                     </td>
                     <td style={styles.td}>{formatDate(entry.capturedAt)}</td>
@@ -1176,10 +1176,10 @@ const DefectQuery = () => {
                           borderRadius: '4px',
                           fontSize: '12px',
                           fontWeight: '600',
-                          backgroundColor: insp.result === 'OK' ? '#d1fae5' :
-                                          insp.result === 'NOK' ? '#fee2e2' : '#f3f4f6',
-                          color: insp.result === 'OK' ? '#065f46' :
-                                insp.result === 'NOK' ? '#991b1b' : '#6b7280'
+                          backgroundColor: insp.result === 'OK' ? t.successBg :
+                                          insp.result === 'NOK' ? t.errorBg : t.bgPanel,
+                          color: insp.result === 'OK' ? t.successFg :
+                                insp.result === 'NOK' ? t.errorFg : t.textMuted
                         }}>
                           {insp.result || 'SKIP'}
                         </span>
