@@ -1749,8 +1749,8 @@ const MRBDefectCapture = () => {
         <div
           style={{
             ...s.badge,
-            backgroundColor: selectedMrbLocation ? t.accent + '20' : '#fee2e2',
-            border: `1px solid ${selectedMrbLocation ? t.accent : '#ef4444'}`,
+            backgroundColor: selectedMrbLocation ? t.accent + '20' : `${t.error}15`,
+            border: `1px solid ${selectedMrbLocation ? t.accent : t.error}`,
             cursor: 'pointer',
             padding: '6px 12px'
           }}
@@ -1762,7 +1762,7 @@ const MRBDefectCapture = () => {
 
         {/* Selector Estación MRB (inspección) */}
         <select
-          style={{ ...s.select, borderColor: selectedMrbStation ? t.accent : '#ef4444', fontWeight: '600', minWidth: '140px' }}
+          style={{ ...s.select, borderColor: selectedMrbStation ? t.accent : t.error, fontWeight: '600', minWidth: '140px' }}
           value={selectedMrbStation?.id || ''}
           onChange={e => {
             const st = mrbStations.find(s => s.id === parseInt(e.target.value)) || null;
@@ -1780,7 +1780,7 @@ const MRBDefectCapture = () => {
 
         {/* Selector Turno */}
         <select
-          style={{ ...s.select, borderColor: selectedShift ? t.accent : '#ef4444', fontWeight: '600' }}
+          style={{ ...s.select, borderColor: selectedShift ? t.accent : t.error, fontWeight: '600' }}
           value={selectedShift?.id || ''}
           onChange={e => {
             const sh = shifts.find(sh => sh.id === parseInt(e.target.value)) || null;
@@ -2073,9 +2073,9 @@ const MRBDefectCapture = () => {
                     </span>
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: '600', color:
-                        productionInfo.inspectionStatus === 'OK' ? '#166534' :
-                        productionInfo.inspectionStatus === 'DEFECTIVE' ? '#991b1b' :
-                        productionInfo.inspectionStatus === 'SCRAPPED' ? '#6b7280' : '#92400e'
+                        productionInfo.inspectionStatus === 'OK' ? t.success :
+                        productionInfo.inspectionStatus === 'DEFECTIVE' ? t.error :
+                        productionInfo.inspectionStatus === 'SCRAPPED' ? t.textMuted : t.warning
                       }}>
                         {productionInfo.inspectionStatus === 'OK' ? 'Inspeccionado OK' :
                          productionInfo.inspectionStatus === 'DEFECTIVE' ? 'Con defectos' :
@@ -2170,10 +2170,10 @@ const MRBDefectCapture = () => {
               </div>
             </div>
             <div style={s.fieldGroup}>
-              <label style={{ ...s.label, color: downtimeRequiresComment ? '#ef4444' : undefined }}>
+              <label style={{ ...s.label, color: downtimeRequiresComment ? t.error : undefined }}>
                 Comentario {downtimeRequiresComment ? '* — requerido con downtime' : ''}
               </label>
-              <textarea style={{ ...s.textarea, borderColor: downtimeRequiresComment ? '#ef4444' : undefined }} placeholder="Observaciones..." value={comment} onChange={e => setComment(e.target.value)} />
+              <textarea style={{ ...s.textarea, borderColor: downtimeRequiresComment ? t.error : undefined }} placeholder="Observaciones..." value={comment} onChange={e => setComment(e.target.value)} />
             </div>
 
           </div>
@@ -2311,7 +2311,7 @@ const MRBDefectCapture = () => {
                         style={{
                           display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px',
                           backgroundColor: isSelected ? (hasDefects ? t.errorBg : t.successBg) : t.bgInput,
-                          border: `1px solid ${isOutOfList ? '#f59e0b' : (isSelected ? (hasDefects ? '#ef4444' : '#22c55e') : t.border)}`,
+                          border: `1px solid ${isOutOfList ? t.warning : (isSelected ? (hasDefects ? t.error : t.success) : t.border)}`,
                           borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: '600'
                         }}
                       >
@@ -2325,7 +2325,7 @@ const MRBDefectCapture = () => {
                               setSelectedCampaigns(prev => [...prev, camp]);
                             }
                           }}
-                          style={{ width: '14px', height: '14px', accentColor: hasDefects ? '#ef4444' : '#22c55e' }}
+                          style={{ width: '14px', height: '14px', accentColor: hasDefects ? t.error : t.success }}
                         />
                         <span style={{ color: t.text }}>{camp.campaignNumber}</span>
                         {isOutOfList && <AlertTriangle size={12} color={t.warning} />}
@@ -2364,7 +2364,7 @@ const MRBDefectCapture = () => {
                     <div key={item.id} style={{ position: 'relative', width: '36px', height: '36px' }}>
                       <img src={item.previewUrl} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: `1px solid ${t.border}` }} />
                       <button onClick={() => { URL.revokeObjectURL(item.previewUrl); setStagedEvidence(prev => prev.filter(i => i.id !== item.id)); }}
-                        style={{ position: 'absolute', top: '-4px', right: '-4px', width: '14px', height: '14px', borderRadius: '50%', backgroundColor: '#ef4444', border: 'none', color: 'white', fontSize: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>✕</button>
+                        style={{ position: 'absolute', top: '-4px', right: '-4px', width: '14px', height: '14px', borderRadius: '50%', backgroundColor: t.error, border: 'none', color: 'white', fontSize: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>✕</button>
                     </div>
                   ))}
                 </div>
@@ -2375,7 +2375,7 @@ const MRBDefectCapture = () => {
                   disabled={submitting || selectedCampaigns.length === 0}
                   style={{
                     width: '100%', padding: '10px 16px', border: 'none', borderRadius: '6px',
-                    backgroundColor: (submitting || selectedCampaigns.length === 0) ? t.textDim : '#3b82f6', color: 'white',
+                    backgroundColor: (submitting || selectedCampaigns.length === 0) ? t.textDim : t.info, color: 'white',
                     cursor: (submitting || selectedCampaigns.length === 0) ? 'not-allowed' : 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'
                   }}
@@ -2420,7 +2420,7 @@ const MRBDefectCapture = () => {
               <div style={{ padding: '10px 14px', backgroundColor: t.successBg, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: t.successFg, fontSize: '13px', textTransform: 'uppercase', borderRight: `2px solid ${t.success}` }}>
                 <CheckCircle size={15} /> OK
               </div>
-              <div style={{ padding: '10px 18px', backgroundColor: accumulatedOk > 0 ? '#bbf7d0' : '#f0fdf4', textAlign: 'center', borderRight: '1px solid #86efac', minWidth: '80px' }}>
+              <div style={{ padding: '10px 18px', backgroundColor: accumulatedOk > 0 ? `${t.success}30` : t.successBg, textAlign: 'center', borderRight: `1px solid ${t.success}40`, minWidth: '80px' }}>
                 <div style={{ fontSize: '10px', color: t.successFg, fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Acum</div>
                 <div style={{ fontSize: '22px', fontWeight: '600', color: t.successFg }}>{accumulatedOk || '—'}</div>
               </div>
@@ -2698,11 +2698,11 @@ const MRBDefectCapture = () => {
               onDragLeave={() => setImportDragOver(false)}
               onDrop={handleImportDrop}
               style={{
-                border: `2px dashed ${importDragOver ? t.accent : importFile ? '#22c55e' : t.border}`,
+                border: `2px dashed ${importDragOver ? t.accent : importFile ? t.success : t.border}`,
                 borderRadius: '10px',
                 padding: '20px',
                 textAlign: 'center',
-                backgroundColor: importDragOver ? `${t.accent}10` : importFile ? '#d1fae520' : t.bgInput,
+                backgroundColor: importDragOver ? `${t.accent}10` : importFile ? `${t.success}20` : t.bgInput,
                 marginBottom: '12px',
                 transition: 'all 0.2s'
               }}
@@ -3061,7 +3061,7 @@ const MRBDefectCapture = () => {
           <div style={{ backgroundColor: t.bgCard, borderRadius: '16px', padding: '24px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: t.errorBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Trash2 size={24} color="#dc2626" />
+                <Trash2 size={24} color={t.error} />
               </div>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: t.errorFg }}>SERIAL EN SCRAP</div>
@@ -3125,8 +3125,8 @@ const MRBDefectCapture = () => {
           <div style={{ backgroundColor: t.bgCard, borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '95%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             {/* Header dinámico */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: importConflicts.wrongPartCount > 0 ? '#fef3c7' : '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {importConflicts.wrongPartCount > 0 ? <AlertTriangle size={24} color="#f59e0b" /> : <FileSpreadsheet size={24} color="#3b82f6" />}
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: importConflicts.wrongPartCount > 0 ? t.warningBg : `${t.info}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {importConflicts.wrongPartCount > 0 ? <AlertTriangle size={24} color={t.warning} /> : <FileSpreadsheet size={24} color={t.info} />}
               </div>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: importConflicts.wrongPartCount > 0 ? t.warningFg : t.accent }}>
@@ -3148,7 +3148,7 @@ const MRBDefectCapture = () => {
                     {importConflicts.wrongPartCount} discrepancia(s) de parte - Excel vs Inventario
                   </summary>
                   <div style={{ fontSize: '11px', fontFamily: "'IBM Plex Mono', monospace", marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: t.errorBg, padding: '6px', borderRadius: '4px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #fca5a5', paddingBottom: '2px', marginBottom: '2px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: `1px solid ${t.error}40`, paddingBottom: '2px', marginBottom: '2px' }}>
                       <span>Serial</span><span>Excel</span><span>Inventario</span>
                     </div>
                     {importConflicts.wrongPartSerials?.map((w, i) => (
@@ -3172,7 +3172,7 @@ const MRBDefectCapture = () => {
                     {importConflicts.skippedCount} omitido(s) - parte no existe en sistema
                   </summary>
                   <div style={{ fontSize: '11px', fontFamily: "'IBM Plex Mono', monospace", marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: t.bgPanel, padding: '6px', borderRadius: '4px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #d1d5db', paddingBottom: '2px', marginBottom: '2px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: `1px solid ${t.border}`, paddingBottom: '2px', marginBottom: '2px' }}>
                       <span>Serial</span><span>Parte</span>
                     </div>
                     {importConflicts.skippedSerials?.map((s, i) => (
@@ -3195,7 +3195,7 @@ const MRBDefectCapture = () => {
                     {importConflicts.extendedCount} adicional(es) - se agregarán a campaña
                   </summary>
                   <div style={{ fontSize: '11px', fontFamily: "'IBM Plex Mono', monospace", marginTop: '4px', marginLeft: '16px', maxHeight: '120px', overflowY: 'auto', backgroundColor: t.accentBg, padding: '6px', borderRadius: '4px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: '1px solid #c4b5fd', paddingBottom: '2px', marginBottom: '2px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontWeight: '600', borderBottom: `1px solid ${t.accent}40`, paddingBottom: '2px', marginBottom: '2px' }}>
                       <span>Serial</span><span>Parte</span>
                     </div>
                     {importConflicts.extendedSerials?.map((e, i) => (
@@ -3227,7 +3227,7 @@ const MRBDefectCapture = () => {
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     {toImport > 0 && <span><strong style={{ color: t.successFg }}>{toImport}</strong> nuevos</span>}
                     {normalReprocess > 0 && <span><strong style={{ color: t.accent }}>{normalReprocess}</strong> reprocesos</span>}
-                    {extendedCount > 0 && <span><strong style={{ color: '#8b5cf6' }}>{extendedCount}</strong> adicionales{extendedInReprocess > 0 ? ' (reproceso)' : ''}</span>}
+                    {extendedCount > 0 && <span><strong style={{ color: t.accent }}>{extendedCount}</strong> adicionales{extendedInReprocess > 0 ? ' (reproceso)' : ''}</span>}
                     {skipped > 0 && <span><strong style={{ color: t.textMuted }}>{skipped}</strong> omitidos</span>}
                     {wrongPart > 0 && <span><strong style={{ color: t.errorFg }}>{wrongPart}</strong> rechazados</span>}
                   </div>
@@ -3270,7 +3270,7 @@ const MRBDefectCapture = () => {
                             </td>
                             <td style={{ padding: '3px 4px', textAlign: 'center' }}>
                               {s.isExtended && (
-                                <span style={{ color: '#8b5cf6', fontSize: '9px', fontWeight: '600' }} title={s.extendedReason === 'parte' ? 'Parte fuera de campaña' : 'Serial no estaba en inventario'}>
+                                <span style={{ color: t.accent, fontSize: '9px', fontWeight: '600' }} title={s.extendedReason === 'parte' ? 'Parte fuera de campaña' : 'Serial no estaba en inventario'}>
                                   +ADIC
                                 </span>
                               )}
@@ -3447,7 +3447,7 @@ const MRBDefectCapture = () => {
             {/* Header */}
             <div style={{
               padding: '16px 20px', borderBottom: `1px solid ${t.border}`,
-              backgroundColor: '#3b82f6', color: 'white'
+              backgroundColor: t.info, color: 'white'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
@@ -3493,15 +3493,15 @@ const MRBDefectCapture = () => {
                       <div
                         key={campaignId}
                         style={{
-                          border: `2px solid ${allMarked ? (hasNok ? '#ef4444' : '#22c55e') : t.border}`,
+                          border: `2px solid ${allMarked ? (hasNok ? t.error : t.success) : t.border}`,
                           borderRadius: '10px', overflow: 'hidden',
-                          backgroundColor: allMarked ? (hasNok ? '#fef2f2' : '#f0fdf4') : t.bgPanel
+                          backgroundColor: allMarked ? (hasNok ? `${t.error}08` : `${t.success}08`) : t.bgPanel
                         }}
                       >
                         {/* Campaign Header */}
                         <div style={{
                           padding: '10px 14px',
-                          backgroundColor: allMarked ? (hasNok ? '#fee2e2' : '#dcfce7') : t.bgInput,
+                          backgroundColor: allMarked ? (hasNok ? `${t.error}15` : `${t.success}15`) : t.bgInput,
                           borderBottom: `1px solid ${t.border}`,
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                         }}>
@@ -3516,8 +3516,8 @@ const MRBDefectCapture = () => {
                             {campData.priorInspected && (
                               <span style={{
                                 marginLeft: '8px', padding: '2px 6px', borderRadius: '4px', fontSize: '10px',
-                                backgroundColor: campData.priorResult === 'OK' ? '#dbeafe' : '#fef3c7',
-                                color: campData.priorResult === 'OK' ? '#1e40af' : '#92400e',
+                                backgroundColor: campData.priorResult === 'OK' ? `${t.info}20` : `${t.warning}20`,
+                                color: campData.priorResult === 'OK' ? t.info : t.warning,
                                 fontWeight: '600'
                               }}>
                                 ↻ Previo: {campData.priorResult || '?'}
@@ -3527,7 +3527,7 @@ const MRBDefectCapture = () => {
                           {allMarked && (
                             <span style={{
                               padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600',
-                              backgroundColor: hasNok ? '#ef4444' : '#22c55e', color: 'white'
+                              backgroundColor: hasNok ? t.error : t.success, color: 'white'
                             }}>
                               {hasNok ? 'NOK' : 'OK'}
                             </span>
@@ -3572,8 +3572,8 @@ const MRBDefectCapture = () => {
                                       onClick={() => setDefectInspectionResults(prev => ({ ...prev, [key]: 'OK' }))}
                                       style={{
                                         padding: '6px 14px', borderRadius: '5px', cursor: 'pointer',
-                                        border: result === 'OK' ? '2px solid #15803d' : `1px solid ${t.border}`,
-                                        backgroundColor: result === 'OK' ? '#22c55e' : t.bgInput,
+                                        border: result === 'OK' ? `2px solid ${t.success}` : `1px solid ${t.border}`,
+                                        backgroundColor: result === 'OK' ? t.success : t.bgInput,
                                         color: result === 'OK' ? 'white' : t.text,
                                         fontWeight: result === 'OK' ? '600' : '500', fontSize: '12px'
                                       }}
@@ -3585,7 +3585,7 @@ const MRBDefectCapture = () => {
                                       style={{
                                         padding: '6px 14px', borderRadius: '5px', cursor: 'pointer',
                                         border: result === 'NOK' ? `2px solid ${t.error}` : `1px solid ${t.border}`,
-                                        backgroundColor: result === 'NOK' ? '#ef4444' : t.bgInput,
+                                        backgroundColor: result === 'NOK' ? t.error : t.bgInput,
                                         color: result === 'NOK' ? 'white' : t.text,
                                         fontWeight: result === 'NOK' ? '600' : '500', fontSize: '12px'
                                       }}
@@ -3630,8 +3630,8 @@ const MRBDefectCapture = () => {
                           onChange={e => setModalDispositionId(e.target.value ? parseInt(e.target.value) : null)}
                           style={{
                             flex: 1, padding: '8px 12px', borderRadius: '6px', fontSize: '13px',
-                            border: modalDispositionId ? '2px solid #ef4444' : `1px solid ${t.border}`,
-                            backgroundColor: modalDispositionId ? '#fee2e2' : t.bgInput,
+                            border: modalDispositionId ? `2px solid ${t.error}` : `1px solid ${t.border}`,
+                            backgroundColor: modalDispositionId ? `${t.error}15` : t.bgInput,
                             color: t.text, fontWeight: modalDispositionId ? '600' : '400'
                           }}
                         >
@@ -3673,7 +3673,7 @@ const MRBDefectCapture = () => {
                         disabled={!canSubmit || submitting}
                         style={{
                           padding: '10px 24px', borderRadius: '6px', cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
-                          border: 'none', backgroundColor: canSubmit && !submitting ? '#22c55e' : t.textDim,
+                          border: 'none', backgroundColor: canSubmit && !submitting ? t.success : t.textDim,
                           color: 'white', fontWeight: '600', fontSize: '13px',
                           opacity: canSubmit && !submitting ? 1 : 0.6
                         }}
@@ -3736,8 +3736,8 @@ const MRBDefectCapture = () => {
                       key={camp.campaignId}
                       style={{
                         display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px',
-                        backgroundColor: isSelected ? '#dcfce7' : t.bgPanel,
-                        border: `1px solid ${isSelected ? '#22c55e' : t.border}`,
+                        backgroundColor: isSelected ? `${t.success}15` : t.bgPanel,
+                        border: `1px solid ${isSelected ? t.success : t.border}`,
                         borderRadius: '8px', cursor: 'pointer'
                       }}
                     >
@@ -3751,7 +3751,7 @@ const MRBDefectCapture = () => {
                             setAdditionalCampaigns(prev => [...prev, camp]);
                           }
                         }}
-                        style={{ marginTop: '2px', accentColor: '#22c55e' }}
+                        style={{ marginTop: '2px', accentColor: t.success }}
                       />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>
@@ -3813,7 +3813,7 @@ const MRBDefectCapture = () => {
                   style={{
                     padding: '8px 20px', fontSize: '12px', fontWeight: '600', borderRadius: '6px',
                     cursor: additionalCampaigns.length > 0 ? 'pointer' : 'not-allowed',
-                    backgroundColor: additionalCampaigns.length > 0 ? '#22c55e' : t.textDim,
+                    backgroundColor: additionalCampaigns.length > 0 ? t.success : t.textDim,
                     border: 'none', color: 'white'
                   }}
                 >

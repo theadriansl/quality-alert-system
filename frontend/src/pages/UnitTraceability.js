@@ -388,7 +388,7 @@ const UnitTraceability = () => {
       outline: 'none'
     },
     errorText: {
-      color: '#ef4444',
+      color: t.error,
       fontSize: '14px',
       marginTop: '12px'
     },
@@ -482,7 +482,7 @@ const UnitTraceability = () => {
       transition: 'all 0.2s'
     },
     tabActive: {
-      backgroundColor: '#0072CE',
+      backgroundColor: t.info,
       color: 'white'
     },
     tabInactive: {
@@ -658,7 +658,7 @@ const UnitTraceability = () => {
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>
-          <Package size={28} color="#0072CE" />
+          <Package size={28} color={t.info} />
           {L.title}
         </h1>
         <div style={{ display: 'flex', gap: '12px' }}>
@@ -666,7 +666,7 @@ const UnitTraceability = () => {
             {language === 'es' ? 'EN' : 'ES'}
           </button>
           <button
-            style={{ ...styles.btn, backgroundColor: '#6b7280', color: 'white' }}
+            style={{ ...styles.btn, backgroundColor: t.textMuted, color: 'white' }}
             onClick={() => navigate('/')}
           >
             <Home size={16} />
@@ -692,7 +692,7 @@ const UnitTraceability = () => {
           <button
             style={{
               ...styles.btn,
-              backgroundColor: '#0072CE',
+              backgroundColor: t.info,
               color: 'white',
               padding: '12px 24px'
             }}
@@ -769,21 +769,21 @@ const UnitTraceability = () => {
 
           {/* Counters */}
           <div style={styles.countersRow}>
-            <div style={{ ...styles.counter, backgroundColor: '#dcfce7' }}>
-              <div style={{ ...styles.counterValue, color: '#166534' }}>{unit.specsOk || 0}</div>
-              <div style={{ ...styles.counterLabel, color: '#166534' }}>Specs OK</div>
+            <div style={{ ...styles.counter, backgroundColor: `${t.success}15` }}>
+              <div style={{ ...styles.counterValue, color: t.success }}>{unit.specsOk || 0}</div>
+              <div style={{ ...styles.counterLabel, color: t.success }}>Specs OK</div>
             </div>
-            <div style={{ ...styles.counter, backgroundColor: '#fee2e2' }}>
-              <div style={{ ...styles.counterValue, color: '#991b1b' }}>{unit.specsNok || 0}</div>
-              <div style={{ ...styles.counterLabel, color: '#991b1b' }}>Specs NOK</div>
+            <div style={{ ...styles.counter, backgroundColor: `${t.error}15` }}>
+              <div style={{ ...styles.counterValue, color: t.error }}>{unit.specsNok || 0}</div>
+              <div style={{ ...styles.counterLabel, color: t.error }}>Specs NOK</div>
             </div>
-            <div style={{ ...styles.counter, backgroundColor: '#fef3c7' }}>
-              <div style={{ ...styles.counterValue, color: '#92400e' }}>{unit.totalDefects || 0}</div>
-              <div style={{ ...styles.counterLabel, color: '#92400e' }}>{L.defects}</div>
+            <div style={{ ...styles.counter, backgroundColor: `${t.warning}15` }}>
+              <div style={{ ...styles.counterValue, color: t.warning }}>{unit.totalDefects || 0}</div>
+              <div style={{ ...styles.counterLabel, color: t.warning }}>{L.defects}</div>
             </div>
-            <div style={{ ...styles.counter, backgroundColor: '#e0e7ff' }}>
-              <div style={{ ...styles.counterValue, color: '#3730a3' }}>{unit.totalInspections || 0}</div>
-              <div style={{ ...styles.counterLabel, color: '#3730a3' }}>{L.inspections}</div>
+            <div style={{ ...styles.counter, backgroundColor: `${t.accent}15` }}>
+              <div style={{ ...styles.counterValue, color: t.accent }}>{unit.totalInspections || 0}</div>
+              <div style={{ ...styles.counterLabel, color: t.accent }}>{L.inspections}</div>
             </div>
           </div>
         </div>
@@ -831,7 +831,7 @@ const UnitTraceability = () => {
               <div style={styles.timelineHeader}>
                 <h3 style={styles.timelineTitle}>{L.eventHistory}</h3>
                 <button
-                  style={{ ...styles.btn, backgroundColor: '#0072CE', color: 'white' }}
+                  style={{ ...styles.btn, backgroundColor: t.info, color: 'white' }}
                   onClick={() => setShowAddNote(true)}
                 >
                   <Plus size={16} />
@@ -916,7 +916,7 @@ const UnitTraceability = () => {
                     <tbody>
                       {specInspections.map(spec => (
                         <tr key={spec.id}>
-                          <td style={{ ...styles.td, fontWeight: '600', color: '#0072CE' }}>
+                          <td style={{ ...styles.td, fontWeight: '600', color: t.info }}>
                             {spec.entryNumber}
                           </td>
                           <td style={styles.td}>{formatDateShort(spec.inspectionDate || spec.createdAt)}</td>
@@ -936,7 +936,7 @@ const UnitTraceability = () => {
                           </td>
                           <td style={{
                             ...styles.td,
-                            color: spec.withinTolerance === false ? '#ef4444' : 'inherit',
+                            color: spec.withinTolerance === false ? t.error : 'inherit',
                             fontWeight: spec.withinTolerance === false ? '600' : 'normal'
                           }}>
                             {spec.deviation !== null ? spec.deviation.toFixed(3) : '-'}
@@ -989,10 +989,10 @@ const UnitTraceability = () => {
                           <td style={styles.td}>
                             {si.durationMinutes ? `${si.durationMinutes} min` : '-'}
                           </td>
-                          <td style={{ ...styles.td, color: '#166534', fontWeight: '600' }}>
+                          <td style={{ ...styles.td, color: t.success, fontWeight: '600' }}>
                             {si.specsOk || 0}
                           </td>
-                          <td style={{ ...styles.td, color: '#991b1b', fontWeight: '600' }}>
+                          <td style={{ ...styles.td, color: t.error, fontWeight: '600' }}>
                             {si.specsNok || 0}
                           </td>
                           <td style={styles.td}>
@@ -1053,7 +1053,7 @@ const UnitTraceability = () => {
                 {L.cancel}
               </button>
               <button
-                style={{ ...styles.btn, backgroundColor: '#0072CE', color: 'white' }}
+                style={{ ...styles.btn, backgroundColor: t.info, color: 'white' }}
                 onClick={handleAddNote}
                 disabled={savingNote || !newNote.trim()}
               >

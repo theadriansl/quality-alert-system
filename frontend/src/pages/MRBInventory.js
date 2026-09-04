@@ -491,10 +491,10 @@ const MRBInventory = () => {
                   const rowBg = i % 2 === 0 ? t.bgCard : t.bgPanel;
                   const isSelected = selectedSerials.has(item.serialNumber);
                   return (
-                    <tr key={item.serialNumber || item.defectId} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: isSelected ? (activeTab === 'OK' ? '#d1fae520' : '#fee2e220') : rowBg }}>
+                    <tr key={item.serialNumber || item.defectId} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: isSelected ? (activeTab === 'OK' ? `${t.success}20` : `${t.error}20`) : rowBg }}>
                       {/* Checkbox de selección */}
                       {(activeTab === 'OK' || activeTab === 'SCRAP') && (
-                        <td style={{ padding: '12px 8px', textAlign: 'center', backgroundColor: isSelected ? (activeTab === 'OK' ? '#d1fae520' : '#fee2e220') : rowBg, minWidth: '40px' }}>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', backgroundColor: isSelected ? (activeTab === 'OK' ? `${t.success}20` : `${t.error}20`) : rowBg, minWidth: '40px' }}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -503,7 +503,7 @@ const MRBInventory = () => {
                           />
                         </td>
                       )}
-                      <td style={{ padding: '12px 16px', fontWeight: '600', color: t.text, position: 'sticky', left: (activeTab === 'OK' || activeTab === 'SCRAP') ? '40px' : 0, backgroundColor: isSelected ? (activeTab === 'OK' ? '#d1fae520' : '#fee2e220') : rowBg, zIndex: 1, minWidth: '180px' }}>
+                      <td style={{ padding: '12px 16px', fontWeight: '600', color: t.text, position: 'sticky', left: (activeTab === 'OK' || activeTab === 'SCRAP') ? '40px' : 0, backgroundColor: isSelected ? (activeTab === 'OK' ? `${t.success}20` : `${t.error}20`) : rowBg, zIndex: 1, minWidth: '180px' }}>
                         {item.serialNumber || item.entryNumber}
                         {item.lotNumber && (
                           <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '400', marginTop: '2px' }}>
@@ -612,8 +612,8 @@ const MRBInventory = () => {
                 {Array.from(selectedSerials).map(s => (
                   <span key={s} style={{
                     display: 'inline-block', padding: '2px 8px', margin: '2px',
-                    backgroundColor: activeTab === 'OK' ? '#d1fae5' : '#fee2e2',
-                    color: activeTab === 'OK' ? '#16a34a' : '#ef4444',
+                    backgroundColor: activeTab === 'OK' ? `${t.success}20` : `${t.error}20`,
+                    color: activeTab === 'OK' ? t.success : t.error,
                     borderRadius: '4px', fontSize: '11px', fontWeight: '600'
                   }}>
                     {s}
@@ -662,8 +662,8 @@ const MRBInventory = () => {
             {error && (
               <div style={{
                 padding: '10px', marginBottom: '16px',
-                backgroundColor: '#fee2e2', border: '1px solid #ef4444',
-                borderRadius: '6px', color: '#ef4444', fontSize: '13px'
+                backgroundColor: `${t.error}15`, border: `1px solid ${t.error}`,
+                borderRadius: '6px', color: t.error, fontSize: '13px'
               }}>
                 {error}
               </div>
