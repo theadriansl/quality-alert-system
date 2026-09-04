@@ -249,9 +249,9 @@ const HospitalRolesManager = () => {
       border: `1px solid ${t.accent}`
     },
     badgeDeviation: {
-      backgroundColor: '#8b5cf6' + '20',
-      color: '#8b5cf6',
-      border: '1px solid #8b5cf6'
+      backgroundColor: (t.info || '#8b5cf6') + '20',
+      color: t.info || '#8b5cf6',
+      border: `1px solid ${t.info || '#8b5cf6'}`
     },
     btnSmall: {
       padding: '4px 8px',
@@ -263,15 +263,15 @@ const HospitalRolesManager = () => {
     },
     btnPrimary: {
       backgroundColor: t.primary,
-      color: '#fff'
+      color: 'white'
     },
     btnDanger: {
       backgroundColor: t.error,
-      color: '#fff'
+      color: 'white'
     },
     btnSuccess: {
       backgroundColor: t.success,
-      color: '#fff'
+      color: 'white'
     },
     alert: {
       padding: '12px 16px',
@@ -541,10 +541,10 @@ const HospitalRolesManager = () => {
                       <span style={{ ...styles.badge, ...styles.badgeDeviation }}>Desviaciones</span>
                     )}
                     {user.canScrap && (
-                      <span style={{ ...styles.badge, backgroundColor: '#ef444420', color: '#ef4444', border: '1px solid #ef4444' }}>SCRAP</span>
+                      <span style={{ ...styles.badge, backgroundColor: (t.error || '#ef4444') + '20', color: t.error || '#ef4444', border: `1px solid ${t.error || '#ef4444'}` }}>SCRAP</span>
                     )}
                     {user.canUploadProduction && (
-                      <span style={{ ...styles.badge, backgroundColor: '#8b5cf620', color: '#8b5cf6', border: '1px solid #8b5cf6' }}>Producción</span>
+                      <span style={{ ...styles.badge, backgroundColor: (t.info || '#8b5cf6') + '20', color: t.info || '#8b5cf6', border: `1px solid ${t.info || '#8b5cf6'}` }}>Producción</span>
                     )}
                   </div>
                 </td>

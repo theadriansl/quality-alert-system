@@ -23,7 +23,10 @@ const ReleaseModal = ({
     text: '#1f2937',
     textMuted: '#6b7280',
     border: '#e5e7eb',
-    accent: '#3b82f6'
+    accent: '#3b82f6',
+    error: '#dc2626',
+    errorBg: '#fef2f2',
+    info: '#8b5cf6'
   };
 
   const [formData, setFormData] = useState({
@@ -176,8 +179,8 @@ const ReleaseModal = ({
     },
     error: {
       padding: '10px 12px',
-      backgroundColor: '#fef2f2',
-      color: '#dc2626',
+      backgroundColor: t.errorBg,
+      color: t.error,
       borderRadius: '6px',
       marginBottom: '16px',
       fontSize: '13px'
@@ -205,7 +208,7 @@ const ReleaseModal = ({
     },
     btnSubmit: {
       padding: '10px 20px',
-      backgroundColor: '#8b5cf6',
+      backgroundColor: t.info,
       color: 'white',
       border: 'none',
       borderRadius: '6px',

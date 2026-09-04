@@ -20,17 +20,25 @@ const DefectsListModal = ({
     bgCard: '#f9fafb',
     text: '#1f2937',
     textMuted: '#6b7280',
-    border: '#e5e7eb'
+    border: '#e5e7eb',
+    error: '#ef4444',
+    errorBg: '#fef2f2',
+    warning: '#f59e0b',
+    warningBg: '#fffbeb',
+    success: '#22c55e',
+    successBg: '#f0fdf4',
+    info: '#8b5cf6',
+    infoBg: '#f5f3ff'
   };
 
   if (!isOpen) return null;
 
   const statusConfig = {
-    OPEN: { color: '#ef4444', bgColor: '#fef2f2', label: 'Abierto', icon: AlertCircle },
-    QUARANTINE: { color: '#8b5cf6', bgColor: '#f5f3ff', label: 'Cuarentena', icon: AlertCircle },
-    REPAIRED: { color: '#f59e0b', bgColor: '#fffbeb', label: 'Reparado', icon: Clock },
-    RELEASED: { color: '#22c55e', bgColor: '#f0fdf4', label: 'Liberado', icon: CheckCircle },
-    CLOSED: { color: '#22c55e', bgColor: '#f0fdf4', label: 'Liberado', icon: CheckCircle }
+    OPEN: { color: t.error, bgColor: t.errorBg, label: 'Abierto', icon: AlertCircle },
+    QUARANTINE: { color: t.info, bgColor: t.infoBg, label: 'Cuarentena', icon: AlertCircle },
+    REPAIRED: { color: t.warning, bgColor: t.warningBg, label: 'Reparado', icon: Clock },
+    RELEASED: { color: t.success, bgColor: t.successBg, label: 'Liberado', icon: CheckCircle },
+    CLOSED: { color: t.success, bgColor: t.successBg, label: 'Liberado', icon: CheckCircle }
   };
 
   const getStatusConfig = (status) => statusConfig[status] || statusConfig.OPEN;
@@ -102,18 +110,18 @@ const DefectsListModal = ({
           gap: '24px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-            <span style={{ fontSize: '14px', fontWeight: '600', color: '#ef4444' }}>{counts.open}</span>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: t.error }} />
+            <span style={{ fontSize: '14px', fontWeight: '600', color: t.error }}>{counts.open}</span>
             <span style={{ fontSize: '12px', color: t.textMuted }}>Abiertos</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-            <span style={{ fontSize: '14px', fontWeight: '600', color: '#f59e0b' }}>{counts.repaired}</span>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: t.warning }} />
+            <span style={{ fontSize: '14px', fontWeight: '600', color: t.warning }}>{counts.repaired}</span>
             <span style={{ fontSize: '12px', color: t.textMuted }}>Reparados</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
-            <span style={{ fontSize: '14px', fontWeight: '600', color: '#22c55e' }}>{counts.released}</span>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: t.success }} />
+            <span style={{ fontSize: '14px', fontWeight: '600', color: t.success }}>{counts.released}</span>
             <span style={{ fontSize: '12px', color: t.textMuted }}>Liberados</span>
           </div>
         </div>
@@ -165,7 +173,7 @@ const DefectsListModal = ({
                       marginBottom: '2px'
                     }}>
                       {defect.defectCode ? `[${defect.defectCode}] ` : ''}
-                      {defect.isReprocess && <span style={{ color: '#f59e0b', fontWeight: '600' }}>reprocess </span>}
+                      {defect.isReprocess && <span style={{ color: t.warning, fontWeight: '600' }}>reprocess </span>}
                       {defect.defectName || 'Defecto'}
                     </div>
                     <div style={{

@@ -24,7 +24,10 @@ const RepairModal = ({
     text: '#1f2937',
     textMuted: '#6b7280',
     border: '#e5e7eb',
-    accent: '#3b82f6'
+    accent: '#3b82f6',
+    error: '#dc2626',
+    errorBg: '#fef2f2',
+    success: '#22c55e'
   };
 
   const [formData, setFormData] = useState({
@@ -175,8 +178,8 @@ const RepairModal = ({
     },
     error: {
       padding: '10px 12px',
-      backgroundColor: '#fef2f2',
-      color: '#dc2626',
+      backgroundColor: t.errorBg,
+      color: t.error,
       borderRadius: '6px',
       marginBottom: '16px',
       fontSize: '13px'
@@ -199,7 +202,7 @@ const RepairModal = ({
     },
     btnSubmit: {
       padding: '10px 20px',
-      backgroundColor: '#22c55e',
+      backgroundColor: t.success,
       color: 'white',
       border: 'none',
       borderRadius: '6px',
