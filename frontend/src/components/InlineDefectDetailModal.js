@@ -31,17 +31,30 @@ const InlineDefectDetailModal = ({
     bgCard: '#f9fafb',
     text: '#1f2937',
     textMuted: '#6b7280',
-    border: '#e5e7eb'
+    border: '#e5e7eb',
+    error: '#ef4444',
+    errorBg: '#fef2f2',
+    errorFg: '#991b1b',
+    warning: '#f59e0b',
+    warningBg: '#fffbeb',
+    warningFg: '#92400e',
+    success: '#22c55e',
+    successBg: '#f0fdf4',
+    successFg: '#166534',
+    info: '#8b5cf6',
+    infoBg: '#f5f3ff',
+    accent: '#3b82f6',
+    accentBg: '#eff6ff'
   };
 
   if (!isOpen || !defect) return null;
 
   const statusConfig = {
-    OPEN: { color: '#ef4444', bgColor: '#fef2f2', label: 'Abierto', icon: AlertCircle },
-    QUARANTINE: { color: '#8b5cf6', bgColor: '#f5f3ff', label: 'Cuarentena', icon: AlertCircle },
-    REPAIRED: { color: '#f59e0b', bgColor: '#fffbeb', label: 'Reparado', icon: Clock },
-    RELEASED: { color: '#22c55e', bgColor: '#f0fdf4', label: 'Liberado', icon: CheckCircle },
-    CLOSED: { color: '#22c55e', bgColor: '#f0fdf4', label: 'Liberado', icon: CheckCircle }
+    OPEN: { color: t.error, bgColor: t.errorBg, label: 'Abierto', icon: AlertCircle },
+    QUARANTINE: { color: t.info, bgColor: t.infoBg, label: 'Cuarentena', icon: AlertCircle },
+    REPAIRED: { color: t.warning, bgColor: t.warningBg, label: 'Reparado', icon: Clock },
+    RELEASED: { color: t.success, bgColor: t.successBg, label: 'Liberado', icon: CheckCircle },
+    CLOSED: { color: t.success, bgColor: t.successBg, label: 'Liberado', icon: CheckCircle }
   };
 
   const config = statusConfig[defect.repairStatus] || statusConfig.OPEN;
@@ -220,8 +233,8 @@ const InlineDefectDetailModal = ({
                     fontSize: '11px',
                     padding: '2px 8px',
                     borderRadius: '4px',
-                    backgroundColor: defect.categoryColor || '#e5e7eb',
-                    color: '#fff',
+                    backgroundColor: defect.categoryColor || t.border,
+                    color: 'white',
                     fontWeight: '500'
                   }}>
                     {defect.categoryName}
@@ -232,8 +245,8 @@ const InlineDefectDetailModal = ({
                     fontSize: '11px',
                     padding: '2px 8px',
                     borderRadius: '4px',
-                    backgroundColor: defect.severityColor || '#f59e0b',
-                    color: '#fff',
+                    backgroundColor: defect.severityColor || t.warning,
+                    color: 'white',
                     fontWeight: '500'
                   }}>
                     {defect.severityName}
@@ -244,8 +257,8 @@ const InlineDefectDetailModal = ({
                     fontSize: '11px',
                     padding: '2px 8px',
                     borderRadius: '4px',
-                    backgroundColor: '#6366f1',
-                    color: '#fff',
+                    backgroundColor: t.info,
+                    color: 'white',
                     fontWeight: '500'
                   }}>
                     Cantidad: {defect.quantity}
@@ -266,8 +279,8 @@ const InlineDefectDetailModal = ({
               {/* Tiempo de paro */}
               {defect.downtimeMinutes > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <AlertTriangle size={12} color="#ef4444" />
-                  <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: '500' }}>
+                  <AlertTriangle size={12} color={t.error} />
+                  <span style={{ fontSize: '12px', color: t.error, fontWeight: '500' }}>
                     Paro de línea: {defect.downtimeMinutes} min
                   </span>
                 </div>
@@ -357,17 +370,17 @@ const InlineDefectDetailModal = ({
           {['CLOSED', 'RELEASED'].includes(defect.repairStatus) && (
             <div style={{
               padding: '12px',
-              backgroundColor: '#f0fdf4',
+              backgroundColor: t.successBg,
               borderRadius: '8px',
               marginBottom: '12px',
-              border: '1px solid #bbf7d0',
+              border: `1px solid ${t.success}`,
               textAlign: 'center'
             }}>
-              <CheckCircle size={24} color="#22c55e" style={{ marginBottom: '8px' }} />
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#166534' }}>
+              <CheckCircle size={24} color={t.success} style={{ marginBottom: '8px' }} />
+              <div style={{ fontSize: '14px', fontWeight: '600', color: t.successFg }}>
                 Defecto Cerrado
               </div>
-              <div style={{ fontSize: '12px', color: '#15803d', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: t.successFg, marginTop: '4px' }}>
                 Este defecto ya fue reparado y liberado.
               </div>
             </div>
@@ -385,7 +398,7 @@ const InlineDefectDetailModal = ({
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <MapPin size={14} color={t.textMuted} />
-                <span style={{ fontSize: '13px', color: defect.captureStationName ? t.text : '#9ca3af' }}>
+                <span style={{ fontSize: '13px', color: defect.captureStationName ? t.text : t.textMuted }}>
                   {defect.captureStationName || '(No registrada)'}
                 </span>
               </div>
@@ -408,19 +421,19 @@ const InlineDefectDetailModal = ({
                 REPARACION
               </div>
               <div style={{
-                backgroundColor: '#fffbeb',
+                backgroundColor: t.warningBg,
                 borderRadius: '8px',
                 padding: '12px',
-                border: '1px solid #fde68a'
+                border: `1px solid ${t.warning}`
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <MapPin size={14} color="#f59e0b" />
-                  <span style={{ fontSize: '13px', color: defect.repairStationName ? t.text : '#9ca3af' }}>
+                  <MapPin size={14} color={t.warning} />
+                  <span style={{ fontSize: '13px', color: defect.repairStationName ? t.text : t.textMuted }}>
                     {defect.repairStationName || '(No registrada)'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <User size={14} color="#f59e0b" />
+                  <User size={14} color={t.warning} />
                   <span style={{ fontSize: '13px', color: t.text }}>
                     {defect.repairedByName || 'Reparador desconocido'}
                   </span>
@@ -433,10 +446,10 @@ const InlineDefectDetailModal = ({
                   <div style={{
                     marginTop: '8px',
                     padding: '8px',
-                    backgroundColor: '#fef3c7',
+                    backgroundColor: t.warningBg,
                     borderRadius: '6px',
                     fontSize: '12px',
-                    color: '#92400e'
+                    color: t.warningFg
                   }}>
                     {defect.repairNotes}
                   </div>
@@ -452,19 +465,19 @@ const InlineDefectDetailModal = ({
                 LIBERACION
               </div>
               <div style={{
-                backgroundColor: '#f0fdf4',
+                backgroundColor: t.successBg,
                 borderRadius: '8px',
                 padding: '12px',
-                border: '1px solid #bbf7d0'
+                border: `1px solid ${t.success}`
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <MapPin size={14} color="#22c55e" />
-                  <span style={{ fontSize: '13px', color: defect.releaseStationName ? t.text : '#9ca3af' }}>
+                  <MapPin size={14} color={t.success} />
+                  <span style={{ fontSize: '13px', color: defect.releaseStationName ? t.text : t.textMuted }}>
                     {defect.releaseStationName || '(No registrada)'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <User size={14} color="#22c55e" />
+                  <User size={14} color={t.success} />
                   <span style={{ fontSize: '13px', color: t.text }}>
                     {defect.releasedByName || 'Liberador desconocido'}
                   </span>
@@ -477,10 +490,10 @@ const InlineDefectDetailModal = ({
                   <div style={{
                     marginTop: '8px',
                     padding: '8px',
-                    backgroundColor: '#dcfce7',
+                    backgroundColor: t.successBg,
                     borderRadius: '6px',
                     fontSize: '12px',
-                    color: '#166534'
+                    color: t.successFg
                   }}>
                     {defect.resolutionNotes}
                   </div>
@@ -517,12 +530,12 @@ const InlineDefectDetailModal = ({
           {(['OPEN', 'QUARANTINE', 'REPAIRED'].includes(defect.repairStatus)) && (
             <div style={{
               padding: '10px 12px',
-              backgroundColor: stationId ? '#eff6ff' : '#fef2f2',
+              backgroundColor: stationId ? t.accentBg : t.errorBg,
               borderRadius: '8px',
-              border: `1px solid ${stationId ? '#bfdbfe' : '#fecaca'}`,
+              border: `1px solid ${stationId ? t.accent : t.error}`,
               marginBottom: '16px'
             }}>
-              <div style={{ fontSize: '11px', color: stationId ? '#3b82f6' : '#dc2626', fontWeight: '500' }}>
+              <div style={{ fontSize: '11px', color: stationId ? t.accent : t.error, fontWeight: '500' }}>
                 {stationId
                   ? `Estación seleccionada: ${stationName}`
                   : '⚠️ Selecciona una estación en el encabezado para continuar'}
@@ -534,12 +547,12 @@ const InlineDefectDetailModal = ({
           {error && (
             <div style={{
               padding: '10px 12px',
-              backgroundColor: '#fef2f2',
+              backgroundColor: t.errorBg,
               borderRadius: '8px',
-              border: '1px solid #fecaca',
+              border: `1px solid ${t.error}`,
               marginBottom: '16px'
             }}>
-              <div style={{ fontSize: '12px', color: '#dc2626' }}>
+              <div style={{ fontSize: '12px', color: t.error }}>
                 {error}
               </div>
             </div>
@@ -580,7 +593,7 @@ const InlineDefectDetailModal = ({
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                backgroundColor: '#ef4444',
+                backgroundColor: t.error,
                 color: 'white',
                 fontSize: '14px',
                 fontWeight: '500',
@@ -606,7 +619,7 @@ const InlineDefectDetailModal = ({
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                backgroundColor: !stationId ? '#9ca3af' : '#f59e0b',
+                backgroundColor: !stationId ? t.textMuted : t.warning,
                 color: 'white',
                 fontSize: '14px',
                 fontWeight: '500',
@@ -632,7 +645,7 @@ const InlineDefectDetailModal = ({
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                backgroundColor: !stationId ? '#9ca3af' : '#22c55e',
+                backgroundColor: !stationId ? t.textMuted : t.success,
                 color: 'white',
                 fontSize: '14px',
                 fontWeight: '500',
