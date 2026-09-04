@@ -85,14 +85,14 @@ const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
                   <td style={{ padding: '8px 10px', fontFamily: "'IBM Plex Mono', monospace", color: t.textMuted, whiteSpace: 'nowrap' }}>{fmtTime(row.createdAt)}</td>
                   <td style={{ padding: '8px 10px', color: t.text }}>{row.lotNumber || '—'}</td>
                   <td style={{ padding: '8px 10px' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '600', backgroundColor: row.sourceType === 'NOK' ? '#fee2e2' : '#d1fae5', color: row.sourceType === 'NOK' ? '#991b1b' : '#065f46' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '600', backgroundColor: row.sourceType === 'NOK' ? `${t.error}20` : `${t.success}20`, color: row.sourceType === 'NOK' ? t.error : t.success }}>
                       {row.sourceType}
                     </span>
                   </td>
                   <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                     {isEditing
                       ? <input type="number" value={editMin} onChange={e => setEditMin(e.target.value)} min="0" style={{ width: '70px', padding: '4px 6px', border: `1px solid ${t.border}`, borderRadius: '4px', backgroundColor: t.bgInput, color: t.text, fontSize: '13px', textAlign: 'center' }} />
-                      : <span style={{ fontWeight: '600', color: '#f59e0b' }}>{row.downtimeMinutes}</span>}
+                      : <span style={{ fontWeight: '600', color: t.warning }}>{row.downtimeMinutes}</span>}
                   </td>
                   <td style={{ padding: '8px 10px', color: t.text, maxWidth: '220px' }}>
                     {isEditing
@@ -103,13 +103,13 @@ const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
                   <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
                     {isEditing ? (
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button onClick={() => saveEdit(row)} disabled={saving} style={{ padding: '3px 10px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✓</button>
+                        <button onClick={() => saveEdit(row)} disabled={saving} style={{ padding: '3px 10px', backgroundColor: t.success, color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✓</button>
                         <button onClick={cancelEdit} style={{ padding: '3px 10px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✕</button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button onClick={() => startEdit(row)} style={{ padding: '3px 10px', backgroundColor: t.bgPanel, color: t.text, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>✏</button>
-                        <button onClick={() => deleteEntry(row)} style={{ padding: '3px 10px', backgroundColor: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✕</button>
+                        <button onClick={() => deleteEntry(row)} style={{ padding: '3px 10px', backgroundColor: `${t.error}20`, color: t.error, border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✕</button>
                       </div>
                     )}
                   </td>
@@ -120,7 +120,7 @@ const DowntimeSection = ({ downtimeLog, campaignId, onRefresh, fmtTime }) => {
           <tfoot>
             <tr style={{ borderTop: `2px solid ${t.border}` }}>
               <td colSpan={3} style={{ padding: '8px 10px', fontWeight: '600', color: t.text, fontSize: '12px' }}>Total</td>
-              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: '#f59e0b' }}>{total} min</td>
+              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: t.warning }}>{total} min</td>
               <td colSpan={3} />
             </tr>
           </tfoot>
@@ -349,14 +349,14 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontWeight: '600', fontSize: '15px', color: t.text }}>Reporte de Turno</span>
               <span style={{ padding: '3px 10px', backgroundColor: `${t.accent}20`, color: t.accent, borderRadius: '10px', fontSize: '12px', fontWeight: '600' }}>{shiftLabel}</span>
-              {isToday && <span style={{ padding: '3px 8px', backgroundColor: '#d1fae5', color: '#065f46', borderRadius: '6px', fontSize: '11px', fontWeight: '600' }}>● EN CURSO</span>}
+              {isToday && <span style={{ padding: '3px 8px', backgroundColor: `${t.success}20`, color: t.success, borderRadius: '6px', fontSize: '11px', fontWeight: '600' }}>● EN CURSO</span>}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {lastRefresh && <span style={{ fontSize: '11px', color: t.textMuted }}>Actualizado {lastRefresh.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
               <button onClick={fetchReport} style={{ padding: '6px 10px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: t.text }}>
                 <RefreshCw size={13} /> Actualizar
               </button>
-              <button onClick={handlePrint} disabled={exporting} style={{ padding: '6px 12px', backgroundColor: exporting ? '#6b7280' : '#7c3aed', color: 'white', border: 'none', borderRadius: '6px', cursor: exporting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600' }}>
+              <button onClick={handlePrint} disabled={exporting} style={{ padding: '6px 12px', backgroundColor: exporting ? t.textMuted : t.accent, color: 'white', border: 'none', borderRadius: '6px', cursor: exporting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600' }}>
                 <Printer size={13} /> {exporting ? 'Generando...' : 'Exportar PDF'}
               </button>
               <button onClick={onClose} style={{ padding: '6px 8px', backgroundColor: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', cursor: 'pointer', color: t.text }}>
@@ -392,11 +392,11 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                 {[
                   { label: 'INSP', value: kpis.qtyInspected, color: t.accent },
-                  { label: 'OK', value: kpis.qtyOk, color: '#16a34a' },
-                  { label: 'NOK', value: kpis.qtyNok, color: '#B00020' },
-                  { label: 'Yield %', value: kpis.yieldPct != null ? `${kpis.yieldPct}%` : '—', color: parseFloat(kpis.yieldPct) >= 95 ? '#16a34a' : '#f59e0b' },
-                  { label: L.scrap, value: kpis.qtyScrap, color: '#ef4444' },
-                  { label: L.downtime, value: kpis.downtimeMin > 0 ? `${kpis.downtimeMin} min` : '—', color: kpis.downtimeMin > 0 ? '#f59e0b' : t.textMuted },
+                  { label: 'OK', value: kpis.qtyOk, color: t.success },
+                  { label: 'NOK', value: kpis.qtyNok, color: t.error },
+                  { label: 'Yield %', value: kpis.yieldPct != null ? `${kpis.yieldPct}%` : '—', color: parseFloat(kpis.yieldPct) >= 95 ? t.success : t.warning },
+                  { label: L.scrap, value: kpis.qtyScrap, color: t.error },
+                  { label: L.downtime, value: kpis.downtimeMin > 0 ? `${kpis.downtimeMin} min` : '—', color: kpis.downtimeMin > 0 ? t.warning : t.textMuted },
                 ].map(k => (
                   <div key={k.label} style={{ textAlign: 'center', minWidth: '70px' }}>
                     <div style={{ fontSize: '28px', fontWeight: '600', color: k.color }}>{k.value ?? '—'}</div>
@@ -411,9 +411,9 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
               {avance.qtyEnPlanta > 0 ? (
                 <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
                   {[
-                    { label: 'En Planta', value: avance.qtyEnPlanta, color: '#f59e0b' },
-                    { label: L.inspected, value: avance.qtyInspected, color: '#7c3aed' },
-                    { label: L.remaining, value: Math.max(0, avance.qtyEnPlanta - avance.qtyInspected), color: avance.qtyEnPlanta - avance.qtyInspected > 0 ? '#B00020' : '#16a34a' },
+                    { label: 'En Planta', value: avance.qtyEnPlanta, color: t.warning },
+                    { label: L.inspected, value: avance.qtyInspected, color: t.accent },
+                    { label: L.remaining, value: Math.max(0, avance.qtyEnPlanta - avance.qtyInspected), color: avance.qtyEnPlanta - avance.qtyInspected > 0 ? t.error : t.success },
                   ].map(a => (
                     <div key={a.label} style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '28px', fontWeight: '600', color: a.color }}>{a.value}</div>
@@ -423,10 +423,10 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   <div style={{ flex: 1, minWidth: '200px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
                       <span style={{ color: t.textMuted }}>% Avance campaña</span>
-                      <span style={{ color: avancePct >= 100 ? '#16a34a' : t.accent }}>{avancePct.toFixed(1)}%</span>
+                      <span style={{ color: avancePct >= 100 ? t.success : t.accent }}>{avancePct.toFixed(1)}%</span>
                     </div>
                     <div style={{ height: '10px', backgroundColor: t.border, borderRadius: '6px', overflow: 'hidden' }}>
-                      <div style={{ width: `${avancePct}%`, height: '100%', backgroundColor: avancePct >= 100 ? '#16a34a' : '#f59e0b', borderRadius: '6px', transition: 'width 0.4s ease' }} />
+                      <div style={{ width: `${avancePct}%`, height: '100%', backgroundColor: avancePct >= 100 ? t.success : t.warning, borderRadius: '6px', transition: 'width 0.4s ease' }} />
                     </div>
                   </div>
                 </div>
@@ -450,12 +450,12 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                     {pareto.map((row, i) => (
                       <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                         <td style={{ padding: '8px 10px', fontWeight: i === 0 ? '600' : '400', color: t.text }}>{row.defectName}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{row.qty}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', color: t.error }}>{row.qty}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.text }}>{row.pctNok}%</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.textMuted }}>{row.pctCumulative}%</td>
                         <td style={{ padding: '8px 10px', width: '120px' }}>
                           <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${(row.qty / paretoMax) * 100}%`, height: '100%', backgroundColor: i === 0 ? '#B00020' : '#f59e0b', borderRadius: '4px' }} />
+                            <div style={{ width: `${(row.qty / paretoMax) * 100}%`, height: '100%', backgroundColor: i === 0 ? t.error : t.warning, borderRadius: '4px' }} />
                           </div>
                         </td>
                       </tr>
@@ -506,10 +506,10 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                     {inspectors.map((ins, i) => (
                       <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                         <td style={{ padding: '8px 10px', fontWeight: '600', color: t.text }}>{ins.name}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#16a34a', fontWeight: '600' }}>{ins.qtyOk}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#B00020', fontWeight: '600' }}>{ins.qtyNok}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: t.success, fontWeight: '600' }}>{ins.qtyOk}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: t.error, fontWeight: '600' }}>{ins.qtyNok}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.accent, fontWeight: '600' }}>{ins.qtyInspected}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: parseFloat(ins.yieldPct) >= 95 ? '#16a34a' : '#f59e0b' }}>{ins.yieldPct != null ? `${ins.yieldPct}%` : '—'}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: parseFloat(ins.yieldPct) >= 95 ? t.success : t.warning }}>{ins.yieldPct != null ? `${ins.yieldPct}%` : '—'}</td>
                         <td style={{ padding: '8px 10px', textAlign: 'center', color: t.text }}>{ins.detectionRate != null ? `${ins.detectionRate}%` : '—'}</td>
                       </tr>
                     ))}
@@ -546,15 +546,15 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                             {dispNames[dc]}
                           </th>
                         ))}
-                        <th style={{ padding: '6px 8px', textAlign: 'center', color: '#B00020', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Total</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'center', color: t.error, fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' }}>Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {/* OK row */}
-                      <tr style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: '#d1fae520' }}>
-                        <td style={{ padding: '7px 10px', fontWeight: '600', color: '#16a34a' }}>✓ OK</td>
+                      <tr style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: `${t.success}20` }}>
+                        <td style={{ padding: '7px 10px', fontWeight: '600', color: t.success }}>✓ OK</td>
                         {dispCodes.map(dc => <td key={dc} style={{ padding: '7px 8px', textAlign: 'center', color: t.textMuted }}>—</td>)}
-                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: '#16a34a' }}>{kpis.qtyOk}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: t.success }}>{kpis.qtyOk}</td>
                       </tr>
                       {defectRows.map(([defectName, vals], i) => (
                         <tr key={defectName} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel }}>
@@ -571,7 +571,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                               </td>
                             );
                           })}
-                          <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{vals.total}</td>
+                          <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: t.error }}>{vals.total}</td>
                         </tr>
                       ))}
                       {/* Totals row */}
@@ -584,7 +584,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                             <td key={dc} style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: dStyle.color || t.text }}>{colTotal || '—'}</td>
                           );
                         })}
-                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{totalNok}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: '600', color: t.error }}>{totalNok}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -600,7 +600,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                 )}
                 {tallies.map(ts => (
                   <a key={ts.id} href={`${API_URL}${ts.filePath}`} target="_blank" rel="noreferrer"
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', color: '#92400e', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: `${t.warning}20`, border: `1px solid ${t.warning}`, borderRadius: '6px', color: t.warning, fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}>
                     {ts.filename}
                   </a>
                 ))}
@@ -646,7 +646,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                       { label: L.hour,        value: <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: t.accent, fontWeight: '600' }}>{fmtTime(e.createdAt)}</span> },
                       { label: L.serial,      value: <span style={{ fontWeight: '600', color: t.text }}>{e.lotNumber || '—'}</span> },
                       { label: L.part,       value: e.partNumber || '—' },
-                      { label: L.defect,     value: <span style={{ fontWeight: '600', color: '#B00020' }}>{e.defectName || '—'}</span> },
+                      { label: L.defect,     value: <span style={{ fontWeight: '600', color: t.error }}>{e.defectName || '—'}</span> },
                       { label: L.disposition, value: e.dispositionCode
                           ? <span style={{ padding: '2px 10px', backgroundColor: dispStyle.bg, color: dispStyle.color, borderRadius: '10px', fontSize: '11px', fontWeight: '600' }}>{e.dispositionName || e.dispositionCode}</span>
                           : '—'
@@ -707,7 +707,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   {okSerials.map((e, i) => (
                     <div key={e.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '8px 12px', backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel, borderRadius: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.inspectedAt)}</span>
-                      <span style={{ fontWeight: '600', color: '#2E7D32', minWidth: '140px' }}>{e.serialNumber}</span>
+                      <span style={{ fontWeight: '600', color: t.success, minWidth: '140px' }}>{e.serialNumber}</span>
                       {e.partNumber && <span style={{ color: t.textDim }}>{e.partNumber}</span>}
                       <span style={{ marginLeft: 'auto', color: t.textMuted }}>{e.inspector}</span>
                     </div>
@@ -723,7 +723,7 @@ const MRBShiftReport = ({ campaignId, shiftId, date, shiftLabel, onClose }) => {
                   {okEntries.map((e, i) => (
                     <div key={e.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '8px 12px', backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel, borderRadius: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: t.textMuted, minWidth: '60px' }}>{fmtTime(e.createdAt)}</span>
-                      <span style={{ fontWeight: '600', color: '#2E7D32', minWidth: '120px' }}>{e.lotNumber || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>Sin serial</span>}</span>
+                      <span style={{ fontWeight: '600', color: t.success, minWidth: '120px' }}>{e.lotNumber || <span style={{ color: t.textMuted, fontStyle: 'italic' }}>Sin serial</span>}</span>
                       <span style={{ color: t.text }}>Qty: {e.quantity}</span>
                       {e.partNumber && <span style={{ color: t.textDim }}>{e.partNumber}</span>}
                       <span style={{ marginLeft: 'auto', color: t.textMuted }}>{e.inspector}</span>
