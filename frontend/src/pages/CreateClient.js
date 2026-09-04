@@ -317,7 +317,7 @@ const CreateClient = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Nombre del Cliente <span style={{ color: '#ef4444' }}>*</span>
+                  Nombre del Cliente <span style={{ color: t.error }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -329,7 +329,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -345,7 +345,7 @@ const CreateClient = () => {
                   color: t.text,
                   marginBottom: '6px'
                 }}>
-                  Alias <span style={{ color: '#ef4444' }}>*</span>
+                  Alias <span style={{ color: t.error }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -357,7 +357,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -384,7 +384,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -411,7 +411,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -506,7 +506,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -533,7 +533,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -560,7 +560,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -587,7 +587,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -638,7 +638,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -663,7 +663,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -694,7 +694,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -717,7 +717,7 @@ const CreateClient = () => {
               gap: '8px',
               marginBottom: '8px'
             }}>
-              <Target size={20} color="#0072CE" />
+              <Target size={20} color={t.info} />
               <h2 style={{
                 fontSize: '18px',
                 fontWeight: '600',
@@ -761,7 +761,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -796,7 +796,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -843,7 +843,7 @@ const CreateClient = () => {
                 placeholder="Nombre"
                 style={{
                   padding: '10px',
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${t.border}`,
                   borderRadius: '6px',
                   fontSize: '14px'
                 }}
@@ -855,7 +855,7 @@ const CreateClient = () => {
                 placeholder="Título / Puesto"
                 style={{
                   padding: '10px',
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${t.border}`,
                   borderRadius: '6px',
                   fontSize: '14px'
                 }}
@@ -867,7 +867,7 @@ const CreateClient = () => {
                 placeholder="Email"
                 style={{
                   padding: '10px',
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${t.border}`,
                   borderRadius: '6px',
                   fontSize: '14px'
                 }}
@@ -879,7 +879,7 @@ const CreateClient = () => {
                 placeholder="Teléfono"
                 style={{
                   padding: '10px',
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${t.border}`,
                   borderRadius: '6px',
                   fontSize: '14px'
                 }}
@@ -892,7 +892,7 @@ const CreateClient = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '10px 20px',
-                  backgroundColor: '#2E7D32',
+                  backgroundColor: t.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -954,8 +954,8 @@ const CreateClient = () => {
                               alignItems: 'center',
                               gap: '4px',
                               padding: '6px 12px',
-                              backgroundColor: '#fee2e2',
-                              color: '#B00020',
+                              backgroundColor: t.errorBg,
+                              color: t.error,
                               border: 'none',
                               borderRadius: '4px',
                               fontSize: '12px',
@@ -979,7 +979,7 @@ const CreateClient = () => {
                 textAlign: 'center',
                 color: t.textDim,
                 fontSize: '14px',
-                border: '1px dashed #d1d5db',
+                border: `1px dashed ${t.border}`,
                 borderRadius: '6px'
               }}>
                 No se han agregado contactos aún. Agregue al menos un contacto para el cliente.
@@ -1035,7 +1035,7 @@ const CreateClient = () => {
                   onChange={(e) => setDocumentInput({ ...documentInput, type: e.target.value })}
                   style={{
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px',
                     minWidth: '150px'
@@ -1070,7 +1070,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -1096,7 +1096,7 @@ const CreateClient = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: `1px solid ${t.border}`,
                     borderRadius: '6px',
                     fontSize: '14px'
                   }}
@@ -1112,7 +1112,7 @@ const CreateClient = () => {
                     alignItems: 'center',
                     gap: '8px',
                     padding: '10px 16px',
-                    backgroundColor: '#6b7280',
+                    backgroundColor: t.textMuted,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -1140,7 +1140,7 @@ const CreateClient = () => {
                     alignItems: 'center',
                     gap: '8px',
                     padding: '10px 20px',
-                    backgroundColor: documentInput.file ? '#8b5cf6' : '#d1d5db',
+                    backgroundColor: documentInput.file ? t.accent : t.border,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -1167,7 +1167,7 @@ const CreateClient = () => {
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <FileText size={16} color="#6b7280" />
+                <FileText size={16} color={t.textMuted} />
                 <span style={{ fontSize: '14px', color: t.text }}>
                   {documentInput.file.name}
                 </span>
@@ -1206,8 +1206,8 @@ const CreateClient = () => {
                         <td style={{ padding: '10px', fontSize: '14px' }}>
                           <span style={{
                             padding: '4px 8px',
-                            backgroundColor: '#eff6ff',
-                            color: '#2563eb',
+                            backgroundColor: t.infoBg,
+                            color: t.info,
                             borderRadius: '4px',
                             fontSize: '12px',
                             fontWeight: '500'
@@ -1236,8 +1236,8 @@ const CreateClient = () => {
                               alignItems: 'center',
                               gap: '4px',
                               padding: '6px 12px',
-                              backgroundColor: '#fee2e2',
-                              color: '#B00020',
+                              backgroundColor: t.errorBg,
+                              color: t.error,
                               border: 'none',
                               borderRadius: '4px',
                               fontSize: '12px',
@@ -1261,7 +1261,7 @@ const CreateClient = () => {
                 textAlign: 'center',
                 color: t.textDim,
                 fontSize: '14px',
-                border: '1px dashed #d1d5db',
+                border: `1px dashed ${t.border}`,
                 borderRadius: '6px'
               }}>
                 No se han agregado documentos aún. Los documentos son opcionales pero se recomienda agregar cotizaciones y aprobaciones.
@@ -1282,7 +1282,7 @@ const CreateClient = () => {
               style={{
                 padding: '12px 24px',
                 backgroundColor: t.bgCard,
-                border: '1px solid #E6EAEE',
+                border: `1px solid ${t.border}`,
                 borderRadius: '6px',
                 fontSize: '14px',
                 fontWeight: '500',
@@ -1300,7 +1300,7 @@ const CreateClient = () => {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '12px 24px',
-                backgroundColor: saving ? '#9ca3af' : '#0072CE',
+                backgroundColor: saving ? t.textMuted : t.info,
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
