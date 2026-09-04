@@ -174,10 +174,10 @@ const LocationCodesTab = ({ theme: t }) => {
   };
 
   const locationTypes = [
-    { value: 'REPAIR', label: 'Reparacion', color: '#3B82F6', icon: '🔧' },
-    { value: 'RELEASE', label: 'Liberacion', color: '#10B981', icon: '✅' },
-    { value: 'BUFFER', label: 'Buffer', color: '#F59E0B', icon: '📦' },
-    { value: 'MRB', label: 'MRB', color: '#EF4444', icon: '🔴' }
+    { value: 'REPAIR', label: 'Reparacion', color: t.accent || '#3B82F6', icon: '🔧' },
+    { value: 'RELEASE', label: 'Liberacion', color: t.success || '#10B981', icon: '✅' },
+    { value: 'BUFFER', label: 'Buffer', color: t.warning || '#F59E0B', icon: '📦' },
+    { value: 'MRB', label: 'MRB', color: t.error || '#EF4444', icon: '🔴' }
   ];
 
   const getTypeStyle = (type) => {
@@ -192,14 +192,14 @@ const LocationCodesTab = ({ theme: t }) => {
     filterBar: { display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px' },
     select: { padding: '8px 12px', borderRadius: '6px', border: `1px solid ${t.borderColor}`, backgroundColor: t.bgCard, color: t.textPrimary, fontSize: '14px' },
     btn: { padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500' },
-    btnPrimary: { backgroundColor: t.accent, color: '#fff' },
-    btnDanger: { backgroundColor: '#EF4444', color: '#fff' },
+    btnPrimary: { backgroundColor: t.accent, color: 'white' },
+    btnDanger: { backgroundColor: t.error || '#EF4444', color: 'white' },
     btnSecondary: { backgroundColor: t.bgPanel, color: t.textPrimary, border: `1px solid ${t.borderColor}` },
     table: { width: '100%', borderCollapse: 'collapse', backgroundColor: t.bgCard, borderRadius: '8px', overflow: 'hidden' },
     th: { padding: '12px', textAlign: 'left', backgroundColor: t.bgPanel, color: t.textMuted, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' },
     td: { padding: '12px', borderTop: `1px solid ${t.borderColor}`, color: t.textPrimary },
     badge: { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' },
-    wipBadge: { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', backgroundColor: '#3B82F620', color: '#3B82F6' },
+    wipBadge: { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', backgroundColor: t.accentBg || '#3B82F620', color: t.accent || '#3B82F6' },
     modal: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
     modalContent: { backgroundColor: t.bgCard, borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' },
     modalTitle: { fontSize: '18px', fontWeight: '600', color: t.textPrimary, marginBottom: '20px' },
@@ -210,8 +210,8 @@ const LocationCodesTab = ({ theme: t }) => {
     radioOption: { display: 'flex', alignItems: 'center', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', border: `1px solid ${t.borderColor}`, transition: 'all 0.2s' },
     radioSelected: { borderColor: t.accent, backgroundColor: t.accent + '10' },
     alert: { padding: '12px 16px', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' },
-    alertError: { backgroundColor: '#FEE2E2', color: '#DC2626' },
-    alertSuccess: { backgroundColor: '#D1FAE5', color: '#059669' },
+    alertError: { backgroundColor: t.errorBg || '#FEE2E2', color: t.error || '#DC2626' },
+    alertSuccess: { backgroundColor: t.successBg || '#D1FAE5', color: t.success || '#059669' },
     actions: { display: 'flex', gap: '8px' },
     emptyState: { textAlign: 'center', padding: '40px', color: t.textMuted }
   };
@@ -292,8 +292,8 @@ const LocationCodesTab = ({ theme: t }) => {
                 <td style={styles.td}>
                   <span style={{
                     ...styles.badge,
-                    backgroundColor: loc.isActive ? '#D1FAE5' : '#FEE2E2',
-                    color: loc.isActive ? '#059669' : '#DC2626'
+                    backgroundColor: loc.isActive ? (t.successBg || '#D1FAE5') : (t.errorBg || '#FEE2E2'),
+                    color: loc.isActive ? (t.success || '#059669') : (t.error || '#DC2626')
                   }}>
                     {loc.isActive ? 'Activo' : 'Inactivo'}
                   </span>
