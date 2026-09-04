@@ -635,7 +635,7 @@ const RepairStation = () => {
               style={{
                 flex: 1, padding: '14px', border: 'none', borderRadius: '8px', cursor: 'pointer',
                 fontWeight: '600', fontSize: '14px',
-                backgroundColor: stationType === 'RELEASE' ? '#22c55e' : t.bgPanel,
+                backgroundColor: stationType === 'RELEASE' ? t.success : t.bgPanel,
                 color: stationType === 'RELEASE' ? 'white' : t.text
               }}
             >
@@ -724,12 +724,12 @@ const RepairStation = () => {
           {/* Station Type & Location */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '0', borderRadius: '8px', overflow: 'hidden',
-            border: `1px solid ${stationType === 'REPAIR' ? t.accent : '#22c55e'}`
+            border: `1px solid ${stationType === 'REPAIR' ? t.accent : t.success}`
           }}>
             {/* Type Badge */}
             <div style={{
               padding: '8px 12px',
-              backgroundColor: stationType === 'REPAIR' ? t.accent : '#22c55e',
+              backgroundColor: stationType === 'REPAIR' ? t.accent : t.success,
               color: 'white', fontWeight: '600', fontSize: '12px',
               display: 'flex', alignItems: 'center', gap: '6px'
             }}>
@@ -741,8 +741,8 @@ const RepairStation = () => {
               onClick={() => setLocationSelectorOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px',
-                backgroundColor: stationType === 'REPAIR' ? (t.accent + '15') : '#dcfce7',
-                color: stationType === 'REPAIR' ? t.accent : '#166534',
+                backgroundColor: stationType === 'REPAIR' ? (t.accent + '15') : `${t.success}20`,
+                color: stationType === 'REPAIR' ? t.accent : t.success,
                 border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px'
               }}
             >
@@ -766,12 +766,12 @@ const RepairStation = () => {
       {/* Error Banner */}
       {actionError && (
         <div style={{
-          padding: '10px 16px', backgroundColor: '#fef2f2', borderBottom: '1px solid #fecaca',
-          color: '#991b1b', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+          padding: '10px 16px', backgroundColor: t.errorBg, borderBottom: `1px solid ${t.error}`,
+          color: t.error, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X size={16} color="#991b1b" />
+            <X size={16} color={t.error} />
           </button>
         </div>
       )}
@@ -909,7 +909,7 @@ const RepairStation = () => {
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {pendingCount > 0 && (
                           <span style={{
-                            padding: '2px 6px', backgroundColor: '#fef2f2', color: '#dc2626',
+                            padding: '2px 6px', backgroundColor: `${t.error}15`, color: t.error,
                             borderRadius: '6px', fontSize: '10px', fontWeight: '600'
                           }}>
                             🔴 {pendingCount}
@@ -917,7 +917,7 @@ const RepairStation = () => {
                         )}
                         {repairedCount > 0 && (
                           <span style={{
-                            padding: '2px 6px', backgroundColor: '#eff6ff', color: '#2563eb',
+                            padding: '2px 6px', backgroundColor: `${t.info}15`, color: t.info,
                             borderRadius: '6px', fontSize: '10px', fontWeight: '600'
                           }}>
                             🔵 {repairedCount}
@@ -925,7 +925,7 @@ const RepairStation = () => {
                         )}
                         {quarantineCount > 0 && (
                           <span style={{
-                            padding: '2px 6px', backgroundColor: '#fef3c7', color: '#d97706',
+                            padding: '2px 6px', backgroundColor: `${t.warning}15`, color: t.warning,
                             borderRadius: '6px', fontSize: '10px', fontWeight: '600'
                           }}>
                             🟠 {quarantineCount}
@@ -933,7 +933,7 @@ const RepairStation = () => {
                         )}
                         {releasedCount > 0 && (
                           <span style={{
-                            padding: '2px 6px', backgroundColor: '#f0fdf4', color: '#16a34a',
+                            padding: '2px 6px', backgroundColor: `${t.success}15`, color: t.success,
                             borderRadius: '6px', fontSize: '10px', fontWeight: '600'
                           }}>
                             🟢 {releasedCount}
@@ -1062,7 +1062,7 @@ const RepairStation = () => {
                               onClick={() => handleRelease(defect)}
                               disabled={isLoading}
                               style={{
-                                flex: 1, padding: '8px 12px', backgroundColor: '#22c55e', color: 'white',
+                                flex: 1, padding: '8px 12px', backgroundColor: t.success, color: 'white',
                                 border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '12px',
                                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                               }}
@@ -1076,8 +1076,8 @@ const RepairStation = () => {
                       {wasSuccess && (
                         <div style={{
                           padding: '8px', borderRadius: '6px', textAlign: 'center',
-                          backgroundColor: wasSuccess === 'repaired' ? '#eff6ff' : '#f0fdf4',
-                          color: wasSuccess === 'repaired' ? '#3b82f6' : '#22c55e',
+                          backgroundColor: wasSuccess === 'repaired' ? `${t.info}15` : `${t.success}15`,
+                          color: wasSuccess === 'repaired' ? t.info : t.success,
                           fontWeight: '600', fontSize: '12px'
                         }}>
                           ✓ {wasSuccess === 'repaired' ? (language === 'es' ? 'Reparado' : 'Repaired') : (language === 'es' ? 'Liberado' : 'Released')}
@@ -1257,30 +1257,30 @@ const RepairStation = () => {
                 selectedDefect.repairStatus === 'RELEASED' || selectedDefect.repair_status === 'RELEASED' ||
                 selectedDefect.repairedAt || selectedDefect.repaired_at) && (
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#d97706', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: t.warning, marginBottom: '8px' }}>
                     🔧 REPARACIÓN
                   </div>
-                  <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ backgroundColor: `${t.warning}15`, border: `1px solid ${t.warning}30`, borderRadius: '8px', padding: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <MapPin size={14} color="#d97706" />
-                      <span style={{ fontSize: '13px', color: '#92400e' }}>
+                      <MapPin size={14} color={t.warning} />
+                      <span style={{ fontSize: '13px', color: t.warning }}>
                         {selectedDefect.repairLocationName || selectedDefect.repair_location_name || selectedDefect.repairStationName || selectedDefect.repair_station_name || '(Ubicación no registrada)'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <Wrench size={14} color="#d97706" />
-                      <span style={{ fontSize: '13px', color: '#92400e' }}>
+                      <Wrench size={14} color={t.warning} />
+                      <span style={{ fontSize: '13px', color: t.warning }}>
                         {selectedDefect.repairedByName || selectedDefect.repaired_by_name || 'Técnico desconocido'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', color: '#b45309' }}>
+                      <span style={{ fontSize: '12px', color: t.warning }}>
                         {selectedDefect.repairedAt || selectedDefect.repaired_at
                           ? new Date(selectedDefect.repairedAt || selectedDefect.repaired_at).toLocaleString()
                           : ''}
                       </span>
                       {(selectedDefect.repairTimeMinutes || selectedDefect.repair_time_minutes) && (
-                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#d97706', backgroundColor: '#fef3c7', padding: '2px 8px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: t.warning, backgroundColor: `${t.warning}20`, padding: '2px 8px', borderRadius: '4px' }}>
                           ⏱ {selectedDefect.repairTimeMinutes || selectedDefect.repair_time_minutes} min
                         </span>
                       )}
@@ -1293,30 +1293,30 @@ const RepairStation = () => {
               {(selectedDefect.repairStatus === 'RELEASED' || selectedDefect.repair_status === 'RELEASED' ||
                 selectedDefect.status === 'CLOSED' || selectedDefect.releasedAt || selectedDefect.released_at) && (
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#16a34a', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: t.success, marginBottom: '8px' }}>
                     ✅ LIBERACIÓN
                   </div>
-                  <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ backgroundColor: `${t.success}15`, border: `1px solid ${t.success}30`, borderRadius: '8px', padding: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <MapPin size={14} color="#16a34a" />
-                      <span style={{ fontSize: '13px', color: '#166534' }}>
+                      <MapPin size={14} color={t.success} />
+                      <span style={{ fontSize: '13px', color: t.success }}>
                         {selectedDefect.releaseLocationName || selectedDefect.release_location_name || selectedDefect.releaseStationName || selectedDefect.release_station_name || '(Ubicación no registrada)'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <CheckCircle size={14} color="#16a34a" />
-                      <span style={{ fontSize: '13px', color: '#166534' }}>
+                      <CheckCircle size={14} color={t.success} />
+                      <span style={{ fontSize: '13px', color: t.success }}>
                         {selectedDefect.releasedByName || selectedDefect.released_by_name || 'Inspector desconocido'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', color: '#15803d' }}>
+                      <span style={{ fontSize: '12px', color: t.success }}>
                         {selectedDefect.releasedAt || selectedDefect.released_at
                           ? new Date(selectedDefect.releasedAt || selectedDefect.released_at).toLocaleString()
                           : ''}
                       </span>
                       {(selectedDefect.releaseTimeMinutes || selectedDefect.release_time_minutes) && (
-                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#16a34a', backgroundColor: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: t.success, backgroundColor: `${t.success}20`, padding: '2px 8px', borderRadius: '4px' }}>
                           ⏱ {selectedDefect.releaseTimeMinutes || selectedDefect.release_time_minutes} min
                         </span>
                       )}
@@ -1332,7 +1332,7 @@ const RepairStation = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '12px', color: t.textMuted }}>{language === 'es' ? 'Tiempo abierto' : 'Time open'}</span>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#ef4444' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: t.error }}>
                     {getTimeAgo(selectedDefect.createdAt || selectedDefect.created_at)}
                   </span>
                 </div>
@@ -1373,8 +1373,8 @@ const RepairStation = () => {
                   return (
                     <div style={{
                       padding: '16px', borderRadius: '10px', textAlign: 'center',
-                      backgroundColor: wasSuccess === 'repaired' ? '#eff6ff' : (wasSuccess === 'released' ? '#f0fdf4' : '#fef3c7'),
-                      color: wasSuccess === 'repaired' ? '#3b82f6' : (wasSuccess === 'released' ? '#22c55e' : '#d97706'),
+                      backgroundColor: wasSuccess === 'repaired' ? `${t.info}15` : (wasSuccess === 'released' ? `${t.success}15` : `${t.warning}15`),
+                      color: wasSuccess === 'repaired' ? t.info : (wasSuccess === 'released' ? t.success : t.warning),
                       fontWeight: '600', fontSize: '14px'
                     }}>
                       ✓ {wasSuccess === 'repaired' ? (language === 'es' ? 'Reparado exitosamente' : 'Repaired successfully') :
@@ -1436,7 +1436,7 @@ const RepairStation = () => {
                           onClick={() => handleRelease(selectedDefect)}
                           disabled={isLoading}
                           style={{
-                            flex: 1, padding: '12px', backgroundColor: '#22c55e', color: 'white',
+                            flex: 1, padding: '12px', backgroundColor: t.success, color: 'white',
                             border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px',
                             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                             opacity: isLoading ? 0.7 : 1
@@ -1469,8 +1469,8 @@ const RepairStation = () => {
                             }}
                             disabled={isLoading}
                             style={{
-                              flex: 1, padding: '10px', backgroundColor: '#fef3c7', color: '#92400e',
-                              border: '1px solid #fde68a', borderRadius: '8px', fontWeight: '600', fontSize: '13px',
+                              flex: 1, padding: '10px', backgroundColor: `${t.warning}20`, color: t.warning,
+                              border: `1px solid ${t.warning}30`, borderRadius: '8px', fontWeight: '600', fontSize: '13px',
                               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                               opacity: isLoading ? 0.7 : 1
                             }}
@@ -1490,8 +1490,8 @@ const RepairStation = () => {
                             }}
                             disabled={isLoading}
                             style={{
-                              flex: 1, padding: '10px', backgroundColor: '#fef2f2', color: '#991b1b',
-                              border: '1px solid #fecaca', borderRadius: '8px', fontWeight: '600', fontSize: '13px',
+                              flex: 1, padding: '10px', backgroundColor: `${t.error}15`, color: t.error,
+                              border: `1px solid ${t.error}30`, borderRadius: '8px', fontWeight: '600', fontSize: '13px',
                               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                               opacity: isLoading ? 0.7 : 1
                             }}
@@ -1639,25 +1639,25 @@ const RepairStation = () => {
             maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <AlertTriangle size={32} color="#d97706" />
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#92400e' }}>
+              <AlertTriangle size={32} color={t.warning} />
+              <h3 style={{ margin: 0, fontSize: '18px', color: t.warning }}>
                 {language === 'es' ? 'Campañas MRB Pendientes' : 'Pending MRB Campaigns'}
               </h3>
             </div>
 
-            <p style={{ color: '#78350f', marginBottom: '16px' }}>
+            <p style={{ color: t.warning, marginBottom: '16px' }}>
               {language === 'es'
                 ? 'Esta pieza tiene campañas MRB pendientes de inspección. Debe completar las inspecciones antes de enviar a SCRAP.'
                 : 'This part has pending MRB campaigns. You must complete inspections before sending to SCRAP.'}
             </p>
 
             {mrbPendingCampaigns.length > 0 && (
-              <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+              <div style={{ backgroundColor: `${t.warning}15`, border: `1px solid ${t.warning}30`, borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: t.warning, marginBottom: '8px' }}>
                   {language === 'es' ? 'Campañas pendientes:' : 'Pending campaigns:'}
                 </div>
                 {mrbPendingCampaigns.map((c, i) => (
-                  <div key={i} style={{ fontSize: '13px', color: '#78350f', padding: '4px 0' }}>
+                  <div key={i} style={{ fontSize: '13px', color: t.warning, padding: '4px 0' }}>
                     • {c.campaignNumber || c.campaign_number} - {c.description || c.campaignDescription}
                   </div>
                 ))}
@@ -1672,7 +1672,7 @@ const RepairStation = () => {
                   setMrbPendingCampaigns([]);
                 }}
                 style={{
-                  padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#374151',
+                  padding: '10px 20px', backgroundColor: t.bgPanel, color: t.text,
                   border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer'
                 }}
               >
@@ -1701,7 +1701,7 @@ const RepairStation = () => {
                   }
                 }}
                 style={{
-                  padding: '10px 20px', backgroundColor: '#f59e0b', color: 'white',
+                  padding: '10px 20px', backgroundColor: t.warning, color: 'white',
                   border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '8px'
                 }}
