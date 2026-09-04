@@ -776,6 +776,43 @@ D3MFG.js: 32 literales
 
 ---
 
+---
+
+## Notas Sesión 03-Sep-2026 (cont.)
+
+### ✅ COMPLETADO: Tokenización Hex → Theme Tokens (whitelist: color, backgroundColor, border*)
+
+| Archivo | Cambios | Commit |
+|---------|---------|--------|
+| 8D/_obsolete/ | Carpeta eliminada (0 imports activos) | `d72940e` |
+| ECRChangeRequest.js | ~30 tokens | `b41460d` |
+| ECRImpactAnalysis.js | ~20 tokens (condicionales complejos) | `b41460d` |
+| ECRTeamTab.js | ~15 tokens | `b41460d` |
+| ProductionTab.js | ~50 tokens (stats, modals, badges) | `b623ce1` |
+| DefectConsultTab.js | ~40 tokens (progress, buttons, history) | `b623ce1` |
+| InlineDefectDetailModal.js | ~40 tokens (statusConfig, panels, actions) | `6345c38` |
+| CalibrationEquipmentTab.js | ~20 tokens (badges, stats, history) | `9df3366` |
+| LocationCodesTab.js | ~10 tokens (locationTypes, alerts, badges) | `f5bc0e2` |
+| HomeNotifications.js | ~6 tokens (TYPE_CONFIG → getTypeConfig) | `35b1293` |
+| HomeReminders.js | ~6 tokens (PRIORITY_COLORS → getPriorityColors) | `35b1293` |
+| DefectsListModal.js | ~15 tokens (statusConfig, semaforo) | `e29c202` |
+| HospitalRolesManager.js | ~8 tokens (badges) | `e29c202` |
+| ReleaseModal.js | ~3 tokens (error, btnSubmit) | `e29c202` |
+| RepairModal.js | ~3 tokens (error, btnSubmit) | `e29c202` |
+
+**Total:** ~265 hex → tokens, 8 commits pusheados
+
+### Patrones aplicados:
+- Fallback themes expandidos con tokens semánticos (error/errorBg/errorFg, warning/warningBg/warningFg, etc.)
+- Funciones dinámicas: `getTypeConfig(t)`, `getPriorityColors(t)` para constantes que requieren theme
+- `#fff/#ffffff` → `'white'` (literal)
+- SVG stroke mantiene hex (atributo no-CSS)
+- DATA colors preservados (chart palettes, ProcessFlowBuilder icons)
+
+### PENDIENTE para próxima sesión:
+- ECRClosure.js + resto de pages/ (no revisados en este pase)
+- borderRadius: 2480 instancias en 134 archivos (requiere sesión dedicada)
+
 ### Otros pendientes:
 - Testing formal Auditorías
 - Testing Reportes/Dashboard
