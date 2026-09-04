@@ -1846,7 +1846,7 @@ const MRBCampaignDetail = () => {
                           )}
                           <button
                             onClick={() => setShowQuarantineEdit(v => !v)}
-                            style={{ padding: '6px 12px', backgroundColor: showQuarantineEdit ? '#f59e0b' : t.bgInput, color: showQuarantineEdit ? 'white' : t.text, border: `1px solid ${showQuarantineEdit ? '#f59e0b' : t.border}`, borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                            style={{ padding: '6px 12px', backgroundColor: showQuarantineEdit ? t.warning : t.bgInput, color: showQuarantineEdit ? 'white' : t.text, border: `1px solid ${showQuarantineEdit ? t.warning : t.border}`, borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                           >
                             <Edit3 size={13} /> {showQuarantineEdit ? L.cancel : L.edit}
                           </button>
@@ -1865,16 +1865,16 @@ const MRBCampaignDetail = () => {
                             <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>Inspeccionado</div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '32px', fontWeight: '600', color: qRest > 0 ? '#B00020' : '#22c55e' }}>{qRest}</div>
+                            <div style={{ fontSize: '32px', fontWeight: '600', color: qRest > 0 ? t.error : t.success }}>{qRest}</div>
                             <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>Restante</div>
                           </div>
                           <div style={{ flex: 1, minWidth: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600' }}>
                               <span style={{ color: t.textMuted }}>% Avance</span>
-                              <span style={{ color: qPct >= 100 ? '#22c55e' : t.accent }}>{qPct.toFixed(1)}%</span>
+                              <span style={{ color: qPct >= 100 ? t.success : t.accent }}>{qPct.toFixed(1)}%</span>
                             </div>
                             <div style={{ height: '10px', backgroundColor: t.border, borderRadius: '6px', overflow: 'hidden' }}>
-                              <div style={{ width: `${qPct}%`, height: '100%', backgroundColor: qPct >= 100 ? '#22c55e' : '#f59e0b', borderRadius: '6px', transition: 'width 0.4s ease' }} />
+                              <div style={{ width: `${qPct}%`, height: '100%', backgroundColor: qPct >= 100 ? t.success : t.warning, borderRadius: '6px', transition: 'width 0.4s ease' }} />
                             </div>
                             {/* Location breakdown */}
                             {(dispWarehouse > 0 || dispProcess > 0 || dispTransit > 0 || dispCustomer > 0) && (
@@ -1882,10 +1882,10 @@ const MRBCampaignDetail = () => {
                                 {[
                                   { label: L.warehouse, value: dispWarehouse, color: t.warning, info: false },
                                   { label: L.process,  value: dispProcess,  color: t.warning, info: false },
-                                  { label: L.transit, value: dispTransit,  color: '#9ca3af', info: true },
-                                  { label: L.customer,  value: dispCustomer, color: '#9ca3af', info: true },
+                                  { label: L.transit, value: dispTransit,  color: t.textMuted, info: true },
+                                  { label: L.customer,  value: dispCustomer, color: t.textMuted, info: true },
                                 ].filter(l => l.value > 0).map(loc => (
-                                  <span key={loc.label} style={{ fontSize: '11px', padding: '2px 8px', backgroundColor: loc.info ? '#f3f4f6' : `${loc.color}18`, color: loc.color, borderRadius: '10px', fontWeight: loc.info ? '400' : '600', opacity: loc.info ? 0.7 : 1 }}>
+                                  <span key={loc.label} style={{ fontSize: '11px', padding: '2px 8px', backgroundColor: loc.info ? t.bgPanel : `${loc.color}18`, color: loc.color, borderRadius: '10px', fontWeight: loc.info ? '400' : '600', opacity: loc.info ? 0.7 : 1 }}>
                                     {loc.label}: {loc.value}{loc.info ? ' ℹ' : ''}
                                   </span>
                                 ))}
@@ -1921,7 +1921,7 @@ const MRBCampaignDetail = () => {
                           ))}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <label style={{ fontSize: '11px', color: t.warning, fontWeight: '600', textTransform: 'uppercase' }}>Total</label>
-                            <div style={{ width: '90px', padding: '8px', backgroundColor: t.warningBg, border: '1px solid #f59e0b', borderRadius: '6px', fontSize: '15px', fontWeight: '600', textAlign: 'center', color: t.warningFg }}>
+                            <div style={{ width: '90px', padding: '8px', backgroundColor: t.warningBg, border: `1px solid ${t.warning}`, borderRadius: '6px', fontSize: '15px', fontWeight: '600', textAlign: 'center', color: t.warningFg }}>
                               {qWarehouse + qProcess + qTransit + qCustomer}
                             </div>
                           </div>
@@ -1947,10 +1947,10 @@ const MRBCampaignDetail = () => {
                       { label: L.ok,   value: mrbCase.qtyOk || 0, color: t.success },
                       { label: L.nok,  value: mrbCase.qtyNok || 0, color: t.error },
                       { label: L.rework,      value: mrbCase.qtyRework || 0,    color: t.warning },
-                      { label: L.scrap,       value: mrbCase.qtyScrap || 0,     color: '#ef4444' },
-                      { label: L.return,      value: mrbCase.qtyReturn || 0,    color: '#8b5cf6' },
-                      { label: L.hold,        value: mrbCase.qtyHold || 0,      color: '#6b7280' },
-                      ...(mrbCase.qtyUseAsIs > 0 ? [{ label: L.useAsIs, value: mrbCase.qtyUseAsIs, color: '#065f46' }] : []),
+                      { label: L.scrap,       value: mrbCase.qtyScrap || 0,     color: t.error },
+                      { label: L.return,      value: mrbCase.qtyReturn || 0,    color: t.accent },
+                      { label: L.hold,        value: mrbCase.qtyHold || 0,      color: t.textMuted },
+                      ...(mrbCase.qtyUseAsIs > 0 ? [{ label: L.useAsIs, value: mrbCase.qtyUseAsIs, color: t.success }] : []),
                       { label: L.yield,  value: mrbCase.qtyInspected > 0 ? `${((mrbCase.qtyOk / mrbCase.qtyInspected) * 100).toFixed(1)}%` : '—', color: t.text },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ textAlign: 'center', minWidth: '60px' }}>
@@ -1999,7 +1999,7 @@ const MRBCampaignDetail = () => {
                                 });
                                 loadProgress();
                               }}
-                              style={{ padding: '3px 8px', backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #f87171', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                              style={{ padding: '3px 8px', backgroundColor: t.errorBg, color: t.error, border: `1px solid ${t.error}`, borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
                             >
                               <option value="">⚠ Asignar turno...</option>
                               {shifts.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
@@ -2035,9 +2035,9 @@ const MRBCampaignDetail = () => {
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                           {totalNok > 0 && <span style={{ fontSize: '13px', color: t.error, fontWeight: '600' }}>{totalNok} NOK</span>}
                           {rework > 0 && <span style={{ fontSize: '12px', color: t.warning, fontWeight: '600' }}>⟳ {rework} Rework</span>}
-                          {scrap > 0 && <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: '600' }}>✕ {scrap} Scrap</span>}
-                          {ret > 0 && <span style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: '600' }}>↩ {ret} Dev.</span>}
-                          {hold > 0 && <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>⏸ {hold} Hold</span>}
+                          {scrap > 0 && <span style={{ fontSize: '12px', color: t.error, fontWeight: '600' }}>✕ {scrap} Scrap</span>}
+                          {ret > 0 && <span style={{ fontSize: '12px', color: t.accent, fontWeight: '600' }}>↩ {ret} Dev.</span>}
+                          {hold > 0 && <span style={{ fontSize: '12px', color: t.textMuted, fontWeight: '600' }}>⏸ {hold} Hold</span>}
                           {useAsIs > 0 && <span style={{ fontSize: '12px', color: t.success, fontWeight: '600' }}>✓ {useAsIs} UAI</span>}
                           <button
                             onClick={() => setShiftReport({ shiftId: row.shiftId, date: rawDate, shiftLabel: shiftLabel })}
@@ -2060,7 +2060,7 @@ const MRBCampaignDetail = () => {
                                 href={`${API_URL}${tally.filePath}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: t.warningBg, border: '1px solid #f59e0b', borderRadius: '6px', color: t.warningFg, fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: t.warningBg, border: `1px solid ${t.warning}`, borderRadius: '6px', color: t.warningFg, fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}
                               >
                                 {tally.filename}
                               </a>
@@ -2244,7 +2244,7 @@ const MRBCampaignDetail = () => {
                       {campaignDefects.slice(0, 8).map(d => (
                         <span key={d.defectTypeId} style={{
                           padding: '3px 8px',
-                          backgroundColor: d.categoryColor ? `${d.categoryColor}20` : '#f3f4f6',
+                          backgroundColor: d.categoryColor ? `${d.categoryColor}20` : t.bgPanel,
                           borderRadius: '4px',
                           fontSize: '11px',
                           color: d.categoryColor || t.text
@@ -2253,7 +2253,7 @@ const MRBCampaignDetail = () => {
                         </span>
                       ))}
                       {campaignDefects.length > 8 && (
-                        <span style={{ padding: '3px 8px', backgroundColor: '#f3f4f6', borderRadius: '4px', fontSize: '11px', color: t.textMuted }}>
+                        <span style={{ padding: '3px 8px', backgroundColor: t.bgPanel, borderRadius: '4px', fontSize: '11px', color: t.textMuted }}>
                           +{campaignDefects.length - 8} más
                         </span>
                       )}
@@ -2299,7 +2299,7 @@ const MRBCampaignDetail = () => {
 
                   {/* Personnel cost by shift/day */}
                   <div>
-                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#C77700', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: t.warning, textTransform: 'uppercase', marginBottom: '6px' }}>
                       Costo de Personal — ${costSummary.totals.personnel.toFixed(2)} total
                       <span style={{ fontSize: '10px', fontWeight: '400', color: t.textMuted, marginLeft: '8px' }}>
                         Insp. ${parseFloat(mrbCase.inspectorUnitCost || 0).toFixed(2)}/hr · Sup. ${parseFloat(mrbCase.supervisorUnitCost || 0).toFixed(2)}/hr
@@ -2340,7 +2340,7 @@ const MRBCampaignDetail = () => {
             {mrbCase.description && (
               <div style={{ marginTop: '16px' }}>
                 <div style={styles.infoLabel}>Descripción del Defecto</div>
-                <div style={{ color: t.text, fontSize: '14px', whiteSpace: 'pre-wrap', backgroundColor: t.bg, padding: '10px', borderRadius: '6px', borderLeft: '3px solid #C77700' }}>
+                <div style={{ color: t.text, fontSize: '14px', whiteSpace: 'pre-wrap', backgroundColor: t.bg, padding: '10px', borderRadius: '6px', borderLeft: `3px solid ${t.warning}` }}>
                   {mrbCase.description}
                 </div>
               </div>
@@ -2357,7 +2357,7 @@ const MRBCampaignDetail = () => {
               {mrbCase.inspectionCriteria && (
                 <div style={{ marginBottom: mrbCase.dispositionInstructions ? '16px' : 0 }}>
                   <div style={styles.infoLabel}>Criterio de Inspección</div>
-                  <div style={{ backgroundColor: '#0072CE12', border: '1px solid #0072CE40', borderRadius: '8px', padding: '12px', color: t.text, fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                  <div style={{ backgroundColor: `${t.info}12`, border: `1px solid ${t.info}40`, borderRadius: '8px', padding: '12px', color: t.text, fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
                     {mrbCase.inspectionCriteria}
                   </div>
                 </div>
@@ -2365,7 +2365,7 @@ const MRBCampaignDetail = () => {
               {mrbCase.dispositionInstructions && (
                 <div>
                   <div style={styles.infoLabel}>Instrucciones de Disposición</div>
-                  <div style={{ backgroundColor: '#7c3aed12', border: '1px solid #7c3aed40', borderRadius: '8px', padding: '12px', color: t.text, fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                  <div style={{ backgroundColor: `${t.accent}12`, border: `1px solid ${t.accent}40`, borderRadius: '8px', padding: '12px', color: t.text, fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
                     {mrbCase.dispositionInstructions}
                   </div>
                 </div>
@@ -2433,14 +2433,14 @@ const MRBCampaignDetail = () => {
                 alignItems: 'center',
                 gap: '10px',
                 padding: '12px 20px',
-                backgroundColor: '#F59E0B22',
-                border: '2px dashed #F59E0B',
+                backgroundColor: `${t.warning}22`,
+                border: `2px dashed ${t.warning}`,
                 borderRadius: '8px'
               }}>
-                <Package size={24} color="#F59E0B" />
+                <Package size={24} color={t.warning} />
                 <div>
                   <div style={{ fontSize: '11px', color: t.textDim, textTransform: 'uppercase' }}>Incoming Inspection</div>
-                  <div style={{ fontSize: '14px', color: '#F59E0B', fontWeight: '600' }}>Sin 8D vinculado — pendiente de emisión</div>
+                  <div style={{ fontSize: '14px', color: t.warning, fontWeight: '600' }}>Sin 8D vinculado — pendiente de emisión</div>
                 </div>
               </div>
             ) : mrbCase.sourceType ? (
@@ -2450,8 +2450,8 @@ const MRBCampaignDetail = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '12px 20px',
-                  backgroundColor: mrbCase.sourceType === 'QAR' ? '#C7770022' : '#0072CE22',
-                  border: `2px solid ${mrbCase.sourceType === 'QAR' ? '#C77700' : t.accent}`,
+                  backgroundColor: mrbCase.sourceType === 'QAR' ? `${t.warning}22` : `${t.info}22`,
+                  border: `2px solid ${mrbCase.sourceType === 'QAR' ? t.warning : t.accent}`,
                   borderRadius: '8px',
                   cursor: (mrbCase.sourceType === 'QAR' && mrbCase.sourceQarId) || (mrbCase.sourceType !== 'QAR' && mrbCase.source8dId) ? 'pointer' : 'default'
                 }}
@@ -2464,7 +2464,7 @@ const MRBCampaignDetail = () => {
                 }}
                 >
                   {mrbCase.sourceType === 'QAR' ? (
-                    <AlertTriangle size={24} color="#C77700" />
+                    <AlertTriangle size={24} color={t.warning} />
                   ) : (
                     <Package size={24} color={t.accent} />
                   )}
@@ -2475,7 +2475,7 @@ const MRBCampaignDetail = () => {
                     <div style={{
                       fontSize: '16px',
                       fontWeight: '600',
-                      color: mrbCase.sourceType === 'QAR' ? '#C77700' : t.accent,
+                      color: mrbCase.sourceType === 'QAR' ? t.warning : t.accent,
                       fontFamily: "'IBM Plex Mono', monospace"
                     }}>
                       {mrbCase.sourceQarFolio || mrbCase.source8dFolio || '-'}
@@ -2491,8 +2491,8 @@ const MRBCampaignDetail = () => {
                     alignItems: 'center',
                     gap: '10px',
                     padding: '12px 16px',
-                    backgroundColor: '#0072CE22',
-                    border: '1px solid #0072CE',
+                    backgroundColor: `${t.info}22`,
+                    border: `1px solid ${t.info}`,
                     borderRadius: '8px'
                   }}>
                     <AlertTriangle size={18} color={t.info} />
@@ -2532,7 +2532,7 @@ const MRBCampaignDetail = () => {
               <div style={{ color: t.textMuted, fontSize: '14px' }}>
                 Sin origen vinculado
                 {mrbCase.status === 'ABIERTA' && (
-                  <span style={{ marginLeft: '8px', color: '#C77700' }}>
+                  <span style={{ marginLeft: '8px', color: t.warning }}>
                     - Haz clic en "Cambiar Origen" para vincular a un 8D
                   </span>
                 )}
@@ -2596,7 +2596,7 @@ const MRBCampaignDetail = () => {
               <div style={styles.card}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={styles.cardTitle}>
-                    <AlertTriangle size={18} color="#C77700" />
+                    <AlertTriangle size={18} color={t.warning} />
                     Resumen de Defectos — Campaña Completa
                     <span style={{ fontSize: '12px', color: t.textMuted, fontWeight: '400', marginLeft: '8px' }}>
                       {defects.length} registros · {totalQty} piezas NOK
@@ -2604,7 +2604,7 @@ const MRBCampaignDetail = () => {
                   </div>
                   <button
                     onClick={handleExcelExport}
-                    style={{ padding: '6px 14px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    style={{ padding: '6px 14px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     ↓ Exportar Excel
                   </button>
@@ -2627,7 +2627,7 @@ const MRBCampaignDetail = () => {
                         </td>
                         <td style={{ ...styles.td, width: '140px' }}>
                           <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${(row.qty / paretoMax) * 100}%`, height: '100%', backgroundColor: i === 0 ? '#B00020' : '#f59e0b', borderRadius: '4px' }} />
+                            <div style={{ width: `${(row.qty / paretoMax) * 100}%`, height: '100%', backgroundColor: i === 0 ? t.error : t.warning, borderRadius: '4px' }} />
                           </div>
                         </td>
                       </tr>
@@ -2644,7 +2644,7 @@ const MRBCampaignDetail = () => {
               <Send size={18} color={t.accent} />
               Disposición del Material
               {mrbCase.status === 'ABIERTA' && (
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#C77700', fontWeight: '500' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: t.warning, fontWeight: '500' }}>
                   PENDIENTE
                 </span>
               )}
@@ -2662,8 +2662,8 @@ const MRBCampaignDetail = () => {
 
             {/* BORRADOR banner */}
             {isDraft && (
-              <div style={{ backgroundColor: '#6b728015', border: '1px solid #6b7280', borderRadius: '8px', padding: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <FileText size={24} color="#6b7280" />
+              <div style={{ backgroundColor: `${t.textMuted}15`, border: `1px solid ${t.textMuted}`, borderRadius: '8px', padding: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <FileText size={24} color={t.textMuted} />
                 <div style={{ flex: 1 }}>
                   <div style={{ color: t.text, fontWeight: '600', fontSize: '14px' }}>Este MRB está en Borrador</div>
                   <div style={{ color: t.textDim, fontSize: '12px', marginTop: '2px' }}>No ha sido notificado a los destinatarios. Publica la campaña cuando estés listo.</div>
@@ -2776,13 +2776,13 @@ const MRBCampaignDetail = () => {
           {/* ====== VALIDATION SECTION ====== */}
           <div style={styles.card}>
             <div style={styles.cardTitle}>
-              <CheckCircle size={18} color="#22c55e" />
+              <CheckCircle size={18} color={t.success} />
               Validación
             </div>
 
             {mrbCase.status === 'CERRADA' ? (
               <div style={styles.closedBanner}>
-                <CheckCircle size={40} color="#22c55e" style={{ marginBottom: '12px' }} />
+                <CheckCircle size={40} color={t.success} style={{ marginBottom: '12px' }} />
                 <div style={{ color: t.success, fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
                   Caso MRB Cerrado y Validado
                 </div>
@@ -2798,8 +2798,8 @@ const MRBCampaignDetail = () => {
                   Revisa la respuesta proporcionada y decide si aprobar el cierre o rechazar para corrección.
                 </p>
                 {requiresEarlyCloseReason && (
-                  <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#C7770015', border: '1px solid #C77700', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#C77700', marginBottom: '8px' }}>
+                  <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: `${t.warning}15`, border: `1px solid ${t.warning}`, borderRadius: '8px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: t.warning, marginBottom: '8px' }}>
                       ⚠ Inventario incompleto — se requiere motivo de cierre anticipado
                     </div>
                     <textarea
@@ -2863,8 +2863,8 @@ const MRBCampaignDetail = () => {
                 {responseRecipients.map((r) => (
                   <span key={r.id} style={{
                     ...styles.recipientChip,
-                    backgroundColor: r.acknowledgedAt ? '#22c55e33' : '#C7770033',
-                    color: r.acknowledgedAt ? '#22c55e' : '#C77700',
+                    backgroundColor: r.acknowledgedAt ? `${t.success}33` : `${t.warning}33`,
+                    color: r.acknowledgedAt ? t.success : t.warning,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px'
@@ -3067,8 +3067,8 @@ const MRBCampaignDetail = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: attachments.length > 0 ? '16px' : 0 }}>
                   <div>
                     <div style={{
-                      backgroundColor: '#B0002015',
-                      border: '2px solid #B00020',
+                      backgroundColor: `${t.error}15`,
+                      border: `2px solid ${t.error}`,
                       borderRadius: '8px',
                       overflow: 'hidden'
                     }}>
@@ -3090,8 +3090,8 @@ const MRBCampaignDetail = () => {
                   </div>
                   <div>
                     <div style={{
-                      backgroundColor: '#22c55e15',
-                      border: '2px solid #22c55e',
+                      backgroundColor: `${t.success}15`,
+                      border: `2px solid ${t.success}`,
                       borderRadius: '8px',
                       overflow: 'hidden'
                     }}>
@@ -3170,9 +3170,9 @@ const MRBCampaignDetail = () => {
               {comments.map((c, idx) => {
                 const dotColor =
                   c.commentType === 'status_change' ? t.accent :
-                  c.commentType === 'response' ? '#2E7D32' :
-                  c.commentType === 'validation' ? '#22c55e' :
-                  c.commentType === 'rejection' ? '#B00020' : t.textDim;
+                  c.commentType === 'response' ? t.success :
+                  c.commentType === 'validation' ? t.success :
+                  c.commentType === 'rejection' ? t.error : t.textDim;
 
                 return (
                   <div key={idx} style={styles.timelineItem}>
@@ -3216,13 +3216,13 @@ const MRBCampaignDetail = () => {
           <div>
             {/* Summary Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ ...styles.card, borderLeft: '4px solid #0072CE', padding: '16px' }}>
+              <div style={{ ...styles.card, borderLeft: `4px solid ${t.info}`, padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Total Seriales</div>
-                <div style={{ fontSize: '28px', fontWeight: '600', color: '#0072CE' }}>{affectedSerialsSummary.total}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: t.info }}>{affectedSerialsSummary.total}</div>
               </div>
-              <div style={{ ...styles.card, borderLeft: '4px solid #16a34a', padding: '16px' }}>
+              <div style={{ ...styles.card, borderLeft: `4px solid ${t.success}`, padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Inspeccionados</div>
-                <div style={{ fontSize: '28px', fontWeight: '600', color: '#16a34a' }}>{affectedSerialsSummary.inspected}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: t.success }}>{affectedSerialsSummary.inspected}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.inspected / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
               </div>
               <div style={{ ...styles.card, borderLeft: `4px solid ${t.warning}`, padding: '16px' }}>
@@ -3230,9 +3230,9 @@ const MRBCampaignDetail = () => {
                 <div style={{ fontSize: '28px', fontWeight: '600', color: t.warning }}>{affectedSerialsSummary.pending}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.pending / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
               </div>
-              <div style={{ ...styles.card, borderLeft: '4px solid #8b5cf6', padding: '16px' }}>
+              <div style={{ ...styles.card, borderLeft: `4px solid ${t.accent}`, padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>OK</div>
-                <div style={{ fontSize: '28px', fontWeight: '600', color: '#8b5cf6' }}>{affectedSerials.filter(s => s.inspectionResult === 'OK').length}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: t.accent }}>{affectedSerials.filter(s => s.inspectionResult === 'OK').length}</div>
               </div>
             </div>
 
@@ -3275,7 +3275,7 @@ const MRBCampaignDetail = () => {
                             const comment = roundComments[roundNum] || '';
                             const shortComment = comment.length > 15 ? comment.substring(0, 15) + '…' : comment;
                             return (
-                              <th key={`round-${roundNum}`} style={{ padding: '4px 6px', textAlign: 'center', fontWeight: '600', color: '#2563eb', fontSize: '10px', backgroundColor: '#eff6ff', minWidth: '140px', borderBottom: `2px solid ${t.border}` }} title={comment}>
+                              <th key={`round-${roundNum}`} style={{ padding: '4px 6px', textAlign: 'center', fontWeight: '600', color: t.info, fontSize: '10px', backgroundColor: `${t.info}15`, minWidth: '140px', borderBottom: `2px solid ${t.border}` }} title={comment}>
                                 <div>R{roundNum}</div>
                                 <div style={{ fontSize: '8px', color: '#666', fontWeight: '400', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px', margin: '0 auto' }}>{shortComment || '—'}</div>
                               </th>
@@ -3299,7 +3299,7 @@ const MRBCampaignDetail = () => {
                                 <td style={{ position: 'sticky', left: 0, zIndex: 10, padding: '6px 10px', fontWeight: '600', fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>
                                   {serial.serialNumber}
                                   {serial.inspected
-                                    ? <span style={{ color: '#16a34a', marginLeft: '4px' }}>✓</span>
+                                    ? <span style={{ color: t.success, marginLeft: '4px' }}>✓</span>
                                     : <span style={{ color: t.warning, marginLeft: '4px' }}>⏳</span>}
                                 </td>
                                 <td style={{ position: 'sticky', left: '130px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>{serial.partNumber || '—'}</td>
@@ -3313,8 +3313,8 @@ const MRBCampaignDetail = () => {
                                     return <td key={`r-${roundNum}`} style={{ padding: '6px', textAlign: 'center', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, backgroundColor: rowBg }}>—</td>;
                                   }
                                   const isOk = roundData.result === 'OK';
-                                  const bgColor = isOk ? '#dcfce7' : '#fee2e2';
-                                  const textColor = isOk ? '#16a34a' : '#ef4444';
+                                  const bgColor = isOk ? `${t.success}20` : `${t.error}20`;
+                                  const textColor = isOk ? t.success : t.error;
                                   const dateStr = roundData.inspectedAt ? new Date(roundData.inspectedAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '';
                                   const inspectorShort = roundData.inspectorName ? roundData.inspectorName.split(' ')[0].substring(0, 6) : '';
                                   return (
@@ -3336,7 +3336,7 @@ const MRBCampaignDetail = () => {
                               {normales.map((s, i) => renderRow(s, i))}
                               {adicionales.length > 0 && (
                                 <tr>
-                                  <td colSpan={3 + Math.max(maxInspectionRound, 1)} style={{ padding: '8px 10px', backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '11px', fontWeight: '600', textAlign: 'center', borderBottom: `2px solid #3b82f6` }}>
+                                  <td colSpan={3 + Math.max(maxInspectionRound, 1)} style={{ padding: '8px 10px', backgroundColor: `${t.info}20`, color: t.info, fontSize: '11px', fontWeight: '600', textAlign: 'center', borderBottom: `2px solid ${t.info}` }}>
                                     — Adicionales ({adicionales.length}) —
                                   </td>
                                 </tr>
@@ -3435,8 +3435,8 @@ const MRBCampaignDetail = () => {
                           style={{
                             padding: '10px 12px',
                             borderRadius: '6px',
-                            border: `2px solid ${isSelected ? '#7c3aed' : t.border}`,
-                            backgroundColor: isSelected ? '#7c3aed15' : t.bgInput,
+                            border: `2px solid ${isSelected ? t.accent : t.border}`,
+                            backgroundColor: isSelected ? `${t.accent}15` : t.bgInput,
                             cursor: 'pointer',
                             transition: 'all 0.15s ease'
                           }}
@@ -3445,8 +3445,8 @@ const MRBCampaignDetail = () => {
                             <div style={{
                               width: '18px', height: '18px',
                               borderRadius: '4px',
-                              border: `2px solid ${isSelected ? '#7c3aed' : t.border}`,
-                              backgroundColor: isSelected ? '#7c3aed' : 'transparent',
+                              border: `2px solid ${isSelected ? t.accent : t.border}`,
+                              backgroundColor: isSelected ? t.accent : 'transparent',
                               display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
                               {isSelected && <Check size={12} color="white" />}
@@ -3566,7 +3566,7 @@ const MRBCampaignDetail = () => {
                   style={{
                     flex: 1,
                     padding: '14px',
-                    backgroundColor: sourceType === '8D' ? '#0072CE22' : t.bg,
+                    backgroundColor: sourceType === '8D' ? `${t.info}22` : t.bg,
                     border: `2px solid ${sourceType === '8D' ? t.accent : t.border}`,
                     borderRadius: '8px',
                     cursor: 'pointer',
@@ -3643,7 +3643,7 @@ const MRBCampaignDetail = () => {
                     onClick={() => setSelectedNewSource(source)}
                     style={{
                       padding: '12px 16px',
-                      backgroundColor: selectedNewSource?.id === source.id ? '#0072CE22' : t.bg,
+                      backgroundColor: selectedNewSource?.id === source.id ? `${t.info}22` : t.bg,
                       border: `2px solid ${selectedNewSource?.id === source.id ? t.accent : 'transparent'}`,
                       borderRadius: '8px',
                       marginBottom: '8px',
@@ -3654,9 +3654,9 @@ const MRBCampaignDetail = () => {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '14px' }}>{source.folio}</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: source.status === 'completed' ? '#22c55e33' : '#C7770033', color: source.status === 'completed' ? '#22c55e' : '#C77700' }}>{source.status}</span>
+                          <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: source.status === 'completed' ? `${t.success}33` : `${t.warning}33`, color: source.status === 'completed' ? t.success : t.warning }}>{source.status}</span>
                           {source.mrbCampaigns && source.mrbCampaigns.map((mc, mi) => {
-                            const mrbColor = mc.status === 'CERRADA' ? { bg: '#22c55e22', color: '#16a34a' } : mc.status === 'BORRADOR' ? { bg: '#6b728022', color: '#6b7280' } : { bg: '#f59e0b22', color: '#b45309' };
+                            const mrbColor = mc.status === 'CERRADA' ? { bg: `${t.success}22`, color: t.success } : mc.status === 'BORRADOR' ? { bg: `${t.textMuted}22`, color: t.textMuted } : { bg: `${t.warning}22`, color: t.warning };
                             return <span key={mi} style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: mrbColor.bg, color: mrbColor.color }}>MRB {mc.campaignNumber} · {mc.status}</span>;
                           })}
                         </div>
@@ -3695,7 +3695,7 @@ const MRBCampaignDetail = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button onClick={() => setShowSourceModal(false)} style={{ padding: '10px 16px', backgroundColor: t.bgInput, color: t.text, border: `1px solid ${t.border}`, borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>Cancelar</button>
-                  <button onClick={handleChangeSource} disabled={submitting} style={{ padding: '10px 20px', backgroundColor: '#0072CE', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: submitting ? 0.7 : 1 }}>
+                  <button onClick={handleChangeSource} disabled={submitting} style={{ padding: '10px 20px', backgroundColor: t.info, color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: submitting ? 0.7 : 1 }}>
                     ✓ {submitting ? 'Vinculando...' : 'Adoptar seleccionados'}
                   </button>
                 </div>
@@ -3708,7 +3708,7 @@ const MRBCampaignDetail = () => {
                 <span style={{ color: t.textDim, fontSize: '13px' }}>{selectedNewSource ? `Seleccionado: ${selectedNewSource.folio}` : 'Ninguno seleccionado'}</span>
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button onClick={() => setShowSourceModal(false)} style={{ padding: '10px 20px', backgroundColor: t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
-                  <button onClick={handleChangeSource} disabled={!selectedNewSource || submitting} style={{ padding: '10px 20px', backgroundColor: selectedNewSource ? '#2E7D32' : t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: selectedNewSource ? 'pointer' : 'not-allowed', opacity: submitting ? 0.7 : 1 }}>
+                  <button onClick={handleChangeSource} disabled={!selectedNewSource || submitting} style={{ padding: '10px 20px', backgroundColor: selectedNewSource ? t.success : t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: selectedNewSource ? 'pointer' : 'not-allowed', opacity: submitting ? 0.7 : 1 }}>
                     {submitting ? L.saving : L.saveChange}
                   </button>
                 </div>
@@ -3771,7 +3771,7 @@ const MRBCampaignDetail = () => {
                     onClick={() => setSelectedPartToAdd(part)}
                     style={{
                       padding: '12px 16px',
-                      backgroundColor: selectedPartToAdd?.id === part.id ? '#0072CE22' : t.bg,
+                      backgroundColor: selectedPartToAdd?.id === part.id ? `${t.info}22` : t.bg,
                       border: `2px solid ${selectedPartToAdd?.id === part.id ? t.accent : 'transparent'}`,
                       borderRadius: '8px',
                       marginBottom: '8px',
@@ -3786,7 +3786,7 @@ const MRBCampaignDetail = () => {
             </div>
             <div style={{ padding: '16px 20px', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button onClick={() => setShowAddPartModal(false)} style={{ padding: '10px 20px', backgroundColor: t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={handleAddPart} disabled={!selectedPartToAdd || addingPart} style={{ padding: '10px 20px', backgroundColor: selectedPartToAdd ? '#2E7D32' : t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: selectedPartToAdd ? 'pointer' : 'not-allowed', opacity: addingPart ? 0.7 : 1 }}>
+              <button onClick={handleAddPart} disabled={!selectedPartToAdd || addingPart} style={{ padding: '10px 20px', backgroundColor: selectedPartToAdd ? t.success : t.textMuted, color: 'white', border: 'none', borderRadius: '6px', cursor: selectedPartToAdd ? 'pointer' : 'not-allowed', opacity: addingPart ? 0.7 : 1 }}>
                 {addingPart ? 'Agregando...' : 'Agregar Parte'}
               </button>
             </div>
@@ -4049,7 +4049,7 @@ const MRBCampaignDetail = () => {
                           disabled={savingSerials || selectedSearchSerials.size === 0}
                           style={{
                             padding: '8px 16px',
-                            backgroundColor: selectedSearchSerials.size === 0 ? t.textDim : '#16a34a',
+                            backgroundColor: selectedSearchSerials.size === 0 ? t.textDim : t.success,
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
@@ -4212,7 +4212,7 @@ const MRBCampaignDetail = () => {
                     disabled={savingSerials || manualSerials.every(s => !s.serial.trim() || !s.partId)}
                     style={{
                       padding: '8px 20px',
-                      backgroundColor: '#16a34a',
+                      backgroundColor: t.success,
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
@@ -4250,9 +4250,9 @@ const MRBCampaignDetail = () => {
                           onClick={handleClearAllSerials}
                           style={{
                             padding: '6px 12px',
-                            backgroundColor: '#B0002022',
+                            backgroundColor: `${t.error}22`,
                             color: t.error,
-                            border: '1px solid #B00020',
+                            border: `1px solid ${t.error}`,
                             borderRadius: '6px',
                             cursor: 'pointer',
                             fontSize: '11px',
@@ -4284,13 +4284,13 @@ const MRBCampaignDetail = () => {
                                   borderRadius: '4px',
                                   fontSize: '10px',
                                   fontWeight: '600',
-                                  backgroundColor: serial.inspectionResult === 'OK' ? '#22c55e22' : serial.inspectionResult === 'NOK' ? '#B0002022' : '#f59e0b22',
-                                  color: serial.inspectionResult === 'OK' ? '#16a34a' : serial.inspectionResult === 'NOK' ? '#B00020' : '#b45309'
+                                  backgroundColor: serial.inspectionResult === 'OK' ? `${t.success}22` : serial.inspectionResult === 'NOK' ? `${t.error}22` : `${t.warning}22`,
+                                  color: serial.inspectionResult === 'OK' ? t.success : serial.inspectionResult === 'NOK' ? t.error : t.warning
                                 }}>
                                   {serial.inspectionResult}
                                 </span>
                               ) : (
-                                <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: '#6b728022', color: '#6b7280' }}>
+                                <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: `${t.textMuted}22`, color: t.textMuted }}>
                                   Pendiente
                                 </span>
                               )}
