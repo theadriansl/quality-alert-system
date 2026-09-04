@@ -499,8 +499,8 @@ const AuditAuditors = () => {
                     {auditor.fromRole && (
                       <span style={{
                         fontSize: '10px',
-                        color: '#8b5cf6',
-                        backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                        color: t.accent,
+                        backgroundColor: t.accentBg,
                         padding: '2px 6px',
                         borderRadius: '4px',
                         marginLeft: '8px'
@@ -600,7 +600,7 @@ const AuditAuditors = () => {
                     <td style={styles.td}>
                       <div style={{ fontWeight: '500' }}>
                         {auditor.firstName} {auditor.lastName}
-                        {auditor.fromRole && <span style={{ fontSize: '10px', color: '#8b5cf6', marginLeft: '6px' }}>({L.role})</span>}
+                        {auditor.fromRole && <span style={{ fontSize: '10px', color: t.accent, marginLeft: '6px' }}>({L.role})</span>}
                       </div>
                     </td>
                     <td style={styles.td}>{auditor.department || '-'}</td>

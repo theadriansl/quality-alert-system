@@ -554,7 +554,7 @@ const AuditRequests = () => {
                     </span>
                   )}
                   {request.totalRejections > 0 && (
-                    <span style={{ ...styles.badge, backgroundColor: '#fae8ff', color: '#a21caf' }}>
+                    <span style={{ ...styles.badge, backgroundColor: t.accentBg, color: t.accent }}>
                        {request.totalRejections} {L.rejections}{request.totalRejections > 1 ? 's' : ''}
                     </span>
                   )}
@@ -676,13 +676,13 @@ const AuditRequests = () => {
                       <tr>
                         <th style={{ ...styles.th, width: '100px' }}>{L.category}</th>
                         <th style={{ ...styles.th, width: '200px' }}>{L.checkItem}</th>
-                        <th style={{ ...styles.th, width: '150px', backgroundColor: '#eff6ff' }}>{L.leaderNotes}</th>
+                        <th style={{ ...styles.th, width: '150px', backgroundColor: t.infoBg }}>{L.leaderNotes}</th>
                         <th style={{ ...styles.th, width: '90px' }}>{L.dueDate}</th>
                         <th style={{ ...styles.th, width: '200px' }}>{L.auditorComments}</th>
                         <th style={{ ...styles.th, width: '100px' }}>{L.judgment}</th>
                         <th style={{ ...styles.th, width: '80px' }}>{L.completed}</th>
                         <th style={{ ...styles.th, width: '120px' }}>{L.validatedBy}</th>
-                        <th style={{ ...styles.th, width: '70px', backgroundColor: '#fef9c3' }}>{L.round}</th>
+                        <th style={{ ...styles.th, width: '70px', backgroundColor: t.warningBg }}>{L.round}</th>
                         <th style={{ ...styles.th, width: '70px' }}>{L.history}</th>
                       </tr>
                     </thead>
@@ -710,14 +710,14 @@ const AuditRequests = () => {
                               </div>
                             </td>
                             {/* Leader Notes/Comments */}
-                            <td style={{ ...styles.td, backgroundColor: '#f0f7ff' }}>
+                            <td style={{ ...styles.td, backgroundColor: t.infoBg }}>
                               {item.comments ? (
                                 <div style={{
-                                  backgroundColor: '#dbeafe',
+                                  backgroundColor: t.infoBg,
                                   padding: '8px',
                                   borderRadius: '6px',
                                   fontSize: '12px',
-                                  color: '#1e40af',
+                                  color: t.info,
                                   fontStyle: 'italic'
                                 }}>
                                   {item.comments}
@@ -801,7 +801,7 @@ const AuditRequests = () => {
                                 </div>
                               )}
                             </td>
-                            <td style={{ ...styles.td, textAlign: 'center', backgroundColor: '#fefce8' }}>
+                            <td style={{ ...styles.td, textAlign: 'center', backgroundColor: t.warningBg }}>
                               <span style={{
                                 padding: '4px 10px',
                                 borderRadius: '12px',
@@ -818,7 +818,7 @@ const AuditRequests = () => {
                                 onClick={(e) => { e.stopPropagation(); openHistoryModal(item); }}
                                 style={{
                                   padding: '6px 10px',
-                                  backgroundColor: '#8b5cf6',
+                                  backgroundColor: t.accent,
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '6px',
@@ -876,7 +876,7 @@ const AuditRequests = () => {
             {/* Header */}
             <div style={{
               ...styles.modalHeader,
-              backgroundColor: '#8b5cf6',
+              backgroundColor: t.accent,
               color: 'white'
             }}>
               <span style={{ fontSize: '18px', fontWeight: '600' }}>

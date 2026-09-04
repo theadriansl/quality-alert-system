@@ -592,7 +592,7 @@ const AuditExecute = () => {
       position: 'fixed',
       top: '100px',
       right: '20px',
-      backgroundColor: '#fffbeb',
+      backgroundColor: t.warningBg,
       border: `1px solid ${t.warning}`,
       borderRadius: '12px',
       padding: '16px',
@@ -1044,7 +1044,7 @@ const AuditExecute = () => {
                     <div
                       style={{
                         ...styles.resultBadge,
-                        backgroundColor: resultOption ? getResultColor(resultOption.colorKey) : '#ccc'
+                        backgroundColor: resultOption ? getResultColor(resultOption.colorKey) : t.border
                       }}
                       onClick={() => {
                         // Allow re-editing NCs

@@ -657,15 +657,15 @@ const ClientsList = () => {
       {/* Read-only banner */}
       {readOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          borderBottom: '2px solid #C77700',
+          backgroundColor: t.warningBg,
+          borderBottom: `2px solid ${t.warning}`,
           padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
         }}>
           <span style={{ fontSize: '18px' }}></span>
-          <span style={{ color: '#92400e', fontWeight: '600', fontSize: '14px' }}>
+          <span style={{ color: t.warningFg, fontWeight: '600', fontSize: '14px' }}>
             {L.readOnlyMode}
           </span>
         </div>
@@ -693,7 +693,7 @@ const ClientsList = () => {
               alignItems: 'center',
               gap: '12px'
             }}>
-              <Building2 size={32} color="#0072CE" />
+              <Building2 size={32} color={t.info} />
               {L.title}
             </h1>
             <p style={{
@@ -738,7 +738,7 @@ const ClientsList = () => {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '12px 20px',
-                backgroundColor: '#8b5cf6',
+                backgroundColor: t.accent,
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -748,8 +748,8 @@ const ClientsList = () => {
                 transition: 'background-color 0.2s',
                 opacity: loadingBOM ? 0.6 : 1
               }}
-              onMouseEnter={(e) => !loadingBOM && (e.target.style.backgroundColor = '#7c3aed')}
-              onMouseLeave={(e) => !loadingBOM && (e.target.style.backgroundColor = '#8b5cf6')}
+              onMouseEnter={(e) => !loadingBOM && (e.target.style.backgroundColor = t.accent)}
+              onMouseLeave={(e) => !loadingBOM && (e.target.style.backgroundColor = t.accent)}
             >
               <Package size={16} />
               {loadingBOM ? L.loading : L.globalBom}
@@ -762,7 +762,7 @@ const ClientsList = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '12px 20px',
-                  backgroundColor: '#C77700',
+                  backgroundColor: t.warning,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -771,8 +771,8 @@ const ClientsList = () => {
                   cursor: 'pointer',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#C77700'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#C77700'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = t.warning}
+                onMouseLeave={(e) => e.target.style.backgroundColor = t.warning}
               >
                 <Settings size={16} />
                 {L.configBom}
@@ -785,7 +785,7 @@ const ClientsList = () => {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '12px 20px',
-                backgroundColor: '#2E7D32',
+                backgroundColor: t.success,
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -794,8 +794,8 @@ const ClientsList = () => {
                 cursor: 'pointer',
                 transition: 'background-color 0.2s'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#2E7D32'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#2E7D32'}
+              onMouseEnter={(e) => e.target.style.backgroundColor = t.success}
+              onMouseLeave={(e) => e.target.style.backgroundColor = t.success}
             >
               <Download size={16} />
               {L.excelTemplate}
@@ -809,7 +809,7 @@ const ClientsList = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '12px 20px',
-                  backgroundColor: importing ? '#9ca3af' : '#8b5cf6',
+                  backgroundColor: importing ? t.textMuted : t.accent,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -818,8 +818,8 @@ const ClientsList = () => {
                   cursor: importing ? 'not-allowed' : 'pointer',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => !importing && (e.target.style.backgroundColor = '#7c3aed')}
-                onMouseLeave={(e) => !importing && (e.target.style.backgroundColor = '#8b5cf6')}
+                onMouseEnter={(e) => !importing && (e.target.style.backgroundColor = t.accent)}
+                onMouseLeave={(e) => !importing && (e.target.style.backgroundColor = t.accent)}
               >
                 <Upload size={16} />
                 {importing ? L.importing : L.importExcel}
@@ -895,7 +895,7 @@ const ClientsList = () => {
             <div style={{ fontSize: '14px', color: t.textMuted, marginBottom: '8px' }}>
               {L.active}
             </div>
-            <div style={{ fontSize: '32px', fontWeight: '600', color: '#2E7D32' }}>
+            <div style={{ fontSize: '32px', fontWeight: '600', color: t.success }}>
               {stats.active}
             </div>
           </div>
@@ -978,7 +978,7 @@ const ClientsList = () => {
             <div style={{
               padding: '48px',
               textAlign: 'center',
-              color: '#ef4444'
+              color: t.error
             }}>
               {error}
             </div>
@@ -1093,8 +1093,8 @@ const ClientsList = () => {
                             alignItems: 'center',
                             gap: '6px',
                             padding: '4px 12px',
-                            backgroundColor: '#d1fae5',
-                            color: '#065f46',
+                            backgroundColor: t.successBg,
+                            color: t.successFg,
                             borderRadius: '12px',
                             fontSize: '12px',
                             fontWeight: '500'
@@ -1108,8 +1108,8 @@ const ClientsList = () => {
                             alignItems: 'center',
                             gap: '6px',
                             padding: '4px 12px',
-                            backgroundColor: '#fee2e2',
-                            color: '#991b1b',
+                            backgroundColor: t.errorBg,
+                            color: t.errorFg,
                             borderRadius: '12px',
                             fontSize: '12px',
                             fontWeight: '500'
@@ -1175,7 +1175,7 @@ const ClientsList = () => {
             }}>
               <div>
                 <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Package size={28} color="#8b5cf6" />
+                  <Package size={28} color={t.accent} />
                   {L.globalBomTitle}
                 </h2>
                 <p style={{ margin: 0, fontSize: '14px', color: t.textMuted }}>
@@ -1186,8 +1186,8 @@ const ClientsList = () => {
                 onClick={() => setShowGlobalBOM(false)}
                 style={{
                   padding: '8px',
-                  backgroundColor: '#fee2e2',
-                  color: '#B00020',
+                  backgroundColor: t.errorBg,
+                  color: t.error,
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
@@ -1212,7 +1212,7 @@ const ClientsList = () => {
                     onClick={handleExportGlobalBOM}
                     style={{
                       padding: '6px 12px',
-                      backgroundColor: '#2E7D32',
+                      backgroundColor: t.success,
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
@@ -1302,7 +1302,7 @@ const ClientsList = () => {
                                   whiteSpace: 'nowrap',
                                   cursor: 'grab',
                                   userSelect: 'none',
-                                  backgroundColor: draggedGlobalColumn === columnId ? '#e0e7ff' : (column.isCustom ? '#ecfdf5' : t.bg),
+                                  backgroundColor: draggedGlobalColumn === columnId ? t.infoBg : (column.isCustom ? t.successBg : t.bg),
                                   transition: 'background-color 0.2s',
                                   minWidth: column.width
                                 }}
@@ -1334,8 +1334,8 @@ const ClientsList = () => {
                                         borderRadius: '12px',
                                         fontSize: '12px',
                                         fontWeight: '500',
-                                        backgroundColor: part.active ? '#d1fae5' : '#fee2e2',
-                                        color: part.active ? '#065f46' : '#991b1b'
+                                        backgroundColor: part.active ? t.successBg : t.errorBg,
+                                        color: part.active ? t.successFg : t.errorFg
                                       }}>
                                         {part.active ? ` ${L.activeLabel}` : ` ${L.inactiveLabel}`}
                                       </span>
@@ -1432,7 +1432,7 @@ const ClientsList = () => {
                                   return (
                                     <td key={columnId} style={{
                                       padding: '12px',
-                                      backgroundColor: part.customFields?.[columnId] ? '#f0fdf4' : 'transparent'
+                                      backgroundColor: part.customFields?.[columnId] ? t.successBg : 'transparent'
                                     }}>
                                       {part.customFields?.[columnId] || '-'}
                                     </td>
@@ -1729,16 +1729,16 @@ const ClientsList = () => {
             {/* Custom Fields Section */}
             <div style={{
               padding: '16px',
-              backgroundColor: '#f0fdf4',
+              backgroundColor: t.successBg,
               borderRadius: '6px',
-              border: '1px solid #86efac',
+              border: `1px solid ${t.success}`,
               marginBottom: '24px'
             }}>
               <h3 style={{
                 margin: '0 0 16px 0',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#166534',
+                color: t.successFg,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -1786,7 +1786,7 @@ const ClientsList = () => {
                         onClick={() => handleRemoveCustomField(field.id)}
                         style={{
                           padding: '8px 12px',
-                          backgroundColor: '#ef4444',
+                          backgroundColor: t.error,
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -1863,7 +1863,7 @@ const ClientsList = () => {
                   onClick={handleAddCustomField}
                   style={{
                     padding: '8px 16px',
-                    backgroundColor: '#2E7D32',
+                    backgroundColor: t.success,
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',

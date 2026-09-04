@@ -53,7 +53,7 @@ const AuditDetail = () => {
     conformity: { label: L.conformity, color: t.success, icon: '' },
     nc_major: { label: L.ncMajor, color: t.error, icon: '' },
     nc_minor: { label: L.ncMinor, color: t.warning, icon: '!' },
-    observation: { label: L.observation, color: '#8b5cf6', icon: '?' },
+    observation: { label: L.observation, color: t.accent, icon: '?' },
     opportunity: { label: L.opportunity, color: t.accent, icon: '+' },
     na: { label: L.na, color: t.textMuted, icon: '-' }
   };
@@ -277,7 +277,7 @@ const AuditDetail = () => {
             </button>
           )}
           <button
-            style={{ ...styles.button, backgroundColor: '#8b5cf6', color: 'white' }}
+            style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-ncs')}
           >
              {L.viewNCs}
@@ -366,7 +366,7 @@ const AuditDetail = () => {
               <div style={styles.summaryLabel}>{L.ncMinor}</div>
             </div>
             <div style={styles.summaryItem}>
-              <div style={{ ...styles.summaryValue, color: '#8b5cf6' }}>{audit.observations || 0}</div>
+              <div style={{ ...styles.summaryValue, color: t.accent }}>{audit.observations || 0}</div>
               <div style={styles.summaryLabel}>{L.observations}</div>
             </div>
             <div style={styles.summaryItem}>

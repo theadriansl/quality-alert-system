@@ -2208,7 +2208,7 @@ const ClientDetail = () => {
                   alignItems: 'baseline',
                   gap: '4px'
                 }}>
-                  <span style={{ fontSize: '20px', fontWeight: '600', color: '#2E7D32' }}>
+                  <span style={{ fontSize: '20px', fontWeight: '600', color: theme.success }}>
                     {client.d5ResponseTimeHours || 48}
                   </span>
                   <span style={{ fontSize: '14px', color: theme.textMuted }}>
@@ -2250,8 +2250,8 @@ const ClientDetail = () => {
                     alignItems: 'center',
                     gap: '6px',
                     padding: '4px 12px',
-                    backgroundColor: '#d1fae5',
-                    color: '#065f46',
+                    backgroundColor: theme.successBg,
+                    color: theme.successFg,
                     borderRadius: '12px',
                     fontSize: '12px',
                     fontWeight: '500'
@@ -2265,8 +2265,8 @@ const ClientDetail = () => {
                     alignItems: 'center',
                     gap: '6px',
                     padding: '4px 12px',
-                    backgroundColor: '#fee2e2',
-                    color: '#991b1b',
+                    backgroundColor: theme.errorBg,
+                    color: theme.errorFg,
                     borderRadius: '12px',
                     fontSize: '12px',
                     fontWeight: '500'
@@ -2369,7 +2369,7 @@ const ClientDetail = () => {
                   cursor: 'pointer',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = theme.accent}
                 onMouseLeave={(e) => e.target.style.backgroundColor = theme.accent}
               >
                 <Plus size={16} />
@@ -2596,7 +2596,7 @@ const ClientDetail = () => {
                             alignItems: 'center',
                             gap: '6px',
                             padding: '6px 12px',
-                            backgroundColor: '#2E7D32',
+                            backgroundColor: theme.success,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -2617,7 +2617,7 @@ const ClientDetail = () => {
                             alignItems: 'center',
                             gap: '6px',
                             padding: '6px 12px',
-                            backgroundColor: importingParts ? theme.textDim : '#8b5cf6',
+                            backgroundColor: importingParts ? theme.textDim : theme.accent,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -2638,7 +2638,7 @@ const ClientDetail = () => {
                             alignItems: 'center',
                             gap: '6px',
                             padding: '6px 12px',
-                            backgroundColor: projectParts.length === 0 ? theme.textDim : '#0ea5e9',
+                            backgroundColor: projectParts.length === 0 ? theme.textDim : theme.info,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -2670,7 +2670,7 @@ const ClientDetail = () => {
                           alignItems: 'center',
                           gap: '8px',
                           padding: '10px 20px',
-                          backgroundColor: '#2E7D32',
+                          backgroundColor: theme.success,
                           color: 'white',
                           border: 'none',
                           borderRadius: '6px',
@@ -2730,8 +2730,8 @@ const ClientDetail = () => {
                                 {part.clientPartNumber && (
                                   <div style={{
                                     fontSize: '11px',
-                                    color: '#8b5cf6',
-                                    backgroundColor: '#f3e8ff',
+                                    color: theme.accent,
+                                    backgroundColor: theme.accentBg,
                                     padding: '2px 8px',
                                     borderRadius: '4px',
                                     fontWeight: '500'
@@ -2771,7 +2771,7 @@ const ClientDetail = () => {
                                   </span>
                                 )}
                                 {part.unitCost && (
-                                  <span style={{ color: '#2E7D32', fontWeight: '600' }}>
+                                  <span style={{ color: theme.success, fontWeight: '600' }}>
                                     <strong>{L.costLabel}:</strong> ${parseFloat(part.unitCost).toFixed(2)} {part.currency || 'USD'}
                                   </span>
                                 )}
@@ -2800,8 +2800,8 @@ const ClientDetail = () => {
                               onClick={() => handleRemovePart(part.id)}
                               style={{
                                 padding: '4px 12px',
-                                backgroundColor: '#fee2e2',
-                                color: '#B00020',
+                                backgroundColor: theme.errorBg,
+                                color: theme.error,
                                 border: 'none',
                                 borderRadius: '4px',
                                 fontSize: '12px',
@@ -2886,9 +2886,9 @@ const ClientDetail = () => {
                     key={project.id}
                     style={{
                       padding: '20px',
-                      backgroundColor: editingProject?.id === project.id ? '#fef3c7' : theme.bg,
+                      backgroundColor: editingProject?.id === project.id ? theme.warningBg : theme.bg,
                       borderRadius: '8px',
-                      border: editingProject?.id === project.id ? '2px solid #C77700' : `1px solid ${theme.border}`
+                      border: editingProject?.id === project.id ? `2px solid ${theme.warning}` : `1px solid ${theme.border}`
                     }}
                   >
                     <div style={{
@@ -2915,15 +2915,15 @@ const ClientDetail = () => {
                           <span style={{
                             padding: '4px 8px',
                             backgroundColor:
-                              project.status === 'Active' ? '#d1fae5' :
-                              project.status === 'Completed' ? '#dbeafe' :
-                              project.status === 'On Hold' ? '#fee2e2' :
-                              '#fef3c7',
+                              project.status === 'Active' ? theme.successBg :
+                              project.status === 'Completed' ? theme.infoBg :
+                              project.status === 'On Hold' ? theme.errorBg :
+                              theme.warningBg,
                             color:
-                              project.status === 'Active' ? '#065f46' :
+                              project.status === 'Active' ? theme.successFg :
                               project.status === 'Completed' ? theme.text :
-                              project.status === 'On Hold' ? '#991b1b' :
-                              '#92400e',
+                              project.status === 'On Hold' ? theme.errorFg :
+                              theme.warningFg,
                             borderRadius: '12px',
                             fontSize: '11px',
                             fontWeight: '600'
@@ -2932,7 +2932,7 @@ const ClientDetail = () => {
                           </span>
                           <span style={{
                             padding: '4px 10px',
-                            backgroundColor: '#eff6ff',
+                            backgroundColor: theme.infoBg,
                             color: theme.text,
                             borderRadius: '12px',
                             fontSize: '11px',
@@ -2943,8 +2943,8 @@ const ClientDetail = () => {
                           {editingProject?.id === project.id && (
                             <span style={{
                               padding: '4px 10px',
-                              backgroundColor: '#fef3c7',
-                              color: '#92400e',
+                              backgroundColor: theme.warningBg,
+                              color: theme.warningFg,
                               borderRadius: '12px',
                               fontSize: '11px',
                               fontWeight: '600'
@@ -2978,7 +2978,7 @@ const ClientDetail = () => {
                           alignItems: 'center',
                           gap: '6px',
                           padding: '8px 16px',
-                          backgroundColor: editingProject?.id === project.id ? '#ef4444' : theme.accent,
+                          backgroundColor: editingProject?.id === project.id ? theme.error : theme.accent,
                           color: 'white',
                           border: 'none',
                           borderRadius: '6px',
@@ -2987,8 +2987,8 @@ const ClientDetail = () => {
                           cursor: 'pointer',
                           transition: 'background-color 0.2s'
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = editingProject?.id === project.id ? '#B00020' : '#2563eb'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = editingProject?.id === project.id ? '#ef4444' : theme.accent}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = editingProject?.id === project.id ? theme.error : theme.accent}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = editingProject?.id === project.id ? theme.error : theme.accent}
                       >
                         <Edit size={14} />
                         {editingProject?.id === project.id ? L.cancelEdit : L.edit}
@@ -3107,7 +3107,7 @@ const ClientDetail = () => {
                                   </div>
                                   <span style={{
                                     padding: '4px 8px',
-                                    backgroundColor: '#eff6ff',
+                                    backgroundColor: theme.infoBg,
                                     color: theme.text,
                                     borderRadius: '4px',
                                     fontSize: '11px',
@@ -3129,13 +3129,13 @@ const ClientDetail = () => {
                           backgroundColor: theme.bgCard,
                           padding: '20px',
                           borderRadius: '8px',
-                          border: '2px solid #C77700',
+                          border: `2px solid ${theme.warning}`,
                           marginBottom: '16px'
                         }}>
                           <h5 style={{
                             fontSize: '14px',
                             fontWeight: '600',
-                            color: '#92400e',
+                            color: theme.warningFg,
                             marginBottom: '16px'
                           }}>
                             {L.editProjectInfo}
@@ -3286,7 +3286,7 @@ const ClientDetail = () => {
                           backgroundColor: theme.bgCard,
                           padding: '20px',
                           borderRadius: '8px',
-                          border: '2px solid #C77700'
+                          border: `2px solid ${theme.warning}`
                         }}>
                           <div style={{
                             display: 'flex',
@@ -3297,7 +3297,7 @@ const ClientDetail = () => {
                             <h5 style={{
                               fontSize: '14px',
                               fontWeight: '600',
-                              color: '#92400e',
+                              color: theme.warningFg,
                               margin: 0
                             }}>
                               {L.editProjectParts} ({projectParts.length})
@@ -3311,7 +3311,7 @@ const ClientDetail = () => {
                                   alignItems: 'center',
                                   gap: '6px',
                                   padding: '6px 12px',
-                                  backgroundColor: '#2E7D32',
+                                  backgroundColor: theme.success,
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '4px',
@@ -3332,7 +3332,7 @@ const ClientDetail = () => {
                                   alignItems: 'center',
                                   gap: '6px',
                                   padding: '6px 12px',
-                                  backgroundColor: importingParts ? theme.textDim : '#8b5cf6',
+                                  backgroundColor: importingParts ? theme.textDim : theme.accent,
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '4px',
@@ -3353,7 +3353,7 @@ const ClientDetail = () => {
                                   alignItems: 'center',
                                   gap: '6px',
                                   padding: '6px 12px',
-                                  backgroundColor: projectParts.length === 0 ? theme.textDim : '#0ea5e9',
+                                  backgroundColor: projectParts.length === 0 ? theme.textDim : theme.info,
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '4px',
@@ -3420,7 +3420,7 @@ const ClientDetail = () => {
                                     {part.unitCost && (
                                       <div style={{
                                         fontSize: '11px',
-                                        color: '#2E7D32',
+                                        color: theme.success,
                                         marginTop: '2px',
                                         fontWeight: '600'
                                       }}>
@@ -3457,7 +3457,7 @@ const ClientDetail = () => {
                                       onClick={() => handleRemovePart(part.id || part.partNumber)}
                                       style={{
                                         padding: '6px 12px',
-                                        backgroundColor: '#ef4444',
+                                        backgroundColor: theme.error,
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '4px',
@@ -3514,7 +3514,7 @@ const ClientDetail = () => {
                             onClick={handleCancelEdit}
                             style={{
                               padding: '10px 24px',
-                              backgroundColor: '#ef4444',
+                              backgroundColor: theme.error,
                               color: 'white',
                               border: 'none',
                               borderRadius: '6px',
@@ -3529,7 +3529,7 @@ const ClientDetail = () => {
                             type="submit"
                             style={{
                               padding: '10px 24px',
-                              backgroundColor: '#2E7D32',
+                              backgroundColor: theme.success,
                               color: 'white',
                               border: 'none',
                               borderRadius: '6px',
@@ -3575,7 +3575,7 @@ const ClientDetail = () => {
                     alignItems: 'center',
                     gap: '6px',
                     padding: '8px 16px',
-                    backgroundColor: '#2E7D32',
+                    backgroundColor: theme.success,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -3595,7 +3595,7 @@ const ClientDetail = () => {
                     alignItems: 'center',
                     gap: '6px',
                     padding: '8px 16px',
-                    backgroundColor: importingContacts ? theme.textDim : '#8b5cf6',
+                    backgroundColor: importingContacts ? theme.textDim : theme.accent,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -3615,7 +3615,7 @@ const ClientDetail = () => {
                     alignItems: 'center',
                     gap: '6px',
                     padding: '8px 16px',
-                    backgroundColor: clientContacts.length === 0 ? theme.textDim : '#0ea5e9',
+                    backgroundColor: clientContacts.length === 0 ? theme.textDim : theme.info,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -3640,15 +3640,15 @@ const ClientDetail = () => {
             {/* Add Contact Form */}
             <div style={{
               padding: '20px',
-              backgroundColor: '#f0f9ff',
+              backgroundColor: theme.infoBg,
               borderRadius: '8px',
-              border: '1px solid #bae6fd',
+              border: `1px solid ${theme.info}`,
               marginBottom: '24px'
             }}>
               <h4 style={{
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#0369a1',
+                color: theme.info,
                 marginBottom: '16px',
                 margin: 0
               }}>
@@ -3792,14 +3792,14 @@ const ClientDetail = () => {
                     // Edit Mode
                     <div key={index} style={{
                       padding: '20px',
-                      backgroundColor: '#fef3c7',
+                      backgroundColor: theme.warningBg,
                       borderRadius: '8px',
-                      border: '2px solid #fbbf24'
+                      border: `2px solid ${theme.warning}`
                     }}>
                       <h4 style={{
                         fontSize: '14px',
                         fontWeight: '600',
-                        color: '#92400e',
+                        color: theme.warningFg,
                         marginBottom: '16px',
                         margin: 0
                       }}>
@@ -3914,7 +3914,7 @@ const ClientDetail = () => {
                           style={{
                             flex: 1,
                             padding: '10px 20px',
-                            backgroundColor: '#2E7D32',
+                            backgroundColor: theme.success,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -4021,7 +4021,7 @@ const ClientDetail = () => {
                           onClick={() => handleEditContact(index)}
                           style={{
                             padding: '6px 12px',
-                            backgroundColor: '#dbeafe',
+                            backgroundColor: theme.infoBg,
                             color: theme.text,
                             border: 'none',
                             borderRadius: '4px',
@@ -4040,8 +4040,8 @@ const ClientDetail = () => {
                           onClick={() => handleRemoveContact(index)}
                           style={{
                             padding: '6px 12px',
-                            backgroundColor: '#fee2e2',
-                            color: '#B00020',
+                            backgroundColor: theme.errorBg,
+                            color: theme.error,
                             border: 'none',
                             borderRadius: '4px',
                             fontSize: '12px',
@@ -4166,8 +4166,8 @@ const ClientDetail = () => {
                     alignItems: 'center',
                     gap: '6px',
                     padding: '4px 10px',
-                    backgroundColor: part.active ? '#d1fae5' : '#fee2e2',
-                    color: part.active ? '#065f46' : '#991b1b',
+                    backgroundColor: part.active ? theme.successBg : theme.errorBg,
+                    color: part.active ? theme.successFg : theme.errorFg,
                     border: 'none',
                     borderRadius: '12px',
                     cursor: 'pointer',
@@ -4336,7 +4336,7 @@ const ClientDetail = () => {
                     onClick={handleExportBomGlobal}
                     style={{
                       padding: '8px 16px',
-                      backgroundColor: '#2E7D32',
+                      backgroundColor: theme.success,
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
@@ -4409,7 +4409,7 @@ const ClientDetail = () => {
                                   whiteSpace: 'nowrap',
                                   cursor: 'grab',
                                   userSelect: 'none',
-                                  backgroundColor: draggedColumn === columnId ? '#e0e7ff' : '#ecfdf5',
+                                  backgroundColor: draggedColumn === columnId ? theme.infoBg : theme.successBg,
                                   transition: 'background-color 0.2s'
                                 }}
                               >
@@ -4439,7 +4439,7 @@ const ClientDetail = () => {
                                 whiteSpace: 'nowrap',
                                 cursor: 'grab',
                                 userSelect: 'none',
-                                backgroundColor: draggedColumn === column.id ? '#e0e7ff' : theme.bg,
+                                backgroundColor: draggedColumn === column.id ? theme.infoBg : theme.bg,
                                 transition: 'background-color 0.2s'
                               }}
                             >
@@ -4475,7 +4475,7 @@ const ClientDetail = () => {
                                   style={{
                                     padding: '12px',
                                     fontSize: '13px',
-                                    backgroundColor: part.customFields?.[columnId] ? '#f0fdf4' : 'transparent'
+                                    backgroundColor: part.customFields?.[columnId] ? theme.successBg : 'transparent'
                                   }}
                                 >
                                   {part.customFields?.[columnId] || '-'}
@@ -4491,7 +4491,7 @@ const ClientDetail = () => {
                                 onClick={() => handleEditPart(part)}
                                 style={{
                                   padding: '6px',
-                                  backgroundColor: '#eff6ff',
+                                  backgroundColor: theme.infoBg,
                                   color: theme.accent,
                                   border: 'none',
                                   borderRadius: '4px',
@@ -4518,8 +4518,8 @@ const ClientDetail = () => {
                                 }}
                                 style={{
                                   padding: '6px',
-                                  backgroundColor: '#fef2f2',
-                                  color: '#B00020',
+                                  backgroundColor: theme.errorBg,
+                                  color: theme.error,
                                   border: 'none',
                                   borderRadius: '4px',
                                   cursor: 'pointer'
@@ -4574,7 +4574,7 @@ const ClientDetail = () => {
                     alignItems: 'center',
                     gap: '8px',
                     padding: '8px 16px',
-                    backgroundColor: uploadingDocument ? theme.textDim : '#2E7D32',
+                    backgroundColor: uploadingDocument ? theme.textDim : theme.success,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -4585,12 +4585,12 @@ const ClientDetail = () => {
                   }}
                   onMouseEnter={(e) => {
                     if (!uploadingDocument) {
-                      e.target.style.backgroundColor = '#2E7D32';
+                      e.target.style.backgroundColor = theme.success;
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!uploadingDocument) {
-                      e.target.style.backgroundColor = '#2E7D32';
+                      e.target.style.backgroundColor = theme.success;
                     }
                   }}
                 >
@@ -4656,7 +4656,7 @@ const ClientDetail = () => {
                     <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
                       <div style={{
                         padding: '12px',
-                        backgroundColor: '#eff6ff',
+                        backgroundColor: theme.infoBg,
                         borderRadius: '8px',
                         flexShrink: 0
                       }}>
@@ -4739,7 +4739,7 @@ const ClientDetail = () => {
                           cursor: 'pointer',
                           transition: 'background-color 0.2s'
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = theme.accent}
                         onMouseLeave={(e) => e.target.style.backgroundColor = theme.accent}
                       >
                         <Download size={14} />
@@ -4749,7 +4749,7 @@ const ClientDetail = () => {
                         onClick={() => handleDeleteDocument(doc.id, doc.fileName)}
                         style={{
                           padding: '8px 12px',
-                          backgroundColor: '#ef4444',
+                          backgroundColor: theme.error,
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -4757,8 +4757,8 @@ const ClientDetail = () => {
                           cursor: 'pointer',
                           transition: 'background-color 0.2s'
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#B00020'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = theme.error}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = theme.error}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -4784,9 +4784,9 @@ const ClientDetail = () => {
 
         const getEventColor = (type) => {
           switch (type) {
-            case 'created': return '#2E7D32'; // green
+            case 'created': return theme.success; // green
             case 'updated': return theme.accent; // blue
-            case 'deleted': return '#ef4444'; // red
+            case 'deleted': return theme.error; // red
             default: return theme.textDim; // gray
           }
         };
@@ -5252,7 +5252,7 @@ const ClientDetail = () => {
         flexDirection: 'column',
         gap: '16px'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '16px' }}>
+        <div style={{ color: theme.error, fontSize: '16px' }}>
           {error || 'Client not found'}
         </div>
         <button
@@ -5388,14 +5388,14 @@ const ClientDetail = () => {
                   gap: '8px',
                   padding: '10px 20px',
                   backgroundColor: theme.bgCard,
-                  border: '1px solid #fecaca',
+                  border: `1px solid ${theme.error}`,
                   borderRadius: '6px',
                   fontSize: '14px',
-                  color: '#B00020',
+                  color: theme.error,
                   cursor: 'pointer',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#fef2f2'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = theme.errorBg}
                 onMouseLeave={(e) => e.target.style.backgroundColor = theme.bgCard}
               >
                 <Trash2 size={16} />
@@ -5607,7 +5607,7 @@ const ClientDetail = () => {
                 disabled={uploadingDocument || !documentToUpload.title.trim()}
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: uploadingDocument || !documentToUpload.title.trim() ? theme.textDim : '#2E7D32',
+                  backgroundColor: uploadingDocument || !documentToUpload.title.trim() ? theme.textDim : theme.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -5863,16 +5863,16 @@ const ClientDetail = () => {
             {/* Custom Fields Section - From bom_field_config */}
             <div style={{
               padding: '16px',
-              backgroundColor: '#f0fdf4',
+              backgroundColor: theme.successBg,
               borderRadius: '6px',
-              border: '1px solid #86efac',
+              border: `1px solid ${theme.success}`,
               marginBottom: '24px'
             }}>
               <h3 style={{
                 margin: '0 0 16px 0',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#166534',
+                color: theme.successFg,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -5897,7 +5897,7 @@ const ClientDetail = () => {
                         color: theme.text,
                         marginBottom: '4px'
                       }}>
-                        {field.key} {field.isRequired && <span style={{ color: '#ef4444' }}>*</span>}
+                        {field.key} {field.isRequired && <span style={{ color: theme.error }}>*</span>}
                       </label>
 
                       {/* Render input based on field type */}
@@ -6020,11 +6020,11 @@ const ClientDetail = () => {
               {/* Add Custom Field (for fields not in config) */}
               <div style={{
                 padding: '12px',
-                backgroundColor: '#ecfdf5',
+                backgroundColor: theme.successBg,
                 borderRadius: '4px',
-                border: '1px dashed #86efac'
+                border: `1px dashed ${theme.success}`
               }}>
-                <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '500', color: '#166534' }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '500', color: theme.successFg }}>
                   {L.addAdditionalField}
                 </p>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
@@ -6075,7 +6075,7 @@ const ClientDetail = () => {
                     }}
                     style={{
                       padding: '8px 16px',
-                      backgroundColor: '#2E7D32',
+                      backgroundColor: theme.success,
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
@@ -6124,7 +6124,7 @@ const ClientDetail = () => {
                 }}
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: '#2E7D32',
+                  backgroundColor: theme.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -6408,16 +6408,16 @@ const ClientDetail = () => {
             {/* Custom Fields Section */}
             <div style={{
               padding: '16px',
-              backgroundColor: '#f0fdf4',
+              backgroundColor: theme.successBg,
               borderRadius: '6px',
-              border: '1px solid #86efac',
+              border: `1px solid ${theme.success}`,
               marginBottom: '24px'
             }}>
               <h3 style={{
                 margin: '0 0 16px 0',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: '#166534',
+                color: theme.successFg,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -6465,7 +6465,7 @@ const ClientDetail = () => {
                         onClick={() => handleRemoveCustomField(field.id)}
                         style={{
                           padding: '8px 12px',
-                          backgroundColor: '#ef4444',
+                          backgroundColor: theme.error,
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -6542,7 +6542,7 @@ const ClientDetail = () => {
                   onClick={handleAddCustomField}
                   style={{
                     padding: '8px 16px',
-                    backgroundColor: '#2E7D32',
+                    backgroundColor: theme.success,
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',

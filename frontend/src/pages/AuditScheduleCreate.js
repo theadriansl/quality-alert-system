@@ -873,7 +873,7 @@ const AuditScheduleCreate = () => {
                   <select
                     value={formData.frequency}
                     onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                    style={{ ...styles.select, marginTop: '8px', borderColor: !formData.frequency ? '#ef4444' : undefined }}
+                    style={{ ...styles.select, marginTop: '8px', borderColor: !formData.frequency ? t.error : undefined }}
                     required
                   >
                     <option value="">{L.selectFreqOpt}</option>
@@ -1117,8 +1117,8 @@ const AuditScheduleCreate = () => {
                             fontSize: '10px',
                             padding: '2px 6px',
                             borderRadius: '4px',
-                            backgroundColor: ecr.status === 'approved' ? `${t.success}20` : ecr.status === 'implemented' ? `${t.accent}20` : '#f3e8ff',
-                            color: ecr.status === 'approved' ? t.success : ecr.status === 'implemented' ? t.primary : '#7c3aed',
+                            backgroundColor: ecr.status === 'approved' ? `${t.success}20` : ecr.status === 'implemented' ? `${t.accent}20` : t.accentBg,
+                            color: ecr.status === 'approved' ? t.success : ecr.status === 'implemented' ? t.primary : t.accent,
                             fontWeight: '600',
                             textTransform: 'uppercase'
                           }}>
@@ -1218,8 +1218,8 @@ const AuditScheduleCreate = () => {
                             fontSize: '10px',
                             padding: '2px 6px',
                             borderRadius: '4px',
-                            backgroundColor: report.status === 'closed' ? `${t.success}20` : report.status === 'in_progress' ? `${t.warning}20` : '#e0e7ff',
-                            color: report.status === 'closed' ? t.success : report.status === 'in_progress' ? t.warning : '#3730a3',
+                            backgroundColor: report.status === 'closed' ? `${t.success}20` : report.status === 'in_progress' ? `${t.warning}20` : t.infoBg,
+                            color: report.status === 'closed' ? t.success : report.status === 'in_progress' ? t.warning : t.info,
                             fontWeight: '600',
                             textTransform: 'uppercase'
                           }}>

@@ -87,7 +87,7 @@ const AuditNCDetail = () => {
   const STATUS_CONFIG = {
     open: { label: L.open, color: t.error },
     in_progress: { label: L.inProgress, color: t.warning },
-    pending_verification: { label: L.pendingVerification, color: '#8b5cf6' },
+    pending_verification: { label: L.pendingVerification, color: t.accent },
     closed: { label: L.closed, color: t.success }
   };
 
@@ -719,7 +719,7 @@ const AuditNCDetail = () => {
             </p>
             {nc.status !== 'closed' && (
               <button
-                style={{ ...styles.button, backgroundColor: '#8b5cf6', color: 'white' }}
+                style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
                 onClick={create8D}
               >
                 {L.create8DFromNC}

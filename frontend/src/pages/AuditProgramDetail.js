@@ -385,7 +385,7 @@ const AuditProgramDetail = () => {
             </>
           )}
           <button
-            style={{ ...styles.button, backgroundColor: '#8b5cf6', color: 'white' }}
+            style={{ ...styles.button, backgroundColor: t.accent, color: 'white' }}
             onClick={() => navigate('/audit-schedule-create', { state: { programId: program.id } })}
           >
             {L.addAudit}

@@ -372,8 +372,8 @@ const AuditCalendar = () => {
           {readOnly && (
             <span style={{
               padding: '8px 16px',
-              backgroundColor: '#fef3c7',
-              color: '#92400e',
+              backgroundColor: t.warningBg,
+              color: t.warningFg,
               borderRadius: '6px',
               fontSize: '13px',
               fontWeight: '500'

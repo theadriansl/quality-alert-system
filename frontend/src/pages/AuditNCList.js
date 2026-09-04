@@ -40,7 +40,7 @@ const AuditNCList = () => {
   const STATUS_CONFIG = {
     open: { label: L.open, color: t.error },
     in_progress: { label: L.inProgress, color: t.warning },
-    pending_verification: { label: L.pendingVerification, color: '#8b5cf6' },
+    pending_verification: { label: L.pendingVerification, color: t.accent },
     closed: { label: L.closed, color: t.success }
   };
 
@@ -273,7 +273,7 @@ const AuditNCList = () => {
           <div style={styles.summaryLabel}>{L.inProgress}</div>
         </div>
         <div style={styles.summaryCard}>
-          <div style={{ ...styles.summaryValue, color: '#8b5cf6' }}>{summary.pendingVerification}</div>
+          <div style={{ ...styles.summaryValue, color: t.accent }}>{summary.pendingVerification}</div>
           <div style={styles.summaryLabel}>{L.pendingVerification}</div>
         </div>
         <div style={styles.summaryCard}>
