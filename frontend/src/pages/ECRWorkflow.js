@@ -1130,12 +1130,12 @@ const ECRWorkflow = () => {
                   borderRadius: '12px',
                   fontSize: '11px',
                   fontWeight: '600',
-                  backgroundColor: workflowData.priority === 'critical' ? '#fecaca' :
-                                   workflowData.priority === 'high' ? '#fed7aa' :
-                                   workflowData.priority === 'medium' ? '#fef08a' : '#d1fae5',
-                  color: workflowData.priority === 'critical' ? '#991b1b' :
-                         workflowData.priority === 'high' ? '#9a3412' :
-                         workflowData.priority === 'medium' ? '#854d0e' : '#166534'
+                  backgroundColor: workflowData.priority === 'critical' ? t.errorBg :
+                                   workflowData.priority === 'high' ? t.warningBg :
+                                   workflowData.priority === 'medium' ? t.warningBg : t.successBg,
+                  color: workflowData.priority === 'critical' ? t.errorFg :
+                         workflowData.priority === 'high' ? t.warningFg :
+                         workflowData.priority === 'medium' ? t.warningFg : t.successFg
                 }}>
                   {workflowData.priority === 'critical' ? ` ${tr('ecr.changeRequest.priorities.critical')}` :
                    workflowData.priority === 'high' ? ` ${tr('ecr.changeRequest.priorities.high')}` :
@@ -1195,9 +1195,9 @@ const ECRWorkflow = () => {
             ...styles.statusBadge,
             backgroundColor:
               workflowData.status === 'closed' ? t.success :
-              workflowData.status === 'pending_closure' ? '#3b82f6' :
+              workflowData.status === 'pending_closure' ? t.info :
               workflowData.status === 'pending_approval' ? t.warning :
-              workflowData.status === 'rejected' ? '#ef4444' :
+              workflowData.status === 'rejected' ? t.error :
               t.textMuted
           }}>
             {workflowData.status === 'closed' ? tr('ecr.status.closed') :
@@ -1442,7 +1442,7 @@ const ECRWorkflow = () => {
           {/* Close as Rejected Checkbox - Only in ECR-4 and when not locked */}
           {workflowData.id && !showLog && STAGES[currentStage].id === 'ecr4' &&
            !['closed', 'closed_rejected', 'pending_approval', 'pending_rejected_closure'].includes(workflowData.status) && (
-            <label style={{...styles.footerCompletionCheckbox, marginLeft: '16px', backgroundColor: workflowData.closureType === 'rejected' ? '#fee2e2' : 'transparent', border: workflowData.closureType === 'rejected' ? '2px solid #dc2626' : '2px solid transparent', borderRadius: '6px', padding: '6px 10px'}}>
+            <label style={{...styles.footerCompletionCheckbox, marginLeft: '16px', backgroundColor: workflowData.closureType === 'rejected' ? t.errorBg : 'transparent', border: workflowData.closureType === 'rejected' ? `2px solid ${t.error}` : '2px solid transparent', borderRadius: '6px', padding: '6px 10px'}}>
               <input
                 type="checkbox"
                 checked={workflowData.closureType === 'rejected'}
@@ -1472,7 +1472,7 @@ const ECRWorkflow = () => {
                 }}
                 style={styles.footerCheckbox}
               />
-              <span style={{...styles.footerCheckboxLabel, color: workflowData.closureType === 'rejected' ? '#dc2626' : t.textMuted}}>
+              <span style={{...styles.footerCheckboxLabel, color: workflowData.closureType === 'rejected' ? t.error : t.textMuted}}>
                 CERRAR COMO NO ADOPTABLE
               </span>
             </label>
@@ -1501,7 +1501,7 @@ const ECRWorkflow = () => {
                 style={{
                   ...styles.button,
                   ...styles.submitButton,
-                  backgroundColor: workflowData.status === 'rejected' ? '#C77700' : t.accent
+                  backgroundColor: workflowData.status === 'rejected' ? t.warning : t.accent
                 }}
               >
                 {saving ? (language === 'es' ? 'Enviando...' : 'Sending...') : workflowData.status === 'rejected' ? `↻ ${language === 'es' ? 'Re-enviar a Aprobación' : 'Re-submit for Approval'}` : ` ${tr('ecr.actions.submit')}`}
@@ -1511,9 +1511,9 @@ const ECRWorkflow = () => {
                 padding: '10px 20px',
                 backgroundColor:
                   workflowData.status === 'closed' ? t.success :
-                  workflowData.status === 'closed_rejected' ? '#991b1b' :
-                  workflowData.status === 'pending_rejected_closure' ? '#dc2626' :
-                  workflowData.status === 'pending_closure' ? '#3b82f6' :
+                  workflowData.status === 'closed_rejected' ? t.error :
+                  workflowData.status === 'pending_rejected_closure' ? t.error :
+                  workflowData.status === 'pending_closure' ? t.info :
                   workflowData.status === 'pending_approval' ? t.warning :
                   t.textMuted,
                 color: 'white',
@@ -1549,12 +1549,12 @@ const ECRWorkflow = () => {
             <tbody>
               {workflowData.closureApprovalHistory.map((entry, index) => {
                 const actionStyles = {
-                  submitted: { bg: '#dbeafe', color: '#1e40af', label: 'Enviado' },
-                  submitted_rejected: { bg: '#fef2f2', color: '#991b1b', label: 'Enviado (No Adoptable)' },
-                  approved: { bg: '#d1fae5', color: '#166534', label: 'Firmado' },
-                  rejected: { bg: '#fee2e2', color: '#991b1b', label: 'Devuelto' },
-                  rejection_approved: { bg: '#7f1d1d', color: '#fecaca', label: 'Confirmado No Adoptable' },
-                  rejection_cancelled: { bg: '#fef3c7', color: '#92400e', label: 'No Adoptable Cancelado' }
+                  submitted: { bg: t.infoBg, color: t.info, label: 'Enviado' },
+                  submitted_rejected: { bg: t.errorBg, color: t.errorFg, label: 'Enviado (No Adoptable)' },
+                  approved: { bg: t.successBg, color: t.successFg, label: 'Firmado' },
+                  rejected: { bg: t.errorBg, color: t.errorFg, label: 'Devuelto' },
+                  rejection_approved: { bg: t.error, color: t.errorBg, label: 'Confirmado No Adoptable' },
+                  rejection_cancelled: { bg: t.warningBg, color: t.warningFg, label: 'No Adoptable Cancelado' }
                 };
                 const style = actionStyles[entry.action] || actionStyles.submitted;
                 return (

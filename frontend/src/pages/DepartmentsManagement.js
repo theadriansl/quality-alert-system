@@ -194,7 +194,7 @@ const DepartmentsManagement = () => {
     deleteBtn: {
       backgroundColor: 'rgba(239, 68, 68, 0.2)',
       borderColor: 'rgba(239, 68, 68, 0.3)',
-      color: '#fca5a5'
+      color: t.error
     },
     childrenContainer: {
       marginTop: '8px'
@@ -508,7 +508,7 @@ const DepartmentsManagement = () => {
           style={{
             ...styles.deptCard,
             marginLeft: level * 24,
-            borderLeft: level > 0 ? '3px solid #6366f1' : 'none'
+            borderLeft: level > 0 ? `3px solid ${t.accent}` : 'none'
           }}
         >
           <div style={styles.deptHeader}>
