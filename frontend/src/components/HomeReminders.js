@@ -11,12 +11,13 @@ import { useSocket } from '../context/SocketContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-const PRIORITY_COLORS = {
-  critical: { bg: '#FEE2E2', text: '#991B1B' },
-  high: { bg: '#FEE2E2', text: '#991B1B' },
-  medium: { bg: '#FEF3C7', text: '#92400E' },
-  low: { bg: '#F3F4F6', text: '#6B7280' },
-};
+// Colores de prioridad - usa tokens del theme
+const getPriorityColors = (t) => ({
+  critical: { bg: t?.errorBg || '#FEE2E2', text: t?.errorFg || '#991B1B' },
+  high: { bg: t?.errorBg || '#FEE2E2', text: t?.errorFg || '#991B1B' },
+  medium: { bg: t?.warningBg || '#FEF3C7', text: t?.warningFg || '#92400E' },
+  low: { bg: t?.bgPanel || '#F3F4F6', text: t?.textMuted || '#6B7280' },
+});
 
 const HomeReminders = () => {
   const navigate = useNavigate();
@@ -110,7 +111,7 @@ const HomeReminders = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: 0.3 }}>{labels.title}</span>
             {totalPending > 0 && (
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'white', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
                 {totalPending}
               </span>
             )}
@@ -141,6 +142,7 @@ const HomeReminders = () => {
       {/* Lista de actividades con scroll */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
         {activities.map((a) => {
+          const PRIORITY_COLORS = getPriorityColors(t);
           const pr = PRIORITY_COLORS[a.priority] || PRIORITY_COLORS.medium;
           const dotColor = a.bucket === 'overdue' ? t.error : a.bucket === 'today' ? t.warning : a.bucket === 'future' ? t.textMuted : t.info;
           return (

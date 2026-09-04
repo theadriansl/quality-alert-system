@@ -13,11 +13,12 @@ import { useSocket } from '../context/SocketContext';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const STORAGE_KEY = 'openItems_dismissed';
 
-const TYPE_CONFIG = {
-  qar: { label: 'QAR', color: '#EF4444' },
-  '8d': { label: '8D', color: '#F59E0B' },
-  ecr: { label: 'ECR', color: '#3B82F6' },
-};
+// Colores definidos en componente - usa tokens del theme
+const getTypeConfig = (t) => ({
+  qar: { label: 'QAR', color: t?.error || '#EF4444' },
+  '8d': { label: '8D', color: t?.warning || '#F59E0B' },
+  ecr: { label: 'ECR', color: t?.accent || '#3B82F6' },
+});
 
 const HomeNotifications = () => {
   const navigate = useNavigate();
@@ -139,7 +140,7 @@ const HomeNotifications = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: 0.3 }}>{labels.title}</span>
             {visibleItems.length > 0 && (
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'white', background: t.primary, borderRadius: 10, padding: '2px 7px' }}>
                 {visibleItems.length}
               </span>
             )}
@@ -155,13 +156,13 @@ const HomeNotifications = () => {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {counts.qar > 0 && (
-            <span style={{ fontSize: 10, color: TYPE_CONFIG.qar.color, fontWeight: 600 }}>{counts.qar} {labels.qar}</span>
+            <span style={{ fontSize: 10, color: t.error, fontWeight: 600 }}>{counts.qar} {labels.qar}</span>
           )}
           {counts.eightD > 0 && (
-            <span style={{ fontSize: 10, color: TYPE_CONFIG['8d'].color, fontWeight: 600 }}>{counts.eightD} {labels.eightD}</span>
+            <span style={{ fontSize: 10, color: t.warning, fontWeight: 600 }}>{counts.eightD} {labels.eightD}</span>
           )}
           {counts.ecr > 0 && (
-            <span style={{ fontSize: 10, color: TYPE_CONFIG.ecr.color, fontWeight: 600 }}>{counts.ecr} {labels.ecr}</span>
+            <span style={{ fontSize: 10, color: t.accent, fontWeight: 600 }}>{counts.ecr} {labels.ecr}</span>
           )}
         </div>
       </div>
@@ -174,6 +175,7 @@ const HomeNotifications = () => {
           </div>
         ) : (
           visibleItems.map((n) => {
+            const TYPE_CONFIG = getTypeConfig(t);
             const config = TYPE_CONFIG[n.type] || TYPE_CONFIG.qar;
             const isDismissed = !!dismissed[getItemKey(n)];
             return (
@@ -217,7 +219,7 @@ const HomeNotifications = () => {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                     <span style={{
-                      fontSize: 9, fontWeight: 600, color: '#fff',
+                      fontSize: 9, fontWeight: 600, color: 'white',
                       background: config.color, padding: '1px 5px', borderRadius: 3
                     }}>
                       {config.label}
