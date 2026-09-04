@@ -137,12 +137,12 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
 
   // Get progress bar color
   const getProgressColor = (status) => {
-    if (status === 'CLOSED') return '#22c55e';
-    if (status === 'SCRAPPED') return '#1f2937';
-    if (status === 'QUARANTINE') return '#6b7280';
-    if (status === 'REJECTED') return '#ef4444';
-    if (['REPAIRED', 'IN_VALIDATION', 'PENDING_APPROVAL', 'PENDING_RELEASE_APPROVAL'].includes(status)) return '#f59e0b';
-    return '#ef4444';
+    if (status === 'CLOSED') return t.success;
+    if (status === 'SCRAPPED') return t.text;
+    if (status === 'QUARANTINE') return t.textMuted;
+    if (status === 'REJECTED') return t.error;
+    if (['REPAIRED', 'IN_VALIDATION', 'PENDING_APPROVAL', 'PENDING_RELEASE_APPROVAL'].includes(status)) return t.warning;
+    return t.error;
   };
 
   // Handle repair actions
@@ -513,13 +513,13 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
           {/* Counters */}
           {defects.length > 0 && (
             <div style={styles.counters}>
-              <span style={{ ...styles.counter, backgroundColor: '#fef2f2', color: '#ef4444' }}>
+              <span style={{ ...styles.counter, backgroundColor: t.errorBg, color: t.error }}>
                 Abiertos: {counts.open || 0}
               </span>
-              <span style={{ ...styles.counter, backgroundColor: '#fffbeb', color: '#f59e0b' }}>
+              <span style={{ ...styles.counter, backgroundColor: t.warningBg, color: t.warning }}>
                 En Proceso: {(counts.inRepair || 0) + (counts.repaired || 0) + (counts.inValidation || 0)}
               </span>
-              <span style={{ ...styles.counter, backgroundColor: '#f0fdf4', color: '#22c55e' }}>
+              <span style={{ ...styles.counter, backgroundColor: t.successBg, color: t.success }}>
                 Cerrados: {counts.closed || 0}
               </span>
             </div>
@@ -574,7 +574,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                         <span><User size={12} /> {defect.capturedByName}</span>
                         {defect.departmentName && <span>Depto: {defect.departmentName}</span>}
                         {defect.repairAttempts > 0 && (
-                          <span style={{ color: '#f59e0b' }}>
+                          <span style={{ color: t.warning }}>
                             Intentos: {defect.repairAttempts}
                           </span>
                         )}
@@ -599,8 +599,8 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                         height: '12px',
                         borderRadius: '50%',
                         backgroundColor:
-                          defect.timeColor === 'GREEN' ? '#22c55e' :
-                          defect.timeColor === 'YELLOW' ? '#f59e0b' : '#ef4444'
+                          defect.timeColor === 'GREEN' ? t.success :
+                          defect.timeColor === 'YELLOW' ? t.warning : t.error
                       }}
                       title={`${Math.round(defect.hoursOpen || 0)} horas`}
                     />
@@ -610,7 +610,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       {/* Repair Actions */}
                       {permissions.canRepair && defect.repairStatus === 'OPEN' && (
                         <button
-                          style={{ ...styles.actionBtn, backgroundColor: '#3b82f6', color: 'white' }}
+                          style={{ ...styles.actionBtn, backgroundColor: t.accent, color: 'white' }}
                           onClick={() => handleStartRepair(defect)}
                         >
                           <Wrench size={14} />
@@ -619,7 +619,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       )}
                       {permissions.canRepair && defect.repairStatus === 'IN_REPAIR' && (
                         <button
-                          style={{ ...styles.actionBtn, backgroundColor: '#22c55e', color: 'white' }}
+                          style={{ ...styles.actionBtn, backgroundColor: t.success, color: 'white' }}
                           onClick={() => handleCompleteRepair(defect)}
                         >
                           <CheckCircle size={14} />
@@ -628,7 +628,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       )}
                       {permissions.canRepair && defect.repairStatus === 'REJECTED' && (
                         <button
-                          style={{ ...styles.actionBtn, backgroundColor: '#f59e0b', color: 'white' }}
+                          style={{ ...styles.actionBtn, backgroundColor: t.warning, color: 'white' }}
                           onClick={() => handleCompleteRepair(defect)}
                         >
                           <RefreshCw size={14} />
@@ -640,7 +640,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       {permissions.canRepair && ['IN_REPAIR', 'REJECTED'].includes(defect.repairStatus) && (
                         <>
                           <button
-                            style={{ ...styles.actionBtn, backgroundColor: '#6b7280', color: 'white' }}
+                            style={{ ...styles.actionBtn, backgroundColor: t.textMuted, color: 'white' }}
                             onClick={() => handleQuarantine(defect)}
                             title="Enviar a cuarentena (no se puede reparar)"
                           >
@@ -648,7 +648,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                             Cuarentena
                           </button>
                           <button
-                            style={{ ...styles.actionBtn, backgroundColor: '#1f2937', color: 'white' }}
+                            style={{ ...styles.actionBtn, backgroundColor: t.text, color: 'white' }}
                             onClick={() => handleScrap(defect)}
                             title="Enviar a scrap (descartar)"
                           >
@@ -662,14 +662,14 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       {permissions.canRepair && defect.repairStatus === 'QUARANTINE' && (
                         <>
                           <button
-                            style={{ ...styles.actionBtn, backgroundColor: '#3b82f6', color: 'white' }}
+                            style={{ ...styles.actionBtn, backgroundColor: t.accent, color: 'white' }}
                             onClick={() => handleStartRepair(defect)}
                           >
                             <Wrench size={14} />
                             Reintentar
                           </button>
                           <button
-                            style={{ ...styles.actionBtn, backgroundColor: '#1f2937', color: 'white' }}
+                            style={{ ...styles.actionBtn, backgroundColor: t.text, color: 'white' }}
                             onClick={() => handleScrap(defect)}
                           >
                             <Trash2 size={14} />
@@ -681,7 +681,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       {/* Supervisor Repair Approval */}
                       {permissions.canApproveRepair && defect.repairStatus === 'PENDING_REPAIR_APPROVAL' && (
                         <button
-                          style={{ ...styles.actionBtn, backgroundColor: '#8b5cf6', color: 'white' }}
+                          style={{ ...styles.actionBtn, backgroundColor: t.info, color: 'white' }}
                           onClick={() => handleApprove(defect, 'repair')}
                         >
                           <CheckCircle size={14} />
@@ -692,7 +692,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       {/* Release Actions */}
                       {permissions.canRelease && ['REPAIRED', 'OPEN'].includes(defect.repairStatus) && (
                         <button
-                          style={{ ...styles.actionBtn, backgroundColor: '#8b5cf6', color: 'white' }}
+                          style={{ ...styles.actionBtn, backgroundColor: t.info, color: 'white' }}
                           onClick={() => handleRelease(defect)}
                         >
                           <CheckCircle size={14} />
@@ -701,7 +701,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       )}
                       {permissions.canRelease && defect.repairStatus === 'REPAIRED' && (
                         <button
-                          style={{ ...styles.actionBtn, backgroundColor: '#ef4444', color: 'white' }}
+                          style={{ ...styles.actionBtn, backgroundColor: t.error, color: 'white' }}
                           onClick={() => handleReject(defect)}
                         >
                           <XCircle size={14} />
@@ -712,7 +712,7 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                       {/* Supervisor Release Approval */}
                       {permissions.canApproveRelease && defect.repairStatus === 'PENDING_RELEASE_APPROVAL' && (
                         <button
-                          style={{ ...styles.actionBtn, backgroundColor: '#8b5cf6', color: 'white' }}
+                          style={{ ...styles.actionBtn, backgroundColor: t.info, color: 'white' }}
                           onClick={() => handleApprove(defect, 'release')}
                         >
                           <CheckCircle size={14} />
@@ -742,15 +742,15 @@ const DefectConsultTab = ({ isOpen, onClose, serial, clientId, theme }) => {
                                 style={{
                                   ...styles.historyIcon,
                                   backgroundColor:
-                                    event.eventType.includes('REPAIR') ? '#dbeafe' :
-                                    event.eventType.includes('RELEASE') ? '#dcfce7' :
-                                    event.eventType.includes('REJECT') ? '#fef2f2' : '#f3f4f6'
+                                    event.eventType.includes('REPAIR') ? t.accentBg :
+                                    event.eventType.includes('RELEASE') ? t.successBg :
+                                    event.eventType.includes('REJECT') ? t.errorBg : t.bgContent
                                 }}
                               >
-                                {event.eventType.includes('REPAIR') && <Wrench size={12} color="#3b82f6" />}
-                                {event.eventType.includes('RELEASE') && <CheckCircle size={12} color="#22c55e" />}
-                                {event.eventType.includes('REJECT') && <XCircle size={12} color="#ef4444" />}
-                                {event.eventType === 'CREATED' && <AlertTriangle size={12} color="#6b7280" />}
+                                {event.eventType.includes('REPAIR') && <Wrench size={12} color={t.accent} />}
+                                {event.eventType.includes('RELEASE') && <CheckCircle size={12} color={t.success} />}
+                                {event.eventType.includes('REJECT') && <XCircle size={12} color={t.error} />}
+                                {event.eventType === 'CREATED' && <AlertTriangle size={12} color={t.textMuted} />}
                               </div>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: '600', color: t.text }}>
@@ -819,7 +819,12 @@ export const DefectCounter = ({ serial, clientId, onClick, theme }) => {
     bg: '#ffffff',
     text: '#1f2937',
     textMuted: '#6b7280',
-    border: '#e5e7eb'
+    border: '#e5e7eb',
+    error: '#ef4444',
+    errorBg: '#fef2f2',
+    warning: '#f59e0b',
+    success: '#22c55e',
+    successBg: '#f0fdf4'
   };
 
   useEffect(() => {
@@ -870,31 +875,31 @@ export const DefectCounter = ({ serial, clientId, onClick, theme }) => {
       fontSize: '13px',
       fontWeight: '600',
       cursor: onClick ? 'pointer' : 'default',
-      backgroundColor: hasScrapped ? '#1f2937' : (hasOpen ? '#fef2f2' : '#f0fdf4'),
-      border: `1px solid ${hasScrapped ? '#374151' : (hasOpen ? '#fecaca' : '#bbf7d0')}`,
+      backgroundColor: hasScrapped ? t.text : (hasOpen ? t.errorBg : t.successBg),
+      border: `1px solid ${hasScrapped ? t.textMuted : (hasOpen ? t.error : t.success)}`,
       transition: 'all 0.2s'
     },
     label: {
-      color: hasScrapped ? '#9ca3af' : t.textMuted
+      color: hasScrapped ? t.border : t.textMuted
     },
     open: {
-      color: hasScrapped ? '#fca5a5' : '#ef4444'
+      color: hasScrapped ? t.errorBg : t.error
     },
     inProcess: {
-      color: hasScrapped ? '#fcd34d' : '#f59e0b'
+      color: hasScrapped ? t.warningBg : t.warning
     },
     closed: {
-      color: hasScrapped ? '#86efac' : '#22c55e'
+      color: hasScrapped ? t.successBg : t.success
     },
     scrapped: {
-      color: '#ef4444',
+      color: t.error,
       fontWeight: '600'
     },
     quarantine: {
-      color: hasScrapped ? '#fdba74' : '#f97316'
+      color: hasScrapped ? t.warning : t.warning
     },
     separator: {
-      color: hasScrapped ? '#6b7280' : t.textMuted
+      color: hasScrapped ? t.textMuted : t.textMuted
     }
   };
 

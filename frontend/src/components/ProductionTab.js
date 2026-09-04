@@ -439,9 +439,9 @@ const ProductionTab = ({ theme: t }) => {
   });
 
   const getCoverageColor = (percent) => {
-    if (percent >= 95) return '#22c55e';
-    if (percent >= 80) return '#eab308';
-    return '#ef4444';
+    if (percent >= 95) return t.success;
+    if (percent >= 80) return t.warning;
+    return t.error;
   };
 
   const formatDate = (date) => {
@@ -472,13 +472,13 @@ const ProductionTab = ({ theme: t }) => {
       transition: 'all 0.2s',
       position: 'relative'
     },
-    tabActive: { backgroundColor: t.primary, color: '#fff' },
+    tabActive: { backgroundColor: t.primary, color: 'white' },
     tabBadge: {
       position: 'absolute',
       top: '-6px',
       right: '-6px',
-      backgroundColor: '#ef4444',
-      color: '#fff',
+      backgroundColor: t.error,
+      color: 'white',
       borderRadius: '50%',
       width: '20px',
       height: '20px',
@@ -496,11 +496,11 @@ const ProductionTab = ({ theme: t }) => {
       border: `1px solid ${t.border}`
     },
     warningCard: {
-      backgroundColor: '#fef3c7',
+      backgroundColor: t.warningBg,
       borderRadius: '12px',
       padding: '16px',
       marginBottom: '20px',
-      border: '1px solid #fcd34d',
+      border: `1px solid ${t.warning}`,
       display: 'flex',
       alignItems: 'flex-start',
       gap: '12px'
@@ -552,10 +552,10 @@ const ProductionTab = ({ theme: t }) => {
       fontSize: '14px',
       fontWeight: '500'
     },
-    btnPrimary: { backgroundColor: t.primary, color: '#fff' },
+    btnPrimary: { backgroundColor: t.primary, color: 'white' },
     btnSecondary: { backgroundColor: t.bgContent, color: t.text, border: `1px solid ${t.border}` },
-    btnWarning: { backgroundColor: '#f59e0b', color: '#fff' },
-    btnDanger: { backgroundColor: '#ef4444', color: '#fff' },
+    btnWarning: { backgroundColor: t.warning, color: 'white' },
+    btnDanger: { backgroundColor: t.error, color: 'white' },
     uploadZone: {
       border: `2px dashed ${t.border}`,
       borderRadius: '12px',
@@ -571,9 +571,9 @@ const ProductionTab = ({ theme: t }) => {
       marginBottom: '16px',
       fontSize: '14px'
     },
-    alertSuccess: { backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #86efac' },
-    alertError: { backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' },
-    alertWarning: { backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' },
+    alertSuccess: { backgroundColor: t.successBg, color: t.successFg, border: `1px solid ${t.success}` },
+    alertError: { backgroundColor: t.errorBg, color: t.errorFg, border: `1px solid ${t.error}` },
+    alertWarning: { backgroundColor: t.warningBg, color: t.warningFg, border: `1px solid ${t.warning}` },
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
     label: { fontSize: '12px', fontWeight: '500', color: t.textSecondary },
@@ -687,10 +687,10 @@ const ProductionTab = ({ theme: t }) => {
         <div style={styles.warningCard}>
           <span style={{ fontSize: '24px' }}>⚠️</span>
           <div style={{ flex: 1 }}>
-            <strong style={{ color: '#92400e' }}>
+            <strong style={{ color: t.warningFg }}>
               {unmatchedParts.length} número(s) de parte sin configurar, afectando a {unmatchedParts.reduce((sum, p) => sum + p.entryCount, 0)} entrada(s)
             </strong>
-            <p style={{ margin: '4px 0 0', color: '#92400e', fontSize: '14px' }}>
+            <p style={{ margin: '4px 0 0', color: t.warningFg, fontSize: '14px' }}>
               Estas entradas no pueden vincularse porque sus partes no existen en el sistema.
             </p>
           </div>
@@ -769,29 +769,29 @@ const ProductionTab = ({ theme: t }) => {
               <div style={styles.statLabel}>Total Producido</div>
             </div>
             <div style={styles.statCard}>
-              <div style={{ ...styles.statValue, color: '#22c55e' }}>{coverage.totalInspected}</div>
+              <div style={{ ...styles.statValue, color: t.success }}>{coverage.totalInspected}</div>
               <div style={styles.statLabel}>Inspeccionados</div>
             </div>
             <div style={styles.statCard}>
-              <div style={{ ...styles.statValue, color: '#eab308' }}>{coverage.pending}</div>
+              <div style={{ ...styles.statValue, color: t.warning }}>{coverage.pending}</div>
               <div style={styles.statLabel}>Pendientes</div>
             </div>
             {/* Desglose por estado de unit_registry */}
             {coverage.totalOk > 0 && (
               <div style={styles.statCard}>
-                <div style={{ ...styles.statValue, color: '#22c55e' }}>{coverage.totalOk}</div>
+                <div style={{ ...styles.statValue, color: t.success }}>{coverage.totalOk}</div>
                 <div style={styles.statLabel}>OK</div>
               </div>
             )}
             {coverage.totalDefective > 0 && (
               <div style={styles.statCard}>
-                <div style={{ ...styles.statValue, color: '#ef4444' }}>{coverage.totalDefective}</div>
+                <div style={{ ...styles.statValue, color: t.error }}>{coverage.totalDefective}</div>
                 <div style={styles.statLabel}>Con Defectos</div>
               </div>
             )}
             {coverage.totalScrapped > 0 && (
               <div style={styles.statCard}>
-                <div style={{ ...styles.statValue, color: '#6b7280' }}>{coverage.totalScrapped}</div>
+                <div style={{ ...styles.statValue, color: t.textMuted }}>{coverage.totalScrapped}</div>
                 <div style={styles.statLabel}>Scrap</div>
               </div>
             )}
@@ -811,8 +811,8 @@ const ProductionTab = ({ theme: t }) => {
               </div>
             </div>
             {coverage.unmatchedCount > 0 && (
-              <div style={{ ...styles.statCard, border: '2px solid #f59e0b' }}>
-                <div style={{ ...styles.statValue, color: '#f59e0b' }}>{coverage.unmatchedCount}</div>
+              <div style={{ ...styles.statCard, border: `2px solid ${t.warning}` }}>
+                <div style={{ ...styles.statValue, color: t.warning }}>{coverage.unmatchedCount}</div>
                 <div style={styles.statLabel}>Sin Configurar</div>
               </div>
             )}
@@ -924,7 +924,7 @@ const ProductionTab = ({ theme: t }) => {
                       <td style={styles.td}><strong>{entry.serialNumber}</strong></td>
                       <td style={styles.td}>
                         {entry.partNumber || (
-                          <span style={{ color: '#f59e0b', fontStyle: 'italic' }}>
+                          <span style={{ color: t.warning, fontStyle: 'italic' }}>
                             {entry.partNumberRaw || 'Sin parte'}
                           </span>
                         )}
@@ -936,20 +936,20 @@ const ProductionTab = ({ theme: t }) => {
                         <span style={{
                           ...styles.badge,
                           backgroundColor:
-                            entry.unitStatus === 'OK' ? '#dcfce7' :
-                            entry.unitStatus === 'DEFECTIVE' ? '#fee2e2' :
-                            entry.unitStatus === 'SCRAPPED' ? '#e5e7eb' :
-                            entry.unitId ? '#dbeafe' : '#fef3c7',
+                            entry.unitStatus === 'OK' ? t.successBg :
+                            entry.unitStatus === 'DEFECTIVE' ? t.errorBg :
+                            entry.unitStatus === 'SCRAPPED' ? t.bgContent :
+                            entry.unitId ? t.accentBg : t.warningBg,
                           color:
-                            entry.unitStatus === 'OK' ? '#166534' :
-                            entry.unitStatus === 'DEFECTIVE' ? '#991b1b' :
-                            entry.unitStatus === 'SCRAPPED' ? '#6b7280' :
-                            entry.unitId ? '#1e40af' : '#92400e'
+                            entry.unitStatus === 'OK' ? t.successFg :
+                            entry.unitStatus === 'DEFECTIVE' ? t.errorFg :
+                            entry.unitStatus === 'SCRAPPED' ? t.textMuted :
+                            entry.unitId ? t.accent : t.warningFg
                         }}>
                           {entry.unitStatus || (entry.unitId ? 'REGISTRADO' : 'PENDIENTE')}
                         </span>
                         {entry.partStatus === 'UNMATCHED' && (
-                          <span style={{ ...styles.badge, backgroundColor: '#fee2e2', color: '#991b1b', marginLeft: '4px' }}>
+                          <span style={{ ...styles.badge, backgroundColor: t.errorBg, color: t.errorFg, marginLeft: '4px' }}>
                             SIN CONFIG
                           </span>
                         )}
@@ -1013,8 +1013,8 @@ const ProductionTab = ({ theme: t }) => {
               <p style={{ color: t.text, fontSize: '13px', margin: '0 0 8px', fontWeight: '500' }}>Columnas del CSV:</p>
               <table style={{ fontSize: '12px', color: t.textSecondary }}>
                 <tbody>
-                  <tr><td style={{ padding: '2px 12px 2px 0' }}><code>serial_number</code></td><td><strong style={{ color: '#ef4444' }}>*</strong> Número de serie</td></tr>
-                  <tr><td style={{ padding: '2px 12px 2px 0' }}><code>part_number</code></td><td><strong style={{ color: '#ef4444' }}>*</strong> Número de parte</td></tr>
+                  <tr><td style={{ padding: '2px 12px 2px 0' }}><code>serial_number</code></td><td><strong style={{ color: t.error }}>*</strong> Número de serie</td></tr>
+                  <tr><td style={{ padding: '2px 12px 2px 0' }}><code>part_number</code></td><td><strong style={{ color: t.error }}>*</strong> Número de parte</td></tr>
                   <tr><td style={{ padding: '2px 12px 2px 0' }}><code>lot_number</code></td><td>Número de lote</td></tr>
                   <tr><td style={{ padding: '2px 12px 2px 0' }}><code>work_order</code></td><td>Orden de trabajo</td></tr>
                   <tr><td style={{ padding: '2px 12px 2px 0' }}><code>produced_at</code></td><td>Fecha (YYYY-MM-DD HH:MM:SS)</td></tr>
@@ -1023,7 +1023,7 @@ const ProductionTab = ({ theme: t }) => {
               </table>
             </div>
 
-            <p style={{ color: '#f59e0b', fontSize: '13px', marginBottom: '16px' }}>
+            <p style={{ color: t.warning, fontSize: '13px', marginBottom: '16px' }}>
               <strong>Nota:</strong> Si un part_number no existe en el sistema, se registrará para configuración posterior.
             </p>
 
@@ -1038,8 +1038,8 @@ const ProductionTab = ({ theme: t }) => {
               <div
                 style={{
                   ...styles.uploadZone,
-                  borderColor: dragOver ? '#3b82f6' : undefined,
-                  backgroundColor: dragOver ? 'rgba(59, 130, 246, 0.1)' : undefined
+                  borderColor: dragOver ? t.accent : undefined,
+                  backgroundColor: dragOver ? t.accentBg : undefined
                 }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -1050,7 +1050,7 @@ const ProductionTab = ({ theme: t }) => {
                 ) : (
                   <>
                     <div style={{ fontSize: '48px', marginBottom: '8px' }}>{dragOver ? '📥' : '📄'}</div>
-                    <div style={{ color: dragOver ? '#3b82f6' : t.text, fontWeight: '500' }}>
+                    <div style={{ color: dragOver ? t.accent : t.text, fontWeight: '500' }}>
                       {dragOver ? 'Suelta el archivo aquí' : 'Arrastra un archivo CSV o haz clic para seleccionar'}
                     </div>
                     <div style={{ color: t.textSecondary, fontSize: '14px', marginTop: '4px' }}>
@@ -1064,10 +1064,10 @@ const ProductionTab = ({ theme: t }) => {
             {importResults && (
               <div style={{ marginTop: '16px', padding: '16px', backgroundColor: t.bgContent, borderRadius: '8px' }}>
                 <h4 style={{ color: t.text, marginBottom: '8px' }}>Resultados:</h4>
-                <p style={{ color: '#22c55e' }}>Insertados: {importResults.inserted}</p>
-                <p style={{ color: '#6b7280' }}>Duplicados: {importResults.duplicates}</p>
+                <p style={{ color: t.success }}>Insertados: {importResults.inserted}</p>
+                <p style={{ color: t.textMuted }}>Duplicados: {importResults.duplicates}</p>
                 {importResults.unmatched > 0 && (
-                  <p style={{ color: '#f59e0b' }}>Sin configurar: {importResults.unmatched}</p>
+                  <p style={{ color: t.warning }}>Sin configurar: {importResults.unmatched}</p>
                 )}
                 {importResults.warnings && importResults.warnings.length > 0 && (
                   <div style={{ marginTop: '12px' }}>
@@ -1090,7 +1090,7 @@ const ProductionTab = ({ theme: t }) => {
                 )}
                 {importResults.errors && importResults.errors.length > 0 && (
                   <div style={{ marginTop: '8px' }}>
-                    <p style={{ color: '#ef4444' }}>Errores: {importResults.errors.length}</p>
+                    <p style={{ color: t.error }}>Errores: {importResults.errors.length}</p>
                     <ul style={{ fontSize: '12px', color: t.textSecondary, maxHeight: '100px', overflow: 'auto' }}>
                       {importResults.errors.slice(0, 10).map((err, i) => (
                         <li key={i}>Fila {err.row}: {err.error}</li>
@@ -1141,7 +1141,7 @@ const ProductionTab = ({ theme: t }) => {
                     placeholder="Ej: ABC-123-NEW"
                     disabled={!!manualEntry.partId}
                   />
-                  <span style={{ fontSize: '11px', color: '#f59e0b' }}>
+                  <span style={{ fontSize: '11px', color: t.warning }}>
                     Si no existe, se guardará para configurar después
                   </span>
                 </div>
@@ -1220,7 +1220,7 @@ const ProductionTab = ({ theme: t }) => {
                   )}
                 </div>
                 <button
-                  style={{ ...styles.btn, background: '#3b82f6', color: 'white' }}
+                  style={{ ...styles.btn, background: t.accent, color: 'white' }}
                   onClick={() => navigate('/clients')}
                   title="Crear esta parte en el catálogo de clientes"
                 >
@@ -1251,27 +1251,27 @@ const ProductionTab = ({ theme: t }) => {
                 <div style={{ fontSize: '24px', fontWeight: '600', color: t.text }}>{previewModal.preview.total}</div>
                 <div style={{ fontSize: '12px', color: t.textSecondary }}>Total en CSV</div>
               </div>
-              <div style={{ background: '#dcfce7', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '600', color: '#166534' }}>{previewModal.preview.newCount}</div>
-                <div style={{ fontSize: '12px', color: '#166534' }}>Nuevos</div>
+              <div style={{ background: t.successBg, padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: t.successFg }}>{previewModal.preview.newCount}</div>
+                <div style={{ fontSize: '12px', color: t.successFg }}>Nuevos</div>
               </div>
-              <div style={{ background: previewModal.preview.duplicateCount > 0 ? '#fef3c7' : '#f3f4f6', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '600', color: previewModal.preview.duplicateCount > 0 ? '#92400e' : '#6b7280' }}>{previewModal.preview.duplicateCount}</div>
-                <div style={{ fontSize: '12px', color: previewModal.preview.duplicateCount > 0 ? '#92400e' : '#6b7280' }}>Ya existen</div>
+              <div style={{ background: previewModal.preview.duplicateCount > 0 ? t.warningBg : t.bgContent, padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: previewModal.preview.duplicateCount > 0 ? t.warningFg : t.textMuted }}>{previewModal.preview.duplicateCount}</div>
+                <div style={{ fontSize: '12px', color: previewModal.preview.duplicateCount > 0 ? t.warningFg : t.textMuted }}>Ya existen</div>
               </div>
             </div>
 
             {/* Warning de duplicados */}
             {previewModal.preview.duplicateCount > 0 && (
-              <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>
+              <div style={{ background: t.warningBg, border: `1px solid ${t.warning}`, borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontWeight: '600', color: t.warningFg, marginBottom: '8px' }}>
                   ⚠️ {previewModal.preview.duplicateCount} serial(es) ya existen y serán omitidos
                 </div>
 
                 {/* Lista de duplicados (máx 10) */}
-                <div style={{ maxHeight: '120px', overflowY: 'auto', fontSize: '13px', color: '#78350f' }}>
+                <div style={{ maxHeight: '120px', overflowY: 'auto', fontSize: '13px', color: t.warningFg }}>
                   {previewModal.preview.duplicates.slice(0, 10).map((dup, i) => (
-                    <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #fcd34d' }}>
+                    <div key={i} style={{ padding: '4px 0', borderBottom: `1px solid ${t.warning}` }}>
                       <strong>{dup.serialNumber}</strong>
                       {dup.partNumber && <span> - {dup.partNumber}</span>}
                       {dup.workOrder && <span> (OT: {dup.workOrder})</span>}
@@ -1286,7 +1286,7 @@ const ProductionTab = ({ theme: t }) => {
 
                 {/* Botón descargar CSV de duplicados */}
                 <button
-                  style={{ ...styles.btn, marginTop: '12px', background: '#f59e0b', color: 'white', fontSize: '13px' }}
+                  style={{ ...styles.btn, marginTop: '12px', background: t.warning, color: 'white', fontSize: '13px' }}
                   onClick={() => {
                     const csvContent = 'serial_number,part_number,work_order\n' +
                       previewModal.preview.duplicates.map(d =>
@@ -1308,11 +1308,11 @@ const ProductionTab = ({ theme: t }) => {
 
             {/* Warning de partes no configuradas */}
             {previewModal.preview.unmatchedCount > 0 && (
-              <div style={{ background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: '600', color: '#991b1b', marginBottom: '4px' }}>
+              <div style={{ background: t.errorBg, border: `1px solid ${t.error}`, borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontWeight: '600', color: t.errorFg, marginBottom: '4px' }}>
                   ⚠️ {previewModal.preview.unmatchedCount} parte(s) no configurada(s)
                 </div>
-                <div style={{ fontSize: '13px', color: '#991b1b' }}>
+                <div style={{ fontSize: '13px', color: t.errorFg }}>
                   {previewModal.preview.unmatchedParts.join(', ')}
                 </div>
               </div>
