@@ -1131,7 +1131,7 @@ const MRBCreate = () => {
       {currentStep === 1 && (
         <div style={styles.card}>
           <div style={styles.cardTitle}>
-            <FileWarning size={22} color="#C77700" />
+            <FileWarning size={22} color={t.warning} />
             Paso 1: Seleccionar Tipo de Campaña
           </div>
           <p style={{ color: t.textDim, marginBottom: '24px' }}>
@@ -1143,7 +1143,7 @@ const MRBCreate = () => {
               style={{ ...styles.sourceTypeCard, ...(sourceType === '8D' ? styles.sourceTypeCardSelected : {}) }}
               onClick={() => { setSourceType('8D'); setSelectedSource(null); setSelectedClientId(null); setSelectedProjectId(null); setSelectedPartIds([]); setCurrentStep(2); }}
             >
-              <Package size={48} color="#0072CE" style={{ marginBottom: '12px' }} />
+              <Package size={48} color={t.info} style={{ marginBottom: '12px' }} />
               <div style={{ fontSize: '20px', fontWeight: '600', color: t.accent, marginBottom: '8px' }}>Vincular 8D</div>
               <div style={{ color: t.textDim, fontSize: '13px' }}>Eight Disciplines Report</div>
               <div style={{ color: t.textDim, fontSize: '12px', marginTop: '8px' }}>El 8D ya existe — hereda datos automáticamente</div>
@@ -1163,8 +1163,8 @@ const MRBCreate = () => {
                 setCurrentStep(3);
               }}
             >
-              <AlertTriangle size={48} color="#C77700" style={{ marginBottom: '12px' }} />
-              <div style={{ fontSize: '20px', fontWeight: '600', color: '#C77700', marginBottom: '8px' }}>Incoming Inspection</div>
+              <AlertTriangle size={48} color={t.warning} style={{ marginBottom: '12px' }} />
+              <div style={{ fontSize: '20px', fontWeight: '600', color: t.warning, marginBottom: '8px' }}>Incoming Inspection</div>
               <div style={{ color: t.textDim, fontSize: '13px' }}>Campaña MRB Incoming</div>
               <div style={{ color: t.textDim, fontSize: '12px', marginTop: '8px' }}>Sin 8D aún — datos manuales, vincular después</div>
             </div>
@@ -1176,7 +1176,7 @@ const MRBCreate = () => {
       {currentStep === 2 && (
         <div style={styles.card}>
           <div style={styles.cardTitle}>
-            <Search size={22} color="#0072CE" />
+            <Search size={22} color={t.info} />
             Paso 2: Buscar y Seleccionar {sourceType}
           </div>
 
@@ -1269,7 +1269,7 @@ const MRBCreate = () => {
         <div style={styles.card}>
           <div style={{ ...styles.cardTitle, justifyContent: 'space-between', alignItems: 'center', display: 'flex' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FileText size={22} color="#22c55e" />
+              <FileText size={22} color={t.success} />
               {sourceType === 'INCOMING' ? 'Paso 3: Campaña MRB Incoming Inspection' : `Paso 3: Datos Heredados del 8D`}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1451,14 +1451,14 @@ const MRBCreate = () => {
                     <button
                       type="button"
                       onClick={() => setCampaignDefectIds(availableDefects.map(d => d.defectTypeId))}
-                      style={{ padding: '4px 10px', fontSize: '11px', backgroundColor: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ padding: '4px 10px', fontSize: '11px', backgroundColor: t.infoBg, color: t.info, border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                     >
                       Seleccionar todos
                     </button>
                     <button
                       type="button"
                       onClick={() => setCampaignDefectIds([])}
-                      style={{ padding: '4px 10px', fontSize: '11px', backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ padding: '4px 10px', fontSize: '11px', backgroundColor: t.errorBg, color: t.error, border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                     >
                       Quitar todos
                     </button>
@@ -1466,9 +1466,9 @@ const MRBCreate = () => {
                   {availableDefects.map(defect => {
                     const selected = campaignDefectIds.includes(defect.defectTypeId);
                     return (
-                      <label key={defect.defectTypeId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', backgroundColor: selected ? '#fef3c7' : 'transparent', border: `1px solid ${selected ? '#f59e0b' : 'transparent'}` }}>
+                      <label key={defect.defectTypeId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', backgroundColor: selected ? t.warningBg : 'transparent', border: `1px solid ${selected ? t.warning : 'transparent'}` }}>
                         <input type="checkbox" checked={selected} onChange={() => toggleDefectSelection(defect.defectTypeId)} style={{ width: '15px', height: '15px', flexShrink: 0 }} />
-                        <span style={{ fontWeight: '600', color: '#f59e0b', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', minWidth: '50px' }}>{defect.code}</span>
+                        <span style={{ fontWeight: '600', color: t.warning, fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', minWidth: '50px' }}>{defect.code}</span>
                         <span style={{ color: t.text, fontSize: '12px' }}>{defect.displayName || defect.name}</span>
                         {defect.categoryName && <span style={{ color: t.textMuted, fontSize: '11px', marginLeft: 'auto' }}>{defect.categoryName}</span>}
                       </label>
@@ -1535,7 +1535,7 @@ const MRBCreate = () => {
                       }
                     } catch (e) { console.error(e); }
                   }}
-                  style={{ padding: '5px 12px', backgroundColor: '#ede9fe', color: '#7c3aed', border: '1px solid #c4b5fd', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  style={{ padding: '5px 12px', backgroundColor: t.accentBg, color: t.accent, border: `1px solid ${t.accentBorder}`, borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                 >
                   Sincronizar desde 8D
                 </button>
@@ -1558,13 +1558,13 @@ const MRBCreate = () => {
                     value={f.val}
                     onChange={e => f.set(e.target.value)}
                     placeholder="0"
-                    style={{ ...styles.input, borderColor: f.info ? t.border : (f.val > 0 ? '#f59e0b' : t.border), opacity: f.info ? 0.7 : 1 }}
+                    style={{ ...styles.input, borderColor: f.info ? t.border : (f.val > 0 ? t.warning : t.border), opacity: f.info ? 0.7 : 1 }}
                   />
                 </div>
               ))}
             </div>
             {(parseInt(qWarehouse)||0) + (parseInt(qProcess)||0) > 0 && (
-              <div style={{ marginTop: '10px', fontSize: '12px', color: '#f59e0b', fontWeight: '600' }}>
+              <div style={{ marginTop: '10px', fontSize: '12px', color: t.warning, fontWeight: '600' }}>
                 En Planta: {(parseInt(qWarehouse)||0) + (parseInt(qProcess)||0)} pcs
                 {((parseInt(qTransit)||0) + (parseInt(qCustomer)||0)) > 0 &&
                   <span style={{ color: t.textDim, fontWeight: '400', marginLeft: '12px' }}>
@@ -1624,7 +1624,7 @@ const MRBCreate = () => {
           {/* MRB Details */}
           <div style={styles.card}>
             <div style={styles.cardTitle}>
-              <FileText size={22} color="#7c3aed" />
+              <FileText size={22} color={t.accent} />
               {draftId ? 'Datos Generales' : 'Paso 4: Datos de la Campaña MRB'}
             </div>
 
@@ -1665,7 +1665,7 @@ const MRBCreate = () => {
               <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 Descripción de Parte
                 {partDescription && (sourceType === '8D' || sourceType === 'INCOMING') && (
-                  <span style={{ backgroundColor: '#0072CE20', color: '#0072CE', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
+                  <span style={{ backgroundColor: `${t.info}20`, color: t.info, padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
                     Del 8D
                   </span>
                 )}
@@ -1683,7 +1683,7 @@ const MRBCreate = () => {
               <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 Criterio de Inspección * — ¿Cómo se garantiza que el material esté conforme?
                 {inspectionCriteria && (sourceType === '8D' || sourceType === 'INCOMING') && (
-                  <span style={{ backgroundColor: '#0072CE20', color: '#0072CE', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
+                  <span style={{ backgroundColor: `${t.info}20`, color: t.info, padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
                     D3 del 8D
                   </span>
                 )}
@@ -1700,7 +1700,7 @@ const MRBCreate = () => {
               <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 Instrucciones de Disposición * — ¿Cómo se dispondrá el material sospechoso?
                 {dispositionInstructions && (sourceType === '8D' || sourceType === 'INCOMING') && (
-                  <span style={{ backgroundColor: '#0072CE20', color: '#0072CE', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
+                  <span style={{ backgroundColor: `${t.info}20`, color: t.info, padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
                     D3 del 8D
                   </span>
                 )}
@@ -1717,7 +1717,7 @@ const MRBCreate = () => {
           {/* MRB Operation Fields */}
           <div style={styles.card}>
             <div style={styles.cardTitle}>
-              <ClipboardCheck size={22} color="#2E7D32" />
+              <ClipboardCheck size={22} color={t.success} />
               Recursos de Inspección
             </div>
             <p style={{ color: t.textDim, fontSize: '12px', marginBottom: '16px', marginTop: 0 }}>
@@ -1788,7 +1788,7 @@ const MRBCreate = () => {
               <Camera size={22} />
               Estándar Visual (NOK / OK)
               {(inheritedPhotoNok || inheritedPhotoOk) && (
-                <span style={{ fontSize: '12px', color: '#2E7D32', fontWeight: '400', marginLeft: '8px' }}>
+                <span style={{ fontSize: '12px', color: t.success, fontWeight: '400', marginLeft: '8px' }}>
                   Heredadas del 8D
                 </span>
               )}
@@ -1796,7 +1796,7 @@ const MRBCreate = () => {
             <div style={styles.photoGrid}>
               {/* NOK */}
               <div style={{ position: 'relative' }}>
-                <div style={{ fontSize: '11px', fontWeight: '600', color: '#B00020', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: t.error, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   NOK — Condición de Defecto
                 </div>
                 <label style={{ ...styles.photoBox, ...styles.photoBoxNok }}>
@@ -1805,15 +1805,15 @@ const MRBCreate = () => {
                     <>
                       <img src={photoNokPreview} alt="NOK" style={styles.photoPreview} />
                       {inheritedPhotoNok && !photoNokFile && (
-                        <span style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: '#C77700', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
+                        <span style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: t.warning, color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
                           Heredada
                         </span>
                       )}
                     </>
                   ) : (
                     <>
-                      <X size={32} color="#B00020" />
-                      <p style={{ margin: '8px 0 0', color: '#B00020', fontWeight: '600', fontSize: '13px' }}>Foto NOK (Defecto) *</p>
+                      <X size={32} color={t.error} />
+                      <p style={{ margin: '8px 0 0', color: t.error, fontWeight: '600', fontSize: '13px' }}>Foto NOK (Defecto) *</p>
                     </>
                   )}
                 </label>
@@ -1823,7 +1823,7 @@ const MRBCreate = () => {
               </div>
               {/* OK */}
               <div style={{ position: 'relative' }}>
-                <div style={{ fontSize: '11px', fontWeight: '600', color: '#2E7D32', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: t.success, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   OK — Condición Aceptable
                 </div>
                 <label style={{ ...styles.photoBox, ...styles.photoBoxOk }}>
@@ -1832,15 +1832,15 @@ const MRBCreate = () => {
                     <>
                       <img src={photoOkPreview} alt="OK" style={styles.photoPreview} />
                       {inheritedPhotoOk && !photoOkFile && (
-                        <span style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: '#2E7D32', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
+                        <span style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: t.success, color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
                           Heredada
                         </span>
                       )}
                     </>
                   ) : (
                     <>
-                      <Check size={32} color="#22c55e" />
-                      <p style={{ margin: '8px 0 0', color: '#22c55e', fontWeight: '600', fontSize: '13px' }}>Foto OK (Referencia) *</p>
+                      <Check size={32} color={t.success} />
+                      <p style={{ margin: '8px 0 0', color: t.success, fontWeight: '600', fontSize: '13px' }}>Foto OK (Referencia) *</p>
                     </>
                   )}
                 </label>
@@ -1881,7 +1881,7 @@ const MRBCreate = () => {
                       </p>
                       <button
                         onClick={() => removeExtraFile(idx)}
-                        style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#B00020', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                        style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: t.error, color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                       >
                         <X size={10} />
                       </button>
@@ -2006,7 +2006,7 @@ const MRBCreate = () => {
             {/* Header */}
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontWeight: '600', fontSize: '15px', color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Package size={18} color="#0072CE" />
+                <Package size={18} color={t.info} />
                 Vincular 8D a esta campaña
               </div>
               <button onClick={() => { setShowLinkModal(false); setPendingAdoptSource(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted }}><X size={20} /></button>
@@ -2063,7 +2063,7 @@ const MRBCreate = () => {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px' }}>{src.folio}</span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#C7770022', color: '#C77700' }}>{src.status}</span>
+                    <span style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#C7770022', color: t.warning }}>{src.status}</span>
                     {src.mrbCampaigns?.map((mc, mi) => (
                       <span key={mi} style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: mc.status === 'CERRADA' ? '#22c55e22' : '#f59e0b22', color: mc.status === 'CERRADA' ? '#16a34a' : '#b45309' }}>
                         MRB {mc.campaignNumber} · {mc.status}
@@ -2208,7 +2208,7 @@ const MRBCreate = () => {
             maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.4)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <AlertTriangle size={24} color="#C77700" />
+              <AlertTriangle size={24} color={t.warning} />
               <h3 style={{ margin: 0, color: t.text, fontSize: '16px', fontWeight: '600' }}>
                 Ya existe una campaña vinculada
               </h3>
@@ -2266,7 +2266,7 @@ const MRBCreate = () => {
                     handleSubmit(draft, true);
                   }
                 }}
-                style={{ flex: 1, padding: '10px', backgroundColor: '#C77700', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
+                style={{ flex: 1, padding: '10px', backgroundColor: t.warning, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
               >
                 Crear de todas formas
               </button>

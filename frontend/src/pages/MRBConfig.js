@@ -124,8 +124,8 @@ const MRBConfig = () => {
     tab: (active) => ({
       padding: '10px 20px', border: 'none', cursor: 'pointer', fontWeight: 600,
       fontSize: '14px', background: 'none',
-      color: active ? '#1d4ed8' : t.textMuted,
-      borderBottom: active ? '2px solid #1d4ed8' : '2px solid transparent',
+      color: active ? t.info : t.textMuted,
+      borderBottom: active ? `2px solid ${t.info}` : '2px solid transparent',
       marginBottom: '-2px'
     }),
     card: {
@@ -142,8 +142,8 @@ const MRBConfig = () => {
     toggleBtn: (active) => ({
       padding: '4px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
       fontWeight: 600, fontSize: '13px', minWidth: '60px',
-      backgroundColor: active ? '#dcfce7' : '#fee2e2',
-      color: active ? '#166534' : '#B00020'
+      backgroundColor: active ? t.successBg : t.errorBg,
+      color: active ? t.successFg : t.error
     }),
     linkCard: {
       background: t.cardBg, border: `1px solid ${t.border}`,
@@ -151,15 +151,15 @@ const MRBConfig = () => {
       alignItems: 'center', justifyContent: 'space-between'
     },
     linkBtn: {
-      padding: '8px 18px', background: '#1d4ed8', color: '#fff',
+      padding: '8px 18px', background: t.info, color: '#fff',
       border: 'none', borderRadius: '6px', cursor: 'pointer',
       fontWeight: 600, fontSize: '13px'
     },
     alert: (type) => ({
       padding: '12px 16px', borderRadius: '6px', marginBottom: '16px', fontSize: '14px',
-      background: type === 'error' ? '#fee2e2' : '#dcfce7',
-      color: type === 'error' ? '#B00020' : '#166534',
-      border: `1px solid ${type === 'error' ? '#fca5a5' : '#86efac'}`
+      background: type === 'error' ? t.errorBg : t.successBg,
+      color: type === 'error' ? t.error : t.successFg,
+      border: `1px solid ${type === 'error' ? t.error : t.success}`
     })
   };
 

@@ -46,7 +46,7 @@ const PersonnelRow = ({ row, campaignId, token, theme: t, onSaved, savingPersonn
         {editing
           ? <input type="number" min="0.5" max="24" step="0.5" value={hrs} onChange={e => setHrs(parseFloat(e.target.value) || 0)} autoFocus
               style={{ width: '64px', padding: '4px', textAlign: 'center', border: `1px solid ${t.accent}`, borderRadius: '4px', backgroundColor: t.bgInput, color: t.text, fontSize: '13px', fontWeight: '600' }} />
-          : <span style={{ fontWeight: hrs > 0 ? '600' : '400', color: hrs > 0 ? t.text : '#f59e0b' }}>{hrs > 0 ? `${hrs} hrs` : '— sin registrar'}</span>
+          : <span style={{ fontWeight: hrs > 0 ? '600' : '400', color: hrs > 0 ? t.text : t.warning }}>{hrs > 0 ? `${hrs} hrs` : '— sin registrar'}</span>
         }
       </td>
       <td style={{ padding: '5px 8px', textAlign: 'center', fontSize: '12px' }}>
@@ -61,10 +61,10 @@ const PersonnelRow = ({ row, campaignId, token, theme: t, onSaved, savingPersonn
           </div>
         ) : <span style={{ color: t.textMuted }}>{insp} insp · {sup} sup</span>}
       </td>
-      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: hrs > 0 ? '#C77700' : t.textMuted }}>{hrs > 0 ? `$${cost.toFixed(2)}` : '—'}</td>
+      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: hrs > 0 ? t.warning : t.textMuted }}>{hrs > 0 ? `$${cost.toFixed(2)}` : '—'}</td>
       <td style={{ padding: '5px 8px', textAlign: 'center' }}>
         {editing
-          ? <button onClick={handleSave} disabled={savingPersonnel} style={{ padding: '4px 10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>✓ Guardar</button>
+          ? <button onClick={handleSave} disabled={savingPersonnel} style={{ padding: '4px 10px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>✓ Guardar</button>
           : <button onClick={() => setEditing(true)} style={{ padding: '4px 8px', backgroundColor: t.bgInput, color: t.accent, border: `1px solid ${t.border}`, borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>✎ Hrs</button>
         }
       </td>
@@ -1168,8 +1168,8 @@ const MRBCampaignDetail = () => {
       'BORRADOR': { color: '#6b7280', label: L.draft, icon: FileText },
       'ABIERTA': { color: '#C77700', label: L.pendingDisposition, icon: AlertTriangle },
       'EN_PROCESO': { color: '#0072CE', label: L.inProcessValidation, icon: Clock },
-      'CERRADA': { color: '#22c55e', label: L.closed, icon: CheckCircle },
-      'CANCELADA': { color: '#B00020', label: L.cancelled, icon: XCircle }
+      'CERRADA': { color: t.success, label: L.closed, icon: CheckCircle },
+      'CANCELADA': { color: t.error, label: L.cancelled, icon: XCircle }
     };
     return configs[status] || { color: '#6b7280', label: status, icon: AlertTriangle };
   };
@@ -1199,7 +1199,7 @@ const MRBCampaignDetail = () => {
       fontSize: '14px'
     },
     header: {
-      backgroundColor: '#7c3aed',
+      backgroundColor: t.accent,
       color: 'white',
       padding: '24px',
       borderRadius: '12px',
@@ -1365,7 +1365,7 @@ const MRBCampaignDetail = () => {
     buttonSuccess: {
       flex: 1,
       padding: '14px',
-      backgroundColor: '#22c55e',
+      backgroundColor: t.success,
       color: 'white',
       border: 'none',
       borderRadius: '8px',
@@ -1380,7 +1380,7 @@ const MRBCampaignDetail = () => {
     buttonDanger: {
       flex: 1,
       padding: '14px',
-      backgroundColor: '#B00020',
+      backgroundColor: t.error,
       color: 'white',
       border: 'none',
       borderRadius: '8px',
@@ -1456,15 +1456,15 @@ const MRBCampaignDetail = () => {
       border: `2px solid ${t.bgCard}`
     },
     closedBanner: {
-      backgroundColor: '#22c55e20',
-      border: '1px solid #22c55e',
+      backgroundColor: `${t.success}20`,
+      border: `1px solid ${t.success}`,
       borderRadius: '8px',
       padding: '20px',
       textAlign: 'center'
     },
     rejectedBanner: {
-      backgroundColor: '#B0002020',
-      border: '1px solid #B00020',
+      backgroundColor: `${t.error}20`,
+      border: `1px solid ${t.error}`,
       borderRadius: '8px',
       padding: '16px'
     }
@@ -1523,7 +1523,7 @@ const MRBCampaignDetail = () => {
                   if (data.success) navigate('/mrb-campaigns');
                   else alert(data.message || L.errorDelete);
                 }}
-                style={{ padding: '8px 14px', backgroundColor: '#B00020', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                style={{ padding: '8px 14px', backgroundColor: t.error, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
               >
                 <Trash2 size={16} />
                 Eliminar Borrador
@@ -1532,7 +1532,7 @@ const MRBCampaignDetail = () => {
           )}
           <button
             onClick={() => navigate('/mrb-create')}
-            style={{ padding: '8px 14px', backgroundColor: '#2E7D32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+            style={{ padding: '8px 14px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
           >
             <PlusCircle size={16} />
             Nuevo MRB
@@ -1555,7 +1555,7 @@ const MRBCampaignDetail = () => {
       </div>
 
       {/* Header */}
-      <div style={{ ...styles.header, backgroundColor: mrbCase?.severityColor || '#7c3aed' }}>
+      <div style={{ ...styles.header, backgroundColor: mrbCase?.severityColor || t.accent }}>
         <div style={styles.headerTop}>
           <div>
             <div style={styles.qarNumber}>{mrbCase.campaignNumber}</div>
@@ -1601,7 +1601,7 @@ const MRBCampaignDetail = () => {
 
           {/* Title & Description */}
           <div style={styles.card}>
-            <div style={styles.cardTitle}><FileText size={18} color="#7c3aed" />Datos Generales</div>
+            <div style={styles.cardTitle}><FileText size={18} color={t.accent} />Datos Generales</div>
             <div style={{ marginBottom: '14px' }}>
               <label style={styles.label}>Título *</label>
               <input type="text" style={{ ...styles.infoValue, width: '100%', padding: '10px', backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '14px' }}
@@ -1632,14 +1632,14 @@ const MRBCampaignDetail = () => {
           {/* Inspector instructions */}
           <div style={styles.card}>
             <div style={styles.cardTitle}>
-              <Info size={18} color="#0072CE" />
+              <Info size={18} color={t.info} />
               Instrucciones para el Inspector
               {mrbCase.sourceType === '8D' && (
                 <button
                   onClick={handleSyncFromSource}
                   disabled={submitting}
                   title="Actualizar desde D3 del 8D vinculado"
-                  style={{ marginLeft: 'auto', padding: '4px 10px', backgroundColor: '#0072CE20', color: '#0072CE', border: '1px solid #0072CE60', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  style={{ marginLeft: 'auto', padding: '4px 10px', backgroundColor: `${t.info}20`, color: t.info, border: `1px solid ${t.info}60`, borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                 >
                   <RefreshCw size={12} />
                   Sincronizar del 8D
@@ -1660,7 +1660,7 @@ const MRBCampaignDetail = () => {
 
           {/* Resources */}
           <div style={styles.card}>
-            <div style={styles.cardTitle}><ClipboardCheck size={18} color="#2E7D32" />Recursos de Inspección</div>
+            <div style={styles.cardTitle}><ClipboardCheck size={18} color={t.success} />Recursos de Inspección</div>
             <p style={{ color: t.textDim, fontSize: '12px', margin: '0 0 14px' }}>
               Las cantidades y costo de scrap se registran desde la app de inspección una vez iniciada la campaña.
             </p>
@@ -1696,7 +1696,7 @@ const MRBCampaignDetail = () => {
           {/* Photos & Attachments */}
           <div style={styles.card}>
             <div style={styles.cardTitle}>
-              <Camera size={18} color="#7c3aed" />
+              <Camera size={18} color={t.accent} />
               Estándar Visual
               <label style={{ marginLeft: 'auto', padding: '5px 10px', backgroundColor: t.accent, color: 'white', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Paperclip size={12} />{uploadingAttach ? L.uploading : L.addFile}
@@ -1706,13 +1706,13 @@ const MRBCampaignDetail = () => {
             {(mrbCase.photoNokPath || mrbCase.photoOkPath) && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: attachments.length > 0 ? '14px' : 0 }}>
                 <div>
-                  <div style={{ backgroundColor: '#B00020', padding: '4px 10px', borderRadius: '6px 6px 0 0' }}>
+                  <div style={{ backgroundColor: t.error, padding: '4px 10px', borderRadius: '6px 6px 0 0' }}>
                     <span style={{ color: 'white', fontWeight: '600', fontSize: '11px' }}>NOK — Defecto</span>
                   </div>
                   <img src={`${API_URL}${mrbCase.photoNokPath}`} alt="NOK" style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '0 0 6px 6px', display: 'block' }} onClick={() => window.open(`${API_URL}${mrbCase.photoNokPath}`, '_blank')} />
                 </div>
                 <div>
-                  <div style={{ backgroundColor: '#22c55e', padding: '4px 10px', borderRadius: '6px 6px 0 0' }}>
+                  <div style={{ backgroundColor: t.success, padding: '4px 10px', borderRadius: '6px 6px 0 0' }}>
                     <span style={{ color: 'white', fontWeight: '600', fontSize: '11px' }}>OK — Aceptable</span>
                   </div>
                   <img src={`${API_URL}${mrbCase.photoOkPath}`} alt="OK" style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '0 0 6px 6px', display: 'block' }} onClick={() => window.open(`${API_URL}${mrbCase.photoOkPath}`, '_blank')} />
@@ -1732,7 +1732,7 @@ const MRBCampaignDetail = () => {
                             <span style={{ fontSize: '9px', color: t.textDim, maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.filename}</span>
                           </a>
                       }
-                      <button onClick={() => handleDeleteAttachment(att.id)} style={{ position: 'absolute', top: '-5px', right: '-5px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#B00020', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                      <button onClick={() => handleDeleteAttachment(att.id)} style={{ position: 'absolute', top: '-5px', right: '-5px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: t.error, color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                         <X size={9} />
                       </button>
                     </div>
@@ -1756,7 +1756,7 @@ const MRBCampaignDetail = () => {
               <button
                 onClick={() => { if (window.confirm('¿Publicar esta campaña MRB? Se notificará a los destinatarios.')) handleSaveDraft(true); }}
                 disabled={submitting}
-                style={{ flex: 2, padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: submitting ? 0.7 : 1 }}
+                style={{ flex: 2, padding: '14px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: submitting ? 0.7 : 1 }}
               >
                 <Send size={18} />
                 {submitting ? L.publishing : L.publishCampaign}
@@ -1787,9 +1787,9 @@ const MRBCampaignDetail = () => {
                 fontSize: '13px',
                 fontWeight: '600',
                 border: 'none',
-                borderBottom: activeTab === tab.id ? `3px solid #7c3aed` : '3px solid transparent',
+                borderBottom: activeTab === tab.id ? `3px solid ${t.accent}` : '3px solid transparent',
                 backgroundColor: 'transparent',
-                color: activeTab === tab.id ? '#7c3aed' : t.textMuted,
+                color: activeTab === tab.id ? t.accent : t.textMuted,
                 cursor: 'pointer',
                 marginBottom: '-2px'
               }}
@@ -1828,7 +1828,7 @@ const MRBCampaignDetail = () => {
                     : null;
 
                   return (
-                    <div style={{ ...styles.card, marginBottom: '16px', borderLeft: '4px solid #f59e0b' }}>
+                    <div style={{ ...styles.card, marginBottom: '16px', borderLeft: `4px solid ${t.warning}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
                           <div style={styles.cardTitle}>⚠ {L.quarantineMaterial}</div>
@@ -1839,7 +1839,7 @@ const MRBCampaignDetail = () => {
                             <button
                               onClick={() => handleSaveQuarantine(true)}
                               disabled={savingQuarantine}
-                              style={{ padding: '6px 12px', backgroundColor: '#1565C0', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                              style={{ padding: '6px 12px', backgroundColor: t.info, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                             >
                               <RefreshCw size={13} /> Sync desde 8D
                             </button>
@@ -1856,12 +1856,12 @@ const MRBCampaignDetail = () => {
                       {/* Main numbers */}
                       <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: qTotal > 0 ? '14px' : '0' }}>
                         <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '32px', fontWeight: '600', color: '#f59e0b' }}>{qTotal || '—'}</div>
+                          <div style={{ fontSize: '32px', fontWeight: '600', color: t.warning }}>{qTotal || '—'}</div>
                           <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>En Planta</div>
                         </div>
                         {qTotal > 0 && <>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '32px', fontWeight: '600', color: '#22c55e' }}>{qInsp}</div>
+                            <div style={{ fontSize: '32px', fontWeight: '600', color: t.success }}>{qInsp}</div>
                             <div style={{ fontSize: '11px', color: t.textMuted, textTransform: 'uppercase' }}>Inspeccionado</div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
@@ -1880,8 +1880,8 @@ const MRBCampaignDetail = () => {
                             {(dispWarehouse > 0 || dispProcess > 0 || dispTransit > 0 || dispCustomer > 0) && (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
                                 {[
-                                  { label: L.warehouse, value: dispWarehouse, color: '#f59e0b', info: false },
-                                  { label: L.process,  value: dispProcess,  color: '#f59e0b', info: false },
+                                  { label: L.warehouse, value: dispWarehouse, color: t.warning, info: false },
+                                  { label: L.process,  value: dispProcess,  color: t.warning, info: false },
                                   { label: L.transit, value: dispTransit,  color: '#9ca3af', info: true },
                                   { label: L.customer,  value: dispCustomer, color: '#9ca3af', info: true },
                                 ].filter(l => l.value > 0).map(loc => (
@@ -1920,15 +1920,15 @@ const MRBCampaignDetail = () => {
                             </div>
                           ))}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '600', textTransform: 'uppercase' }}>Total</label>
-                            <div style={{ width: '90px', padding: '8px', backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', fontSize: '15px', fontWeight: '600', textAlign: 'center', color: '#92400e' }}>
+                            <label style={{ fontSize: '11px', color: t.warning, fontWeight: '600', textTransform: 'uppercase' }}>Total</label>
+                            <div style={{ width: '90px', padding: '8px', backgroundColor: t.warningBg, border: '1px solid #f59e0b', borderRadius: '6px', fontSize: '15px', fontWeight: '600', textAlign: 'center', color: t.warningFg }}>
                               {qWarehouse + qProcess + qTransit + qCustomer}
                             </div>
                           </div>
                           <button
                             onClick={() => handleSaveQuarantine(false)}
                             disabled={savingQuarantine}
-                            style={{ padding: '8px 16px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-end' }}
+                            style={{ padding: '8px 16px', backgroundColor: t.warning, color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-end' }}
                           >
                             <Save size={14} /> {savingQuarantine ? L.saving : L.save}
                           </button>
@@ -1944,9 +1944,9 @@ const MRBCampaignDetail = () => {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
                     {[
                       { label: L.inspected, value: mrbCase.qtyInspected || 0, color: t.accent },
-                      { label: L.ok,   value: mrbCase.qtyOk || 0, color: '#22c55e' },
-                      { label: L.nok,  value: mrbCase.qtyNok || 0, color: '#B00020' },
-                      { label: L.rework,      value: mrbCase.qtyRework || 0,    color: '#f59e0b' },
+                      { label: L.ok,   value: mrbCase.qtyOk || 0, color: t.success },
+                      { label: L.nok,  value: mrbCase.qtyNok || 0, color: t.error },
+                      { label: L.rework,      value: mrbCase.qtyRework || 0,    color: t.warning },
                       { label: L.scrap,       value: mrbCase.qtyScrap || 0,     color: '#ef4444' },
                       { label: L.return,      value: mrbCase.qtyReturn || 0,    color: '#8b5cf6' },
                       { label: L.hold,        value: mrbCase.qtyHold || 0,      color: '#6b7280' },
@@ -2033,15 +2033,15 @@ const MRBCampaignDetail = () => {
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                          {totalNok > 0 && <span style={{ fontSize: '13px', color: '#B00020', fontWeight: '600' }}>{totalNok} NOK</span>}
-                          {rework > 0 && <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: '600' }}>⟳ {rework} Rework</span>}
+                          {totalNok > 0 && <span style={{ fontSize: '13px', color: t.error, fontWeight: '600' }}>{totalNok} NOK</span>}
+                          {rework > 0 && <span style={{ fontSize: '12px', color: t.warning, fontWeight: '600' }}>⟳ {rework} Rework</span>}
                           {scrap > 0 && <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: '600' }}>✕ {scrap} Scrap</span>}
                           {ret > 0 && <span style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: '600' }}>↩ {ret} Dev.</span>}
                           {hold > 0 && <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>⏸ {hold} Hold</span>}
-                          {useAsIs > 0 && <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: '600' }}>✓ {useAsIs} UAI</span>}
+                          {useAsIs > 0 && <span style={{ fontSize: '12px', color: t.success, fontWeight: '600' }}>✓ {useAsIs} UAI</span>}
                           <button
                             onClick={() => setShiftReport({ shiftId: row.shiftId, date: rawDate, shiftLabel: shiftLabel })}
-                            style={{ marginLeft: 'auto', padding: '5px 12px', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                            style={{ marginLeft: 'auto', padding: '5px 12px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                             Ver Reporte
                           </button>
                         </div>
@@ -2060,7 +2060,7 @@ const MRBCampaignDetail = () => {
                                 href={`${API_URL}${tally.filePath}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', color: '#92400e', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: t.warningBg, border: '1px solid #f59e0b', borderRadius: '6px', color: t.warningFg, fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}
                               >
                                 {tally.filename}
                               </a>
@@ -2172,8 +2172,8 @@ const MRBCampaignDetail = () => {
               <div style={styles.infoItem}>
                 <div style={styles.infoLabel}>Qty OK / NOK</div>
                 <div style={{ ...styles.infoValue, display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#22c55e', fontWeight: '600' }}>{mrbCase.qtyOk ?? 0} OK</span>
-                  <span style={{ color: '#B00020', fontWeight: '600' }}>{mrbCase.qtyNok ?? 0} NOK</span>
+                  <span style={{ color: t.success, fontWeight: '600' }}>{mrbCase.qtyOk ?? 0} OK</span>
+                  <span style={{ color: t.error, fontWeight: '600' }}>{mrbCase.qtyNok ?? 0} NOK</span>
                 </div>
               </div>
               {/* Affected Serials Section */}
@@ -2185,7 +2185,7 @@ const MRBCampaignDetail = () => {
                       onClick={handleOpenAffectedSerialsModal}
                       style={{
                         padding: '4px 12px',
-                        backgroundColor: '#7c3aed',
+                        backgroundColor: t.accent,
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -2204,8 +2204,8 @@ const MRBCampaignDetail = () => {
                   {affectedSerialsSummary.total > 0 ? (
                     <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
                       <span style={{ color: t.text }}>Total: <strong>{affectedSerialsSummary.total}</strong></span>
-                      <span style={{ color: '#22c55e' }}>Inspeccionados: <strong>{affectedSerialsSummary.inspected}</strong></span>
-                      <span style={{ color: '#f59e0b' }}>Pendientes: <strong>{affectedSerialsSummary.pending}</strong></span>
+                      <span style={{ color: t.success }}>Inspeccionados: <strong>{affectedSerialsSummary.inspected}</strong></span>
+                      <span style={{ color: t.warning }}>Pendientes: <strong>{affectedSerialsSummary.pending}</strong></span>
                     </div>
                   ) : (
                     <div style={{ color: t.textMuted, fontSize: '12px', fontStyle: 'italic' }}>
@@ -2223,7 +2223,7 @@ const MRBCampaignDetail = () => {
                       onClick={handleOpenDefectsModal}
                       style={{
                         padding: '4px 12px',
-                        backgroundColor: '#7c3aed',
+                        backgroundColor: t.accent,
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -2272,7 +2272,7 @@ const MRBCampaignDetail = () => {
                   {/* Scrap cost by part */}
                   {costSummary.scrap?.length > 0 && (
                     <div>
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#B00020', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: t.error, textTransform: 'uppercase', marginBottom: '6px' }}>
                         Costo de Scrap — ${costSummary.totals.scrap.toFixed(2)} total
                       </div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -2287,9 +2287,9 @@ const MRBCampaignDetail = () => {
                           {costSummary.scrap.map((r, i) => (
                             <tr key={i} style={{ borderBottom: `1px solid ${t.border}` }}>
                               <td style={{ padding: '5px 8px', color: t.text, fontWeight: '500' }}>{r.partNumber}{r.partName ? ` — ${r.partName}` : ''}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'center', color: '#B00020', fontWeight: '600' }}>{r.qtyScrap}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'center', color: t.error, fontWeight: '600' }}>{r.qtyScrap}</td>
                               <td style={{ padding: '5px 8px', textAlign: 'center', color: t.textMuted }}>${r.unitCost.toFixed(2)}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: '#B00020' }}>${r.totalCost.toFixed(2)}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: t.error }}>${r.totalCost.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2331,7 +2331,7 @@ const MRBCampaignDetail = () => {
                   {/* Grand total */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px', borderTop: `2px solid ${t.border}` }}>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>
-                      Costo Total Campaña: <span style={{ color: '#B00020', fontSize: '18px' }}>${costSummary.totals.grand.toFixed(2)}</span>
+                      Costo Total Campaña: <span style={{ color: t.error, fontSize: '18px' }}>${costSummary.totals.grand.toFixed(2)}</span>
                     </span>
                   </div>
                 </div>
@@ -2351,7 +2351,7 @@ const MRBCampaignDetail = () => {
           {(mrbCase.inspectionCriteria || mrbCase.dispositionInstructions) && (
             <div style={styles.card}>
               <div style={styles.cardTitle}>
-                <Info size={18} color="#0072CE" />
+                <Info size={18} color={t.info} />
                 Instrucciones para el Inspector
               </div>
               {mrbCase.inspectionCriteria && (
@@ -2495,7 +2495,7 @@ const MRBCampaignDetail = () => {
                     border: '1px solid #0072CE',
                     borderRadius: '8px'
                   }}>
-                    <AlertTriangle size={18} color="#0072CE" />
+                    <AlertTriangle size={18} color={t.info} />
                     <div>
                       <div style={{ color: t.text, fontSize: '13px', fontWeight: '500' }}>
                         Este QAR escaló a 8D
@@ -2621,7 +2621,7 @@ const MRBCampaignDetail = () => {
                     {paretoRows.map((row, i) => (
                       <tr key={row.defectName} style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: i % 2 === 0 ? t.bgCard : t.bgPanel }}>
                         <td style={{ ...styles.td, fontWeight: i === 0 ? '600' : '400' }}>{row.defectName}</td>
-                        <td style={{ ...styles.td, textAlign: 'center', fontWeight: '600', color: '#B00020' }}>{row.qty}</td>
+                        <td style={{ ...styles.td, textAlign: 'center', fontWeight: '600', color: t.error }}>{row.qty}</td>
                         <td style={{ ...styles.td, textAlign: 'center', color: t.textMuted }}>
                           {totalQty > 0 ? ((row.qty / totalQty) * 100).toFixed(1) : 0}%
                         </td>
@@ -2641,7 +2641,7 @@ const MRBCampaignDetail = () => {
           {/* ====== DISPOSITION SECTION ====== */}
           <div style={styles.card}>
             <div style={styles.cardTitle}>
-              <Send size={18} color="#7c3aed" />
+              <Send size={18} color={t.accent} />
               Disposición del Material
               {mrbCase.status === 'ABIERTA' && (
                 <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#C77700', fontWeight: '500' }}>
@@ -2649,12 +2649,12 @@ const MRBCampaignDetail = () => {
                 </span>
               )}
               {(mrbCase.status === 'EN_PROCESO' || mrbCase.status === 'CERRADA') && (
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#22c55e', fontWeight: '500' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: t.success, fontWeight: '500' }}>
                   COMPLETADO
                 </span>
               )}
               {mrbCase.status === 'CANCELADA' && (
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#B00020', fontWeight: '500' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: t.error, fontWeight: '500' }}>
                   CANCELADO
                 </span>
               )}
@@ -2669,7 +2669,7 @@ const MRBCampaignDetail = () => {
                   <div style={{ color: t.textDim, fontSize: '12px', marginTop: '2px' }}>No ha sido notificado a los destinatarios. Publica la campaña cuando estés listo.</div>
                 </div>
                 <button
-                  style={{ padding: '10px 20px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '10px 20px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   disabled={submitting}
                   onClick={async () => {
                     if (!window.confirm('¿Publicar esta campaña MRB? Se notificará a los destinatarios.')) return;
@@ -2760,7 +2760,7 @@ const MRBCampaignDetail = () => {
                   />
                 </div>
                 <button
-                  style={{ ...styles.buttonPrimary, opacity: submitting ? 0.7 : 1, backgroundColor: '#7c3aed' }}
+                  style={{ ...styles.buttonPrimary, opacity: submitting ? 0.7 : 1, backgroundColor: t.accent }}
                   onClick={handleSubmitResponse}
                   disabled={submitting}
                 >
@@ -2783,7 +2783,7 @@ const MRBCampaignDetail = () => {
             {mrbCase.status === 'CERRADA' ? (
               <div style={styles.closedBanner}>
                 <CheckCircle size={40} color="#22c55e" style={{ marginBottom: '12px' }} />
-                <div style={{ color: '#22c55e', fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
+                <div style={{ color: t.success, fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>
                   Caso MRB Cerrado y Validado
                 </div>
                 {mrbCase.validatedByName && (
@@ -3041,7 +3041,7 @@ const MRBCampaignDetail = () => {
           {(mrbCase.photoNokPath || mrbCase.photoOkPath || attachments.length > 0) && (
             <div style={styles.card}>
               <div style={styles.cardTitle}>
-                <Camera size={18} color="#7c3aed" />
+                <Camera size={18} color={t.accent} />
                 Estándar Visual
                 <label style={{
                   marginLeft: 'auto',
@@ -3072,7 +3072,7 @@ const MRBCampaignDetail = () => {
                       borderRadius: '8px',
                       overflow: 'hidden'
                     }}>
-                      <div style={{ backgroundColor: '#B00020', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ backgroundColor: t.error, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <X size={14} color="white" />
                         <span style={{ color: 'white', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>NOK — Condición de Defecto</span>
                       </div>
@@ -3084,7 +3084,7 @@ const MRBCampaignDetail = () => {
                           onClick={() => window.open(`${API_URL}${mrbCase.photoNokPath}`, '_blank')}
                         />
                       ) : (
-                        <div style={{ padding: '30px', textAlign: 'center', color: '#B00020' }}>Sin foto NOK</div>
+                        <div style={{ padding: '30px', textAlign: 'center', color: t.error }}>Sin foto NOK</div>
                       )}
                     </div>
                   </div>
@@ -3095,7 +3095,7 @@ const MRBCampaignDetail = () => {
                       borderRadius: '8px',
                       overflow: 'hidden'
                     }}>
-                      <div style={{ backgroundColor: '#22c55e', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ backgroundColor: t.success, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Check size={14} color="white" />
                         <span style={{ color: 'white', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>OK — Condición Aceptable</span>
                       </div>
@@ -3107,7 +3107,7 @@ const MRBCampaignDetail = () => {
                           onClick={() => window.open(`${API_URL}${mrbCase.photoOkPath}`, '_blank')}
                         />
                       ) : (
-                        <div style={{ padding: '30px', textAlign: 'center', color: '#22c55e' }}>Sin foto OK</div>
+                        <div style={{ padding: '30px', textAlign: 'center', color: t.success }}>Sin foto OK</div>
                       )}
                     </div>
                   </div>
@@ -3146,7 +3146,7 @@ const MRBCampaignDetail = () => {
                           )}
                           <button
                             onClick={() => handleDeleteAttachment(att.id)}
-                            style={{ position: 'absolute', top: '-5px', right: '-5px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#B00020', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontSize: '10px' }}
+                            style={{ position: 'absolute', top: '-5px', right: '-5px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: t.error, color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontSize: '10px' }}
                           >
                             <X size={9} />
                           </button>
@@ -3225,9 +3225,9 @@ const MRBCampaignDetail = () => {
                 <div style={{ fontSize: '28px', fontWeight: '600', color: '#16a34a' }}>{affectedSerialsSummary.inspected}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.inspected / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
               </div>
-              <div style={{ ...styles.card, borderLeft: '4px solid #f59e0b', padding: '16px' }}>
+              <div style={{ ...styles.card, borderLeft: `4px solid ${t.warning}`, padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: t.textMuted, fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Pendientes</div>
-                <div style={{ fontSize: '28px', fontWeight: '600', color: '#f59e0b' }}>{affectedSerialsSummary.pending}</div>
+                <div style={{ fontSize: '28px', fontWeight: '600', color: t.warning }}>{affectedSerialsSummary.pending}</div>
                 <div style={{ fontSize: '11px', color: t.textMuted }}>{affectedSerialsSummary.total > 0 ? ((affectedSerialsSummary.pending / affectedSerialsSummary.total) * 100).toFixed(1) : 0}%</div>
               </div>
               <div style={{ ...styles.card, borderLeft: '4px solid #8b5cf6', padding: '16px' }}>
@@ -3300,7 +3300,7 @@ const MRBCampaignDetail = () => {
                                   {serial.serialNumber}
                                   {serial.inspected
                                     ? <span style={{ color: '#16a34a', marginLeft: '4px' }}>✓</span>
-                                    : <span style={{ color: '#f59e0b', marginLeft: '4px' }}>⏳</span>}
+                                    : <span style={{ color: t.warning, marginLeft: '4px' }}>⏳</span>}
                                 </td>
                                 <td style={{ position: 'sticky', left: '130px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `1px solid ${t.border}`, backgroundColor: rowBg }}>{serial.partNumber || '—'}</td>
                                 <td style={{ position: 'sticky', left: '210px', zIndex: 10, padding: '6px 10px', color: t.textMuted, fontSize: '10px', borderBottom: `1px solid ${t.border}`, borderRight: `2px solid ${t.border}`, textAlign: 'center', backgroundColor: rowBg }}>
@@ -3489,7 +3489,7 @@ const MRBCampaignDetail = () => {
                   disabled={savingDefects}
                   style={{
                     padding: '8px 16px',
-                    backgroundColor: '#7c3aed',
+                    backgroundColor: t.accent,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -3826,7 +3826,7 @@ const MRBCampaignDetail = () => {
               alignItems: 'center'
             }}>
               <h3 style={{ margin: 0, color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <List size={20} color="#7c3aed" />
+                <List size={20} color={t.accent} />
                 Seriales Afectados
                 {affectedSerialsSummary.total > 0 && (
                   <span style={{ fontSize: '12px', color: t.textDim, fontWeight: '400' }}>
@@ -4180,7 +4180,7 @@ const MRBCampaignDetail = () => {
                       {manualSerials.length > 1 && (
                         <button
                           onClick={() => handleRemoveManualRow(index)}
-                          style={{ background: 'none', border: 'none', color: '#B00020', cursor: 'pointer', padding: '4px' }}
+                          style={{ background: 'none', border: 'none', color: t.error, cursor: 'pointer', padding: '4px' }}
                         >
                           <X size={18} />
                         </button>
@@ -4242,8 +4242,8 @@ const MRBCampaignDetail = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <span style={{ color: t.text }}>
                         <strong>{affectedSerialsSummary.total}</strong> seriales —
-                        <span style={{ color: '#22c55e' }}> {affectedSerialsSummary.inspected} inspeccionados</span>,
-                        <span style={{ color: '#f59e0b' }}> {affectedSerialsSummary.pending} pendientes</span>
+                        <span style={{ color: t.success }}> {affectedSerialsSummary.inspected} inspeccionados</span>,
+                        <span style={{ color: t.warning }}> {affectedSerialsSummary.pending} pendientes</span>
                       </span>
                       {affectedSerials.length > 0 && (
                         <button
@@ -4251,7 +4251,7 @@ const MRBCampaignDetail = () => {
                           style={{
                             padding: '6px 12px',
                             backgroundColor: '#B0002022',
-                            color: '#B00020',
+                            color: t.error,
                             border: '1px solid #B00020',
                             borderRadius: '6px',
                             cursor: 'pointer',
@@ -4299,7 +4299,7 @@ const MRBCampaignDetail = () => {
                               {!serial.inspected && (
                                 <button
                                   onClick={() => handleDeleteSerial(serial.id)}
-                                  style={{ background: 'none', border: 'none', color: '#B00020', cursor: 'pointer', padding: '4px' }}
+                                  style={{ background: 'none', border: 'none', color: t.error, cursor: 'pointer', padding: '4px' }}
                                   title="Eliminar"
                                 >
                                   <X size={14} />

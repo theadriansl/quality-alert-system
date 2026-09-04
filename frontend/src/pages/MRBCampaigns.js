@@ -54,13 +54,13 @@ const UnregisteredRow = ({ item, rowKey, edit, selected, t, onEditChange, onTogg
           </div>
         ) : <span style={{ color: t.textMuted }}>{edit.insp} insp · {edit.sup} sup</span>}
       </td>
-      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: '#C77700', fontSize: '12px' }}>
+      <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: '600', color: t.warning, fontSize: '12px' }}>
         ${cost.toFixed(2)}
       </td>
       <td style={{ padding: '5px 8px', textAlign: 'center' }}>
         {editing ? (
           <button onClick={() => setEditing(false)}
-            style={{ padding: '4px 10px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
+            style={{ padding: '4px 10px', backgroundColor: t.success, color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
             ✓ Ok
           </button>
         ) : (
@@ -593,11 +593,11 @@ const MRBCampaigns = () => {
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>
-          <AlertTriangle size={28} color="#7c3aed" />
+          <AlertTriangle size={28} color={currentTheme.accent} />
           Material Review Board (MRB)
         </h1>
         <div style={styles.headerButtons}>
-          <button style={{ ...styles.homeButton, backgroundColor: '#2E7D32' }} onClick={() => navigate('/mrb-create')}>
+          <button style={{ ...styles.homeButton, backgroundColor: currentTheme.success }} onClick={() => navigate('/mrb-create')}>
             + Nuevo MRB
           </button>
           <button style={styles.homeButton} onClick={() => navigate('/mrb-capture')}>
@@ -620,10 +620,10 @@ const MRBCampaigns = () => {
             padding: '10px 18px',
             fontSize: '13px',
             fontWeight: activeTab === id ? '600' : '500',
-            color: alert ? '#ef4444' : activeTab === id ? currentTheme.accent : currentTheme.textDim,
+            color: alert ? currentTheme.error : activeTab === id ? currentTheme.accent : currentTheme.textDim,
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: `2px solid ${activeTab === id ? (alert ? '#ef4444' : currentTheme.accent) : 'transparent'}`,
+            borderBottom: `2px solid ${activeTab === id ? (alert ? currentTheme.error : currentTheme.accent) : 'transparent'}`,
             marginBottom: '-2px',
             cursor: 'pointer',
             display: 'flex',
@@ -648,7 +648,7 @@ const MRBCampaigns = () => {
                 disabled={bulkRegistering || selectedKeys.size === 0}
                 style={{
                   padding: '9px 20px', fontSize: '13px', fontWeight: '600',
-                  backgroundColor: bulkRegistering || selectedKeys.size === 0 ? '#6b7280' : '#7c3aed',
+                  backgroundColor: bulkRegistering || selectedKeys.size === 0 ? currentTheme.textMuted : currentTheme.accent,
                   color: 'white', border: 'none', borderRadius: '8px',
                   cursor: bulkRegistering || selectedKeys.size === 0 ? 'not-allowed' : 'pointer'
                 }}
@@ -716,7 +716,7 @@ const MRBCampaigns = () => {
             onClick={() => setFilterStatus(filterStatus === key ? '' : key)}
             style={{
               flex: 1,
-              backgroundColor: filterStatus === key ? color : '#374151',
+              backgroundColor: filterStatus === key ? color : currentTheme.bgPanel,
               borderRadius: '12px',
               padding: '16px',
               cursor: 'pointer',
@@ -730,7 +730,7 @@ const MRBCampaigns = () => {
                 {label}
               </span>
             </div>
-            <div style={{ fontSize: '28px', fontWeight: '600', color: filterStatus === key ? 'white' : '#F4F6F8' }}>
+            <div style={{ fontSize: '28px', fontWeight: '600', color: filterStatus === key ? 'white' : currentTheme.text }}>
               {filteredStatusCounts[key]}
             </div>
           </div>
@@ -787,8 +787,8 @@ const MRBCampaigns = () => {
 
           {hasActiveFilters && (
             <button onClick={clearFilters} style={{
-              padding: '8px 14px', backgroundColor: 'transparent', color: '#ef4444',
-              border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600'
+              padding: '8px 14px', backgroundColor: 'transparent', color: currentTheme.error,
+              border: `1px solid ${currentTheme.error}`, borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600'
             }}>
               ✕ Limpiar
             </button>
@@ -806,7 +806,7 @@ const MRBCampaigns = () => {
             onClick={exportToExcel}
             disabled={exportingExcel || sortedMrbs.length === 0}
             style={{
-              padding: '8px 16px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px',
+              padding: '8px 16px', backgroundColor: currentTheme.success, color: 'white', border: 'none', borderRadius: '6px',
               cursor: (exportingExcel || sortedMrbs.length === 0) ? 'not-allowed' : 'pointer',
               opacity: (exportingExcel || sortedMrbs.length === 0) ? 0.6 : 1,
               display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600'
@@ -865,7 +865,7 @@ const MRBCampaigns = () => {
                   <tr
                     key={mrb.id}
                     style={styles.tr}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#4b5563'}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = currentTheme.bgHover}
                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     onClick={() => navigate(`/mrb-campaign/${mrb.id}`)}
                   >
@@ -883,8 +883,8 @@ const MRBCampaigns = () => {
                             borderRadius: '4px',
                             fontSize: '11px',
                             fontWeight: '600',
-                            backgroundColor: mrb.sourceType === 'QAR' ? '#C7770033' : '#0072CE33',
-                            color: mrb.sourceType === 'QAR' ? '#C77700' : currentTheme.accent,
+                            backgroundColor: mrb.sourceType === 'QAR' ? `${currentTheme.warning}33` : `${currentTheme.info}33`,
+                            color: mrb.sourceType === 'QAR' ? currentTheme.warning : currentTheme.info,
                             cursor: 'pointer'
                           }}
                           onClick={(e) => {

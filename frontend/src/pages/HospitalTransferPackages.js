@@ -471,17 +471,17 @@ const HospitalTransferPackages = () => {
 
       {/* Messages */}
       {error && (
-        <div style={{ padding: '12px 16px', backgroundColor: '#dc262620', color: '#dc2626', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ padding: '12px 16px', backgroundColor: `${t.error}20`, color: t.error, borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <XCircle size={18} />
           {error}
-          <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}>×</button>
+          <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: t.error }}>×</button>
         </div>
       )}
       {success && (
-        <div style={{ padding: '12px 16px', backgroundColor: '#16a34a20', color: '#16a34a', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ padding: '12px 16px', backgroundColor: `${t.success}20`, color: t.success, borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <CheckCircle size={18} />
           {success}
-          <button onClick={() => setSuccess('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#16a34a' }}>×</button>
+          <button onClick={() => setSuccess('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: t.success }}>×</button>
         </div>
       )}
 
@@ -490,24 +490,24 @@ const HospitalTransferPackages = () => {
         <button style={tabStyle(activeTab === 'send')} onClick={() => setActiveTab('send')}>
           <Send size={16} />
           {language === 'es' ? 'Enviar a MRB' : 'Send to MRB'}
-          {quarantineDefects.length > 0 && <span style={badgeStyle('#3b82f6')}>{quarantineDefects.length}</span>}
+          {quarantineDefects.length > 0 && <span style={badgeStyle(t.info)}>{quarantineDefects.length}</span>}
         </button>
         <button style={tabStyle(activeTab === 'sent')} onClick={() => setActiveTab('sent')}>
           <Package size={16} />
           {language === 'es' ? 'Paquetes Enviados' : 'Sent Packages'}
           {sentPackages.filter(p => p.status === 'PENDING').length > 0 && (
-            <span style={badgeStyle('#f59e0b')}>{sentPackages.filter(p => p.status === 'PENDING').length}</span>
+            <span style={badgeStyle(t.warning)}>{sentPackages.filter(p => p.status === 'PENDING').length}</span>
           )}
         </button>
         <button style={tabStyle(activeTab === 'receive')} onClick={() => setActiveTab('receive')}>
           <Inbox size={16} />
           {language === 'es' ? 'Recibir de MRB' : 'Receive from MRB'}
-          {incomingPackages.length > 0 && <span style={badgeStyle('#8b5cf6')}>{incomingPackages.length}</span>}
+          {incomingPackages.length > 0 && <span style={badgeStyle(t.accent)}>{incomingPackages.length}</span>}
         </button>
         <button style={tabStyle(activeTab === 'alerts')} onClick={() => setActiveTab('alerts')}>
           <AlertTriangle size={16} />
           {language === 'es' ? 'Alertas' : 'Alerts'}
-          {alertCount > 0 && <span style={badgeStyle('#dc2626')}>{alertCount}</span>}
+          {alertCount > 0 && <span style={badgeStyle(t.error)}>{alertCount}</span>}
         </button>
       </div>
 
@@ -690,8 +690,8 @@ const HospitalTransferPackages = () => {
                           borderRadius: '12px',
                           fontSize: '11px',
                           fontWeight: '600',
-                          backgroundColor: pkg.status === 'RECEIVED' ? '#16a34a20' : pkg.alertTriggered ? '#dc262620' : '#f59e0b20',
-                          color: pkg.status === 'RECEIVED' ? '#16a34a' : pkg.alertTriggered ? '#dc2626' : '#f59e0b'
+                          backgroundColor: pkg.status === 'RECEIVED' ? `${t.success}20` : pkg.alertTriggered ? `${t.error}20` : `${t.warning}20`,
+                          color: pkg.status === 'RECEIVED' ? t.success : pkg.alertTriggered ? t.error : t.warning
                         }}>
                           {pkg.status === 'RECEIVED'
                             ? (language === 'es' ? 'RECIBIDO' : 'RECEIVED')
@@ -705,8 +705,8 @@ const HospitalTransferPackages = () => {
                             borderRadius: '10px',
                             fontSize: '11px',
                             fontWeight: '600',
-                            backgroundColor: pkg.alertTriggered ? '#dc262620' : '#3b82f620',
-                            color: pkg.alertTriggered ? '#dc2626' : '#3b82f6'
+                            backgroundColor: pkg.alertTriggered ? `${t.error}20` : `${t.info}20`,
+                            color: pkg.alertTriggered ? t.error : t.info
                           }}>
                             <Clock size={10} style={{ marginRight: '4px' }} />
                             {formatMinutes(pkg.minutesElapsed)}
@@ -797,7 +797,7 @@ const HospitalTransferPackages = () => {
                       padding: '16px',
                       backgroundColor: selectedIncomingPackage?.id === pkg.id ? `${t.primary}10` : t.bg,
                       borderRadius: '8px',
-                      border: `1px solid ${selectedIncomingPackage?.id === pkg.id ? t.primary : pkg.alertTriggered ? '#dc2626' : t.border}`,
+                      border: `1px solid ${selectedIncomingPackage?.id === pkg.id ? t.primary : pkg.alertTriggered ? t.error : t.border}`,
                       cursor: 'pointer'
                     }}
                   >
@@ -806,7 +806,7 @@ const HospitalTransferPackages = () => {
                         <div style={{ fontWeight: '600', color: t.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Inbox size={16} />
                           {pkg.packageNumber}
-                          {pkg.alertTriggered && <AlertTriangle size={14} color="#dc2626" />}
+                          {pkg.alertTriggered && <AlertTriangle size={14} color={t.error} />}
                         </div>
                         <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '4px' }}>
                           {pkg.itemCount} item(s) • {pkg.createdByName}
@@ -817,8 +817,8 @@ const HospitalTransferPackages = () => {
                         borderRadius: '12px',
                         fontSize: '11px',
                         fontWeight: '600',
-                        backgroundColor: pkg.alertTriggered ? '#dc262620' : '#8b5cf620',
-                        color: pkg.alertTriggered ? '#dc2626' : '#8b5cf6'
+                        backgroundColor: pkg.alertTriggered ? `${t.error}20` : `${t.accent}20`,
+                        color: pkg.alertTriggered ? t.error : t.accent
                       }}>
                         {formatMinutes(pkg.minutesElapsed)}
                       </span>
@@ -989,12 +989,12 @@ const HospitalTransferPackages = () => {
         <div>
           <div style={{
             padding: '16px 20px',
-            backgroundColor: alertPackages.length > 0 ? '#dc262610' : t.bg,
+            backgroundColor: alertPackages.length > 0 ? `${t.error}10` : t.bg,
             borderRadius: '8px',
-            border: `1px solid ${alertPackages.length > 0 ? '#dc2626' : t.border}`,
+            border: `1px solid ${alertPackages.length > 0 ? t.error : t.border}`,
             marginBottom: '20px'
           }}>
-            <h3 style={{ margin: 0, color: alertPackages.length > 0 ? '#dc2626' : t.text }}>
+            <h3 style={{ margin: 0, color: alertPackages.length > 0 ? t.error : t.text }}>
               {alertPackages.length > 0
                 ? (language === 'es' ? `${alertPackages.length} paquete(s) con alerta` : `${alertPackages.length} package(s) with alerts`)
                 : (language === 'es' ? 'Sin alertas' : 'No alerts')}
@@ -1029,7 +1029,7 @@ const HospitalTransferPackages = () => {
                       padding: '16px',
                       backgroundColor: t.bg,
                       borderRadius: '8px',
-                      border: '1px solid #dc2626',
+                      border: `1px solid ${t.error}`,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
@@ -1044,9 +1044,9 @@ const HospitalTransferPackages = () => {
                         fontSize: '10px',
                         fontWeight: '600',
                         textTransform: 'uppercase',
-                        backgroundColor: pkg.direction === 'incoming' ? '#dc262620' : '#3b82f620',
-                        color: pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6',
-                        border: `1px solid ${pkg.direction === 'incoming' ? '#dc2626' : '#3b82f6'}`
+                        backgroundColor: pkg.direction === 'incoming' ? `${t.error}20` : `${t.info}20`,
+                        color: pkg.direction === 'incoming' ? t.error : t.info,
+                        border: `1px solid ${pkg.direction === 'incoming' ? t.error : t.info}`
                       }}>
                         {pkg.direction === 'incoming'
                           ? (language === 'es' ? 'Entrante' : 'Incoming')
@@ -1075,19 +1075,19 @@ const HospitalTransferPackages = () => {
                           {formatMinutes(targetMinutes)}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'center', padding: '8px 12px', backgroundColor: '#f59e0b20', borderRadius: '6px' }}>
-                        <div style={{ fontSize: '10px', color: '#f59e0b', textTransform: 'uppercase' }}>
+                      <div style={{ textAlign: 'center', padding: '8px 12px', backgroundColor: `${t.warning}20`, borderRadius: '6px' }}>
+                        <div style={{ fontSize: '10px', color: t.warning, textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Transcurrido' : 'Elapsed'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#f59e0b' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: t.warning }}>
                           {formatMinutes(elapsed)}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'center', padding: '8px 12px', backgroundColor: '#dc262620', borderRadius: '6px' }}>
-                        <div style={{ fontSize: '10px', color: '#dc2626', textTransform: 'uppercase' }}>
+                      <div style={{ textAlign: 'center', padding: '8px 12px', backgroundColor: `${t.error}20`, borderRadius: '6px' }}>
+                        <div style={{ fontSize: '10px', color: t.error, textTransform: 'uppercase' }}>
                           {language === 'es' ? 'Excedido' : 'Exceeded'}
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#dc2626' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: t.error }}>
                           +{formatMinutes(exceeded)}
                         </div>
                       </div>

@@ -809,8 +809,82 @@ D3MFG.js: 32 literales
 - SVG stroke mantiene hex (atributo no-CSS)
 - DATA colors preservados (chart palettes, ProcessFlowBuilder icons)
 
+---
+
+## Notas Sesión 04-Sep-2026
+
+### ✅ COMPLETADO HOY: Tokenización Hex → Theme Tokens (Bloque pages/)
+
+| Archivo | Cambios | Commit |
+|---------|---------|--------|
+| ClientDetail.js.backup2 | ELIMINADO (archivo muerto) | `70ac8d2` |
+| AuditAuditors.js | 2 tokens (#8b5cf6 → t.accent) | `70ac8d2` |
+| AuditCalendar.js | 1 token (warning banner) | `70ac8d2` |
+| AuditDetail.js | 3 tokens (observation color, button, summary) | `70ac8d2` |
+| AuditExecute.js | 2 tokens (toast, result badge) | `70ac8d2` |
+| AuditNCDetail.js | 2 tokens (status, button) | `70ac8d2` |
+| AuditNCList.js | 2 tokens (status, summary) | `70ac8d2` |
+| AuditProgramDetail.js | 1 token (button) | `70ac8d2` |
+| AuditRequests.js | 9 tokens (badges, headers, cells, buttons) | `70ac8d2` |
+| AuditScheduleCreate.js | 3 tokens (select border, ECR/8D badges) | `70ac8d2` |
+| ClientsList.js | ~25 tokens (banners, buttons, badges, icons) | `70ac8d2` |
+| ClientDetail.js | ~90 tokens (full module tokenization) | `70ac8d2` |
+| DefectQuery.js | ~15 tokens (buttons, tabs, badges, table) | `c45716c` |
+| DefectCapture.js | 1 token (warning border) | `c45716c` |
+| DefectAdminV2.js | 5 tokens (alerts, buttons, checkbox, modal) | `c45716c` |
+| DepartmentsManagement.js | 2 tokens (delete btn, hierarchy border) | `8aee51e` |
+| ECRWorkflow.js | ~20 tokens (priority, status, closure, history) | `8aee51e` |
+
+**Total sesión: ~180 hex → tokens, 3 commits**
+
+### DATA colors preservados (no tocar):
+- DefectConfig.js: color picker defaults (#6b7280, #0072CE)
+- DefectQuery.js: COLORS array (gráficas), Recharts props (stroke, fill)
+- DefectCapture.js: categoryColor/severityColor fallbacks
+- DefectAdminV2.js: form color defaults
+- DefectHospital.js: formatEventType (confirmado sesión 01-Sep)
+- AuditDashboard.js: DEFAULT_COLORS, COLORS.gray scale
+- ECRWorkflow.js: html2canvas backgroundColor (#ffffff)
+- Home.js: #fff (white literal sobre fondos de color)
+
+### ✅ CONTINUACIÓN 04-Sep-2026 (Bloques 1-5)
+
+| Bloque | Archivos | Cambios | Notas |
+|--------|----------|---------|-------|
+| Bloque 1 | ECRClosure.js, CreateClient.js | ~180 tokens | Commit anterior |
+| Bloque 3 | HospitalTransferPackages.js | ~40 tokens | Todos hex UI tokenizados |
+| Bloque 3 | HospitalDashboard.js | 0 cambios | COLORS object = DATA, #fff = PDF export |
+| Bloque 4 | MRBCampaigns.js | ~15 tokens UI | STATUS_CONFIGS = DATA |
+| Bloque 4 | MRBCreate.js | ~30 tokens | Status ternaries = DATA |
+| Bloque 4 | MRBConfig.js | ~8 tokens | Limpio |
+| Bloque 4 | MRBCampaignDetail.js | ~40 tokens | STATUS_CONFIGS = DATA |
+| Bloque 5 | Skills*.js (4 archivos) | 0 cambios | COLORS objects = DATA (chart/skill levels) |
+
+**Grep final pages/:** 807 hex restantes en 39 archivos
+- Mayoría son DATA colors: STATUS_CONFIGS, DISPOSITION_COLORS, COLORS palettes, chart fills, color pickers
+
+### DATA colors identificados (NO tocar):
+- MRBBuffer.js: COLORS, DEPT_COLORS
+- MRBInventory.js: COLORS, DISPOSITION_COLORS
+- MRBDefectCapture.js: DISPOSITION_COLORS, DISPOSITIONS_QUICK
+- MRBCampaigns.js: STATUS_CONFIGS (BORRADOR/ABIERTA/EN_PROCESO/CANCELADA/CERRADA)
+- MRBCampaignDetail.js: getStatusConfig
+- MRBCreate.js: Status ternaries (CERRADA/BORRADOR colors)
+- Skills*.js: COLORS objects (skill levels, charts)
+- HospitalDashboard.js: COLORS (chart palette)
+- ECRDashboardAdvanced.js: Chart palettes (Scrap/Rework/etc.)
+
 ### PENDIENTE para próxima sesión:
-- ECRClosure.js + resto de pages/ (no revisados en este pase)
+**Archivos con hex UI restantes:**
+- MRBTransferPackages.js (~96 hex - mezcla UI/DATA)
+- MRBShiftReport.js (~37 hex)
+- MRBDefectCapture.js (~57 hex - muchos UI)
+- DefectHospital.js (~46 hex)
+- RepairStation.js (~47 hex)
+- ReportCenter.js (~54 hex)
+- RolesManagement.js, UserManagement.js, UnitTraceability.js
+
+**Tech debt general:**
 - borderRadius: 2480 instancias en 134 archivos (requiere sesión dedicada)
 
 ### Otros pendientes:
