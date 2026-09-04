@@ -429,8 +429,8 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: t.warningBg,
+          border: `1px solid ${t.warning}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -467,8 +467,8 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
       {/* Validation Error Banner */}
       {showValidationError && getAreasMissingRisk().length > 0 && (
         <div style={{
-          backgroundColor: '#fee2e2',
-          border: '2px solid #ef4444',
+          backgroundColor: t.errorBg,
+          border: `2px solid ${t.error}`,
           borderRadius: '8px',
           padding: '16px',
           marginBottom: '20px'
@@ -487,7 +487,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
               <p style={{
                 margin: '0 0 12px 0',
                 fontSize: '14px',
-                color: '#991b1b',
+                color: t.errorFg,
                 lineHeight: '1.5'
               }}>
                 {language === 'es'
@@ -498,7 +498,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
               <ul style={{
                 margin: '0',
                 paddingLeft: '20px',
-                color: '#991b1b',
+                color: t.errorFg,
                 fontSize: '14px'
               }}>
                 {getAreasMissingRisk().map((area, idx) => (
@@ -533,7 +533,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
             key: analysisItem.areaKey,
             name: analysisItem.areaName,
             icon: analysisItem.icon || '',
-            color: analysisItem.color || '#6b7280',
+            color: analysisItem.color || t.textMuted,
             description: '',
             subsections: [],
             defaultValidators: []
@@ -545,7 +545,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
               {/* Area Header (no checkbox - mandatory from ECR-1) */}
               <div style={{...styles.areaCheckbox, cursor: 'default'}}>
                 <span style={{
-                  backgroundColor: '#2E7D32',
+                  backgroundColor: t.success,
                   color: 'white',
                   padding: '2px 8px',
                   borderRadius: '4px',
@@ -623,7 +623,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
                         border: `1px solid ${t.border}`
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <label style={{...styles.label, color: '#ef4444', fontWeight: '600', minWidth: '140px', margin: 0}}>
+                          <label style={{...styles.label, color: t.error, fontWeight: '600', minWidth: '140px', margin: 0}}>
                             {tr('ecr.impactAnalysis.riskAssessment')}
                           </label>
 
@@ -661,7 +661,7 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
                           <div style={{flex: 1}}>
                             <div style={{
                               padding: '10px 16px',
-                              backgroundColor: areaData.riskLevel ? getRiskDisplay(areaData.riskLevel).color : '#E6EAEE',
+                              backgroundColor: areaData.riskLevel ? getRiskDisplay(areaData.riskLevel).color : t.border,
                               color: 'white',
                               borderRadius: '6px',
                               textAlign: 'center',
@@ -758,15 +758,15 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
       <div style={{
         marginTop: '24px',
         padding: '20px',
-        backgroundColor: '#fffbeb',
+        backgroundColor: t.warningBg,
         borderRadius: '8px',
-        border: '2px solid #f59e0b'
+        border: `2px solid ${t.warning}`
       }}>
         <h3 style={{
           margin: '0 0 16px 0',
           fontSize: '18px',
           fontWeight: '600',
-          color: '#92400e'
+          color: t.warningFg
         }}>
           Notificación al Cliente
         </h3>
@@ -938,9 +938,9 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
               <div style={{
                 marginTop: '20px',
                 padding: '16px',
-                backgroundColor: maxRiskLevel === 'high' ? '#fee2e2' : maxRiskLevel === 'medium' ? '#fef3c7' : '#d1fae5',
+                backgroundColor: maxRiskLevel === 'high' ? t.errorBg : maxRiskLevel === 'medium' ? t.warningBg : t.successBg,
                 borderRadius: '8px',
-                border: `2px solid ${maxRiskLevel === 'high' ? '#ef4444' : maxRiskLevel === 'medium' ? '#C77700' : '#2E7D32'}`
+                border: `2px solid ${maxRiskLevel === 'high' ? t.error : maxRiskLevel === 'medium' ? t.warning : t.success}`
               }}>
                 <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px'}}>
                   <span style={{fontSize: '24px'}}>
@@ -983,9 +983,9 @@ const ECRImpactAnalysis = ({ data, onDataUpdate, isReadOnly = false, language = 
                           alignItems: 'center',
                           gap: '8px',
                           padding: '8px 12px',
-                          backgroundColor: isValidationSelected(suggestion) ? '#f0fdf4' : 'white',
+                          backgroundColor: isValidationSelected(suggestion) ? t.successBg : 'white',
                           borderRadius: '6px',
-                          border: isValidationSelected(suggestion) ? '2px solid #2E7D32' : '1px solid #d1d5db',
+                          border: isValidationSelected(suggestion) ? `2px solid ${t.success}` : `1px solid ${t.border}`,
                           cursor: 'pointer',
                           fontSize: '14px',
                           color: t.text
@@ -1037,15 +1037,15 @@ const getStyles = (t) => ({
     margin: 0
   },
   disclaimer: {
-    backgroundColor: '#fffbeb',
-    border: '1px solid #fbbf24',
+    backgroundColor: t.warningBg,
+    border: `1px solid ${t.warning}`,
     borderRadius: '6px',
     padding: '12px 16px',
     marginBottom: '24px'
   },
   disclaimerText: {
     fontSize: '13px',
-    color: '#92400e',
+    color: t.warningFg,
     margin: 0,
     lineHeight: '1.5'
   },
@@ -1093,7 +1093,7 @@ const getStyles = (t) => ({
   areaDetails: {
     padding: '20px',
     backgroundColor: t.bgCard,
-    borderLeft: '4px solid #0072CE',
+    borderLeft: `4px solid ${t.accent}`,
     display: 'flex',
     flexDirection: 'column',
     gap: '16px'
@@ -1136,7 +1136,7 @@ const getStyles = (t) => ({
   },
   uploadingText: {
     fontSize: '13px',
-    color: '#0072CE',
+    color: t.accent,
     margin: '4px 0 0 0'
   },
   filesContainer: {
@@ -1163,12 +1163,12 @@ const getStyles = (t) => ({
   },
   fileLink: {
     fontSize: '13px',
-    color: '#0072CE',
+    color: t.accent,
     textDecoration: 'none'
   },
   removeFileButton: {
-    backgroundColor: '#fee2e2',
-    color: '#ef4444',
+    backgroundColor: t.errorBg,
+    color: t.error,
     border: 'none',
     borderRadius: '4px',
     width: '24px',
@@ -1181,9 +1181,9 @@ const getStyles = (t) => ({
   summary: {
     marginTop: '24px',
     padding: '16px',
-    backgroundColor: '#f0f9ff',
+    backgroundColor: t.accentBg,
     borderRadius: '8px',
-    border: '1px solid #bfdbfe'
+    border: `1px solid ${t.accentBg}`
   },
   summaryTitle: {
     fontSize: '16px',

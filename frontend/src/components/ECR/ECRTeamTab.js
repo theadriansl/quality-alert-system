@@ -480,8 +480,8 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
       {/* Read-only Banner */}
       {isReadOnly && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: t.warningBg,
+          border: `1px solid ${t.warning}`,
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '16px',
@@ -607,7 +607,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
         </div>
 
         {/* Requestor Information */}
-        <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #E6EAEE' }}>
+        <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: `2px solid ${t.border}` }}>
           <h4 style={{ fontSize: '14px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>
              {language === 'es' ? 'Información del Solicitante' : 'Requestor Information'}
           </h4>
@@ -652,7 +652,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                   }}
                   style={{
                     padding: '10px 16px',
-                    backgroundColor: '#6b7280',
+                    backgroundColor: t.textMuted,
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -728,15 +728,15 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
         gap: '12px',
         marginBottom: '20px',
         padding: '16px',
-        backgroundColor: '#f0f9ff',
+        backgroundColor: t.accentBg,
         borderRadius: '8px',
-        border: '1px solid #bae6fd'
+        border: `1px solid ${t.accentBg}`
       }}>
         <button
           onClick={() => setShowTemplateModal(true)}
           style={{
             padding: '10px 20px',
-            backgroundColor: '#0072CE',
+            backgroundColor: t.accent,
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -754,7 +754,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
           onClick={() => setShowSaveModal(true)}
           style={{
             padding: '10px 20px',
-            backgroundColor: '#2E7D32',
+            backgroundColor: t.success,
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -768,7 +768,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
         >
            {language === 'es' ? 'Guardar como Plantilla' : 'Save as Template'}
         </button>
-        <div style={{ flex: 1, fontSize: '13px', color: '#0369a1', display: 'flex', alignItems: 'center' }}>
+        <div style={{ flex: 1, fontSize: '13px', color: t.accent, display: 'flex', alignItems: 'center' }}>
            {language === 'es' ? 'Guarda configuraciones de equipos para reutilizarlas en otros ECRs' : 'Save team configurations to reuse in other ECRs'}
         </div>
       </div>
@@ -804,7 +804,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
           <label style={styles.label}>
             {language === 'es' ? 'Board Members (Miembros de la junta)' : 'Board Members'}
             {reviewBoard.members.length > 0 && (
-              <span style={{ marginLeft: '8px', color: '#0072CE', fontWeight: '600' }}>
+              <span style={{ marginLeft: '8px', color: t.accent, fontWeight: '600' }}>
                 ({reviewBoard.members.length} {language === 'es' ? 'seleccionados' : 'selected'})
               </span>
             )}
@@ -1100,7 +1100,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                           onClick={() => handleLoadTemplate(template.id)}
                           style={{
                             padding: '6px 12px',
-                            backgroundColor: '#0072CE',
+                            backgroundColor: t.accent,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -1114,7 +1114,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                           onClick={() => handleDeleteTemplate(template.id)}
                           style={{
                             padding: '6px 12px',
-                            backgroundColor: '#ef4444',
+                            backgroundColor: t.error,
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -1136,7 +1136,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                 onClick={() => setShowTemplateModal(false)}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#6b7280',
+                  backgroundColor: t.textMuted,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1198,7 +1198,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
               />
             </div>
 
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '6px', fontSize: '13px', color: '#0369a1' }}>
+            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: t.accentBg, borderRadius: '6px', fontSize: '13px', color: t.accent }}>
               <strong>{language === 'es' ? 'Se guardará:' : 'Will be saved:'}</strong><br/>
               • Review Board: {reviewBoard.members.length} {language === 'es' ? 'miembros' : 'members'}<br/>
               • {language === 'es' ? 'TFT involucradas' : 'Involved TFT'}: {involvedAreas.length}<br/>
@@ -1210,7 +1210,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                 onClick={() => setShowSaveModal(false)}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#6b7280',
+                  backgroundColor: t.textMuted,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1224,7 +1224,7 @@ const ECRTeamTab = ({ data, onDataUpdate, isReadOnly = false, language = 'es', t
                 onClick={handleSaveTemplate}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#2E7D32',
+                  backgroundColor: t.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -1284,7 +1284,7 @@ const getStyles = (t) => ({
   },
   badge: {
     padding: '4px 12px',
-    backgroundColor: '#0072CE',
+    backgroundColor: t.accent,
     color: 'white',
     borderRadius: '6px',
     fontSize: '14px',
@@ -1373,7 +1373,7 @@ const getStyles = (t) => ({
   },
   primaryBadge: {
     padding: '2px 8px',
-    backgroundColor: '#0072CE',
+    backgroundColor: t.accent,
     color: 'white',
     borderRadius: '4px',
     fontSize: '11px',
@@ -1416,7 +1416,7 @@ const getStyles = (t) => ({
   summary: {
     marginTop: '12px',
     padding: '12px',
-    backgroundColor: '#f0f9ff',
+    backgroundColor: t.accentBg,
     borderRadius: '6px',
     fontSize: '13px',
     color: t.text
@@ -1429,7 +1429,7 @@ const getStyles = (t) => ({
   },
   tag: {
     padding: '4px 10px',
-    backgroundColor: '#0072CE',
+    backgroundColor: t.accent,
     color: 'white',
     borderRadius: '12px',
     fontSize: '12px',
