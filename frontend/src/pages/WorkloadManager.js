@@ -4139,12 +4139,75 @@ const WorkloadManager = () => {
         {/* DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
           <>
+            {/* Member selector for individual view */}
+            {(subordinates.subordinates?.length > 0 || subordinates.self) && (
+              <div style={{
+                backgroundColor: t.bgCard,
+                border: `1px solid ${t.border}`,
+                borderRadius: 10,
+                padding: '12px 16px',
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12
+              }}>
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  color: t.textMuted
+                }}>
+                  Vista
+                </span>
+                <select
+                  value={viewingMemberId || ''}
+                  onChange={(e) => setViewingMemberId(e.target.value ? parseInt(e.target.value) : null)}
+                  style={{
+                    ...styles.input,
+                    width: 220,
+                    fontSize: 13,
+                    borderColor: viewingMemberId ? t.accent : t.border,
+                    backgroundColor: viewingMemberId ? `${t.accent}10` : t.bgCard
+                  }}
+                >
+                  <option value="">Equipo completo</option>
+                  {subordinates.self && (
+                    <option value={subordinates.self.id}>
+                      {subordinates.self.firstName} {subordinates.self.lastName} (Yo)
+                    </option>
+                  )}
+                  {(subordinates.subordinates || []).map(sub => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.firstName} {sub.lastName}
+                    </option>
+                  ))}
+                </select>
+                {viewingMemberId && (
+                  <button
+                    onClick={() => setViewingMemberId(null)}
+                    style={{
+                      ...styles.button,
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      backgroundColor: t.bgPanel,
+                      color: t.textMuted
+                    }}
+                  >
+                    Ver equipo
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* WorkloadDashboard KPI */}
             {(() => {
-              const dashUserIds = [
-                ...(subordinates.self ? [subordinates.self.id] : (user?.id ? [user.id] : [])),
-                ...(subordinates.subordinates || []).map(u => u.id)
-              ];
+              const dashUserIds = viewingMemberId
+                ? [viewingMemberId]
+                : [
+                    ...(subordinates.self ? [subordinates.self.id] : (user?.id ? [user.id] : [])),
+                    ...(subordinates.subordinates || []).map(u => u.id)
+                  ];
               return <WorkloadDashboard userIds={dashUserIds} />;
             })()}
 
