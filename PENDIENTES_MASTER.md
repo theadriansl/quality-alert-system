@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-09-04
+> Última actualización: 2026-09-04 (sesión tarde)
 
 ---
 
@@ -837,6 +837,28 @@ D3MFG.js: 32 literales
 - Emojis: eliminados de UI (🔴🟡🟢⚠️✅⏰✓ → texto/dash)
 
 **DATA colors preservados:** clr(), riskColor() helpers, chart configs, semantic status colors
+
+---
+
+### ✅ WorkloadManager.js - Redundancia + Vista Individual + Gráfica Tendencia
+
+| Paso | Cambios | Commit |
+|------|---------|--------|
+| Paso 1+2 | Eliminar 4 tarjetas redundantes (Hours), restyle B2B KPI Distribution + Activities Summary | `830d872` |
+| Paso 3 | Conectar viewingMemberId al Dashboard (selector vista equipo/individual) | `6a051f0` |
+| Paso 4 | Endpoint `/workload/compliance-history` + LineChart tendencia 12 semanas | `8d0cec4` |
+
+**Funcionalidades nuevas:**
+- **Selector Vista:** Dropdown en tab Dashboard para filtrar a un miembro específico del equipo
+- **Gráfica Tendencia:** LineChart en tab Ejecución con 2 series (Real vs Esperado, 12 semanas)
+
+**Backend nuevo:**
+- `GET /workload/compliance-history?user_ids=X&weeks=12`
+- Retorna: `{week_start, week_label, compliance_real, compliance_expected, activities_count}`
+
+**Redundancia eliminada:**
+- 4 stat cards (Hours Available/Planned/Actual/Utilization) — ya cubiertas por TabCarga
+- Conservado: Distribución por KPI (desglose personal único), Resumen Actividades
 
 ---
 
