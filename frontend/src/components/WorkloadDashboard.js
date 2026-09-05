@@ -230,7 +230,7 @@ const TabCarga = ({ kpis }) => {
             <thead>
               <tr style={{ backgroundColor: t.bgPanel }}>
                 {['Persona', 'Puesto', 'Disponibles', 'Asignadas', 'Reales', 'Utilización', 'Actividades', 'Completadas', 'Retrasadas'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', fontSize: '11px', color: t.textMuted, borderBottom: `1px solid ${t.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: t.textMuted, borderBottom: `1px solid ${t.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -253,11 +253,11 @@ const TabCarga = ({ kpis }) => {
                     }}>{u.utilization}%</span>
                   </td>
                   <td style={{ padding: '8px 12px', color: t.text, textAlign: 'center' }}>{u.activitiesCount}</td>
-                  <td style={{ padding: '8px 12px', color: '#2E7D32', textAlign: 'center', fontWeight: '600' }}>{u.completedCount}</td>
+                  <td style={{ padding: '8px 12px', color: t.success, textAlign: 'center', fontWeight: 600 }}>{u.completedCount}</td>
                   <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                     {u.delayedCount > 0
-                      ? <span style={{ color: '#ef4444', fontWeight: '600' }}>⚠ {u.delayedCount}</span>
-                      : <span style={{ color: '#2E7D32' }}>✓</span>}
+                      ? <span style={{ color: t.error, fontWeight: 600 }}>{u.delayedCount}</span>
+                      : <span style={{ color: t.success }}>-</span>}
                   </td>
                 </tr>
               ))}
@@ -689,7 +689,7 @@ const TabProyectos = ({ kpis }) => {
           <thead>
             <tr style={{ backgroundColor: t.bgPanel }}>
               {['KPI', 'Actividades', 'Completadas', 'Avance Prom.', 'Est. (hrs)', 'Real (hrs)', 'Eficiencia', '% del total'].map(h => (
-                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', fontSize: '11px', color: t.textMuted, borderBottom: `1px solid ${t.border}` }}>{h}</th>
+                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: t.textMuted, borderBottom: `1px solid ${t.border}` }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -983,7 +983,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
     const items = [
       { label: 'Sobrecargados', value: riesgo.overloadedCount ?? 0, color: (riesgo.overloadedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: '> 110% capacidad' },
       { label: 'Tareas Críticas Retrasadas', value: riesgo.criticalDelayedCount ?? 0, color: (riesgo.criticalDelayedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: 'Alta/Crítica vencidas' },
-      { label: 'Retrasadas', value: riesgo.delayedCount ?? 0, icon: '⏰', color: (riesgo.delayedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Fecha vencida' },
+      { label: 'Retrasadas', value: riesgo.delayedCount ?? 0, color: (riesgo.delayedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Fecha vencida' },
       { label: 'Bloqueadas', value: riesgo.blockedCount ?? 0, color: (riesgo.blockedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Estado: Bloqueado' },
       { label: '% En Riesgo', value: `${riesgo.atRiskPercent ?? 0}%`, color: (riesgo.atRiskPercent ?? 0) > 20 ? '#ef4444' : (riesgo.atRiskPercent ?? 0) > 10 ? '#C77700' : '#2E7D32', desc: 'Retrasadas + Bloqueadas' },
       { label: 'Desviación >20%', value: `${riesgo.bigDeviationPercent ?? 0}%`, color: (riesgo.bigDeviationPercent ?? 0) > 30 ? '#ef4444' : (riesgo.bigDeviationPercent ?? 0) > 15 ? '#C77700' : '#2E7D32', desc: 'Estimación imprecisa' },
