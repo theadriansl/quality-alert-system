@@ -1,6 +1,6 @@
 # PENDIENTES MASTER - Quality Alert System
 > Este archivo NUNCA se borra. Se actualiza al final de cada sesión.
-> Última actualización: 2026-09-03
+> Última actualización: 2026-09-04
 
 ---
 
@@ -70,7 +70,8 @@
 | 9 | ~~Refactor temas Dashboard (EightDDashboard, QARDashboard, SharedComponents)~~ | 29-Ago | ✅ 01-Sep |
 | 10 | ~~QAR Rediseño Visual Parte 2 (QARDashboard, QARDashboardComponent)~~ | 29-Ago | ✅ 01-Sep |
 | 11 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
-| 7 | Work Instructions versionamiento | Arrastrado | ⏳ |
+| 12 | Work Instructions versionamiento | Arrastrado | ⏳ |
+| 13 | **Tokenización Bloque 5-6 pendiente**: RiskMatrixConfig, RolesManagement, UserManagement, DefectHospital (cyan/green), ECRDashboardAdvanced | 04-Sep | ⏳ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
 | 9 | ~~Review permisos Hospital~~ | 05-Ago | ✅ 17-Ago |
 | 10 | ~~Cache de imágenes (código visible)~~ | 05-Ago | ✅ Cerrado |
@@ -82,6 +83,12 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
+| ✅ **Tokenización Bloque 5 parcial**: ImpactAnalysisConfig.js (~10 hex → tokens) | 04-Sep |
+| ✅ **Tokenización Bloque 4**: MRBCreate.js (~15) + ManagementReview.js (~12) → tokens tema | 04-Sep |
+| ✅ **Tokenización**: ReportCenter.js (~45), UnitTraceability.js (~15), MRBInventory.js (~12), MRBDefectCapture.js (~50) | 04-Sep |
+| ✅ **Tokenización Bloque 3**: MRBShiftReport.js (~30 hex → tokens) - KPIs, pareto, inspector table | 04-Sep |
+| ✅ **Tokenización Bloque 2**: RepairStation.js (~35 hex → tokens) - status badges, actions, warnings | 04-Sep |
+| ✅ **Tokenización Bloque 1**: MRBTransferPackages.js (~40) + MRBCampaignDetail.js (~35) → tokens tema | 04-Sep |
 | ✅ **Tokenización 6 Dashboards**: HospitalDashboard, AuditDashboard, SkillsDashboard, WIDashboard, WorkloadDashboard, CustomDashboard | 03-Sep |
 | ✅ MRBDashboard.js cerrado: Fase 1 (tokenización C.*, hex, fontWeight) + Fase 2 (98 emojis removidos) | 02-Sep |
 | ✅ DefectHospital.js Fase 2: 60+ emojis removidos de botones, modales, indicadores | 02-Sep |
@@ -874,15 +881,25 @@ D3MFG.js: 32 literales
 - HospitalDashboard.js: COLORS (chart palette)
 - ECRDashboardAdvanced.js: Chart palettes (Scrap/Rework/etc.)
 
-### PENDIENTE para próxima sesión:
-**Archivos con hex UI restantes:**
-- MRBTransferPackages.js (~96 hex - mezcla UI/DATA)
-- MRBShiftReport.js (~37 hex)
-- MRBDefectCapture.js (~57 hex - muchos UI)
-- DefectHospital.js (~46 hex)
-- RepairStation.js (~47 hex)
-- ReportCenter.js (~54 hex)
-- RolesManagement.js, UserManagement.js, UnitTraceability.js
+### 🔴 SESIÓN INTERRUMPIDA 04-Sep-2026 ~11:00 (retomar al mediodía)
+
+**AUDITORÍA COMPLETA REALIZADA** - 455 instancias clasificadas:
+| Categoría | Instancias | Acción |
+|-----------|------------|--------|
+| DATA legítimo | ~280 (62%) | NO TOCAR - STATUS_CONFIG, DISPOSITION_COLORS, formatEventType, color pickers, chart palettes, html2canvas |
+| Bug de tema | ~95 (21%) | TOKENIZAR |
+| #fff sobre token | ~75 (17%) | VÁLIDO - texto blanco sobre backgroundColor tokenizado, documentado |
+
+**Tokenización iniciada:**
+- MRBTransferPackages.js: 2 edits (banners error/success) - SIN COMMIT AÚN
+
+**BLOQUES PENDIENTES (retomar al mediodía):**
+1. MRBTransferPackages.js (~38 restantes), MRBCampaignDetail.js (~35)
+2. RepairStation.js (~20), ReportCenter.js (~20)
+3. MRBShiftReport.js (~15), UnitTraceability.js (~12)
+4. MRBInventory.js, MRBDefectCapture.js, MRBCreate.js, ManagementReview.js
+5. ImpactAnalysisConfig.js, RiskMatrixConfig.js, RolesManagement.js, UserManagement.js
+6. DefectHospital.js (3 bugs: líneas 7576-7577 cyan, 8116 verde), ECRDashboardAdvanced.js (1 bug: línea 711)
 
 **Tech debt general:**
 - borderRadius: 2480 instancias en 134 archivos (requiere sesión dedicada)
