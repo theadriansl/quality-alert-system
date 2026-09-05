@@ -4148,196 +4148,206 @@ const WorkloadManager = () => {
               return <WorkloadDashboard userIds={dashUserIds} />;
             })()}
 
-            {/* Week selector legacy (personal summary) */}
-            <div style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px' }}>
-              <span style={{ fontWeight: '600', color: t.text }}>Mi Semana:</span>
-              <input
-                type="date"
-                value={weekStart}
-                onChange={(e) => setWeekStart(e.target.value)}
-                style={{ ...styles.input, width: '180px' }}
-              />
-              <span style={{ color: t.textMuted, fontSize: '14px' }}>
-                {getSelectedUserName()}
-              </span>
-            </div>
-
-            {/* Summary Cards (personal weekly) */}
-            {weeklySummary && <div style={styles.grid}>
-              {/* Hours Available */}
-              <div style={{ ...styles.statCard, borderLeft: '4px solid ${t.textMuted}' }}>
-                <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Disponibles</div>
-                <div style={{ fontSize: '32px', fontWeight: '600', color: t.text }}>
-                  {weeklySummary.hours_available}
-                </div>
-                <div style={{ fontSize: '12px', color: t.textMuted }}>hrs/semana</div>
-              </div>
-
-              {/* Hours Planned */}
-              <div style={{ ...styles.statCard, borderLeft: '4px solid ${t.accent}' }}>
-                <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Planeadas</div>
-                <div style={{ fontSize: '32px', fontWeight: '600', color: t.accent }}>
-                  {weeklySummary.hours_planned.toFixed(1)}
-                </div>
-                <div style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: t.bgPanel,
-                  borderRadius: '4px',
-                  marginTop: '8px',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${Math.min(100, (weeklySummary.hours_planned / weeklySummary.hours_available) * 100)}%`,
-                    height: '100%',
-                    backgroundColor: t.accent
-                  }} />
-                </div>
-              </div>
-
-              {/* Hours Actual */}
+            {/* Personal Week Summary - B2B Sobrio */}
+            {weeklySummary && (
               <div style={{
-                ...styles.statCard,
-                borderLeft: `4px solid ${weeklySummary.hours_actual > weeklySummary.hours_available ? t.error : t.success}`
+                backgroundColor: t.bgCard,
+                border: `1px solid ${t.border}`,
+                borderRadius: 10,
+                padding: '16px 20px',
+                marginTop: 8
               }}>
-                <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Horas Reales</div>
+                {/* Header with week selector */}
                 <div style={{
-                  fontSize: '32px',
-                  fontWeight: '600',
-                  color: weeklySummary.hours_actual > weeklySummary.hours_available ? t.error : t.success
-                }}>
-                  {weeklySummary.hours_actual.toFixed(1)}
-                </div>
-                <div style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: t.bgPanel,
-                  borderRadius: '4px',
-                  marginTop: '8px',
-                  overflow: 'hidden'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 16,
+                  flexWrap: 'wrap',
+                  gap: 12
                 }}>
                   <div style={{
-                    width: `${Math.min(100, (weeklySummary.hours_actual / weeklySummary.hours_available) * 100)}%`,
-                    height: '100%',
-                    backgroundColor: weeklySummary.hours_actual > weeklySummary.hours_available ? t.error : t.success
-                  }} />
-                </div>
-              </div>
-
-              {/* Utilization */}
-              <div style={{
-                ...styles.statCard,
-                borderLeft: `4px solid ${weeklySummary.utilization_percent > 100 ? t.error : t.accent}`
-              }}>
-                <div style={{ fontSize: '13px', color: t.textMuted, marginBottom: '8px' }}>Utilización</div>
-                <div style={{
-                  fontSize: '32px',
-                  fontWeight: '600',
-                  color: weeklySummary.utilization_percent > 100 ? t.error : t.accent
-                }}>
-                  {weeklySummary.utilization_percent}%
-                </div>
-                {weeklySummary.hours_overtime > 0 && (
-                  <div style={{
-                    marginTop: '8px',
-                    padding: '4px 8px',
-                    backgroundColor: `${t.error}15`,
-                    color: t.error,
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: '600'
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    color: t.textMuted
                   }}>
-                    +{weeklySummary.hours_overtime.toFixed(1)} hrs Tiempo Extra
+                    Resumen Semanal Personal
                   </div>
-                )}
-              </div>
-            </div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <input
+                      type="date"
+                      value={weekStart}
+                      onChange={(e) => setWeekStart(e.target.value)}
+                      style={{ ...styles.input, width: 150, fontSize: 13 }}
+                    />
+                    <span style={{ fontSize: 12, color: t.textMuted }}>
+                      {getSelectedUserName()}
+                    </span>
+                  </div>
+                </div>
 
-            {weeklySummary && <>
-            {/* KPI Distribution */}
-            <div style={styles.card}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: t.text }}>
-                Distribución por KPI (semana personal)
-              </h3>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                {kpis.map(kpi => {
-                  const hours = weeklySummary.kpi_distribution[kpi.code] || 0;
-                  const percent = weeklySummary.hours_actual > 0
-                    ? (hours / weeklySummary.hours_actual * 100).toFixed(0)
-                    : 0;
-                  return (
-                    <div key={kpi.id} style={{
-                      flex: '1 1 150px',
-                      padding: '16px',
-                      backgroundColor: t.bg,
-                      borderRadius: '8px',
-                      borderLeft: `4px solid ${kpi.color}`
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <span>{kpi.icon}</span>
-                        <span style={{ fontWeight: '600', color: t.text }}>{kpi.name}</span>
-                      </div>
-                      <div style={{ fontSize: '24px', fontWeight: '600', color: kpi.color }}>
-                        {hours.toFixed(1)} hrs
-                      </div>
-                      <div style={{ fontSize: '12px', color: t.textMuted }}>{percent}% del total</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Activities Summary */}
-            <div style={styles.card}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: t.text }}>
-                Resumen de Actividades
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                {/* Cumplimiento Real vs Esperado */}
-                {(() => {
-                  const compliance = calculateCompliance(activities);
-                  const isOnTrack = compliance.real >= compliance.expected;
-                  return (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '16px',
-                      backgroundColor: isOnTrack ? `${t.success}15` : `${t.error}15`,
-                      borderRadius: '8px'
-                    }}>
-                      <div style={{
-                        fontSize: '28px',
-                        fontWeight: '600',
-                        color: isOnTrack ? t.success : t.error
+                {/* KPI Distribution - B2B grid */}
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  color: t.textMuted,
+                  marginBottom: 12
+                }}>
+                  Distribución por KPI
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
+                  {kpis.map(kpi => {
+                    const hours = weeklySummary.kpi_distribution[kpi.code] || 0;
+                    const percent = weeklySummary.hours_actual > 0
+                      ? (hours / weeklySummary.hours_actual * 100).toFixed(0)
+                      : 0;
+                    return (
+                      <div key={kpi.id} style={{
+                        backgroundColor: t.bgCard,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 10,
+                        padding: '14px 16px'
                       }}>
-                        {compliance.real}% / {compliance.expected}%
+                        <div style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          color: t.textMuted,
+                          marginBottom: 8
+                        }}>
+                          {kpi.name}
+                        </div>
+                        <div style={{ fontSize: 28, fontWeight: 600, color: kpi.color, lineHeight: 1 }}>
+                          {hours.toFixed(1)}
+                        </div>
+                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
+                          hrs · {percent}%
+                        </div>
                       </div>
-                      <div style={{ fontSize: '13px', color: isOnTrack ? t.success : t.error }}>
-                        Cumplimiento
+                    );
+                  })}
+                </div>
+
+                {/* Activities Summary - B2B grid */}
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  color: t.textMuted,
+                  marginBottom: 12
+                }}>
+                  Resumen de Actividades
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                  {/* Cumplimiento */}
+                  {(() => {
+                    const compliance = calculateCompliance(activities);
+                    const isOnTrack = compliance.real >= compliance.expected;
+                    return (
+                      <div style={{
+                        backgroundColor: t.bgCard,
+                        border: `1px solid ${t.border}`,
+                        borderRadius: 10,
+                        padding: '14px 16px',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          color: t.textMuted,
+                          marginBottom: 8
+                        }}>
+                          Cumplimiento
+                        </div>
+                        <div style={{ fontSize: 24, fontWeight: 600, color: isOnTrack ? t.success : t.error, lineHeight: 1 }}>
+                          {compliance.real}%
+                        </div>
+                        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+                          vs {compliance.expected}% esperado
+                        </div>
                       </div>
-                      <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>
-                        Real / Esperado
-                      </div>
+                    );
+                  })()}
+                  {/* Actividades */}
+                  <div style={{
+                    backgroundColor: t.bgCard,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 10,
+                    padding: '14px 16px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: t.textMuted,
+                      marginBottom: 8
+                    }}>
+                      Completadas
                     </div>
-                  );
-                })()}
-                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.accent}15`, borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '600', color: t.accent }}>
-                    {weeklySummary.activities_completed} / {weeklySummary.activities_total}
+                    <div style={{ fontSize: 24, fontWeight: 600, color: t.accent, lineHeight: 1 }}>
+                      {weeklySummary.activities_completed}/{weeklySummary.activities_total}
+                    </div>
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+                      actividades
+                    </div>
                   </div>
-                  <div style={{ fontSize: '13px', color: t.accent }}>Actividades</div>
-                  <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Completadas / Total</div>
-                </div>
-                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.warning}15`, borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '600', color: t.warning }}>{weeklySummary.activities_pending}</div>
-                  <div style={{ fontSize: '13px', color: t.warning }}>Pendientes</div>
-                </div>
-                <div style={{ textAlign: 'center', padding: '16px', backgroundColor: `${t.error}15`, borderRadius: '8px' }}>
-                  <div style={{ fontSize: '28px', fontWeight: '600', color: t.error }}>{weeklySummary.activities_unplanned}</div>
-                  <div style={{ fontSize: '13px', color: t.error }}>No Planeadas</div>
+                  {/* Pendientes */}
+                  <div style={{
+                    backgroundColor: t.bgCard,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 10,
+                    padding: '14px 16px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: t.textMuted,
+                      marginBottom: 8
+                    }}>
+                      Pendientes
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 600, color: t.warning, lineHeight: 1 }}>
+                      {weeklySummary.activities_pending}
+                    </div>
+                  </div>
+                  {/* No Planeadas */}
+                  <div style={{
+                    backgroundColor: t.bgCard,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 10,
+                    padding: '14px 16px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: t.textMuted,
+                      marginBottom: 8
+                    }}>
+                      No Planeadas
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 600, color: t.error, lineHeight: 1 }}>
+                      {weeklySummary.activities_unplanned}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            </>}
+            )}
           </>
         )}
 
