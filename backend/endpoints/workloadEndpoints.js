@@ -3148,6 +3148,126 @@ router.delete('/activities/recurring/:id', authenticateToken, async (req, res) =
 });
 
 // ============================================================================
+// COMPLIANCE HISTORY ENDPOINT
+// GET /workload/compliance-history?user_ids=1,2,3&weeks=12
+// Returns weekly compliance snapshots for trend charts
+// ============================================================================
+router.get('/compliance-history', authenticateToken, async (req, res) => {
+  const { user_ids, weeks = 12 } = req.query;
+
+  try {
+    // Parse user IDs
+    let userIds = [];
+    if (user_ids) {
+      userIds = user_ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    }
+    if (userIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'user_ids required' });
+    }
+
+    const weeksCount = Math.min(52, Math.max(1, parseInt(weeks) || 12));
+    const history = [];
+
+    // Get all activities for these users that could be relevant (last N weeks + buffer)
+    const today = new Date();
+    const oldestWeekStart = new Date(today);
+    oldestWeekStart.setDate(oldestWeekStart.getDate() - (weeksCount * 7) - 7);
+
+    const activitiesResult = await query(`
+      SELECT
+        a.id, a.assigned_to, a.start_date, a.end_date,
+        a.progress, a.status, a.estimated_hours, a.actual_hours,
+        a.daily_progress
+      FROM workload_activities a
+      WHERE a.assigned_to = ANY($1)
+        AND a.start_date <= $2
+        AND a.end_date >= $3
+    `, [userIds, today.toISOString().split('T')[0], oldestWeekStart.toISOString().split('T')[0]]);
+
+    const activities = activitiesResult.rows;
+
+    // Calculate compliance for each week
+    for (let w = weeksCount - 1; w >= 0; w--) {
+      const weekEnd = new Date(today);
+      weekEnd.setDate(weekEnd.getDate() - (w * 7));
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+
+      let totalReal = 0;
+      let totalExpected = 0;
+      let countActive = 0;
+
+      for (const activity of activities) {
+        const actStart = new Date(activity.start_date);
+        const actEnd = new Date(activity.end_date);
+        actStart.setHours(0, 0, 0, 0);
+        actEnd.setHours(0, 0, 0, 0);
+
+        // Only count activities that had started by weekEnd
+        if (actStart > weekEnd) continue;
+
+        // Activity overlaps with this week's period
+        const effectiveEnd = actEnd < weekEnd ? actEnd : weekEnd;
+
+        // Calculate expected progress as of weekEnd
+        const totalDays = Math.max(1, Math.ceil((actEnd - actStart) / (1000 * 60 * 60 * 24)) + 1);
+        const daysPassed = Math.min(totalDays, Math.max(0, Math.ceil((effectiveEnd - actStart) / (1000 * 60 * 60 * 24)) + 1));
+        const expectedProgress = (daysPassed / totalDays) * 100;
+
+        // Get real progress as of weekEnd
+        // If activity was completed before or during this week, real = 100
+        // Otherwise use the progress field (or check daily_progress if available)
+        let realProgress = 0;
+        if (activity.status === 'completed') {
+          // If completed, assume 100% (could enhance with completion date if stored)
+          realProgress = 100;
+        } else {
+          // Use current progress (approximation - ideally we'd have historical snapshots)
+          realProgress = activity.progress || 0;
+          // If this is a past week and activity is still in progress,
+          // scale down based on how far we are from that week
+          if (w > 0 && realProgress > 0) {
+            // For past weeks, estimate based on daily_progress if available
+            const dailyProgress = activity.daily_progress || [];
+            const weekEndStr = weekEnd.toISOString().split('T')[0];
+            const relevantEntry = dailyProgress.find(dp => dp.date && dp.date <= weekEndStr);
+            if (relevantEntry) {
+              realProgress = relevantEntry.progress || realProgress;
+            }
+          }
+        }
+
+        totalExpected += expectedProgress;
+        totalReal += realProgress;
+        countActive++;
+      }
+
+      const weekLabel = weekStart.toISOString().split('T')[0];
+      history.push({
+        week_start: weekLabel,
+        week_label: `${weekStart.getDate()}/${weekStart.getMonth() + 1}`,
+        compliance_real: countActive > 0 ? Math.round(totalReal / countActive) : 0,
+        compliance_expected: countActive > 0 ? Math.round(totalExpected / countActive) : 0,
+        activities_count: countActive
+      });
+    }
+
+    res.json({
+      success: true,
+      history,
+      user_ids: userIds,
+      weeks: weeksCount
+    });
+  } catch (error) {
+    console.error('Error fetching compliance history:', error);
+    res.status(500).json({ success: false, message: 'Error fetching compliance history' });
+  }
+});
+
+// ============================================================================
 // WORKLOAD DASHBOARD KPI ENDPOINT
 // GET /workload/dashboard?user_ids=1,2,3&start_date=X&end_date=Y
 // Returns all KPI groups for the workload dashboard

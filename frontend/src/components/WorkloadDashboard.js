@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   BarChart, Bar, RadialBarChart, RadialBar,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts';
@@ -1079,6 +1079,7 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
   const { t: tr, language, changeLanguage } = useLanguage();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [complianceHistory, setComplianceHistory] = useState([]);
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('workload-dashboard-tab') || 'carga');
   const handleTabChange = (id) => { setActiveTab(id); localStorage.setItem('workload-dashboard-tab', id); };
   const [startDate, setStartDate] = useState(
@@ -1110,9 +1111,28 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
     }
   }, [userIds?.join(','), startDate, endDate]);
 
+  const fetchComplianceHistory = useCallback(async () => {
+    if (!userIds || userIds.length === 0) return;
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({
+        user_ids: userIds.join(','),
+        weeks: 12
+      });
+      const res = await fetch(`${API_URL}/workload/compliance-history?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (json.success) setComplianceHistory(json.history || []);
+    } catch (e) {
+      console.error('Compliance history fetch error:', e);
+    }
+  }, [userIds?.join(',')]);
+
   useEffect(() => {
     fetchDashboard();
-  }, [fetchDashboard]);
+    fetchComplianceHistory();
+  }, [fetchDashboard, fetchComplianceHistory]);
 
   if (!userIds || userIds.length === 0) {
     return (
@@ -1240,6 +1260,78 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
             />
           ) : (
             ActiveTabComponent && kpis && <ActiveTabComponent kpis={kpis} />
+          )}
+
+          {/* Compliance Trend Chart - shown on Ejecucion tab */}
+          {activeTab === 'ejecucion' && complianceHistory.length > 0 && (
+            <div style={{
+              backgroundColor: t.bgCard,
+              border: `1px solid ${t.border}`,
+              borderRadius: 10,
+              padding: '16px 20px',
+              marginTop: 16
+            }}>
+              <div style={{
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                color: t.textMuted,
+                marginBottom: 16
+              }}>
+                Tendencia de Cumplimiento (12 semanas)
+              </div>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={complianceHistory} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
+                  <XAxis
+                    dataKey="week_label"
+                    tick={{ fill: t.textMuted, fontSize: 11 }}
+                    axisLine={{ stroke: t.border }}
+                    tickLine={{ stroke: t.border }}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fill: t.textMuted, fontSize: 11 }}
+                    axisLine={{ stroke: t.border }}
+                    tickLine={{ stroke: t.border }}
+                    tickFormatter={(v) => `${v}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: t.bgCard,
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 8,
+                      fontSize: 12
+                    }}
+                    formatter={(value, name) => [`${value}%`, name === 'compliance_real' ? 'Real' : 'Esperado']}
+                    labelFormatter={(label) => `Semana ${label}`}
+                  />
+                  <Legend
+                    formatter={(value) => value === 'compliance_real' ? 'Real' : 'Esperado'}
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="compliance_expected"
+                    stroke={t.textMuted}
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={{ fill: t.textMuted, r: 3 }}
+                    name="compliance_expected"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="compliance_real"
+                    stroke={t.accent}
+                    strokeWidth={2}
+                    dot={{ fill: t.accent, r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name="compliance_real"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </>
       )}
