@@ -7573,8 +7573,8 @@ const DefectHospital = () => {
                                     borderRadius: '4px',
                                     fontSize: '12px',
                                     fontWeight: '600',
-                                    backgroundColor: '#06b6d420',
-                                    color: '#06b6d4'
+                                    backgroundColor: `${t.info}20`,
+                                    color: t.info
                                   }}>
                                     {event.stationName || (event.stationCode ? event.stationCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Estación')}
                                   </span>
@@ -8113,7 +8113,7 @@ const DefectHospital = () => {
                   padding: '12px 24px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: '#10b981',
+                  backgroundColor: t.success,
                   color: 'white',
                   fontSize: '14px',
                   fontWeight: '600',

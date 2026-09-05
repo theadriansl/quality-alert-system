@@ -708,7 +708,7 @@ const TabPersonalizado = ({ data, ecrs, t, isAdmin, onDelete, sensors, onSaveCon
           { name: 'N/A', value: cas.byJudgment?.na  || 0, color: '#6b7280' },
         ].filter(d => d.value > 0);
         return auditData.length > 0 ? <ChartWidget type="donut" data={auditData} height={180} /> : <div style={{textAlign:'center',color:t.textMuted,padding:'40px 0'}}>Sin datos de auditoría</div>;
-      default: return <div style={{color:'#ef4444',fontSize:'12px',textAlign:'center',padding:'20px'}}>Widget desconocido</div>;
+      default: return <div style={{color:t.error,fontSize:'12px',textAlign:'center',padding:'20px'}}>Widget desconocido</div>;
     }
   };
 

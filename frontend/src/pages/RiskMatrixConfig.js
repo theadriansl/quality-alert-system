@@ -184,7 +184,7 @@ const RiskMatrixConfig = () => {
     },
     saveButton: {
       padding: '12px 24px',
-      backgroundColor: '#2E7D32',
+      backgroundColor: t.success,
       color: 'white',
       border: 'none',
       borderRadius: '6px',
@@ -198,8 +198,8 @@ const RiskMatrixConfig = () => {
       margin: '0 auto'
     },
     disclaimer: {
-      backgroundColor: '#fef3c7',
-      border: '2px solid #C77700',
+      backgroundColor: `${t.warning}20`,
+      border: `2px solid ${t.warning}`,
       borderRadius: '8px',
       padding: '20px',
       marginBottom: '32px'
@@ -207,12 +207,12 @@ const RiskMatrixConfig = () => {
     disclaimerTitle: {
       fontSize: '18px',
       fontWeight: '600',
-      color: '#92400e',
+      color: t.warning,
       margin: '0 0 12px 0'
     },
     disclaimerText: {
       fontSize: '14px',
-      color: '#78350f',
+      color: t.warning,
       margin: 0,
       lineHeight: '1.6'
     },
@@ -364,8 +364,8 @@ const RiskMatrixConfig = () => {
       width: '28px',
       height: '28px',
       padding: 0,
-      backgroundColor: '#fee2e2',
-      color: '#ef4444',
+      backgroundColor: `${t.error}15`,
+      color: t.error,
       border: 'none',
       borderRadius: '4px',
       cursor: 'pointer',
@@ -387,8 +387,8 @@ const RiskMatrixConfig = () => {
       transition: 'background-color 0.2s'
     },
     instructionsSection: {
-      backgroundColor: '#eff6ff',
-      border: '1px solid #bfdbfe',
+      backgroundColor: `${t.info}10`,
+      border: `1px solid ${t.info}40`,
       borderRadius: '8px',
       padding: '24px'
     },
@@ -480,8 +480,8 @@ const RiskMatrixConfig = () => {
 
           {/* Explicación de los ejes */}
           <div style={{
-            backgroundColor: '#eff6ff',
-            border: '1px solid #bfdbfe',
+            backgroundColor: `${t.info}10`,
+            border: `1px solid ${t.info}40`,
             borderRadius: '6px',
             padding: '16px',
             marginBottom: '16px'

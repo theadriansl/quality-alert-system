@@ -353,8 +353,8 @@ const RolesManagement = () => {
       fontSize: '10px',
       padding: '2px 8px',
       borderRadius: '6px',
-      background: 'rgba(139, 92, 246, 0.2)',
-      color: '#a78bfa',
+      background: `${t.accent}20`,
+      color: t.accent,
       fontWeight: '600'
     },
     usersCount: {
@@ -401,21 +401,21 @@ const RolesManagement = () => {
       transition: 'all 0.2s ease'
     },
     editButton: {
-      background: 'rgba(59, 130, 246, 0.2)',
-      color: '#60a5fa'
+      background: `${t.info}20`,
+      color: t.info
     },
     deleteButton: {
-      background: 'rgba(239, 68, 68, 0.2)',
-      color: '#f87171'
+      background: `${t.error}20`,
+      color: t.error
     },
     saveButton: {
-      background: 'linear-gradient(135deg, #2E7D32 0%, #2E7D32 100%)',
+      background: t.success,
       color: 'white',
-      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+      boxShadow: `0 4px 15px ${t.success}40`
     },
     cancelButton: {
-      background: 'rgba(100, 116, 139, 0.2)',
-      color: '#94a3b8'
+      background: `${t.textMuted}20`,
+      color: t.textMuted
     },
     detailBody: {
       padding: '24px',
@@ -581,8 +581,8 @@ const RolesManagement = () => {
       transition: 'all 0.2s ease'
     },
     checkboxChecked: {
-      background: '#2E7D32',
-      borderColor: '#2E7D32'
+      background: t.success,
+      borderColor: t.success
     },
     sectionName: {
       fontSize: '13px',
@@ -628,10 +628,10 @@ const RolesManagement = () => {
       zIndex: 1000
     },
     notificationSuccess: {
-      background: 'linear-gradient(135deg, #2E7D32 0%, #2E7D32 100%)'
+      background: t.success
     },
     notificationError: {
-      background: 'linear-gradient(135deg, #ef4444 0%, #B00020 100%)'
+      background: t.error
     },
     deleteModal: {
       position: 'fixed',
@@ -659,7 +659,7 @@ const RolesManagement = () => {
       width: '64px',
       height: '64px',
       borderRadius: '50%',
-      background: 'rgba(239, 68, 68, 0.2)',
+      background: `${t.error}20`,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -852,8 +852,8 @@ const RolesManagement = () => {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
-        input::placeholder { color: #475569; }
-        textarea::placeholder { color: #475569; }
+        input::placeholder { color: ${t.textMuted}; }
+        textarea::placeholder { color: ${t.textMuted}; }
       `}</style>
 
       {/* Header */}
@@ -910,7 +910,7 @@ const RolesManagement = () => {
           <div style={styles.rolesSection}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>Roles del Sistema</span>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>{systemRoles.length}</span>
+              <span style={{ fontSize: '12px', color: t.textMuted }}>{systemRoles.length}</span>
             </div>
             <div style={styles.rolesList}>
               {systemRoles.map(role => (
@@ -950,11 +950,11 @@ const RolesManagement = () => {
           <div style={styles.rolesSection}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionTitle}>Roles Personalizados</span>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>{customRoles.length}</span>
+              <span style={{ fontSize: '12px', color: t.textMuted }}>{customRoles.length}</span>
             </div>
             <div style={styles.rolesList}>
               {customRoles.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                <div style={{ padding: '24px', textAlign: 'center', color: t.textMuted }}>
                   <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.5 }}></div>
                   <div style={{ fontSize: '13px' }}>No hay roles personalizados</div>
                 </div>
@@ -1080,7 +1080,7 @@ const RolesManagement = () => {
                       style={styles.textarea}
                     />
                   ) : (
-                    <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
+                    <p style={{ color: t.textMuted, fontSize: '14px', margin: 0 }}>
                       {selectedRole?.description || 'Sin descripción'}
                     </p>
                   )}
@@ -1157,7 +1157,7 @@ const RolesManagement = () => {
                 onClick={() => handleDelete(showDeleteConfirm)}
                 style={{
                   ...styles.actionButton,
-                  background: 'linear-gradient(135deg, #ef4444 0%, #B00020 100%)',
+                  background: t.error,
                   color: 'white'
                 }}
               >

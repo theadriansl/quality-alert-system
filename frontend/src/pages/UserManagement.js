@@ -622,8 +622,8 @@ const UserManagement = () => {
     roleTag: {
       padding: '6px 12px',
       borderRadius: '8px',
-      background: 'rgba(139, 92, 246, 0.2)',
-      color: '#a78bfa',
+      background: `${t.accent}20`,
+      color: t.accent,
       fontSize: '12px',
       fontWeight: '500'
     },
@@ -650,16 +650,16 @@ const UserManagement = () => {
       transition: 'all 0.2s'
     },
     editBtn: {
-      background: 'rgba(59, 130, 246, 0.2)',
-      color: '#60a5fa'
+      background: `${t.info}20`,
+      color: t.info
     },
     rolesBtn: {
-      background: 'rgba(139, 92, 246, 0.2)',
-      color: '#a78bfa'
+      background: `${t.accent}20`,
+      color: t.accent
     },
     deleteBtn: {
-      background: 'rgba(239, 68, 68, 0.2)',
-      color: '#f87171'
+      background: `${t.error}20`,
+      color: t.error
     },
     // Modal styles
     modalOverlay: {
@@ -757,8 +757,8 @@ const UserManagement = () => {
     systemBadge: {
       padding: '2px 8px',
       borderRadius: '6px',
-      background: 'rgba(139, 92, 246, 0.2)',
-      color: '#a78bfa',
+      background: `${t.accent}20`,
+      color: t.accent,
       fontSize: '10px',
       fontWeight: '600'
     },
@@ -772,12 +772,12 @@ const UserManagement = () => {
       transition: 'all 0.2s'
     },
     assignBtn: {
-      background: 'linear-gradient(135deg, #2E7D32 0%, #2E7D32 100%)',
+      background: t.success,
       color: 'white'
     },
     revokeBtn: {
-      background: 'rgba(239, 68, 68, 0.2)',
-      color: '#f87171'
+      background: `${t.error}20`,
+      color: t.error
     },
     // Form styles
     formContainer: {
@@ -825,7 +825,7 @@ const UserManagement = () => {
     },
     formError: {
       fontSize: '12px',
-      color: '#f87171'
+      color: t.error
     },
     formActions: {
       display: 'flex',
@@ -852,10 +852,10 @@ const UserManagement = () => {
       animation: 'slideIn 0.3s ease'
     },
     notificationSuccess: {
-      background: 'linear-gradient(135deg, #2E7D32 0%, #2E7D32 100%)'
+      background: t.success
     },
     notificationError: {
-      background: 'linear-gradient(135deg, #ef4444 0%, #B00020 100%)'
+      background: t.error
     },
     loadingContainer: {
       display: 'flex',
@@ -917,8 +917,8 @@ const UserManagement = () => {
                 {user.systemRole === 'admin' && (
                   <span style={{
                     ...styles.badge,
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    color: '#f87171'
+                    background: `${t.error}20`,
+                    color: t.error
                   }}>
                     ADMIN
                   </span>
@@ -1089,7 +1089,7 @@ const UserManagement = () => {
               onChange={handleInputChange}
               style={{
                 ...styles.formInput,
-                borderColor: errors.email ? '#f87171' : 'rgba(255,255,255,0.1)'
+                borderColor: errors.email ? t.error : t.border
               }}
               placeholder="usuario@empresa.com"
             />
@@ -1118,7 +1118,7 @@ const UserManagement = () => {
               onChange={handleInputChange}
               style={{
                 ...styles.formInput,
-                borderColor: errors.firstName ? '#f87171' : 'rgba(255,255,255,0.1)'
+                borderColor: errors.firstName ? t.error : t.border
               }}
             />
             {errors.firstName && <span style={styles.formError}>{errors.firstName}</span>}
@@ -1133,7 +1133,7 @@ const UserManagement = () => {
               onChange={handleInputChange}
               style={{
                 ...styles.formInput,
-                borderColor: errors.lastName ? '#f87171' : 'rgba(255,255,255,0.1)'
+                borderColor: errors.lastName ? t.error : t.border
               }}
             />
             {errors.lastName && <span style={styles.formError}>{errors.lastName}</span>}
@@ -1176,7 +1176,7 @@ const UserManagement = () => {
               list="departments"
               style={{
                 ...styles.formInput,
-                borderColor: errors.department ? '#f87171' : 'rgba(255,255,255,0.1)'
+                borderColor: errors.department ? t.error : t.border
               }}
             />
             <datalist id="departments">
@@ -1250,7 +1250,7 @@ const UserManagement = () => {
           to { transform: translateX(0); opacity: 1; }
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        input::placeholder, select::placeholder { color: #475569; }
+        input::placeholder, select::placeholder { color: ${t.textMuted}; }
         option { background: ${t.text}; color: white; }
       `}</style>
 
