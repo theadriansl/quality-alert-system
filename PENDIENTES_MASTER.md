@@ -821,6 +821,25 @@ D3MFG.js: 32 literales
 
 ## Notas Sesión 04-Sep-2026
 
+### ✅ WorkloadDashboard.js B2B Visual Restyle
+
+| Bloque | Cambios | Commit |
+|--------|---------|--------|
+| BLOQUE 1 | KpiTile B2B (valores 28-38px, sin borderTop, sin shadow), SectionTitle uppercase gray, Tabs underline style, badges pill (borderRadius: 999px), emojis removidos | `6b51934` |
+| BLOQUE 2 | Table headers uppercase + letter-spacing, celdas tokenizadas (t.success/t.error), emojis removidos | `7293a8f` |
+
+**Specs B2B aplicados:**
+- KPI tiles: labels 11px uppercase, valores 28-38px fontWeight 600, sin borderTop accent, sin shadow
+- SectionTitle: 11px uppercase gray (t.textMuted), letter-spacing 0.5px
+- Tabs: underline style (2px bottom border), accent color, transparent background
+- Badges: borderRadius 999px (pill), tinted backgrounds con tokens
+- Tables: headers uppercase con letter-spacing
+- Emojis: eliminados de UI (🔴🟡🟢⚠️✅⏰✓ → texto/dash)
+
+**DATA colors preservados:** clr(), riskColor() helpers, chart configs, semantic status colors
+
+---
+
 ### ✅ COMPLETADO HOY: Tokenización Hex → Theme Tokens (Bloque pages/)
 
 | Archivo | Cambios | Commit |
