@@ -1222,16 +1222,16 @@ const MRBCreate = () => {
                         </span>
                         <span style={{
                           padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600',
-                          backgroundColor: source.status === 'CERRADA' || source.status === 'completed' ? '#22c55e33' : '#C7770033',
-                          color: source.status === 'CERRADA' || source.status === 'completed' ? '#22c55e' : '#C77700'
+                          backgroundColor: source.status === 'CERRADA' || source.status === 'completed' ? `${t.success}33` : `${t.warning}33`,
+                          color: source.status === 'CERRADA' || source.status === 'completed' ? t.success : t.warning
                         }}>
                           {source.status}
                         </span>
                         {/* MRB campaigns badge */}
                         {source.mrbCampaigns && source.mrbCampaigns.length > 0 && source.mrbCampaigns.map((mc, mi) => {
-                          const mrbColor = mc.status === 'CERRADA' ? { bg: '#22c55e22', color: '#16a34a' }
-                            : mc.status === 'BORRADOR' ? { bg: '#6b728022', color: '#6b7280' }
-                            : { bg: '#f59e0b22', color: '#b45309' };
+                          const mrbColor = mc.status === 'CERRADA' ? { bg: `${t.success}22`, color: t.success }
+                            : mc.status === 'BORRADOR' ? { bg: `${t.textMuted}22`, color: t.textMuted }
+                            : { bg: `${t.warning}22`, color: t.warning };
                           return (
                             <span key={mi} style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', backgroundColor: mrbColor.bg, color: mrbColor.color }}>
                               MRB {mc.campaignNumber} · {mc.status}
@@ -1299,7 +1299,7 @@ const MRBCreate = () => {
                       } finally { setLinkLoading(false); }
                     }
                   }}
-                  style={{ padding: '6px 14px', backgroundColor: linkedSource ? '#d1fae5' : '#ede9fe', color: linkedSource ? '#065f46' : '#7c3aed', border: `1px solid ${linkedSource ? '#6ee7b7' : '#c4b5fd'}`, borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '6px 14px', backgroundColor: linkedSource ? `${t.success}20` : `${t.accent}20`, color: linkedSource ? t.success : t.accent, border: `1px solid ${linkedSource ? `${t.success}60` : `${t.accent}60`}`, borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   <ChevronRight size={14} />
                   {linkedSource ? `8D vinculado: ${linkedSource.folio}` : 'Vincular 8D (opcional)'}
@@ -2063,9 +2063,9 @@ const MRBCreate = () => {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontWeight: '600', color: t.accent, fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px' }}>{src.folio}</span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#C7770022', color: t.warning }}>{src.status}</span>
+                    <span style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: `${t.warning}22`, color: t.warning }}>{src.status}</span>
                     {src.mrbCampaigns?.map((mc, mi) => (
-                      <span key={mi} style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: mc.status === 'CERRADA' ? '#22c55e22' : '#f59e0b22', color: mc.status === 'CERRADA' ? '#16a34a' : '#b45309' }}>
+                      <span key={mi} style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '4px', backgroundColor: mc.status === 'CERRADA' ? `${t.success}22` : `${t.warning}22`, color: mc.status === 'CERRADA' ? t.success : t.warning }}>
                         MRB {mc.campaignNumber} · {mc.status}
                       </span>
                     ))}
@@ -2232,8 +2232,8 @@ const MRBCreate = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{
                       padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600',
-                      backgroundColor: c.status === 'BORRADOR' ? '#6b728030' : c.status === 'CERRADA' ? '#22c55e30' : '#C7770030',
-                      color: c.status === 'BORRADOR' ? '#6b7280' : c.status === 'CERRADA' ? '#22c55e' : '#C77700'
+                      backgroundColor: c.status === 'BORRADOR' ? `${t.textMuted}30` : c.status === 'CERRADA' ? `${t.success}30` : `${t.warning}30`,
+                      color: c.status === 'BORRADOR' ? t.textMuted : c.status === 'CERRADA' ? t.success : t.warning
                     }}>
                       {c.status}
                     </span>

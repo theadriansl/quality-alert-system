@@ -499,8 +499,8 @@ const ManagementReview = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
 
               {/* 8D */}
-              <div style={{ backgroundColor: '#fef3c7', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#92400e' }}>8D Reports</h4>
+              <div style={{ backgroundColor: `${themeColors.warning}20`, padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 15px', color: themeColors.warning }}>8D Reports</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><strong>{kpis['8D']?.openCount || 0}</strong><br /><small>{L.open}</small></div>
                   <div><strong>{kpis['8D']?.closedCount || 0}</strong><br /><small>{L.closed}</small></div>
@@ -508,15 +508,15 @@ const ManagementReview = () => {
                   <div><strong>{kpis['8D']?.onTimeRate || 0}%</strong><br /><small>{L.onTime}</small></div>
                 </div>
                 {kpis['8D']?.totalSavings > 0 && (
-                  <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fbbf24', borderRadius: '4px' }}>
+                  <div style={{ marginTop: '10px', padding: '10px', backgroundColor: themeColors.warning, borderRadius: '4px', color: 'white' }}>
                     <strong>${(kpis['8D']?.totalSavings || 0).toLocaleString()}</strong> {L.savings}
                   </div>
                 )}
               </div>
 
               {/* QAR */}
-              <div style={{ backgroundColor: '#fee2e2', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#991b1b' }}>{L.qarDefects}</h4>
+              <div style={{ backgroundColor: `${themeColors.error}15`, padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 15px', color: themeColors.error }}>{L.qarDefects}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><strong>{kpis['QAR']?.totalQars || 0}</strong><br /><small>{L.totalQars}</small></div>
                   <div><strong>{kpis['QAR']?.openCount || 0}</strong><br /><small>{L.open}</small></div>
@@ -526,8 +526,8 @@ const ManagementReview = () => {
               </div>
 
               {/* MRB */}
-              <div style={{ backgroundColor: '#dbeafe', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#0F3B5F' }}>MRB</h4>
+              <div style={{ backgroundColor: `${themeColors.info}20`, padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 15px', color: themeColors.info }}>MRB</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><strong>{kpis['MRB']?.totalCampaigns || 0}</strong><br /><small>{L.campaigns}</small></div>
                   <div><strong>{kpis['MRB']?.activeCampaigns || 0}</strong><br /><small>{L.active}</small></div>
@@ -537,8 +537,8 @@ const ManagementReview = () => {
               </div>
 
               {/* ECR */}
-              <div style={{ backgroundColor: '#f3e8ff', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#6b21a8' }}>{L.ecrChanges}</h4>
+              <div style={{ backgroundColor: `${themeColors.accent}20`, padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 15px', color: themeColors.accent }}>{L.ecrChanges}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><strong>{kpis['ECR']?.totalChanges || 0}</strong><br /><small>{L.totalChanges}</small></div>
                   <div><strong>{kpis['ECR']?.approvedCount || 0}</strong><br /><small>{L.approved}</small></div>
@@ -548,8 +548,8 @@ const ManagementReview = () => {
               </div>
 
               {/* AUDIT */}
-              <div style={{ backgroundColor: '#d1fae5', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#065f46' }}>{L.audits}</h4>
+              <div style={{ backgroundColor: `${themeColors.success}20`, padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 15px', color: themeColors.success }}>{L.audits}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><strong>{kpis['AUDIT']?.completedAudits || 0}</strong><br /><small>{L.completed}</small></div>
                   <div><strong>{kpis['AUDIT']?.pendingAudits || 0}</strong><br /><small>{L.pending}</small></div>
@@ -559,8 +559,8 @@ const ManagementReview = () => {
               </div>
 
               {/* WORKLOAD */}
-              <div style={{ backgroundColor: '#e0e7ff', padding: '20px', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 15px', color: '#3730a3' }}>{L.workload}</h4>
+              <div style={{ backgroundColor: `${themeColors.info}15`, padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 15px', color: themeColors.info }}>{L.workload}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div><strong>{kpis['WORKLOAD']?.totalActivities || 0}</strong><br /><small>{L.activities}</small></div>
                   <div><strong>{kpis['WORKLOAD']?.completedCount || 0}</strong><br /><small>{L.completed}</small></div>
@@ -784,7 +784,7 @@ const ManagementReview = () => {
                     </td>
                     <td style={{ padding: '12px', borderBottom: `1px solid ${themeColors.border}`, textAlign: 'center' }}>
                       {attendee.signature ? (
-                        <span style={{ color: '#2E7D32' }}> {L.signed}</span>
+                        <span style={{ color: themeColors.success }}> {L.signed}</span>
                       ) : (
                         <span style={{ color: themeColors.textDim }}>{L.pending}</span>
                       )}
@@ -797,7 +797,7 @@ const ManagementReview = () => {
                             attendees: prev.attendees.filter((_, i) => i !== idx)
                           }));
                         }}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', color: themeColors.error, cursor: 'pointer' }}
                       >
                         {L.remove}
                       </button>
