@@ -71,7 +71,7 @@
 | 10 | ~~QAR Rediseño Visual Parte 2 (QARDashboard, QARDashboardComponent)~~ | 29-Ago | ✅ 01-Sep |
 | 11 | Skills/Training certificaciones ILUO | Arrastrado | ⏳ |
 | 12 | Work Instructions versionamiento | Arrastrado | ⏳ |
-| 13 | **Tokenización Bloque 5-6 pendiente**: RiskMatrixConfig, RolesManagement, UserManagement, DefectHospital (cyan/green), ECRDashboardAdvanced | 04-Sep | ⏳ |
+| 13 | ~~**Tokenización Bloque 5-6**~~: RiskMatrixConfig, RolesManagement, UserManagement, DefectHospital, ECRDashboardAdvanced | 04-Sep | ✅ |
 | 8 | ~~Performance Hospital volumen alto~~ | 05-Ago | ✅ 17-Ago |
 | 9 | ~~Review permisos Hospital~~ | 05-Ago | ✅ 17-Ago |
 | 10 | ~~Cache de imágenes (código visible)~~ | 05-Ago | ✅ Cerrado |
@@ -83,7 +83,8 @@
 ## Completados
 | Tarea | Fecha |
 |-------|-------|
-| ✅ **Tokenización Bloque 5 parcial**: ImpactAnalysisConfig.js (~10 hex → tokens) | 04-Sep |
+| ✅ **Tokenización Bloque 6**: DefectHospital.js (3 hex), ECRDashboardAdvanced.js (1 hex) → tokens tema | 04-Sep |
+| ✅ **Tokenización Bloque 5**: RiskMatrixConfig (~12), RolesManagement (~20), UserManagement (~20), ImpactAnalysisConfig (~10) → tokens tema | 04-Sep |
 | ✅ **Tokenización Bloque 4**: MRBCreate.js (~15) + ManagementReview.js (~12) → tokens tema | 04-Sep |
 | ✅ **Tokenización**: ReportCenter.js (~45), UnitTraceability.js (~15), MRBInventory.js (~12), MRBDefectCapture.js (~50) | 04-Sep |
 | ✅ **Tokenización Bloque 3**: MRBShiftReport.js (~30 hex → tokens) - KPIs, pareto, inspector table | 04-Sep |
