@@ -74,7 +74,7 @@ const ImpactAnalysisConfig = () => {
       transition: 'background-color 0.2s'
     },
     disclaimer: {
-      backgroundColor: '#fef3c7',
+      backgroundColor: `${t.warning}20`,
       border: `2px solid ${t.warning}`,
       borderRadius: '8px',
       padding: '16px 20px',
@@ -123,7 +123,7 @@ const ImpactAnalysisConfig = () => {
     inactiveBadge: {
       fontSize: '12px',
       fontWeight: '500',
-      backgroundColor: '#fee2e2',
+      backgroundColor: `${t.error}15`,
       color: t.error,
       padding: '2px 8px',
       borderRadius: '4px'
@@ -154,7 +154,7 @@ const ImpactAnalysisConfig = () => {
       cursor: 'pointer'
     },
     deleteButton: {
-      backgroundColor: '#fee2e2',
+      backgroundColor: `${t.error}15`,
       color: t.error,
       border: 'none',
       borderRadius: '6px',
@@ -197,11 +197,11 @@ const ImpactAnalysisConfig = () => {
       gap: '8px'
     },
     validatorChip: {
-      backgroundColor: '#d1fae5',
+      backgroundColor: `${t.success}20`,
       padding: '6px 12px',
       borderRadius: '16px',
       fontSize: '13px',
-      color: '#065f46',
+      color: t.success,
       fontWeight: '500'
     },
     modalOverlay: {
@@ -333,7 +333,7 @@ const ImpactAnalysisConfig = () => {
       color: t.text
     },
     removeSubButton: {
-      backgroundColor: '#fee2e2',
+      backgroundColor: `${t.error}15`,
       color: t.error,
       border: 'none',
       borderRadius: '6px',
@@ -784,7 +784,7 @@ const ImpactAnalysisConfig = () => {
                 <label style={styles.label}>
                   Team Members
                   {editingArea.defaultValidators?.length > 0 && (
-                    <span style={{ marginLeft: '8px', color: '#2E7D32', fontWeight: '600' }}>
+                    <span style={{ marginLeft: '8px', color: t.success, fontWeight: '600' }}>
                       ({editingArea.defaultValidators.length} asignados)
                     </span>
                   )}
@@ -814,8 +814,8 @@ const ImpactAnalysisConfig = () => {
                         cursor: 'pointer',
                         borderRadius: '4px',
                         fontSize: '13px',
-                        backgroundColor: (editingArea.defaultValidators || []).includes(user.id) ? '#d1fae5' : 'white',
-                        border: (editingArea.defaultValidators || []).includes(user.id) ? '1px solid #2E7D32' : '1px solid #E6EAEE',
+                        backgroundColor: (editingArea.defaultValidators || []).includes(user.id) ? `${t.success}20` : t.bgCard,
+                        border: (editingArea.defaultValidators || []).includes(user.id) ? `1px solid ${t.success}` : `1px solid ${t.border}`,
                         transition: 'all 0.2s'
                       }}
                     >
