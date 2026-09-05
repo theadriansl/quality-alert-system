@@ -33,31 +33,77 @@ const riskColor = (idx) => {
 const fmt1 = (v) => (typeof v === 'number' ? Math.round(v * 10) / 10 : v);
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-// Local KpiTile wrapper for Workload-style (borderTop accent, colored value)
-// Note: icon prop ignored per emoji cleanup protocol
+// B2B sobrio KpiTile: no borderTop, larger values (36-40px), no shadow
 const KpiTile = ({ label, value, unit = '', color, sub, size = 'md' }) => {
   const { theme: t } = useTheme();
+  const sizeConfig = {
+    sm: { valueFontSize: 28, padding: '12px 14px' },
+    md: { valueFontSize: 32, padding: '14px 16px' },
+    lg: { valueFontSize: 38, padding: '16px 18px' }
+  };
+  const { valueFontSize, padding } = sizeConfig[size] || sizeConfig.md;
+
   return (
-    <SharedKpiTile
-      label={label}
-      value={value}
-      unit={unit}
-      sub={sub}
-      borderAccent="top"
-      accentColor={color}
-      valueColor={color}
-      size={size}
-      t={t}
-    />
+    <div style={{
+      backgroundColor: t.bgCard,
+      border: `1px solid ${t.border}`,
+      borderRadius: 10,
+      padding
+    }}>
+      <div style={{
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        color: t.textMuted,
+        marginBottom: 8
+      }}>
+        {label}
+      </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 4
+      }}>
+        <span style={{
+          fontSize: valueFontSize,
+          fontWeight: 600,
+          color: color || t.text,
+          lineHeight: 1
+        }}>
+          {value}
+        </span>
+        {unit && (
+          <span style={{ fontSize: 14, color: t.textMuted, fontWeight: 500 }}>
+            {unit}
+          </span>
+        )}
+      </div>
+      {sub && (
+        <div style={{
+          fontSize: 11,
+          color: t.textMuted,
+          marginTop: 6
+        }}>
+          {sub}
+        </div>
+      )}
+    </div>
   );
 };
 
-const SectionTitle = ({ icon, label }) => {
+const SectionTitle = ({ label }) => {
   const { theme: t } = useTheme();
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-      <span style={{ fontSize: '16px' }}>{icon}</span>
-      <span style={{ fontSize: '15px', fontWeight: '600', color: t.text }}>{label}</span>
+    <div style={{
+      fontSize: 11,
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      color: t.textMuted,
+      marginBottom: 14
+    }}>
+      {label}
     </div>
   );
 };
@@ -96,7 +142,7 @@ const RiskGauge = ({ value }) => {
         {value}
       </div>
       <div style={{ fontSize: '12px', color: t.textDim, marginTop: '2px' }}>
-        {value >= 60 ? '🔴 Riesgo Alto' : value >= 35 ? '🟡 Riesgo Medio' : '🟢 Riesgo Bajo'}
+        {value >= 60 ? 'Riesgo Alto' : value >= 35 ? 'Riesgo Medio' : 'Riesgo Bajo'}
       </div>
     </div>
   );
@@ -198,9 +244,12 @@ const TabCarga = ({ kpis }) => {
                   <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(u.hoursReal)} hrs</td>
                   <td style={{ padding: '8px 12px' }}>
                     <span style={{
-                      padding: '2px 10px', borderRadius: '12px', fontWeight: '600', fontSize: '12px',
-                      backgroundColor: u.utilization > 110 ? '#fee2e2' : u.utilization < 70 ? t.bgPanel : '#dcfce7',
-                      color: u.utilization > 110 ? '#ef4444' : u.utilization < 70 ? t.textDim : '#2E7D32'
+                      padding: '3px 12px',
+                      borderRadius: 999,
+                      fontWeight: 600,
+                      fontSize: 12,
+                      backgroundColor: u.utilization > 110 ? `${t.error}15` : u.utilization < 70 ? t.bgPanel : `${t.success}15`,
+                      color: u.utilization > 110 ? t.error : u.utilization < 70 ? t.textDim : t.success
                     }}>{u.utilization}%</span>
                   </td>
                   <td style={{ padding: '8px 12px', color: t.text, textAlign: 'center' }}>{u.activitiesCount}</td>
@@ -229,7 +278,7 @@ const TabEjecucion = ({ kpis }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
         <KpiTile label="Cumplimiento" value={`${ejecucion.compliancePercent}%`}
-          color={clr(ejecucion.compliancePercent)} icon="✅" sub="Real vs Estimado" />
+          color={clr(ejecucion.compliancePercent)} sub="Real vs Estimado" />
         <KpiTile label="Desviación Est." value={`${ejecucion.estimationDeviation > 0 ? '+' : ''}${ejecucion.estimationDeviation}%`}
           color={Math.abs(ejecucion.estimationDeviation) < 10 ? '#2E7D32' : Math.abs(ejecucion.estimationDeviation) < 25 ? '#C77700' : '#ef4444'}
            sub="(real - est) / est" />
@@ -310,7 +359,7 @@ const TabEjecucion = ({ kpis }) => {
               </div>
             </div>
             <div style={{ marginTop: '16px', fontSize: '14px', color: t.text, fontWeight: '600' }}>
-              {prodGood ? '✅ Por encima de lo estimado' : '⚠️ Por debajo de lo estimado'}
+              {prodGood ? 'Por encima de lo estimado' : 'Por debajo de lo estimado'}
             </div>
             <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '4px' }}>
               &gt;1.0 = más eficiente de lo planeado
@@ -356,7 +405,7 @@ const TabActividades = ({ kpis }) => {
         <KpiTile label="Avance Promedio" value={`${fmt1(actividades.avgProgress)}%`}
           color={clr(actividades.avgProgress)}  />
         <KpiTile label="% Completadas" value={`${actividades.completedPercent}%`}
-          color={clr(actividades.completedPercent)} icon="✅" sub={`${actividades.completedCount} tareas`} />
+          color={clr(actividades.completedPercent)} sub={`${actividades.completedCount} tareas`} />
         <KpiTile label="% Pendientes" value={`${actividades.pendingPercent}%`}
           color={actividades.pendingPercent > 50 ? '#C77700' : '#2E7D32'}  sub={`${actividades.pendingCount} tareas`} />
         <KpiTile label="% No Planeadas" value={`${actividades.unplannedPercent}%`}
@@ -481,9 +530,13 @@ const TabRiesgo = ({ kpis }) => {
           </div>
           <RiskGauge value={riesgo.riskIndex} />
           <div style={{
-            marginTop: '8px', padding: '6px 20px', borderRadius: '20px',
-            backgroundColor: riskColor(riesgo.riskIndex), color: 'white',
-            fontWeight: '600', fontSize: '14px'
+            marginTop: 8,
+            padding: '6px 20px',
+            borderRadius: 999,
+            backgroundColor: riskColor(riesgo.riskIndex),
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 13
           }}>
             {riskLevel}
           </div>
@@ -530,9 +583,8 @@ const TabRiesgo = ({ kpis }) => {
             </div>
           )}
           {riesgo.delayedCount > 0 && (
-            <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-              <span>⏰</span>
-              <span style={{ fontSize: '13px', color: '#C77700' }}>
+            <div style={{ padding: '10px 14px', backgroundColor: '#fef3c7', borderRadius: 8 }}>
+              <span style={{ fontSize: 13, color: '#C77700' }}>
                 <strong>{riesgo.delayedCount} actividad(es)</strong> tienen fecha de fin vencida. Actualiza fechas o avance.
               </span>
             </div>
@@ -545,9 +597,8 @@ const TabRiesgo = ({ kpis }) => {
             </div>
           )}
           {riesgo.overloadedCount === 0 && riesgo.criticalDelayedCount === 0 && riesgo.delayedCount === 0 && riesgo.bigDeviationPercent <= 20 && (
-            <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#dcfce7', borderRadius: '8px' }}>
-              <span>✅</span>
-              <span style={{ fontSize: '13px', color: '#2E7D32' }}>El equipo opera dentro de parámetros normales. Sin alertas críticas activas.</span>
+            <div style={{ padding: '10px 14px', backgroundColor: '#dcfce7', borderRadius: 8 }}>
+              <span style={{ fontSize: 13, color: '#2E7D32' }}>El equipo opera dentro de parámetros normales. Sin alertas críticas activas.</span>
             </div>
           )}
         </div>
@@ -768,7 +819,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
   if (id === 'kpi-avance')
     return <KpiTile label="Avance Prom." value={`${fmt1(actividades.avgProgress ?? 0)}%`} color={clr(actividades.avgProgress ?? 0)}  />;
   if (id === 'kpi-riesgo')
-    return <KpiTile label="Índice de Riesgo" value={riesgo.riskIndex ?? 0} color={riskColor(riesgo.riskIndex ?? 0)}  sub={(riesgo.riskIndex ?? 0) >= 60 ? '🔴 Alto' : (riesgo.riskIndex ?? 0) >= 35 ? '🟡 Medio' : '🟢 Bajo'} />;
+    return <KpiTile label="Índice de Riesgo" value={riesgo.riskIndex ?? 0} color={riskColor(riesgo.riskIndex ?? 0)} sub={(riesgo.riskIndex ?? 0) >= 60 ? 'Alto' : (riesgo.riskIndex ?? 0) >= 35 ? 'Medio' : 'Bajo'} />;
 
   // ── Carga ──
   if (id === 'chart-util-bar') {
@@ -854,7 +905,7 @@ const renderWorkloadWidget = (id, kpis, t) => {
             </div>
           </div>
           <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: '600', color: prodGood ? '#2E7D32' : '#ef4444' }}>
-            {prodGood ? '✅ Más eficiente que estimado' : '⚠️ Por debajo del estimado'}
+            {prodGood ? 'Más eficiente que estimado' : 'Por debajo del estimado'}
           </div>
         </div>
       </WLCardWrapper>
@@ -957,16 +1008,15 @@ const renderWorkloadWidget = (id, kpis, t) => {
     const recs = [];
     if ((riesgo.overloadedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', msg: `${riesgo.overloadedCount} persona(s) sobrecargadas (>110%). Redistribuye actividades.` });
     if ((riesgo.criticalDelayedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', msg: `${riesgo.criticalDelayedCount} tarea(s) críticas retrasadas. Atención inmediata.` });
-    if ((riesgo.delayedCount ?? 0) > 0) recs.push({ bg: '#fef3c7', color: '#C77700', icon: '⏰', msg: `${riesgo.delayedCount} actividad(es) con fecha vencida. Actualiza avance.` });
+    if ((riesgo.delayedCount ?? 0) > 0) recs.push({ bg: '#fef3c7', color: '#C77700', msg: `${riesgo.delayedCount} actividad(es) con fecha vencida. Actualiza avance.` });
     if ((riesgo.bigDeviationPercent ?? 0) > 20) recs.push({ bg: '#fef3c7', color: '#C77700', msg: `${riesgo.bigDeviationPercent}% de actividades con desviación >20%. Revisa estimaciones.` });
-    if (recs.length === 0) recs.push({ bg: '#dcfce7', color: '#2E7D32', icon: '✅', msg: 'El equipo opera dentro de parámetros normales. Sin alertas.' });
+    if (recs.length === 0) recs.push({ bg: '#dcfce7', color: '#2E7D32', msg: 'El equipo opera dentro de parámetros normales. Sin alertas.' });
     return (
       <WLCardWrapper title="Recomendaciones">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {recs.map((r, i) => (
-            <div key={i} style={{ display: 'flex', gap: '8px', padding: '10px 12px', borderRadius: '8px', backgroundColor: r.bg }}>
-              <span>{r.icon}</span>
-              <span style={{ fontSize: '12px', color: r.color }}>{r.msg}</span>
+            <div key={i} style={{ padding: '10px 12px', borderRadius: 8, backgroundColor: r.bg }}>
+              <span style={{ fontSize: 12, color: r.color }}>{r.msg}</span>
             </div>
           ))}
         </div>
@@ -1126,7 +1176,7 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
               label="Utilización Promedio" size="lg"
               value={`${topBar.avgUtilization}%`}
               color={clr(topBar.avgUtilization)}
-                            sub={topBar.avgUtilization > 110 ? '⚠️ Equipo sobrecargado' : topBar.avgUtilization < 70 ? 'Capacidad sin usar' : '✅ Utilización óptima'}
+              sub={topBar.avgUtilization > 110 ? 'Equipo sobrecargado' : topBar.avgUtilization < 70 ? 'Capacidad sin usar' : 'Utilización óptima'}
             />
             <KpiTile
               label="% Personas Sobrecargadas" size="lg"
@@ -1154,19 +1204,24 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
             />
           </div>
 
-          {/* Tab nav */}
+          {/* Tab nav - underline style */}
           <div style={{
-            backgroundColor: t.bgCard, border: `1px solid ${t.border}`,
-            borderRadius: '10px', padding: '10px 14px',
-            display: 'flex', gap: '6px', flexWrap: 'wrap'
+            display: 'flex',
+            gap: 0,
+            borderBottom: `1px solid ${t.border}`
           }}>
             {TABS.map(tab => (
               <button key={tab.id} onClick={() => handleTabChange(tab.id)}
                 style={{
-                  padding: '8px 18px', border: 'none', borderRadius: '8px',
-                  cursor: 'pointer', fontSize: '13px', fontWeight: '500',
-                  backgroundColor: activeTab === tab.id ? t.accent : t.bgPanel,
-                  color: activeTab === tab.id ? 'white' : t.text,
+                  padding: '12px 20px',
+                  border: 'none',
+                  borderBottom: activeTab === tab.id ? `2px solid ${t.accent}` : '2px solid transparent',
+                  marginBottom: '-1px',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: activeTab === tab.id ? 600 : 500,
+                  backgroundColor: 'transparent',
+                  color: activeTab === tab.id ? t.accent : t.textMuted,
                   transition: 'all 0.2s'
                 }}>
                 {tab.label}
