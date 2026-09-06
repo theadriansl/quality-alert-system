@@ -3329,15 +3329,40 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
     `, [userIds, sd, ed]);
     const acts = actResult.rows;
 
+    // ── 2b. ALL overdue activities (regardless of period) ────────────────────
+    const allDelayedResult = await query(`
+      SELECT
+        a.id, a.title, a.status, a.activity_type, a.priority,
+        a.start_date, a.end_date, a.estimated_hours, a.actual_hours, a.progress,
+        a.assigned_to, a.project_id, a.kpi_id,
+        u.first_name || ' ' || u.last_name AS assigned_to_name,
+        COALESCE(d.name, u.department) AS department_name,
+        k.code AS kpi_code, k.color AS kpi_color
+      FROM workload_activities a
+      LEFT JOIN users u ON a.assigned_to = u.id
+      LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN workload_kpis k ON a.kpi_id = k.id
+      WHERE a.assigned_to = ANY($1)
+        AND a.end_date < $2
+        AND a.status NOT IN ('completed', 'cancelled')
+    `, [userIds, today]);
+    const allDelayed = allDelayedResult.rows;
+
     const totalActs = acts.length;
     const completed = acts.filter(a => a.status === 'completed');
     const inProgress = acts.filter(a => a.status === 'in_progress');
     const pending = acts.filter(a => a.status === 'pending');
     const cancelled = acts.filter(a => a.status === 'cancelled');
     const unplanned = acts.filter(a => a.activity_type === 'unplanned');
-    const delayed = acts.filter(a =>
-      a.status !== 'completed' && a.status !== 'cancelled' && a.end_date < today
-    );
+    const todayMs = new Date(today).getTime();
+    // Delayed within period (for period-specific KPIs)
+    const delayedInPeriod = acts.filter(a => {
+      if (a.status === 'completed' || a.status === 'cancelled') return false;
+      const endDate = a.end_date ? new Date(a.end_date).getTime() : null;
+      return endDate && endDate < todayMs;
+    });
+    // All delayed (for counts and alerts)
+    const delayed = allDelayed;
     const criticalDelayed = delayed.filter(a =>
       a.priority === 'high' || a.priority === 'critical'
     );
@@ -3349,23 +3374,37 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
       ? acts.reduce((s, a) => s + (parseFloat(a.progress) || 0), 0) / totalActs
       : 0;
 
-    // Utilization per user
+    // Utilization per user - carga semanal promedio vs capacidad semanal
     const userUtilMap = {};
     userRows.forEach(u => {
       const userActs = acts.filter(a => a.assigned_to === u.id);
-      const usrReal = userActs.reduce((s, a) => s + parseFloat(a.actual_hours || 0), 0);
-      const usrAvail = parseFloat(u.hours_per_week) * periodWeeks;
+      const hoursPerWeek = parseFloat(u.hours_per_week) || 45; // Configurable por usuario
+      const hoursAssigned = userActs.reduce((s, a) => s + parseFloat(a.estimated_hours || 0), 0);
+      const hoursReal = userActs.reduce((s, a) => s + parseFloat(a.actual_hours || 0), 0);
+
+      // Carga semanal promedio = horas asignadas / semanas del periodo
+      const weeklyLoad = periodWeeks > 0 ? hoursAssigned / periodWeeks : hoursAssigned;
+      // Utilización = carga semanal / capacidad semanal × 100
+      const utilization = hoursPerWeek > 0 ? Math.round((weeklyLoad / hoursPerWeek) * 1000) / 10 : 0;
+
+      // Horas disponibles en el periodo = capacidad semanal × semanas del periodo
+      const periodHoursAvailable = Math.round(hoursPerWeek * periodWeeks * 10) / 10;
+
       userUtilMap[u.id] = {
         ...u,
-        hoursAssigned: userActs.reduce((s, a) => s + parseFloat(a.estimated_hours || 0), 0),
-        hoursReal: usrReal,
-        hoursAvailable: usrAvail,
-        utilization: usrAvail > 0 ? Math.round((usrReal / usrAvail) * 1000) / 10 : 0,
+        hoursPerWeek,
+        hoursAssigned,
+        hoursReal,
+        weeklyLoad: Math.round(weeklyLoad * 10) / 10,
+        hoursAvailable: periodHoursAvailable, // Capacidad total del periodo
+        utilization,
         activitiesCount: userActs.length,
         completedCount: userActs.filter(a => a.status === 'completed').length,
-        delayedCount: userActs.filter(a =>
-          a.status !== 'completed' && a.status !== 'cancelled' && a.end_date < today
-        ).length
+        delayedCount: userActs.filter(a => {
+          if (a.status === 'completed' || a.status === 'cancelled') return false;
+          const endDate = a.end_date ? new Date(a.end_date).getTime() : null;
+          return endDate && endDate < todayMs;
+        }).length
       };
     });
     const userUtilList = Object.values(userUtilMap);
@@ -3407,17 +3446,18 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
     // Weighted: overload(30) + delays(30) + critical delayed(20) + unplanned(20)
     const overloadScore = userRows.length > 0
       ? Math.min(30, (overloaded.length / userRows.length) * 30) : 0;
-    const delayScore = totalActs > 0
-      ? Math.min(30, (delayed.length / totalActs) * 30) : 0;
-    const criticalScore = totalActs > 0
-      ? Math.min(20, (criticalDelayed.length / Math.max(1, totalActs * 0.1)) * 20) : 0;
+    // delayScore uses ALL delayed (absolute risk indicator)
+    const delayScore = delayed.length > 0
+      ? Math.min(30, Math.log10(delayed.length + 1) * 15) : 0;
+    const criticalScore = criticalDelayed.length > 0
+      ? Math.min(20, criticalDelayed.length * 5) : 0;
     const unplannedScore = totalActs > 0
       ? Math.min(20, (unplanned.length / totalActs) * 20) : 0;
     const riskIndex = Math.round(overloadScore + delayScore + criticalScore + unplannedScore);
 
-    // Work at risk: delayed or blocked
+    // Work at risk: delayed (in period) or blocked
     const blocked = acts.filter(a => a.status === 'blocked');
-    const atRisk = [...new Set([...delayed, ...blocked].map(a => a.id))];
+    const atRisk = [...new Set([...delayedInPeriod, ...blocked].map(a => a.id))];
 
     // ── 5. KPI distribution ─────────────────────────────────────────────────
     const kpiMap = {};
@@ -3486,6 +3526,70 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
       completionRate: d.count > 0 ? Math.round((d.completed / d.count) * 1000) / 10 : 0
     })).sort((a, b) => b.estimated - a.estimated);
 
+    // ── 8. Activity lists for Detail tab ────────────────────────────────────
+    const todayDate = new Date(today);
+    const fiveDaysFromNow = new Date(today);
+    fiveDaysFromNow.setDate(fiveDaysFromNow.getDate() + 5);
+
+    // Helper to normalize date for comparison
+    const toDateStr = (d) => {
+      if (!d) return null;
+      if (typeof d === 'string') return d.split('T')[0];
+      return d.toISOString().split('T')[0];
+    };
+
+    // Upcoming: activities ending in next 5 days, not completed/cancelled
+    const upcomingActivities = acts
+      .filter(a => {
+        if (a.status === 'completed' || a.status === 'cancelled') return false;
+        const endStr = toDateStr(a.end_date);
+        if (!endStr) return false;
+        const endDate = new Date(endStr);
+        return endDate >= todayDate && endDate <= fiveDaysFromNow;
+      })
+      .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
+      .slice(0, 20)
+      .map(a => ({
+        id: a.id,
+        title: a.title,
+        assignedTo: a.assigned_to_name,
+        assignedToId: a.assigned_to,
+        endDate: toDateStr(a.end_date),
+        priority: a.priority,
+        status: a.status,
+        progress: a.progress,
+        kpiCode: a.kpi_code,
+        kpiColor: a.kpi_color
+      }));
+
+    // Delayed: overdue activities with days count
+    const delayedActivities = delayed
+      .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
+      .slice(0, 20)
+      .map(a => {
+        const endStr = toDateStr(a.end_date);
+        const daysOverdue = Math.ceil((todayDate - new Date(endStr)) / 86400000);
+        return {
+          id: a.id,
+          title: a.title,
+          assignedTo: a.assigned_to_name,
+          assignedToId: a.assigned_to,
+          endDate: endStr,
+          daysOverdue,
+          priority: a.priority,
+          status: a.status,
+          progress: a.progress,
+          kpiCode: a.kpi_code,
+          kpiColor: a.kpi_color
+        };
+      });
+
+    // Debug log
+    console.log(`[Dashboard] today=${today}, delayed=${delayed.length}, upcoming=${upcomingActivities.length}, delayedActivities=${delayedActivities.length}`);
+    if (acts.length > 0) {
+      console.log(`[Dashboard] Sample act end_date: ${acts[0].end_date}, type: ${typeof acts[0].end_date}`);
+    }
+
     // ── Response ─────────────────────────────────────────────────────────────
     res.json({
       success: true,
@@ -3501,7 +3605,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
           realVsPlanned: sumEst > 0
             ? Math.round((sumRealAll / sumEst) * 1000) / 10 : 0,
           delayedPercent: totalActs > 0
-            ? Math.round((delayed.length / totalActs) * 1000) / 10 : 0
+            ? Math.round((delayedInPeriod.length / totalActs) * 1000) / 10 : 0
         },
         // Carga
         carga: {
@@ -3559,6 +3663,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
           kpiDistribution,
           projectDistribution,
           departmentEfficiency
+        },
+        // Listas para Detail tab
+        detail: {
+          upcomingActivities,
+          delayedActivities
         }
       }
     });
@@ -3569,4 +3678,5 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
 

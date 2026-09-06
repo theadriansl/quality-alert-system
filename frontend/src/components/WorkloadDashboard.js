@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  BarChart, Bar, RadialBarChart, RadialBar,
-  PieChart, Pie, Cell, LineChart, Line,
+  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import CustomDashboard from './CustomDashboard';
-import { KpiTile as SharedKpiTile } from './shared/SharedComponents';
+import { KpiTile, SectionTitle, Card } from './shared/SharedComponents';
 
 const API_URL = 'http://localhost:5000';
 
@@ -32,113 +31,81 @@ const riskColor = (idx) => {
 
 const fmt1 = (v) => (typeof v === 'number' ? Math.round(v * 10) / 10 : v);
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-// B2B sobrio KpiTile: no borderTop, larger values (36-40px), no shadow
-const KpiTile = ({ label, value, unit = '', color, sub, size = 'md' }) => {
-  const { theme: t } = useTheme();
-  const sizeConfig = {
-    sm: { valueFontSize: 28, padding: '12px 14px' },
-    md: { valueFontSize: 32, padding: '14px 16px' },
-    lg: { valueFontSize: 38, padding: '16px 18px' }
-  };
-  const { valueFontSize, padding } = sizeConfig[size] || sizeConfig.md;
-
-  return (
-    <div style={{
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: 10,
-      padding
-    }}>
-      <div style={{
-        fontSize: 11,
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-        color: t.textMuted,
-        marginBottom: 8
-      }}>
-        {label}
-      </div>
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 4
-      }}>
-        <span style={{
-          fontSize: valueFontSize,
-          fontWeight: 600,
-          color: color || t.text,
-          lineHeight: 1
-        }}>
-          {value}
-        </span>
-        {unit && (
-          <span style={{ fontSize: 14, color: t.textMuted, fontWeight: 500 }}>
-            {unit}
-          </span>
-        )}
-      </div>
-      {sub && (
-        <div style={{
-          fontSize: 11,
-          color: t.textMuted,
-          marginTop: 6
-        }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  );
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 };
 
-const SectionTitle = ({ label }) => {
-  const { theme: t } = useTheme();
-  return (
-    <div style={{
-      fontSize: 11,
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      color: t.textMuted,
-      marginBottom: 14
-    }}>
-      {label}
-    </div>
-  );
-};
+// ─── Sub-components (KpiTile, SectionTitle, Card imported from SharedComponents) ───
 
-const Card = ({ children, style = {} }) => {
-  const { theme: t } = useTheme();
-  return (
-    <div style={{
-      backgroundColor: t.bgCard,
-      border: `1px solid ${t.border}`,
-      borderRadius: '10px',
-      padding: '18px',
-      ...style
-    }}>
-      {children}
-    </div>
-  );
-};
-
-// Risk gauge (simple arc via conic-gradient trick with radial bar)
+// Risk gauge - Speedometer style with needle
 const RiskGauge = ({ value }) => {
   const { theme: t } = useTheme();
   const color = riskColor(value);
-  const data = [{ name: 'Riesgo', value, fill: color }, { name: 'Rest', value: 100 - value, fill: t.border }];
+  // Needle angle: 0 = left (180°), 100 = right (0°)
+  const angle = 180 - (value / 100) * 180;
+  const needleLength = 55;
+  const cx = 100, cy = 85;
+  // Calculate needle end point
+  const rad = (angle * Math.PI) / 180;
+  const nx = cx + needleLength * Math.cos(rad);
+  const ny = cy - needleLength * Math.sin(rad);
+
   return (
     <div style={{ textAlign: 'center' }}>
-      <ResponsiveContainer width="100%" height={140}>
-        <PieChart>
-          <Pie data={data} cx="50%" cy="100%" startAngle={180} endAngle={0}
-            innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={2}>
-            {data.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-      <div style={{ marginTop: '-40px', fontSize: '28px', fontWeight: '600', color }}>
+      <svg width="200" height="120" viewBox="0 0 200 120" style={{ maxWidth: '100%' }}>
+        {/* Background arc segments - Left to Right: Green → Yellow → Orange → Red */}
+        {/* Green zone: 0-35 (left side) */}
+        <path
+          d="M 30 85 A 70 70 0 0 1 57 32"
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth="16"
+          strokeLinecap="round"
+        />
+        {/* Yellow zone: 35-60 */}
+        <path
+          d="M 57 32 A 70 70 0 0 1 100 15"
+          fill="none"
+          stroke="#eab308"
+          strokeWidth="16"
+        />
+        {/* Orange zone: 60-80 */}
+        <path
+          d="M 100 15 A 70 70 0 0 1 143 32"
+          fill="none"
+          stroke="#f97316"
+          strokeWidth="16"
+        />
+        {/* Red zone: 80-100 (right side) */}
+        <path
+          d="M 143 32 A 70 70 0 0 1 170 85"
+          fill="none"
+          stroke="#ef4444"
+          strokeWidth="16"
+          strokeLinecap="round"
+        />
+
+        {/* Needle */}
+        <line
+          x1={cx}
+          y1={cy}
+          x2={nx}
+          y2={ny}
+          stroke={t.text}
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        {/* Needle center dot */}
+        <circle cx={cx} cy={cy} r="8" fill={color} />
+        <circle cx={cx} cy={cy} r="4" fill={t.bgCard} />
+
+        {/* Labels */}
+        <text x="30" y="105" fontSize="10" fill={t.textMuted} textAnchor="middle">0</text>
+        <text x="170" y="105" fontSize="10" fill={t.textMuted} textAnchor="middle">100</text>
+      </svg>
+      <div style={{ marginTop: '-10px', fontSize: '28px', fontWeight: '700', color }}>
         {value}
       </div>
       <div style={{ fontSize: '12px', color: t.textDim, marginTop: '2px' }}>
@@ -148,12 +115,395 @@ const RiskGauge = ({ value }) => {
   );
 };
 
-// ─── Tab content components ───────────────────────────────────────────────────
-
-const TabCarga = ({ kpis }) => {
+// Status badge for tables
+const StatusBadge = ({ status, priority }) => {
   const { theme: t } = useTheme();
-  const { carga } = kpis;
-  const sorted = [...(carga.userLoad || [])].sort((a, b) => b.utilization - a.utilization);
+  const configs = {
+    pending: { bg: t.bgPanel, color: t.textMuted, label: 'Pendiente' },
+    in_progress: { bg: `${t.accent}15`, color: t.accent, label: 'En Progreso' },
+    completed: { bg: `${t.success}15`, color: t.success, label: 'Completada' },
+    blocked: { bg: `${t.error}15`, color: t.error, label: 'Bloqueada' },
+    cancelled: { bg: t.bgPanel, color: t.textDim, label: 'Cancelada' }
+  };
+  const cfg = configs[status] || configs.pending;
+  return (
+    <span style={{
+      padding: '3px 10px',
+      borderRadius: 999,
+      fontSize: 11,
+      fontWeight: 600,
+      backgroundColor: cfg.bg,
+      color: cfg.color
+    }}>
+      {cfg.label}
+    </span>
+  );
+};
+
+const PriorityDot = ({ priority }) => {
+  const colors = {
+    critical: '#B00020',
+    high: '#ef4444',
+    medium: '#C77700',
+    low: '#2E7D32'
+  };
+  return (
+    <span style={{
+      display: 'inline-block',
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      backgroundColor: colors[priority] || '#9ca3af',
+      marginRight: 6
+    }} />
+  );
+};
+
+// ─── TAB: Summary ─────────────────────────────────────────────────────────────
+const TabSummary = ({ kpis }) => {
+  const { theme: t } = useTheme();
+  const { topBar, carga, riesgo, actividades, detail } = kpis;
+  const userLoad = carga?.userLoad || [];
+  const upcomingActivities = detail?.upcomingActivities || [];
+  const delayedActivities = detail?.delayedActivities || [];
+
+  // Sort users by risk (delayed + overloaded first)
+  const sortedUsers = [...userLoad].sort((a, b) => {
+    const aRisk = (a.delayedCount > 0 ? 100 : 0) + (a.utilization > 110 ? 50 : 0);
+    const bRisk = (b.delayedCount > 0 ? 100 : 0) + (b.utilization > 110 ? 50 : 0);
+    return bRisk - aRisk;
+  });
+
+  // Calculate additional flags
+  const underutilizedCount = userLoad.filter(u => u.utilization < 50).length;
+  const loadImbalance = carga?.loadImbalance || 0;
+  const hasHighImbalance = loadImbalance > 60;
+  const urgentUpcoming = upcomingActivities.filter(a => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const endDate = new Date(a.endDate);
+    return endDate <= tomorrow && a.status === 'pending';
+  }).length;
+
+  // Overall status
+  const hasIssues = (riesgo?.overloadedCount || 0) > 0 ||
+                    (riesgo?.criticalDelayedCount || 0) > 0 ||
+                    (riesgo?.delayedCount || 0) > 0 ||
+                    (riesgo?.blockedCount || 0) > 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* KPIs Row - Cockpit style: siempre visibles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+        <KpiTile
+          label="Carga Promedio"
+          value={`${topBar?.avgUtilization || 0}%`}
+          valueColor={clr(topBar?.avgUtilization || 0)}
+          sub="Utilización equipo"
+          t={t}
+        />
+        <KpiTile
+          label="Sobrecargados"
+          value={riesgo?.overloadedCount || 0}
+          unit="personas"
+          alertType={(riesgo?.overloadedCount || 0) > 0 ? 'error' : null}
+          sub={(riesgo?.overloadedCount || 0) > 0 ? '> 110% de carga' : 'OK'}
+          t={t}
+        />
+        <KpiTile
+          label="Subutilizados"
+          value={underutilizedCount}
+          unit="personas"
+          alertType={underutilizedCount > 0 ? 'warning' : null}
+          sub={underutilizedCount > 0 ? '< 50% de carga' : 'OK'}
+          t={t}
+        />
+        <KpiTile
+          label="Desbalance"
+          value={`${loadImbalance}%`}
+          alertType={hasHighImbalance ? 'warning' : null}
+          sub={hasHighImbalance ? 'máx - mín > 60%' : 'OK'}
+          t={t}
+        />
+        <KpiTile
+          label="Vence Mañana"
+          value={urgentUpcoming}
+          unit="actividades"
+          alertType={urgentUpcoming > 0 ? 'error' : null}
+          sub={urgentUpcoming > 0 ? 'Requieren atención' : 'OK'}
+          t={t}
+        />
+        <KpiTile
+          label="No Planeado"
+          value={`${actividades?.unplannedPercent || 0}%`}
+          alertType={(actividades?.unplannedPercent || 0) > 30 ? 'warning' : null}
+          sub={(actividades?.unplannedPercent || 0) > 30 ? 'Emergencias > 30%' : 'OK'}
+          t={t}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
+        {/* Risk Gauge */}
+        <Card t={t} style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: riesgo?.riskIndex >= 60 ? '#fee2e2' : riesgo?.riskIndex >= 35 ? '#fef3c7' : '#dcfce7'
+        }}>
+          <SectionTitle t={t} label="Índice de Riesgo" />
+          <RiskGauge value={riesgo?.riskIndex || 0} />
+          <div style={{
+            marginTop: 12,
+            padding: '6px 20px',
+            borderRadius: 999,
+            backgroundColor: riskColor(riesgo?.riskIndex || 0),
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 13
+          }}>
+            {(riesgo?.riskIndex || 0) >= 60 ? 'ALTO' : (riesgo?.riskIndex || 0) >= 35 ? 'MEDIO' : 'BAJO'}
+          </div>
+        </Card>
+
+        {/* Status de Tareas - Monitoreo constante */}
+        <Card t={t}>
+          <SectionTitle t={t} label="Status de Tareas" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Sobrecargados */}
+            <div style={{
+              padding: '10px 14px',
+              backgroundColor: (riesgo?.overloadedCount || 0) > 0 ? '#fee2e2' : '#dcfce7',
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: 13, color: (riesgo?.overloadedCount || 0) > 0 ? '#B00020' : '#2E7D32' }}>
+                Personas sobrecargadas (&gt;110%)
+              </span>
+              <span style={{
+                padding: '2px 10px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                backgroundColor: (riesgo?.overloadedCount || 0) > 0 ? '#B00020' : '#2E7D32',
+                color: '#fff'
+              }}>
+                {(riesgo?.overloadedCount || 0) > 0 ? riesgo.overloadedCount : 'OK'}
+              </span>
+            </div>
+
+            {/* Críticas retrasadas */}
+            <div style={{
+              padding: '10px 14px',
+              backgroundColor: (riesgo?.criticalDelayedCount || 0) > 0 ? '#fee2e2' : '#dcfce7',
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: 13, color: (riesgo?.criticalDelayedCount || 0) > 0 ? '#B00020' : '#2E7D32' }}>
+                Tareas críticas retrasadas
+              </span>
+              <span style={{
+                padding: '2px 10px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                backgroundColor: (riesgo?.criticalDelayedCount || 0) > 0 ? '#B00020' : '#2E7D32',
+                color: '#fff'
+              }}>
+                {(riesgo?.criticalDelayedCount || 0) > 0 ? riesgo.criticalDelayedCount : 'OK'}
+              </span>
+            </div>
+
+            {/* Actividades vencidas */}
+            <div style={{
+              padding: '10px 14px',
+              backgroundColor: (riesgo?.delayedCount || 0) > 0 ? '#fef3c7' : '#dcfce7',
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: 13, color: (riesgo?.delayedCount || 0) > 0 ? '#C77700' : '#2E7D32' }}>
+                Actividades con fecha vencida
+              </span>
+              <span style={{
+                padding: '2px 10px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                backgroundColor: (riesgo?.delayedCount || 0) > 0 ? '#C77700' : '#2E7D32',
+                color: '#fff'
+              }}>
+                {(riesgo?.delayedCount || 0) > 0 ? riesgo.delayedCount : 'OK'}
+              </span>
+            </div>
+
+            {/* Bloqueadas */}
+            <div style={{
+              padding: '10px 14px',
+              backgroundColor: (riesgo?.blockedCount || 0) > 0 ? '#fef3c7' : '#dcfce7',
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: 13, color: (riesgo?.blockedCount || 0) > 0 ? '#C77700' : '#2E7D32' }}>
+                Actividades bloqueadas
+              </span>
+              <span style={{
+                padding: '2px 10px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                backgroundColor: (riesgo?.blockedCount || 0) > 0 ? '#C77700' : '#2E7D32',
+                color: '#fff'
+              }}>
+                {(riesgo?.blockedCount || 0) > 0 ? riesgo.blockedCount : 'OK'}
+              </span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Team Summary Table */}
+      <Card t={t}>
+        <SectionTitle t={t} label="Resumen por Persona" />
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ backgroundColor: t.bgPanel }}>
+                {['Persona', 'Utilización', 'Actividades', 'Completadas', 'Retrasadas', 'Estado'].map(h => (
+                  <th key={h} style={{
+                    padding: '8px 12px',
+                    textAlign: 'left',
+                    fontWeight: 600,
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    color: t.textMuted,
+                    borderBottom: `1px solid ${t.border}`,
+                    whiteSpace: 'nowrap'
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedUsers.map((u, i) => {
+                const isOverloaded = u.utilization > 110;
+                const hasDelayed = u.delayedCount > 0;
+                const status = isOverloaded ? 'Sobrecargado' : hasDelayed ? 'Con retrasos' : 'Normal';
+                const statusColor = isOverloaded ? t.error : hasDelayed ? t.warning : t.success;
+                return (
+                  <tr key={u.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
+                    <td style={{ padding: '8px 12px', fontWeight: 600, color: t.text }}>
+                      {u.first_name} {u.last_name}
+                    </td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{
+                          width: 80,
+                          height: 8,
+                          backgroundColor: t.bgPanel,
+                          borderRadius: 4,
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            width: `${Math.min(100, u.utilization)}%`,
+                            height: '100%',
+                            backgroundColor: u.utilization > 110 ? t.error : u.utilization < 70 ? t.textMuted : t.success,
+                            borderRadius: 4
+                          }} />
+                        </div>
+                        <span style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: u.utilization > 110 ? t.error : u.utilization < 70 ? t.textMuted : t.success
+                        }}>{u.utilization}%</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '8px 12px', color: t.text, textAlign: 'center' }}>
+                      {u.activitiesCount}
+                    </td>
+                    <td style={{ padding: '8px 12px', color: t.success, textAlign: 'center', fontWeight: 600 }}>
+                      {u.completedCount}
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      {u.delayedCount > 0
+                        ? <span style={{ color: t.error, fontWeight: 600 }}>{u.delayedCount}</span>
+                        : <span style={{ color: t.textMuted }}>-</span>}
+                    </td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <span style={{
+                        padding: '3px 10px',
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        backgroundColor: `${statusColor}15`,
+                        color: statusColor
+                      }}>{status}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Upcoming Commitments */}
+      {upcomingActivities.length > 0 && (
+        <Card t={t}>
+          <SectionTitle t={t} label="Próximos Compromisos (5 días)" />
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ backgroundColor: t.bgPanel }}>
+                  {['Actividad', 'Responsable', 'Vence', 'Estado'].map(h => (
+                    <th key={h} style={{
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: 600,
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: t.textMuted,
+                      borderBottom: `1px solid ${t.border}`
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {upcomingActivities.slice(0, 8).map((a, i) => (
+                  <tr key={a.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
+                    <td style={{ padding: '8px 12px', color: t.text }}>
+                      <PriorityDot priority={a.priority} />
+                      {a.title}
+                    </td>
+                    <td style={{ padding: '8px 12px', color: t.textMuted }}>{a.assignedTo}</td>
+                    <td style={{ padding: '8px 12px', color: t.text, fontWeight: 500 }}>{formatDate(a.endDate)}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <StatusBadge status={a.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+// ─── TAB: Workload (Carga) ────────────────────────────────────────────────────
+const TabWorkload = ({ kpis }) => {
+  const { theme: t } = useTheme();
+  const { carga, actividades } = kpis;
+  const sorted = [...(carga?.userLoad || [])].sort((a, b) => b.utilization - a.utilization);
 
   const barData = sorted.map(u => ({
     name: u.first_name,
@@ -162,30 +512,76 @@ const TabCarga = ({ kpis }) => {
     asignadas: parseFloat(u.hoursAssigned.toFixed(1))
   }));
 
+  // Planeado vs No Planeado
+  const plannedPercent = 100 - (actividades?.unplannedPercent || 0);
+  const unplannedPercent = actividades?.unplannedPercent || 0;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-        <KpiTile label="Carga Promedio" value={`${carga.userLoad.length > 0 ? fmt1(carga.userLoad.reduce((s,u)=>s+u.utilization,0)/carga.userLoad.length) : 0}%`} color={clr(carga.userLoad.length>0?carga.userLoad.reduce((s,u)=>s+u.utilization,0)/carga.userLoad.length:0)} />
-        <KpiTile label="Cap. Disponible" value={fmt1(carga.totalAvailableHrs)} unit="hrs" color={t.accent}  />
-        <KpiTile label="Horas Asignadas" value={fmt1(carga.totalAssignedHrs)} unit="hrs" color="#8b5cf6" />
-        <KpiTile label="Desbalance" value={`${fmt1(carga.loadImbalance)}%`} color={carga.loadImbalance > 50 ? '#ef4444' : carga.loadImbalance > 25 ? '#C77700' : '#2E7D32'}  sub="(máx - mín)" />
-        <KpiTile label="Subutilización" value={`${carga.underutilizedPercent}%`} color={carga.underutilizedPercent > 30 ? '#C77700' : '#2E7D32'}  sub={`${carga.underutilizedCount} personas <70%`} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+        <KpiTile
+          label="Carga Promedio"
+          value={`${carga?.userLoad?.length > 0 ? fmt1(carga.userLoad.reduce((s, u) => s + u.utilization, 0) / carga.userLoad.length) : 0}%`}
+          color={clr(carga?.userLoad?.length > 0 ? carga.userLoad.reduce((s, u) => s + u.utilization, 0) / carga.userLoad.length : 0)}
+          t={t}
+        />
+        <KpiTile label="Cap. Disponible" value={fmt1(carga?.totalAvailableHrs || 0)} unit="hrs" color={t.accent} t={t} />
+        <KpiTile label="Horas Asignadas" value={fmt1(carga?.totalAssignedHrs || 0)} unit="hrs" color="#8b5cf6" t={t} />
+        <KpiTile
+          label="Desbalance"
+          value={`${fmt1(carga?.loadImbalance || 0)}%`}
+          color={(carga?.loadImbalance || 0) > 50 ? '#ef4444' : (carga?.loadImbalance || 0) > 25 ? '#C77700' : '#2E7D32'}
+          sub="(máx - mín)"
+          t={t}
+        />
+        <KpiTile
+          label="Subutilización"
+          value={`${carga?.underutilizedPercent || 0}%`}
+          color={(carga?.underutilizedPercent || 0) > 30 ? '#C77700' : '#2E7D32'}
+          sub={`${carga?.underutilizedCount || 0} personas <70%`}
+          t={t}
+        />
       </div>
 
+      {/* Planeado vs No Planeado */}
+      <Card t={t}>
+        <SectionTitle t={t} label="Trabajo Planeado vs No Planeado" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 13, color: t.text }}>Trabajo planeado</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: t.accent }}>{plannedPercent}%</span>
+            </div>
+            <div style={{ height: 12, backgroundColor: t.bgPanel, borderRadius: 6, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${plannedPercent}%`, backgroundColor: t.accent, borderRadius: 6 }} />
+            </div>
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 13, color: t.text }}>No planeado (emergencias)</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#ef4444' }}>{unplannedPercent}%</span>
+            </div>
+            <div style={{ height: 12, backgroundColor: t.bgPanel, borderRadius: 6, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${unplannedPercent}%`, backgroundColor: '#ef4444', borderRadius: 6 }} />
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Utilization per person */}
-        <Card>
-          <SectionTitle label="Utilización por Persona (%)" />
+        <Card t={t}>
+          <SectionTitle t={t} label="Carga por Persona (%)" />
           <ResponsiveContainer width="100%" height={Math.max(280, barData.length * 28)}>
             <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 40 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
-              <XAxis type="number" domain={[0, Math.max(120, ...barData.map(d=>d.utilización))]}
+              <XAxis type="number" domain={[0, Math.max(120, ...barData.map(d => d.utilización))]}
                 tickFormatter={v => `${v}%`} fontSize={11} stroke={t.textMuted} />
               <YAxis type="category" dataKey="name" fontSize={11} stroke={t.textMuted} width={70} interval={0} />
-              <Tooltip formatter={(v, n) => [`${v}%`, 'Utilización']}
-                contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px' }} />
+              <Tooltip formatter={(v) => [`${v}%`, 'Utilización']}
+                contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, fontSize: 12 }} />
               <Bar dataKey="utilización" radius={[0, 6, 6, 0]} label={{ position: 'right', fontSize: 11, fill: t.textMuted, formatter: v => `${v}%` }}>
                 {barData.map((entry, i) => (
                   <Cell key={i} fill={entry.utilización > 110 ? '#ef4444' : entry.utilización < 70 ? '#9ca3af' : '#2E7D32'} />
@@ -193,17 +589,16 @@ const TabCarga = ({ kpis }) => {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          {/* Reference lines legend */}
-          <div style={{ display: 'flex', gap: '16px', marginTop: '8px', justifyContent: 'center', fontSize: '11px', color: t.textMuted }}>
+          <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'center', fontSize: 11, color: t.textMuted }}>
             <span style={{ color: t.textDim }}>■ Subutilizado (&lt;70%)</span>
             <span style={{ color: '#2E7D32' }}>■ Óptimo (70-110%)</span>
             <span style={{ color: '#ef4444' }}>■ Sobrecargado (&gt;110%)</span>
           </div>
         </Card>
 
-        {/* Hours breakdown per person */}
-        <Card>
-          <SectionTitle label="Horas: Disponible vs Asignadas" />
+        {/* Hours breakdown */}
+        <Card t={t}>
+          <SectionTitle t={t} label="Horas: Disponible vs Asignadas" />
           <ResponsiveContainer width="100%" height={Math.max(280, sorted.length * 28)}>
             <BarChart data={sorted.map(u => ({
               name: u.first_name,
@@ -213,8 +608,8 @@ const TabCarga = ({ kpis }) => {
               <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
               <XAxis type="number" fontSize={11} stroke={t.textMuted} />
               <YAxis type="category" dataKey="name" fontSize={11} stroke={t.textMuted} width={70} interval={0} />
-              <Tooltip contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px' }} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
+              <Tooltip contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="Disponibles" fill={t.border} radius={[0, 0, 0, 0]} />
               <Bar dataKey="Asignadas" fill={t.accent} radius={[0, 6, 6, 0]} />
             </BarChart>
@@ -223,10 +618,10 @@ const TabCarga = ({ kpis }) => {
       </div>
 
       {/* Detail table */}
-      <Card>
-        <SectionTitle label="Detalle por Persona" />
+      <Card t={t}>
+        <SectionTitle t={t} label="Detalle por Persona" />
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ backgroundColor: t.bgPanel }}>
                 {['Persona', 'Puesto', 'Disponibles', 'Asignadas', 'Reales', 'Utilización', 'Actividades', 'Completadas', 'Retrasadas'].map(h => (
@@ -237,8 +632,8 @@ const TabCarga = ({ kpis }) => {
             <tbody>
               {sorted.map((u, i) => (
                 <tr key={u.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
-                  <td style={{ padding: '8px 12px', color: t.text, fontWeight: '600' }}>{u.first_name} {u.last_name}</td>
-                  <td style={{ padding: '8px 12px', color: t.textMuted, fontSize: '12px' }}>{u.position || '-'}</td>
+                  <td style={{ padding: '8px 12px', color: t.text, fontWeight: 600 }}>{u.first_name} {u.last_name}</td>
+                  <td style={{ padding: '8px 12px', color: t.textMuted, fontSize: 12 }}>{u.position || '-'}</td>
                   <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(u.hoursAvailable)} hrs</td>
                   <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(u.hoursAssigned)} hrs</td>
                   <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(u.hoursReal)} hrs</td>
@@ -269,566 +664,353 @@ const TabCarga = ({ kpis }) => {
   );
 };
 
-const TabEjecucion = ({ kpis }) => {
+// ─── TAB: Objectives ──────────────────────────────────────────────────────────
+const TabObjectives = ({ kpis }) => {
   const { theme: t } = useTheme();
-  const { ejecucion, carga = {} } = kpis;
-  const prodGood = ejecucion.productivity >= 1;
+  const { proyectos, carga } = kpis;
+  const kpiDist = proyectos?.kpiDistribution || [];
+  const userLoad = carga?.userLoad || [];
+
+  // QCTSP colors
+  const qctspColors = {
+    C: '#ef4444',   // Cost - red
+    Q: '#0072CE',   // Quality - blue
+    S: '#C77700',   // Safety - amber
+    T: '#8b5cf6',   // Time - purple
+    P: '#2E7D32'    // People - green
+  };
+
+  // Calculate user contribution per KPI (mock - would need backend enhancement for real data)
+  const getKpiColor = (code) => qctspColors[code?.[0]] || t.accent;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-        <KpiTile label="Cumplimiento" value={`${ejecucion.compliancePercent}%`}
-          color={clr(ejecucion.compliancePercent)} sub="Real vs Estimado" />
-        <KpiTile label="Desviación Est." value={`${ejecucion.estimationDeviation > 0 ? '+' : ''}${ejecucion.estimationDeviation}%`}
-          color={Math.abs(ejecucion.estimationDeviation) < 10 ? '#2E7D32' : Math.abs(ejecucion.estimationDeviation) < 25 ? '#C77700' : '#ef4444'}
-           sub="(real - est) / est" />
-        <KpiTile label="Productividad" value={`${ejecucion.productivity}x`}
-          color={prodGood ? '#2E7D32' : '#ef4444'}           sub={prodGood ? 'Más rápido de lo estimado' : 'Más lento de lo estimado'} />
-        <KpiTile label="Lead Time Prom." value={`${ejecucion.avgLeadTimeDays}`} unit="días"
-          color={ejecucion.avgLeadTimeDays < 7 ? '#2E7D32' : ejecucion.avgLeadTimeDays < 21 ? '#C77700' : '#ef4444'}
-           sub="Promedio tareas completadas" />
-        <KpiTile label="Throughput" value={ejecucion.throughput} unit="tareas"
-          color="#8b5cf6"  sub="Completadas en el periodo" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* KPI Summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(5, kpiDist.length)}, 1fr)`, gap: 12 }}>
+        {kpiDist.slice(0, 5).map(k => (
+          <KpiTile
+            key={k.kpi_id}
+            label={k.name || k.code}
+            value={`${k.avgProgress}%`}
+            color={clr(k.avgProgress)}
+            sub={`${k.completed}/${k.count} completadas`}
+            t={t}
+          />
+        ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        {/* Compliance visual */}
-        <Card>
-          <SectionTitle label="Horas: Estimadas vs Reales" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
-            {/* Bar comparison */}
-            {[
-              { label: 'Horas Estimadas', value: carga.totalAssignedHrs || 0, color: '#0072CE' },
-              { label: 'Horas Reales', value: Math.round((ejecucion.compliancePercent || 0) / 100 * (carga.totalAssignedHrs || 0) * 10) / 10, color: ejecucion.compliancePercent > 100 ? '#ef4444' : '#2E7D32' }
-            ].map(item => (
-              <div key={item.label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '13px', color: t.text }}>{item.label}</span>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: item.color }}>{fmt1(item.value)} hrs</span>
-                </div>
-              </div>
-            ))}
-
-            {/* Deviation alert */}
-            <div style={{
-              padding: '12px 16px',
-              borderRadius: '8px',
-              backgroundColor: Math.abs(ejecucion.estimationDeviation) < 10 ? '#dcfce7' : Math.abs(ejecucion.estimationDeviation) < 25 ? '#fef3c7' : '#fee2e2',
-              marginTop: '8px'
+      {/* Objectives with person breakdown */}
+      <Card t={t}>
+        <SectionTitle t={t} label="Objetivos del Periodo" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {kpiDist.map(k => (
+            <div key={k.kpi_id} style={{
+              padding: 16,
+              backgroundColor: t.bgPanel,
+              borderRadius: 8,
+              borderLeft: `4px solid ${getKpiColor(k.code)}`
             }}>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Interpretación</div>
-              <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '4px' }}>
-                {ejecucion.estimationDeviation > 0
-                  ? `Las actividades están tomando ${ejecucion.estimationDeviation}% más horas de lo estimado.`
-                  : ejecucion.estimationDeviation < 0
-                    ? `Las actividades se están completando ${Math.abs(ejecucion.estimationDeviation)}% más rápido de lo estimado.`
-                    : 'Las estimaciones están perfectamente alineadas con la ejecución.'}
-              </div>
-            </div>
-
-            {/* Big deviation */}
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '10px 14px', borderRadius: '8px', backgroundColor: t.bgPanel,
-              border: `1px solid ${t.border}`
-            }}>
-              <span style={{ fontSize: '13px', color: t.text }}>Actividades con desviación &gt;20%</span>
-              <span style={{
-                fontSize: '14px', fontWeight: '600',
-                color: ejecucion.bigDeviationPercent > 30 ? '#ef4444' : ejecucion.bigDeviationPercent > 15 ? '#C77700' : '#2E7D32'
-              }}>{ejecucion.bigDeviationCount} ({ejecucion.bigDeviationPercent}%)</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Productivity gauge */}
-        <Card>
-          <SectionTitle label="Índice de Productividad" />
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: '140px', height: '140px', borderRadius: '50%',
-              border: `8px solid ${prodGood ? '#2E7D32' : '#ef4444'}`,
-              backgroundColor: prodGood ? '#dcfce7' : '#fee2e2'
-            }}>
-              <div>
-                <div style={{ fontSize: '36px', fontWeight: '600', color: prodGood ? '#2E7D32' : '#ef4444' }}>
-                  {ejecucion.productivity}x
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    backgroundColor: getKpiColor(k.code),
+                    color: 'white',
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    marginRight: 8
+                  }}>{k.code}</span>
+                  <span style={{ fontWeight: 600, color: t.text }}>{k.name}</span>
                 </div>
-                <div style={{ fontSize: '11px', color: t.textMuted }}>est / real</div>
+                <span style={{ fontSize: 11, color: t.textMuted }}>
+                  {k.count} actividades · {fmt1(k.estimated)} hrs est.
+                </span>
               </div>
-            </div>
-            <div style={{ marginTop: '16px', fontSize: '14px', color: t.text, fontWeight: '600' }}>
-              {prodGood ? 'Por encima de lo estimado' : 'Por debajo de lo estimado'}
-            </div>
-            <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '4px' }}>
-              &gt;1.0 = más eficiente de lo planeado
-            </div>
-            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '24px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '22px', fontWeight: '600', color: '#8b5cf6' }}>{ejecucion.throughput}</div>
-                <div style={{ fontSize: '11px', color: t.textMuted }}>Completadas</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '22px', fontWeight: '600', color: '#C77700' }}>{ejecucion.avgLeadTimeDays}d</div>
-                <div style={{ fontSize: '11px', color: t.textMuted }}>Lead Time</div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
 
-const TabActividades = ({ kpis }) => {
-  const { theme: t } = useTheme();
-  const { actividades } = kpis;
-
-  const pieData = [
-    { name: 'Completadas', value: actividades.completedCount, color: '#2E7D32' },
-    { name: 'En Progreso', value: actividades.inProgressCount, color: '#0072CE' },
-    { name: 'Pendientes', value: actividades.pendingCount, color: '#C77700' },
-    { name: 'Canceladas', value: actividades.cancelledCount, color: '#9ca3af' }
-  ].filter(d => d.value > 0);
-
-  const typeData = [
-    { name: 'Completadas', value: actividades.completedPercent, color: '#2E7D32' },
-    { name: 'En Progreso (WIP)', value: actividades.wipPercent, color: '#0072CE' },
-    { name: 'Pendientes', value: actividades.pendingPercent, color: '#C77700' },
-    { name: 'No Planeadas', value: actividades.unplannedPercent, color: '#ef4444' }
-  ];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-        <KpiTile label="Avance Promedio" value={`${fmt1(actividades.avgProgress)}%`}
-          color={clr(actividades.avgProgress)}  />
-        <KpiTile label="% Completadas" value={`${actividades.completedPercent}%`}
-          color={clr(actividades.completedPercent)} sub={`${actividades.completedCount} tareas`} />
-        <KpiTile label="% Pendientes" value={`${actividades.pendingPercent}%`}
-          color={actividades.pendingPercent > 50 ? '#C77700' : '#2E7D32'}  sub={`${actividades.pendingCount} tareas`} />
-        <KpiTile label="% No Planeadas" value={`${actividades.unplannedPercent}%`}
-          color={actividades.unplannedPercent > 20 ? '#ef4444' : actividades.unplannedPercent > 10 ? '#C77700' : '#2E7D32'}
-          sub="Actividades sorpresa" />
-        <KpiTile label="WIP" value={`${actividades.wipPercent}%`}
-          color={t.accent} sub={`${actividades.inProgressCount} activas`} />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        {/* Pie chart status */}
-        <Card>
-          <SectionTitle label="Distribución por Estado" />
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} innerRadius={45}
-                dataKey="value" paddingAngle={3}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                labelLine={false}>
-                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-              </Pie>
-              <Tooltip formatter={(v) => [`${v} tareas`]}
-                contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px' }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {pieData.map(d => (
-              <span key={d.name} style={{ fontSize: '11px', color: t.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: d.color, display: 'inline-block' }} />
-                {d.name}: <strong style={{ color: t.text }}>{d.value}</strong>
-              </span>
-            ))}
-          </div>
-        </Card>
-
-        {/* % Bars */}
-        <Card>
-          <SectionTitle label="Indicadores de Flujo (%)" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '8px' }}>
-            {typeData.map(item => (
-              <div key={item.name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '13px', color: t.text }}>{item.name}</span>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: item.color }}>{item.value}%</span>
+              {/* Progress bar */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: t.textMuted }}>Avance promedio</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: clr(k.avgProgress) }}>{k.avgProgress}%</span>
                 </div>
-                <div style={{ height: '8px', backgroundColor: t.bgPanel, borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ height: 8, backgroundColor: t.bgCard, borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{
-                    height: '100%', width: `${Math.min(100, item.value)}%`,
-                    backgroundColor: item.color, borderRadius: '4px',
-                    transition: 'width 0.6s ease'
+                    height: '100%',
+                    width: `${Math.min(100, k.avgProgress)}%`,
+                    backgroundColor: clr(k.avgProgress),
+                    borderRadius: 4
                   }} />
                 </div>
               </div>
-            ))}
 
-            {/* Total */}
-            <div style={{ marginTop: '8px', padding: '10px 14px', backgroundColor: t.bgPanel, borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', color: t.textMuted }}>Total actividades en periodo</span>
-              <span style={{ fontSize: '16px', fontWeight: '600', color: t.text }}>{actividades.total}</span>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-const TabRiesgo = ({ kpis }) => {
-  const { theme: t } = useTheme();
-  const { riesgo } = kpis;
-
-  const riskItems = [
-    {
-      label: 'Personas Sobrecargadas',
-      value: riesgo.overloadedCount,
-            color: riesgo.overloadedCount > 0 ? '#ef4444' : '#2E7D32',
-      desc: 'Con utilización > 110%'
-    },
-    {
-      label: 'Tareas Críticas Retrasadas',
-      value: riesgo.criticalDelayedCount,
-            color: riesgo.criticalDelayedCount > 0 ? '#ef4444' : '#2E7D32',
-      desc: 'Prioridad Alta/Crítica vencidas'
-    },
-    {
-      label: 'Tareas Retrasadas',
-      value: riesgo.delayedCount,
-            color: riesgo.delayedCount > 0 ? '#C77700' : '#2E7D32',
-      desc: 'Fecha fin pasada, no completadas'
-    },
-    {
-      label: 'Tareas Bloqueadas',
-      value: riesgo.blockedCount,
-            color: riesgo.blockedCount > 0 ? '#C77700' : '#2E7D32',
-      desc: 'Estado: Bloqueado'
-    },
-    {
-      label: '% Trabajo en Riesgo',
-      value: `${riesgo.atRiskPercent}%`,
-            color: riesgo.atRiskPercent > 20 ? '#ef4444' : riesgo.atRiskPercent > 10 ? '#C77700' : '#2E7D32',
-      desc: 'Retrasadas + Bloqueadas'
-    },
-    {
-      label: 'Desviación >20%',
-      value: `${riesgo.bigDeviationPercent}%`,
-            color: riesgo.bigDeviationPercent > 30 ? '#ef4444' : riesgo.bigDeviationPercent > 15 ? '#C77700' : '#2E7D32',
-      desc: 'Tareas con estimación muy imprecisa'
-    }
-  ];
-
-  const riskLevel = riesgo.riskIndex >= 60 ? 'ALTO' : riesgo.riskIndex >= 35 ? 'MEDIO' : 'BAJO';
-  const riskBg = riesgo.riskIndex >= 60 ? '#fee2e2' : riesgo.riskIndex >= 35 ? '#fef3c7' : '#dcfce7';
-  const riskTxt = riesgo.riskIndex >= 60 ? '#B00020' : riesgo.riskIndex >= 35 ? '#C77700' : '#2E7D32';
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '16px' }}>
-        {/* Risk Index */}
-        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: riskBg }}>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: riskTxt, marginBottom: '4px', textTransform: 'uppercase' }}>
-            Índice de Riesgo Operativo
-          </div>
-          <RiskGauge value={riesgo.riskIndex} />
-          <div style={{
-            marginTop: 8,
-            padding: '6px 20px',
-            borderRadius: 999,
-            backgroundColor: riskColor(riesgo.riskIndex),
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: 13
-          }}>
-            {riskLevel}
-          </div>
-          <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '8px', textAlign: 'center' }}>
-            Basado en sobrecarga, retrasos,<br />tareas críticas y no planeadas
-          </div>
-        </Card>
-
-        {/* Risk items */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-          {riskItems.map(item => (
-            <div key={item.label} style={{
-              backgroundColor: t.bgCard,
-              border: `1px solid ${t.border}`,
-              borderRadius: '10px',
-              padding: '14px',
-              borderLeft: `4px solid ${item.color}`
-            }}>
-              <div style={{ fontSize: '20px', marginBottom: '4px' }}>{item.icon}</div>
-              <div style={{ fontSize: '22px', fontWeight: '600', color: item.color }}>{item.value}</div>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: t.text, marginTop: '2px' }}>{item.label}</div>
-              <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>{item.desc}</div>
+              {/* Person breakdown */}
+              <div style={{ fontSize: 12, color: t.textMuted }}>
+                <span style={{ fontWeight: 600 }}>Responsables:</span>{' '}
+                {userLoad.filter(u => u.activitiesCount > 0).slice(0, 3).map((u, i) => (
+                  <span key={u.id}>
+                    {i > 0 && ', '}
+                    {u.first_name}
+                  </span>
+                ))}
+                {userLoad.length > 3 && ` +${userLoad.length - 3} más`}
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
-      {/* Risk recommendations */}
-      <Card>
-        <SectionTitle label="Recomendaciones" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {riesgo.overloadedCount > 0 && (
-            <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#fee2e2', borderRadius: '8px' }}>
-                            <span style={{ fontSize: '13px', color: '#B00020' }}>
-                <strong>{riesgo.overloadedCount} persona(s)</strong> están sobrecargadas (&gt;110%). Considera redistribuir actividades o revisar capacidad.
-              </span>
+      {/* Efficiency by department */}
+      <Card t={t}>
+        <SectionTitle t={t} label="Eficiencia por Departamento" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {(proyectos?.departmentEfficiency || []).slice(0, 6).map(d => (
+            <div key={d.department}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 12, color: t.text, fontWeight: 500 }}>{d.department}</span>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <span style={{ fontSize: 11, color: t.textMuted }}>{d.count} acts</span>
+                  <span style={{
+                    fontSize: 12, fontWeight: 600,
+                    color: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444'
+                  }}>{d.completionRate}%</span>
+                </div>
+              </div>
+              <div style={{ height: 6, backgroundColor: t.bgPanel, borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(100, d.completionRate)}%`,
+                  backgroundColor: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444',
+                  borderRadius: 3
+                }} />
+              </div>
             </div>
-          )}
-          {riesgo.criticalDelayedCount > 0 && (
-            <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#fee2e2', borderRadius: '8px' }}>
-                            <span style={{ fontSize: '13px', color: '#B00020' }}>
-                <strong>{riesgo.criticalDelayedCount} tarea(s) críticas</strong> están retrasadas. Requieren atención inmediata.
-              </span>
-            </div>
-          )}
-          {riesgo.delayedCount > 0 && (
-            <div style={{ padding: '10px 14px', backgroundColor: '#fef3c7', borderRadius: 8 }}>
-              <span style={{ fontSize: 13, color: '#C77700' }}>
-                <strong>{riesgo.delayedCount} actividad(es)</strong> tienen fecha de fin vencida. Actualiza fechas o avance.
-              </span>
-            </div>
-          )}
-          {riesgo.bigDeviationPercent > 20 && (
-            <div style={{ display: 'flex', gap: '10px', padding: '10px 14px', backgroundColor: '#fef3c7', borderRadius: '8px' }}>
-                            <span style={{ fontSize: '13px', color: '#C77700' }}>
-                El <strong>{riesgo.bigDeviationPercent}%</strong> de las actividades tiene desviación &gt;20% en horas. Revisa la calidad de las estimaciones.
-              </span>
-            </div>
-          )}
-          {riesgo.overloadedCount === 0 && riesgo.criticalDelayedCount === 0 && riesgo.delayedCount === 0 && riesgo.bigDeviationPercent <= 20 && (
-            <div style={{ padding: '10px 14px', backgroundColor: '#dcfce7', borderRadius: 8 }}>
-              <span style={{ fontSize: 13, color: '#2E7D32' }}>El equipo opera dentro de parámetros normales. Sin alertas críticas activas.</span>
-            </div>
-          )}
+          ))}
         </div>
       </Card>
     </div>
   );
 };
 
-const TabProyectos = ({ kpis }) => {
+// ─── TAB: Detail ──────────────────────────────────────────────────────────────
+const TabDetail = ({ kpis }) => {
   const { theme: t } = useTheme();
-  const { proyectos } = kpis;
-
-  const kpiBarData = proyectos.kpiDistribution.map(k => ({
-    name: k.name || k.code || 'Sin KPI',
-    'Estimadas': parseFloat(k.estimated.toFixed(1)),
-    'Reales': parseFloat(k.actual.toFixed(1)),
-    color: k.color || '#8b5cf6'
-  }));
-
-  const projBarData = proyectos.projectDistribution.slice(0, 8).map(p => ({
-    name: p.name.length > 18 ? p.name.slice(0, 18) + '…' : p.name,
-    fullName: p.name,
-    avance: p.avgProgress,
-    est: parseFloat(p.estimated.toFixed(1)),
-    real: parseFloat(p.actual.toFixed(1))
-  }));
+  const { ejecucion, detail } = kpis;
+  const upcomingActivities = detail?.upcomingActivities || [];
+  const delayedActivities = detail?.delayedActivities || [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        {/* KPI distribution */}
-        <Card>
-          <SectionTitle label="Horas por KPI" />
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={kpiBarData} margin={{ left: 0, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
-              <XAxis dataKey="name" fontSize={11} stroke={t.textMuted} />
-              <YAxis fontSize={11} stroke={t.textMuted} />
-              <Tooltip contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px' }}
-                formatter={(v, n) => [`${v} hrs`, n]} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="Estimadas" fill={t.accent} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Reales" fill={t.primary} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Department efficiency */}
-        <Card>
-          <SectionTitle label="Eficiencia por Departamento" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
-            {proyectos.departmentEfficiency.slice(0, 6).map(d => (
-              <div key={d.department}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                  <span style={{ fontSize: '12px', color: t.text, fontWeight: '500' }}>{d.department}</span>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <span style={{ fontSize: '11px', color: t.textMuted }}>{d.count} acts</span>
-                    <span style={{
-                      fontSize: '12px', fontWeight: '600',
-                      color: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444'
-                    }}>{d.completionRate}% ✓</span>
-                    {d.efficiency && (
-                      <span style={{
-                        fontSize: '12px', fontWeight: '600',
-                        color: d.efficiency >= 1 ? '#2E7D32' : '#ef4444'
-                      }}>{d.efficiency}x</span>
-                    )}
-                  </div>
-                </div>
-                <div style={{ height: '6px', backgroundColor: t.bgPanel, borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.min(100, d.completionRate)}%`,
-                    backgroundColor: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444',
-                    borderRadius: '3px'
-                  }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <KpiTile
+          label="Cumplimiento"
+          value={`${ejecucion?.compliancePercent || 0}%`}
+          color={clr(ejecucion?.compliancePercent || 0)}
+          sub="Real vs Estimado"
+          t={t}
+        />
+        <KpiTile
+          label="Productividad"
+          value={`${ejecucion?.productivity || 0}x`}
+          color={(ejecucion?.productivity || 0) >= 1 ? '#2E7D32' : '#ef4444'}
+          sub="est / real"
+          t={t}
+        />
+        <KpiTile
+          label="Lead Time"
+          value={ejecucion?.avgLeadTimeDays || 0}
+          unit="días"
+          color={(ejecucion?.avgLeadTimeDays || 0) < 7 ? '#2E7D32' : (ejecucion?.avgLeadTimeDays || 0) < 21 ? '#C77700' : '#ef4444'}
+          t={t}
+        />
+        <KpiTile
+          label="Throughput"
+          value={ejecucion?.throughput || 0}
+          unit="tareas"
+          color="#8b5cf6"
+          sub="Completadas en periodo"
+          t={t}
+        />
       </div>
 
-      {/* KPI detail table */}
-      <Card>
-        <SectionTitle label="Detalle por KPI" />
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-          <thead>
-            <tr style={{ backgroundColor: t.bgPanel }}>
-              {['KPI', 'Actividades', 'Completadas', 'Avance Prom.', 'Est. (hrs)', 'Real (hrs)', 'Eficiencia', '% del total'].map(h => (
-                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: t.textMuted, borderBottom: `1px solid ${t.border}` }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {proyectos.kpiDistribution.map((k, i) => (
-              <tr key={k.kpi_id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
-                <td style={{ padding: '8px 12px' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: k.color || '#8b5cf6', display: 'inline-block' }} />
-                    <strong style={{ color: t.text }}>{k.name || k.code}</strong>
-                  </span>
-                </td>
-                <td style={{ padding: '8px 12px', color: t.text, textAlign: 'center' }}>{k.count}</td>
-                <td style={{ padding: '8px 12px', color: '#2E7D32', textAlign: 'center', fontWeight: '600' }}>{k.completed}</td>
-                <td style={{ padding: '8px 12px' }}>
-                  <span style={{ color: clr(k.avgProgress), fontWeight: '600' }}>{k.avgProgress}%</span>
-                </td>
-                <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(k.estimated)}</td>
-                <td style={{ padding: '8px 12px', color: t.text }}>{fmt1(k.actual)}</td>
-                <td style={{ padding: '8px 12px' }}>
-                  {k.efficiency
-                    ? <span style={{ color: k.efficiency >= 1 ? '#2E7D32' : '#ef4444', fontWeight: '600' }}>{k.efficiency}x</span>
-                    : <span style={{ color: t.textMuted }}>—</span>}
-                </td>
-                <td style={{ padding: '8px 12px', color: '#8b5cf6', fontWeight: '600' }}>{k.hoursShare}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Upcoming Activities */}
+      <Card t={t}>
+        <SectionTitle t={t} label="Próximas Actividades" />
+        {upcomingActivities.length > 0 ? (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ backgroundColor: t.bgPanel }}>
+                  {['Actividad', 'Responsable', 'Fecha Fin', 'Avance', 'Estado'].map(h => (
+                    <th key={h} style={{
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: 600,
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: t.textMuted,
+                      borderBottom: `1px solid ${t.border}`
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {upcomingActivities.map((a, i) => (
+                  <tr key={a.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
+                    <td style={{ padding: '8px 12px', color: t.text }}>
+                      <PriorityDot priority={a.priority} />
+                      {a.title}
+                    </td>
+                    <td style={{ padding: '8px 12px', color: t.textMuted }}>{a.assignedTo}</td>
+                    <td style={{ padding: '8px 12px', color: t.text, fontWeight: 500 }}>{formatDate(a.endDate)}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 60, height: 6, backgroundColor: t.bgPanel, borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: `${a.progress || 0}%`, height: '100%', backgroundColor: t.accent, borderRadius: 3 }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: t.textMuted }}>{a.progress || 0}%</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <StatusBadge status={a.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ padding: 20, textAlign: 'center', color: t.textMuted }}>
+            No hay actividades próximas en los siguientes 5 días
+          </div>
+        )}
       </Card>
 
-      {/* Project progress */}
-      {projBarData.length > 0 && (
-        <Card>
-          <SectionTitle label="Avance por Proyecto (%)" />
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={projBarData} margin={{ left: 0, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
-              <XAxis dataKey="name" fontSize={10} stroke={t.textMuted} />
-              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} fontSize={11} stroke={t.textMuted} />
-              <Tooltip
-                contentStyle={{ backgroundColor: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '12px' }}
-                formatter={(v, n, p) => [`${v}%`, 'Avance']}
-                labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
-              />
-              <Bar dataKey="avance" radius={[4, 4, 0, 0]} label={{ position: 'top', fontSize: 10, fill: t.textMuted, formatter: v => `${v}%` }}>
-                {projBarData.map((entry, i) => (
-                  <Cell key={i} fill={entry.avance >= 75 ? '#2E7D32' : entry.avance >= 40 ? '#0072CE' : '#C77700'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
+      {/* Delayed Activities */}
+      <Card t={t}>
+        <SectionTitle t={t} label="Actividades Retrasadas" />
+        {delayedActivities.length > 0 ? (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ backgroundColor: t.bgPanel }}>
+                  {['Actividad', 'Responsable', 'Fecha Fin', 'Días Vencido', 'Avance', 'Prioridad'].map(h => (
+                    <th key={h} style={{
+                      padding: '8px 12px',
+                      textAlign: 'left',
+                      fontWeight: 600,
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: t.textMuted,
+                      borderBottom: `1px solid ${t.border}`
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {delayedActivities.map((a, i) => {
+                  const priorityConfig = {
+                    critical: { bg: '#B0002015', color: '#B00020', label: 'Crítica' },
+                    high: { bg: '#ef444415', color: '#ef4444', label: 'Alta' },
+                    medium: { bg: '#C7770015', color: '#C77700', label: 'Media' },
+                    low: { bg: '#2E7D3215', color: '#2E7D32', label: 'Baja' }
+                  };
+                  const pCfg = priorityConfig[a.priority] || priorityConfig.medium;
+                  return (
+                    <tr key={a.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : t.bgPanel }}>
+                      <td style={{ padding: '8px 12px', color: t.text, fontWeight: 500 }}>
+                        {a.title}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: t.textMuted }}>{a.assignedTo}</td>
+                      <td style={{ padding: '8px 12px', color: t.error, fontWeight: 500 }}>{formatDate(a.endDate)}</td>
+                      <td style={{ padding: '8px 12px' }}>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: 999,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          backgroundColor: `${t.error}15`,
+                          color: t.error
+                        }}>+{a.daysOverdue} días</span>
+                      </td>
+                      <td style={{ padding: '8px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 60, height: 6, backgroundColor: t.bgPanel, borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{ width: `${a.progress || 0}%`, height: '100%', backgroundColor: t.error, borderRadius: 3 }} />
+                          </div>
+                          <span style={{ fontSize: 11, color: t.textMuted }}>{a.progress || 0}%</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '8px 12px' }}>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: 999,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          backgroundColor: pCfg.bg,
+                          color: pCfg.color
+                        }}>{pCfg.label}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ padding: 20, textAlign: 'center', color: t.success }}>
+            No hay actividades retrasadas
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
 
-// ─── Mi Dashboard: catálogo + renderer (Workload) ─────────────────────────────
+// ─── Mi Dashboard Catalog ─────────────────────────────────────────────────────
 const WORKLOAD_CATALOG = [
-  // KPIs
-  { id: 'kpi-util',       cat: 'KPIs', label: 'Utilización Prom.',   size: 'sm' },
-  { id: 'kpi-sobrecarga', cat: 'KPIs', label: '% Sobrecargados',     size: 'sm' },
-  { id: 'kpi-planeado',   cat: 'KPIs', label: 'Planeado vs Dispon.', size: 'sm' },
-  { id: 'kpi-real-plan',  cat: 'KPIs', label: 'Real vs Planeado',    size: 'sm' },
-  { id: 'kpi-retrasadas', cat: 'KPIs', label: '% Retrasadas',        size: 'sm' },
-  { id: 'kpi-cumplimiento',cat:'KPIs', label: 'Cumplimiento',        size: 'sm' },
-  { id: 'kpi-productividad',cat:'KPIs',label: 'Productividad',       size: 'sm' },
-  { id: 'kpi-leadtime',   cat: 'KPIs', label: 'Lead Time',           size: 'sm' },
-  { id: 'kpi-throughput', cat: 'KPIs', label: 'Throughput',          size: 'sm' },
-  { id: 'kpi-avance',     cat: 'KPIs', label: 'Avance Prom.',        size: 'sm' },
-  { id: 'kpi-riesgo',     cat: 'KPIs', label: 'Índice de Riesgo',    size: 'sm' },
-  // Carga
-  { id: 'chart-util-bar', cat: 'Carga', label: 'Utilización por Persona', size: 'lg' },
-  { id: 'chart-horas',    cat: 'Carga', label: 'Horas Disponible vs Asignadas', size: 'lg' },
-  // Ejecución
-  { id: 'chart-est-real', cat: 'Ejecución', label: 'Estimadas vs Reales', size: 'md' },
-  { id: 'chart-productividad', cat: 'Ejecución', label: 'Productividad',  size: 'md' },
-  // Actividades
-  { id: 'chart-act-pie',  cat: 'Actividades', label: 'Distribución Actividades', size: 'md' },
-  { id: 'chart-flujo',    cat: 'Actividades', label: 'Indicadores de Flujo',     size: 'md' },
-  // Riesgo
-  { id: 'riesgo-gauge',   cat: 'Riesgo', label: 'Índice de Riesgo',      size: 'md' },
-  { id: 'riesgo-items',   cat: 'Riesgo', label: 'Alertas de Riesgo',     size: 'lg' },
-  { id: 'riesgo-recomend',cat: 'Riesgo', label: 'Recomendaciones',       size: 'lg' },
-  // Proyectos
-  { id: 'chart-kpi-hrs',  cat: 'Proyectos', label: 'Horas por KPI',      size: 'lg' },
-  { id: 'chart-dept-eff', cat: 'Proyectos', label: 'Eficiencia por Depto.', size: 'md' },
+  { id: 'kpi-util', cat: 'KPIs', label: 'Utilización Prom.', size: 'sm' },
+  { id: 'kpi-sobrecarga', cat: 'KPIs', label: '% Sobrecargados', size: 'sm' },
+  { id: 'kpi-retrasadas', cat: 'KPIs', label: '% Retrasadas', size: 'sm' },
+  { id: 'kpi-riesgo', cat: 'KPIs', label: 'Índice de Riesgo', size: 'sm' },
+  { id: 'kpi-cumplimiento', cat: 'KPIs', label: 'Cumplimiento', size: 'sm' },
+  { id: 'kpi-productividad', cat: 'KPIs', label: 'Productividad', size: 'sm' },
+  { id: 'chart-util-bar', cat: 'Carga', label: 'Carga por Persona', size: 'lg' },
+  { id: 'chart-horas', cat: 'Carga', label: 'Horas Disponible vs Asignadas', size: 'lg' },
+  { id: 'riesgo-gauge', cat: 'Riesgo', label: 'Índice de Riesgo', size: 'md' },
+  { id: 'riesgo-items', cat: 'Riesgo', label: 'Alertas de Riesgo', size: 'lg' },
 ];
 
-const WORKLOAD_DEFAULT = [
-  'kpi-util', 'kpi-sobrecarga', 'kpi-retrasadas', 'kpi-riesgo',
-  'chart-util-bar', 'chart-act-pie', 'riesgo-gauge', 'riesgo-items',
-];
-
-// Wrapper ligero sin useTheme para usar dentro de renderWorkloadWidget
-const WLCardWrapper = ({ title, children }) => (
-  <div>
-    <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '10px', color: 'inherit' }}>{title}</div>
-    {children}
-  </div>
-);
+const WORKLOAD_DEFAULT = ['kpi-util', 'kpi-sobrecarga', 'kpi-retrasadas', 'kpi-riesgo', 'chart-util-bar', 'riesgo-gauge'];
 
 const renderWorkloadWidget = (id, kpis, t) => {
-  if (!kpis) return <div style={{ padding: '16px', color: t.textDim, fontSize: '12px' }}>Sin datos</div>;
-  const { topBar = {}, carga = {}, ejecucion = {}, actividades = {}, riesgo = {}, proyectos = {} } = kpis;
+  if (!kpis) return <div style={{ padding: 16, color: t.textDim, fontSize: 12 }}>Sin datos</div>;
+  const { topBar = {}, carga = {}, riesgo = {} } = kpis;
 
-  // ── KPIs ──
   if (id === 'kpi-util')
-    return <KpiTile label="Utilización Prom." value={`${topBar.avgUtilization ?? 0}%`} color={clr(topBar.avgUtilization ?? 0)} />;
+    return <KpiTile label="Utilización Prom." value={`${topBar.avgUtilization ?? 0}%`} color={clr(topBar.avgUtilization ?? 0)} t={t} />;
   if (id === 'kpi-sobrecarga')
-    return <KpiTile label="% Sobrecargados" value={`${topBar.overloadedPercent ?? 0}%`} color={(topBar.overloadedPercent ?? 0) > 30 ? '#ef4444' : (topBar.overloadedPercent ?? 0) > 0 ? '#C77700' : '#2E7D32'} sub="> 110% capacidad" />;
-  if (id === 'kpi-planeado')
-    return <KpiTile label="Planeado vs Dispon." value={`${topBar.plannedVsAvailable ?? 0}%`} color={clr(topBar.plannedVsAvailable ?? 0, { low: 60, high: 100 })} />;
-  if (id === 'kpi-real-plan')
-    return <KpiTile label="Real vs Planeado" value={`${topBar.realVsPlanned ?? 0}%`} color={Math.abs((topBar.realVsPlanned ?? 100) - 100) < 15 ? '#2E7D32' : Math.abs((topBar.realVsPlanned ?? 100) - 100) < 30 ? '#C77700' : '#ef4444'} />;
+    return <KpiTile label="% Sobrecargados" value={`${topBar.overloadedPercent ?? 0}%`} color={(topBar.overloadedPercent ?? 0) > 30 ? '#ef4444' : (topBar.overloadedPercent ?? 0) > 0 ? '#C77700' : '#2E7D32'} sub="> 110% capacidad" t={t} />;
   if (id === 'kpi-retrasadas')
-    return <KpiTile label="% Retrasadas" value={`${topBar.delayedPercent ?? 0}%`} color={(topBar.delayedPercent ?? 0) > 20 ? '#ef4444' : (topBar.delayedPercent ?? 0) > 10 ? '#C77700' : '#2E7D32'} sub="Fecha vencida" />;
-  if (id === 'kpi-cumplimiento')
-    return <KpiTile label="Cumplimiento" value={`${ejecucion.compliancePercent ?? 0}%`} color={clr(ejecucion.compliancePercent ?? 0)} />;
-  if (id === 'kpi-productividad')
-    return <KpiTile label="Productividad" value={`${ejecucion.productivity ?? 0}x`} color={(ejecucion.productivity ?? 0) >= 1 ? '#2E7D32' : '#ef4444'} sub="est / real" />;
-  if (id === 'kpi-leadtime')
-    return <KpiTile label="Lead Time Prom." value={ejecucion.avgLeadTimeDays ?? 0} unit="días" color={(ejecucion.avgLeadTimeDays ?? 0) < 7 ? '#2E7D32' : (ejecucion.avgLeadTimeDays ?? 0) < 21 ? '#C77700' : '#ef4444'}  />;
-  if (id === 'kpi-throughput')
-    return <KpiTile label="Throughput" value={ejecucion.throughput ?? 0} unit="tareas" color="#8b5cf6"  sub="Completadas en periodo" />;
-  if (id === 'kpi-avance')
-    return <KpiTile label="Avance Prom." value={`${fmt1(actividades.avgProgress ?? 0)}%`} color={clr(actividades.avgProgress ?? 0)}  />;
+    return <KpiTile label="% Retrasadas" value={`${topBar.delayedPercent ?? 0}%`} color={(topBar.delayedPercent ?? 0) > 20 ? '#ef4444' : (topBar.delayedPercent ?? 0) > 10 ? '#C77700' : '#2E7D32'} sub="Fecha vencida" t={t} />;
   if (id === 'kpi-riesgo')
-    return <KpiTile label="Índice de Riesgo" value={riesgo.riskIndex ?? 0} color={riskColor(riesgo.riskIndex ?? 0)} sub={(riesgo.riskIndex ?? 0) >= 60 ? 'Alto' : (riesgo.riskIndex ?? 0) >= 35 ? 'Medio' : 'Bajo'} />;
+    return <KpiTile label="Índice de Riesgo" value={riesgo.riskIndex ?? 0} color={riskColor(riesgo.riskIndex ?? 0)} sub={(riesgo.riskIndex ?? 0) >= 60 ? 'Alto' : (riesgo.riskIndex ?? 0) >= 35 ? 'Medio' : 'Bajo'} t={t} />;
+  if (id === 'kpi-cumplimiento')
+    return <KpiTile label="Cumplimiento" value={`${kpis.ejecucion?.compliancePercent ?? 0}%`} color={clr(kpis.ejecucion?.compliancePercent ?? 0)} t={t} />;
+  if (id === 'kpi-productividad')
+    return <KpiTile label="Productividad" value={`${kpis.ejecucion?.productivity ?? 0}x`} color={(kpis.ejecucion?.productivity ?? 0) >= 1 ? '#2E7D32' : '#ef4444'} sub="est / real" t={t} />;
 
-  // ── Carga ──
   if (id === 'chart-util-bar') {
     const sorted = [...(carga.userLoad || [])].sort((a, b) => b.utilization - a.utilization);
     const barData = sorted.map(u => ({ name: u.first_name, utilización: parseFloat(u.utilization.toFixed(1)) }));
-    const chartHeight = Math.max(200, barData.length * 28);
     return (
-      <WLCardWrapper title="Utilización por Persona (%)">
-        <ResponsiveContainer width="100%" height={chartHeight}>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Carga por Persona (%)</div>
+        <ResponsiveContainer width="100%" height={Math.max(200, barData.length * 28)}>
           <BarChart data={barData} layout="vertical" margin={{ left: 5, right: 40 }}>
             <XAxis type="number" tickFormatter={v => `${v}%`} fontSize={10} />
             <YAxis type="category" dataKey="name" fontSize={10} width={70} interval={0} />
@@ -838,256 +1020,108 @@ const renderWorkloadWidget = (id, kpis, t) => {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </WLCardWrapper>
+      </div>
     );
   }
 
   if (id === 'chart-horas') {
     const sorted = [...(carga.userLoad || [])].sort((a, b) => b.utilization - a.utilization);
     const data = sorted.map(u => ({ name: u.first_name, Disponibles: parseFloat(u.hoursAvailable.toFixed(1)), Asignadas: parseFloat(u.hoursAssigned.toFixed(1)) }));
-    const chartHeight = Math.max(200, data.length * 28);
     return (
-      <WLCardWrapper title="Horas: Disponible vs Asignadas">
-        <ResponsiveContainer width="100%" height={chartHeight}>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Horas: Disponible vs Asignadas</div>
+        <ResponsiveContainer width="100%" height={Math.max(200, data.length * 28)}>
           <BarChart data={data} layout="vertical" margin={{ left: 5, right: 20 }}>
             <XAxis type="number" fontSize={10} />
             <YAxis type="category" dataKey="name" fontSize={10} width={70} interval={0} />
             <Tooltip />
-            <Legend wrapperStyle={{ fontSize: '11px' }} />
-            <Bar dataKey="Disponibles" fill={t.border} radius={[0, 0, 0, 0]} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="Disponibles" fill={t.border} />
             <Bar dataKey="Asignadas" fill={t.accent} radius={[0, 6, 6, 0]} />
           </BarChart>
         </ResponsiveContainer>
-      </WLCardWrapper>
+      </div>
     );
   }
 
-  // ── Ejecución ──
-  if (id === 'chart-est-real') {
-    const sumEst = carga.totalAssignedHrs || 0;
-    const sumReal = Math.round((ejecucion.compliancePercent || 0) / 100 * sumEst * 10) / 10;
-    const maxVal = Math.max(sumEst, sumReal, 1);
-    return (
-      <WLCardWrapper title="Estimadas vs Reales (hrs)">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '8px' }}>
-          {[
-            { label: 'Horas Estimadas', value: sumEst, color: '#0072CE' },
-            { label: 'Horas Reales', value: sumReal, color: ejecucion.compliancePercent > 100 ? '#ef4444' : '#2E7D32' }
-          ].map(item => (
-            <div key={item.label}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ fontSize: '12px' }}>{item.label}</span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: item.color }}>{fmt1(item.value)} hrs</span>
-              </div>
-              <div style={{ height: '8px', backgroundColor: t.border, borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${(item.value / maxVal) * 100}%`, backgroundColor: item.color, borderRadius: '4px' }} />
-              </div>
-            </div>
-          ))}
-          <div style={{ fontSize: '12px', padding: '8px 12px', borderRadius: '6px', backgroundColor: Math.abs(ejecucion.estimationDeviation ?? 0) < 10 ? '#dcfce7' : Math.abs(ejecucion.estimationDeviation ?? 0) < 25 ? '#fef3c7' : '#fee2e2' }}>
-            Desviación: <strong>{ejecucion.estimationDeviation > 0 ? '+' : ''}{ejecucion.estimationDeviation ?? 0}%</strong>
-          </div>
-        </div>
-      </WLCardWrapper>
-    );
-  }
-
-  if (id === 'chart-productividad') {
-    const prod = ejecucion.productivity ?? 0;
-    const prodGood = prod >= 1;
-    return (
-      <WLCardWrapper title="Índice de Productividad">
-        <div style={{ textAlign: 'center', padding: '12px 0' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100px', height: '100px', borderRadius: '50%', border: `8px solid ${prodGood ? '#2E7D32' : '#ef4444'}`, backgroundColor: prodGood ? '#dcfce7' : '#fee2e2' }}>
-            <div>
-              <div style={{ fontSize: '28px', fontWeight: '600', color: prodGood ? '#2E7D32' : '#ef4444' }}>{prod}x</div>
-              <div style={{ fontSize: '10px', color: t.textDim }}>est / real</div>
-            </div>
-          </div>
-          <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: '600', color: prodGood ? '#2E7D32' : '#ef4444' }}>
-            {prodGood ? 'Más eficiente que estimado' : 'Por debajo del estimado'}
-          </div>
-        </div>
-      </WLCardWrapper>
-    );
-  }
-
-  // ── Actividades ──
-  if (id === 'chart-act-pie') {
-    const pieData = [
-      { name: 'Completadas', value: actividades.completedCount ?? 0, color: '#2E7D32' },
-      { name: 'En Progreso', value: actividades.inProgressCount ?? 0, color: '#0072CE' },
-      { name: 'Pendientes', value: actividades.pendingCount ?? 0, color: '#C77700' },
-      { name: 'Canceladas', value: actividades.cancelledCount ?? 0, color: '#9ca3af' },
-    ].filter(d => d.value > 0);
-    return (
-      <WLCardWrapper title="Distribución por Estado">
-        <ResponsiveContainer width="100%" height={180}>
-          <PieChart>
-            <Pie data={pieData} cx="50%" cy="50%" outerRadius={70} innerRadius={35}
-              dataKey="value" paddingAngle={3}
-              label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
-              {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
-            </Pie>
-            <Tooltip formatter={(v) => [`${v} tareas`]} />
-          </PieChart>
-        </ResponsiveContainer>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '4px' }}>
-          {pieData.map(d => (
-            <span key={d.name} style={{ fontSize: '10px', color: t.textDim, display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: d.color, display: 'inline-block' }} />
-              {d.name}: <strong>{d.value}</strong>
-            </span>
-          ))}
-        </div>
-      </WLCardWrapper>
-    );
-  }
-
-  if (id === 'chart-flujo') {
-    const items = [
-      { label: 'Completadas', value: actividades.completedPercent ?? 0, color: '#2E7D32' },
-      { label: 'WIP (En Progreso)', value: actividades.wipPercent ?? 0, color: '#0072CE' },
-      { label: 'Pendientes', value: actividades.pendingPercent ?? 0, color: '#C77700' },
-      { label: 'No Planeadas', value: actividades.unplannedPercent ?? 0, color: '#ef4444' },
-    ];
-    return (
-      <WLCardWrapper title="Indicadores de Flujo (%)">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
-          {items.map(item => (
-            <div key={item.label}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                <span style={{ fontSize: '11px' }}>{item.label}</span>
-                <span style={{ fontSize: '11px', fontWeight: '600', color: item.color }}>{item.value}%</span>
-              </div>
-              <div style={{ height: '6px', backgroundColor: t.border, borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, item.value)}%`, backgroundColor: item.color, borderRadius: '3px' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </WLCardWrapper>
-    );
-  }
-
-  // ── Riesgo ──
   if (id === 'riesgo-gauge') {
     return (
-      <WLCardWrapper title="Índice de Riesgo Operativo">
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Índice de Riesgo</div>
         <RiskGauge value={riesgo.riskIndex ?? 0} />
-      </WLCardWrapper>
+      </div>
     );
   }
 
   if (id === 'riesgo-items') {
     const items = [
-      { label: 'Sobrecargados', value: riesgo.overloadedCount ?? 0, color: (riesgo.overloadedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: '> 110% capacidad' },
-      { label: 'Tareas Críticas Retrasadas', value: riesgo.criticalDelayedCount ?? 0, color: (riesgo.criticalDelayedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32', desc: 'Alta/Crítica vencidas' },
-      { label: 'Retrasadas', value: riesgo.delayedCount ?? 0, color: (riesgo.delayedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Fecha vencida' },
-      { label: 'Bloqueadas', value: riesgo.blockedCount ?? 0, color: (riesgo.blockedCount ?? 0) > 0 ? '#C77700' : '#2E7D32', desc: 'Estado: Bloqueado' },
-      { label: '% En Riesgo', value: `${riesgo.atRiskPercent ?? 0}%`, color: (riesgo.atRiskPercent ?? 0) > 20 ? '#ef4444' : (riesgo.atRiskPercent ?? 0) > 10 ? '#C77700' : '#2E7D32', desc: 'Retrasadas + Bloqueadas' },
-      { label: 'Desviación >20%', value: `${riesgo.bigDeviationPercent ?? 0}%`, color: (riesgo.bigDeviationPercent ?? 0) > 30 ? '#ef4444' : (riesgo.bigDeviationPercent ?? 0) > 15 ? '#C77700' : '#2E7D32', desc: 'Estimación imprecisa' },
+      { label: 'Sobrecargados', value: riesgo.overloadedCount ?? 0, color: (riesgo.overloadedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32' },
+      { label: 'Críticas Retrasadas', value: riesgo.criticalDelayedCount ?? 0, color: (riesgo.criticalDelayedCount ?? 0) > 0 ? '#ef4444' : '#2E7D32' },
+      { label: 'Retrasadas', value: riesgo.delayedCount ?? 0, color: (riesgo.delayedCount ?? 0) > 0 ? '#C77700' : '#2E7D32' },
+      { label: 'Bloqueadas', value: riesgo.blockedCount ?? 0, color: (riesgo.blockedCount ?? 0) > 0 ? '#C77700' : '#2E7D32' },
     ];
     return (
-      <WLCardWrapper title="Alertas de Riesgo">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Alertas de Riesgo</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           {items.map(item => (
-            <div key={item.label} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${t.border}`, borderLeft: `4px solid ${item.color}` }}>
-              <div style={{ fontSize: '16px' }}>{item.icon}</div>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: item.color }}>{item.value}</div>
-              <div style={{ fontSize: '11px', fontWeight: '600' }}>{item.label}</div>
-              <div style={{ fontSize: '10px', color: t.textDim }}>{item.desc}</div>
+            <div key={item.label} style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, borderLeft: `4px solid ${item.color}` }}>
+              <div style={{ fontSize: 18, fontWeight: 600, color: item.color }}>{item.value}</div>
+              <div style={{ fontSize: 11, fontWeight: 600 }}>{item.label}</div>
             </div>
           ))}
         </div>
-      </WLCardWrapper>
+      </div>
     );
   }
 
-  if (id === 'riesgo-recomend') {
-    const recs = [];
-    if ((riesgo.overloadedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', msg: `${riesgo.overloadedCount} persona(s) sobrecargadas (>110%). Redistribuye actividades.` });
-    if ((riesgo.criticalDelayedCount ?? 0) > 0) recs.push({ bg: '#fee2e2', color: '#B00020', msg: `${riesgo.criticalDelayedCount} tarea(s) críticas retrasadas. Atención inmediata.` });
-    if ((riesgo.delayedCount ?? 0) > 0) recs.push({ bg: '#fef3c7', color: '#C77700', msg: `${riesgo.delayedCount} actividad(es) con fecha vencida. Actualiza avance.` });
-    if ((riesgo.bigDeviationPercent ?? 0) > 20) recs.push({ bg: '#fef3c7', color: '#C77700', msg: `${riesgo.bigDeviationPercent}% de actividades con desviación >20%. Revisa estimaciones.` });
-    if (recs.length === 0) recs.push({ bg: '#dcfce7', color: '#2E7D32', msg: 'El equipo opera dentro de parámetros normales. Sin alertas.' });
-    return (
-      <WLCardWrapper title="Recomendaciones">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {recs.map((r, i) => (
-            <div key={i} style={{ padding: '10px 12px', borderRadius: 8, backgroundColor: r.bg }}>
-              <span style={{ fontSize: 12, color: r.color }}>{r.msg}</span>
-            </div>
-          ))}
-        </div>
-      </WLCardWrapper>
-    );
-  }
-
-  // ── Proyectos ──
-  if (id === 'chart-kpi-hrs') {
-    const kpiBarData = (proyectos.kpiDistribution || []).map(k => ({
-      name: k.name || k.code || 'Sin KPI',
-      Estimadas: parseFloat((k.estimated || 0).toFixed(1)),
-      Reales: parseFloat((k.actual || 0).toFixed(1)),
-    }));
-    return (
-      <WLCardWrapper title="Horas por KPI">
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={kpiBarData} margin={{ left: 0, right: 20 }}>
-            <XAxis dataKey="name" fontSize={10} />
-            <YAxis fontSize={10} />
-            <Tooltip formatter={(v, n) => [`${v} hrs`, n]} />
-            <Legend wrapperStyle={{ fontSize: '11px' }} />
-            <Bar dataKey="Estimadas" fill={t.accent} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Reales" fill={t.primary} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </WLCardWrapper>
-    );
-  }
-
-  if (id === 'chart-dept-eff') {
-    const depts = (proyectos.departmentEfficiency || []).slice(0, 6);
-    return (
-      <WLCardWrapper title="Eficiencia por Departamento">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-          {depts.map(d => (
-            <div key={d.department}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                <span style={{ fontSize: '11px' }}>{d.department}</span>
-                <span style={{ fontSize: '11px', fontWeight: '600', color: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444' }}>
-                  {d.completionRate}% ✓ {d.efficiency ? `· ${d.efficiency}x` : ''}
-                </span>
-              </div>
-              <div style={{ height: '6px', backgroundColor: t.border, borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, d.completionRate)}%`, backgroundColor: d.completionRate >= 70 ? '#2E7D32' : d.completionRate >= 40 ? '#C77700' : '#ef4444', borderRadius: '3px' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </WLCardWrapper>
-    );
-  }
-
-  return <div style={{ padding: '16px', color: t.textDim, fontSize: '12px' }}>Widget "{id}" no encontrado</div>;
+  return <div style={{ padding: 16, color: t.textDim, fontSize: 12 }}>Widget "{id}" no encontrado</div>;
 };
 
 // ─── Main WorkloadDashboard ───────────────────────────────────────────────────
-const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
+const WorkloadDashboard = ({ userIds: initialUserIds, availableUsers = [] }) => {
   const { theme: t } = useTheme();
-  const { t: tr, language, changeLanguage } = useLanguage();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [complianceHistory, setComplianceHistory] = useState([]);
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('workload-dashboard-tab') || 'carga');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('workload-dashboard-tab') || 'summary');
   const handleTabChange = (id) => { setActiveTab(id); localStorage.setItem('workload-dashboard-tab', id); };
+
+  // Period state
+  const [periodPreset, setPeriodPreset] = useState('month');
   const [startDate, setStartDate] = useState(
-    periodStart || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
   );
-  const [endDate, setEndDate] = useState(
-    periodEnd || new Date().toISOString().split('T')[0]
-  );
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // User IDs state - for multi-select
+  const [userIds, setUserIds] = useState(initialUserIds || []);
+
+  // Update userIds when prop changes
+  useEffect(() => {
+    if (initialUserIds && JSON.stringify(initialUserIds) !== JSON.stringify(userIds)) {
+      setUserIds(initialUserIds);
+    }
+  }, [initialUserIds]);
+
+  // Period preset handler
+  const handlePeriodPreset = (preset) => {
+    setPeriodPreset(preset);
+    const today = new Date();
+    let start;
+    if (preset === 'week') {
+      start = new Date(today);
+      start.setDate(today.getDate() - today.getDay());
+    } else if (preset === 'month') {
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else if (preset === 'quarter') {
+      const quarter = Math.floor(today.getMonth() / 3);
+      start = new Date(today.getFullYear(), quarter * 3, 1);
+    }
+    if (start) {
+      setStartDate(start.toISOString().split('T')[0]);
+      setEndDate(today.toISOString().split('T')[0]);
+    }
+  };
 
   const fetchDashboard = useCallback(async () => {
     if (!userIds || userIds.length === 0) return;
@@ -1111,227 +1145,167 @@ const WorkloadDashboard = ({ userIds, periodStart, periodEnd }) => {
     }
   }, [userIds?.join(','), startDate, endDate]);
 
-  const fetchComplianceHistory = useCallback(async () => {
-    if (!userIds || userIds.length === 0) return;
-    try {
-      const token = localStorage.getItem('token');
-      const params = new URLSearchParams({
-        user_ids: userIds.join(','),
-        weeks: 12
-      });
-      const res = await fetch(`${API_URL}/workload/compliance-history?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const json = await res.json();
-      if (json.success) setComplianceHistory(json.history || []);
-    } catch (e) {
-      console.error('Compliance history fetch error:', e);
-    }
-  }, [userIds?.join(',')]);
-
   useEffect(() => {
     fetchDashboard();
-    fetchComplianceHistory();
-  }, [fetchDashboard, fetchComplianceHistory]);
+  }, [fetchDashboard]);
 
   if (!userIds || userIds.length === 0) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
-        Selecciona un usuario para ver el dashboard de su equipo.
+      <div style={{ padding: 40, textAlign: 'center', color: t.textMuted }}>
+        Selecciona un usuario para ver el dashboard.
       </div>
     );
   }
 
   const kpis = data?.kpis;
-  const topBar = kpis?.topBar;
 
   const TABS = [
-    { id: 'carga', label: 'Carga', component: TabCarga },
-    { id: 'ejecucion', label: 'Ejecución', component: TabEjecucion },
-    { id: 'actividades', label: 'Actividades', component: TabActividades },
-    { id: 'riesgo', label: 'Riesgo', component: TabRiesgo },
-    { id: 'proyectos', label: 'Proyectos / KPI', component: TabProyectos },
-    { id: 'personalizado', label: 'Mi Dashboard' },
+    { id: 'summary', label: 'Summary' },
+    { id: 'workload', label: 'Workload' },
+    { id: 'objectives', label: 'Objectives' },
+    { id: 'detail', label: 'Detail' },
+    { id: 'mydashboard', label: 'My Dashboard' },
   ];
 
-  const ActiveTabComponent = TABS.find(tab => tab.id === activeTab)?.component;
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Period selector */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Unified Header */}
       <div style={{
-        backgroundColor: t.bgCard, border: `1px solid ${t.border}`,
-        borderRadius: '10px', padding: '12px 18px',
-        display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap'
+        backgroundColor: t.bgCard,
+        border: `1px solid ${t.border}`,
+        borderRadius: 10,
+        padding: '12px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        flexWrap: 'wrap'
       }}>
-        <span style={{ fontWeight: '600', color: t.text, fontSize: '14px' }}>Periodo</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-            style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, color: t.text, fontSize: '13px' }} />
-          <span style={{ color: t.textMuted }}>→</span>
-          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-            style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, backgroundColor: t.bgPanel, color: t.text, fontSize: '13px' }} />
+        {/* Period presets */}
+        <div style={{ display: 'flex', gap: 0 }}>
+          {[
+            { id: 'week', label: 'Semana' },
+            { id: 'month', label: 'Mes' },
+            { id: 'quarter', label: 'Trimestre' }
+          ].map((p, i) => (
+            <button
+              key={p.id}
+              onClick={() => handlePeriodPreset(p.id)}
+              style={{
+                padding: '6px 14px',
+                border: `1px solid ${t.border}`,
+                borderLeft: i === 0 ? `1px solid ${t.border}` : 'none',
+                borderRadius: i === 0 ? '6px 0 0 6px' : i === 2 ? '0 6px 6px 0' : 0,
+                backgroundColor: periodPreset === p.id ? t.accent : t.bgPanel,
+                color: periodPreset === p.id ? 'white' : t.text,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
-        <button onClick={fetchDashboard}
-          style={{ padding: '6px 16px', backgroundColor: t.accent, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+
+        {/* Date range */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="date"
+            value={startDate}
+            onChange={e => { setStartDate(e.target.value); setPeriodPreset(''); }}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 6,
+              border: `1px solid ${t.border}`,
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              fontSize: 13
+            }}
+          />
+          <span style={{ color: t.textMuted }}>→</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={e => { setEndDate(e.target.value); setPeriodPreset(''); }}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 6,
+              border: `1px solid ${t.border}`,
+              backgroundColor: t.bgPanel,
+              color: t.text,
+              fontSize: 13
+            }}
+          />
+        </div>
+
+        {/* Refresh button */}
+        <button
+          onClick={fetchDashboard}
+          style={{
+            padding: '6px 16px',
+            backgroundColor: t.accent,
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 600
+          }}
+        >
           Actualizar
         </button>
+
+        {/* Period info */}
         {data && (
-          <span style={{ fontSize: '12px', color: t.textMuted, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 'auto' }}>
             {data.period?.days} días · {userIds.length} persona(s)
           </span>
         )}
       </div>
 
-      {/* Top Bar KPIs */}
+      {/* Tab nav - underline style */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${t.border}` }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => handleTabChange(tab.id)}
+            style={{
+              padding: '12px 20px',
+              border: 'none',
+              borderBottom: activeTab === tab.id ? `2px solid ${t.accent}` : '2px solid transparent',
+              marginBottom: -1,
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: activeTab === tab.id ? 600 : 500,
+              backgroundColor: 'transparent',
+              color: activeTab === tab.id ? t.accent : t.textMuted,
+              transition: 'all 0.2s'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
-          <div style={{ fontSize: '14px', marginBottom: '8px', color: t.textMuted }}>...</div>
+        <div style={{ padding: 40, textAlign: 'center', color: t.textMuted }}>
           Calculando KPIs...
         </div>
-      ) : topBar && (
+      ) : kpis && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-            <KpiTile
-              label="Utilización Promedio" size="lg"
-              value={`${topBar.avgUtilization}%`}
-              color={clr(topBar.avgUtilization)}
-              sub={topBar.avgUtilization > 110 ? 'Equipo sobrecargado' : topBar.avgUtilization < 70 ? 'Capacidad sin usar' : 'Utilización óptima'}
-            />
-            <KpiTile
-              label="% Personas Sobrecargadas" size="lg"
-              value={`${topBar.overloadedPercent}%`}
-              color={topBar.overloadedPercent > 30 ? '#ef4444' : topBar.overloadedPercent > 0 ? '#C77700' : '#2E7D32'}
-                            sub="> 110% de capacidad"
-            />
-            <KpiTile
-              label="Planeado vs Disponible" size="lg"
-              value={`${topBar.plannedVsAvailable}%`}
-              color={clr(topBar.plannedVsAvailable, { low: 60, high: 100 })}
-                            sub="Hrs estimadas / hrs capacidad"
-            />
-            <KpiTile
-              label="Real vs Planeado" size="lg"
-              value={`${topBar.realVsPlanned}%`}
-              color={Math.abs(topBar.realVsPlanned - 100) < 15 ? '#2E7D32' : Math.abs(topBar.realVsPlanned - 100) < 30 ? '#C77700' : '#ef4444'}
-                            sub="Hrs reales / hrs estimadas"
-            />
-            <KpiTile
-              label="% Tareas Retrasadas" size="lg"
-              value={`${topBar.delayedPercent}%`}
-              color={topBar.delayedPercent > 20 ? '#ef4444' : topBar.delayedPercent > 10 ? '#C77700' : '#2E7D32'}
-                            sub="Con fecha vencida"
-            />
-          </div>
-
-          {/* Tab nav - underline style */}
-          <div style={{
-            display: 'flex',
-            gap: 0,
-            borderBottom: `1px solid ${t.border}`
-          }}>
-            {TABS.map(tab => (
-              <button key={tab.id} onClick={() => handleTabChange(tab.id)}
-                style={{
-                  padding: '12px 20px',
-                  border: 'none',
-                  borderBottom: activeTab === tab.id ? `2px solid ${t.accent}` : '2px solid transparent',
-                  marginBottom: '-1px',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: activeTab === tab.id ? 600 : 500,
-                  backgroundColor: 'transparent',
-                  color: activeTab === tab.id ? t.accent : t.textMuted,
-                  transition: 'all 0.2s'
-                }}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Active tab content */}
-          {activeTab === 'personalizado' ? (
+          {activeTab === 'summary' && <TabSummary kpis={kpis} />}
+          {activeTab === 'workload' && <TabWorkload kpis={kpis} />}
+          {activeTab === 'objectives' && <TabObjectives kpis={kpis} />}
+          {activeTab === 'detail' && <TabDetail kpis={kpis} />}
+          {activeTab === 'mydashboard' && (
             <CustomDashboard
-              storageKey="workload-custom-dashboard-v1"
+              storageKey="workload-custom-dashboard-v2"
               catalog={WORKLOAD_CATALOG}
               defaultWidgets={WORKLOAD_DEFAULT}
               renderWidget={(id) => renderWorkloadWidget(id, kpis, t)}
               data={kpis}
             />
-          ) : (
-            ActiveTabComponent && kpis && <ActiveTabComponent kpis={kpis} />
-          )}
-
-          {/* Compliance Trend Chart - shown on Ejecucion tab */}
-          {activeTab === 'ejecucion' && complianceHistory.length > 0 && (
-            <div style={{
-              backgroundColor: t.bgCard,
-              border: `1px solid ${t.border}`,
-              borderRadius: 10,
-              padding: '16px 20px',
-              marginTop: 16
-            }}>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                color: t.textMuted,
-                marginBottom: 16
-              }}>
-                Tendencia de Cumplimiento (12 semanas)
-              </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={complianceHistory} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
-                  <XAxis
-                    dataKey="week_label"
-                    tick={{ fill: t.textMuted, fontSize: 11 }}
-                    axisLine={{ stroke: t.border }}
-                    tickLine={{ stroke: t.border }}
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fill: t.textMuted, fontSize: 11 }}
-                    axisLine={{ stroke: t.border }}
-                    tickLine={{ stroke: t.border }}
-                    tickFormatter={(v) => `${v}%`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: t.bgCard,
-                      border: `1px solid ${t.border}`,
-                      borderRadius: 8,
-                      fontSize: 12
-                    }}
-                    formatter={(value, name) => [`${value}%`, name === 'compliance_real' ? 'Real' : 'Esperado']}
-                    labelFormatter={(label) => `Semana ${label}`}
-                  />
-                  <Legend
-                    formatter={(value) => value === 'compliance_real' ? 'Real' : 'Esperado'}
-                    wrapperStyle={{ fontSize: 12 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="compliance_expected"
-                    stroke={t.textMuted}
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    dot={{ fill: t.textMuted, r: 3 }}
-                    name="compliance_expected"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="compliance_real"
-                    stroke={t.accent}
-                    strokeWidth={2}
-                    dot={{ fill: t.accent, r: 4 }}
-                    activeDot={{ r: 6 }}
-                    name="compliance_real"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
           )}
         </>
       )}
